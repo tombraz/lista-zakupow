@@ -57,9 +57,9 @@ flowchart LR
   api -->|API key| mail
 ```
 
-## Zagrożenia
+## Threats
 
-| ID | Ścieżka / granica | STRIDE | Zagrożenie | P × wpływ | Mitygacja | Weryfikacja | Pokrycie | ASVS |
+| ID | Ścieżka / granica | STRIDE | Zagrożenie | P × wpływ | Mitygacja | Weryfikacja | Covered by | ASVS |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | TH-01 | J-02, J-03, J-04 / API | E, I | **MC-01:** inny domownik czyta lub zmienia cudzą listę, pozycje, uczestników albo linki, podmieniając identyfikator | wysokie | `requireListAccess` przy każdej operacji, domyślnie odmowa, 404 bez zdradzania istnienia; zapytania zawsze z `list_id` | negatywne testy integracyjne każdej trasy listy (inny domownik, anonim) | task | Authorization |
 | TH-02 | J-02, J-04 / API | E | uczestnik wykonuje akcje właściciela (zmiana nazwy, usunięcie listy, zaproszenia, usuwanie uczestników) | średnie | rola sprawdzana w `requireListAccess(…, "owner")` | testy integracyjne 403 dla uczestnika | task | Authorization |
@@ -119,3 +119,4 @@ Domena nie jest wysokiego ryzyka (BRD §8b): bez płatności, danych zdrowotnych
 | Data | Zmiana |
 | --- | --- |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |
+| 2026-10-26 | `/plan-backlog`: nagłówek sekcji zagrożeń i kolumna pokrycia przywrócone do etykiet z szablonu (`## Threats`, `Covered by`), które czyta `scripts/backlog-check.mjs`; treść bez zmian. |
