@@ -1,0 +1,46 @@
+{
+  "name": "lista-zakupow",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24.11 <25",
+    "pnpm": ">=12.11"
+  },
+  "scripts": {
+    "postinstall": "pnpm --filter @lista/tokens build",
+    "services:up": "docker compose up -d --wait",
+    "services:down": "docker compose down",
+    "services:reset": "docker compose down -v",
+    "dev": "pnpm --parallel --filter @lista/api --filter @lista/web dev",
+    "build": "pnpm --filter @lista/web build && pnpm --filter @lista/api build",
+    "start": "pnpm --filter @lista/api start",
+    "test": "vitest run",
+    "test:e2e": "pnpm --filter @lista/web test:e2e",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "quality": "pnpm quality:duplication && pnpm quality:deps",
+    "quality:duplication": "jscpd",
+    "quality:deps": "depcruise apps packages",
+    "design-check": "node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated",
+    "backlog-check": "node scripts/backlog-check.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm quality && pnpm design-check && pnpm backlog-check && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "24.19.2",
+    "dependency-cruiser": "18.7.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "jscpd": "5.4.2",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  }
+}

@@ -1,3 +1,10 @@
+| install | `pnpm install`; tokeny ponownie: `pnpm --filter @lista/tokens build` | korzeń repo |
+| uruchom lokalnie | `pnpm dev` (Vite `http://localhost:5173`, proxy `/api` i `/health` do API) | korzeń repo |
+| type check / lint | `pnpm typecheck` / `pnpm lint`; kolory na sztywno `pnpm design-check` | korzeń repo |
+| testy jednego pliku | `pnpm vitest run apps/web/src/screens/start/StartScreen.test.tsx` | korzeń repo |
+| wszystkie testy warstwy | `pnpm vitest run --project web --project tokens` | korzeń repo |
+| E2E | `pnpm test:e2e` (buduje web i API, startuje kontener bazy; pierwszy raz `pnpm --filter @lista/web exec playwright install chromium`; log API w `apps/web/test-results/api.log`; na Windows 1 worker) | korzeń repo |
+| build | `pnpm --filter @lista/web build` (`apps/web/dist`, serwowany przez API) | korzeń repo |
 ---
 layer: web
 status: approved          # draft | approved
@@ -16,7 +23,14 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 ## Gdzie jest kod
 
-<Uzupełnia task walking skeleton. Planowane: `apps/web/src/screens/SC-xx-*/`, `apps/web/src/components/` (komponenty design systemu), `apps/web/src/api/` (klient HTTP i WS), `packages/tokens/`.>
+- `apps/web/index.html`, `src/main.tsx` — wejście SPA (`lang="pl"`, `QueryClientProvider`)
+- `apps/web/src/screens/<ekran>/` — ekran, `messages.ts` (teksty), `*.module.css`, hooki, `*.test.tsx`; teraz `screens/start/` (ekran startowy szkieletu); kolejne `screens/SC-xx-*/`
+- `apps/web/src/api/` — klient HTTP (teraz `health.ts`); WS dojdzie z modułem `na-zywo`
+- `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe
+- `apps/web/src/components/` — komponenty design systemu (od pierwszego taska z nimi)
+- `apps/web/test/` — setup Vitest, serwer MSW, `renderWithApi()`
+- `apps/web/e2e/` — testy Playwright i `server.ts` (kontener bazy + zbudowane API)
+- `packages/tokens/` — `src/build.ts` (Style Dictionary), wynik w `packages/tokens/generated/` (`tokens.css`, `tokens.ts`; poza gitem)
 
 ## Komendy
 

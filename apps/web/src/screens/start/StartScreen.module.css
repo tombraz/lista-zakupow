@@ -1,0 +1,19 @@
+.screen {
+  box-sizing: border-box;
+  max-width: var(--size-content-max);
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-lg);
+}
+
+.title {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--typography-size-title-lg);
+  font-weight: var(--typography-weight-bold);
+  line-height: var(--typography-line-height-tight);
+}
+
+.status {
+  margin: 0;
+  font-size: var(--typography-size-body);
+  color: var(--color-text-secondary);
+}

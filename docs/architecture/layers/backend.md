@@ -1,3 +1,11 @@
+| install | `pnpm install` (Node 24 LTS, pnpm 12; generuje też tokeny) | korzeń repo |
+| uruchom lokalnie | `pnpm services:up`, potem `pnpm dev` (API `http://127.0.0.1:3000` + web `http://localhost:5173`) | korzeń repo |
+| type check / lint | `pnpm typecheck` / `pnpm lint` | korzeń repo |
+| testy jednego pliku | `pnpm vitest run apps/api/test/health.test.ts` | korzeń repo |
+| wszystkie testy warstwy | `pnpm vitest run --project api` | korzeń repo |
+| build | `pnpm --filter @lista/api build` (`apps/api/dist/server.js`); start `pnpm start` | korzeń repo |
+
+Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
 ---
 layer: backend
 status: approved          # draft | approved
@@ -16,7 +24,13 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 
 ## Gdzie jest kod
 
-<Uzupełnia task walking skeleton. Planowane: `apps/api/src/modules/<moduł>/{domain,http,infra}`, `apps/api/src/live/`, `packages/shared/src/`.>
+- `apps/api/src/app.ts` — `buildApp()`: Fastify, limit treści 16 kB, obsługa błędów puli, nagłówki, trasy, web
+- `apps/api/src/server.ts` — start procesu (konfiguracja, pula, `listen`); `src/config.ts` — zmienne środowiskowe (zod)
+- `apps/api/src/logging.ts` — pino: redakcja, `requestId`, `securityLog()`
+- `apps/api/src/http/` — `security-headers.ts` (helmet, CSP), `web-app.ts` (pliki web + fallback SPA, 404 `not_found`)
+- `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health`
+- `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`
+- `packages/shared/src/` — schematy zod i typy kontraktu (teraz `health.ts`)
 
 ## Komendy
 

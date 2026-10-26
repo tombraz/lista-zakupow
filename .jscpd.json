@@ -1,0 +1,10 @@
+{
+  "path": ["apps/api/src", "apps/web/src", "packages/shared/src", "packages/tokens/src"],
+  "threshold": 3,
+  "minTokens": 50,
+  "reporters": ["console"],
+  "ignore": ["**/generated/**", "**/*.test.ts", "**/*.test.tsx"],
+  "exitCode": 1,
+  "absolute": false,
+  "gitignore": true
+}

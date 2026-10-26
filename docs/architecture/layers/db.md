@@ -1,3 +1,11 @@
+| baza lokalna | `pnpm services:up` (PostgreSQL na `localhost:5442`, Mailpit `localhost:8025`); stop `pnpm services:down` | korzeń repo |
+| wygeneruj migrację | `pnpm --filter @lista/api db:generate` (pusta własna: `pnpm --filter @lista/api exec drizzle-kit generate --custom --name=<nazwa>`) | korzeń repo |
+| uruchom migracje | `pnpm --filter @lista/api db:migrate` | korzeń repo |
+| testy warstwy | `pnpm vitest run --project api` (Testcontainers, wymaga działającego Dockera) | korzeń repo |
+
+Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
+
+Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do bazy `lista_template`, każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE`, przed każdym testem `TRUNCATE … RESTART IDENTITY CASCADE` wszystkich tabel schematu `public`. W pliku testów: `const db = useTestDatabase();`, potem `db.pool`.
 ---
 layer: db
 status: approved          # draft | approved
@@ -16,7 +24,13 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 ## Gdzie jest kod
 
-<Uzupełnia task walking skeleton. Planowane: `apps/api/src/db/schema.ts`, `apps/api/drizzle/` (migracje), repozytoria w `apps/api/src/modules/<moduł>/infra/`.>
+- `apps/api/src/db/schema.ts` — schemat Drizzle (tabele modułów dochodzą w kolejnych taskach)
+- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa) i `meta/_journal.json`
+- `apps/api/drizzle.config.ts` — konfiguracja drizzle-kit
+- `apps/api/src/db/pool.ts` — pula `pg` (bezczynne połączenia zamykane po 30 s)
+- `apps/api/src/db/migrate.ts`, `migrate-cli.ts` — uruchamianie migracji
+- `apps/api/test/global-setup.ts`, `test/database.ts` — kontener testowy, baza-szablon, `useTestDatabase()`
+- repozytoria: `apps/api/src/modules/<moduł>/infra/` (od pierwszego modułu z tabelami)
 
 ## Komendy
 

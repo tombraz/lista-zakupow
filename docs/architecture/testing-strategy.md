@@ -55,7 +55,7 @@ Cel: WCAG 2.2 AA (`docs/design/design-decisions.md`).
 
 ## Dane testowe
 
-- Integracja: jeden kontener PostgreSQL na przebieg (Testcontainers), migracje uruchamiane raz; każdy test w osobnej bazie-szablonie (`CREATE DATABASE … TEMPLATE`) albo z czyszczeniem tabel (`TRUNCATE … CASCADE`) przed testem — wybór w walking skeleton.
+- Integracja (decyzja T-001, 2026-10-26): jeden kontener PostgreSQL na przebieg (Testcontainers, `globalSetup`), migracje uruchamiane raz do bazy-szablonu; każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE` (pliki mogą biec równolegle), a przed każdym testem `TRUNCATE … CASCADE` wszystkich tabel aplikacji (bez tabeli migracji).
 - Fabryki w `apps/api/test/factories.ts`: `createUser()`, `signIn(user)` (zwraca ciasteczko), `createList(owner)`, `addMember(list, user)`, `createItem(list, by)`, `createInvitation(list)`. Nazwy i e-maile losowe, bez prawdziwych danych.
 - E2E: api uruchomione na czystej bazie w kontenerze; użytkownicy zakładani przez API w `beforeEach`; mail resetu odczytywany z API Mailpit.
 - Zegar: wstrzykiwany `clock` w module domenowym (wygasanie zaproszeń 7 dni, resetu 1 h, aktywność dzienna).

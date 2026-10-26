@@ -47,6 +47,15 @@ Domyślne wybory techniczne niższego rzędu, wynikające z decyzji powyżej. Ob
 | Tokeny | Style Dictionary generuje `tokens.css` (web) i `tokens.ts` (mobile) z `docs/design/tokens.json` | obsługuje format W3C design tokens |
 | Przechowywanie sesji mobile | `expo-secure-store` (przez plugin Expo Better Auth) | Keychain / Keystore |
 
+## Narzędzia uruchomieniowe (T-001, 2026-10-26)
+
+| Obszar | Wybór | Powód | Alternatywa |
+| --- | --- | --- | --- |
+| Sterownik PostgreSQL | `pg` (node-postgres) przez `drizzle-orm/node-postgres` | pula z `idleTimeoutMillis` ≤ 60 s (koszt Neon, `deployment.md`) | postgres.js |
+| Uruchamianie API w dev | `tsx watch` | TypeScript bez kroku kompilacji, hot reload | natywne type stripping Node |
+| Build API | `esbuild` (bundle do `apps/api/dist/server.js`, pakiety workspace wbudowane, zależności npm zewnętrzne) | obraz bez TypeScriptu w runtime; esbuild już jest w Vite | tsc + project references |
+| Dev api + web razem | `pnpm --parallel` (bez dodatkowych paczek) | jedna komenda `pnpm dev` | concurrently |
+
 ## Git workflow
 
 - Variant: epic branch with draft PR
@@ -62,4 +71,5 @@ Powód: jeden epik MVP, jeden autor, produkt jeszcze niedostępny dla użytkowni
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-26 | `/implement-task T-001`: narzędzia uruchomieniowe (pg, tsx, esbuild, `pnpm --parallel`). |
 | 2026-10-26 | `/ci-cd`: hosting (ADR 0006), brak podglądów per PR, dystrybucja iOS w pilotażu tylko przez web (ADR 0008 — zawęża „Dystrybucja mobile”). |

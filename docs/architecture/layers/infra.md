@@ -1,3 +1,6 @@
+| start usług lokalnych | `pnpm services:up` (`docker compose up -d --wait`) | korzeń repo |
+| stop i czyszczenie | `pnpm services:down` (stop); `pnpm services:reset` (usuwa też wolumen bazy) | korzeń repo |
+| lokalny przebieg CI | `pnpm check` (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, testy), potem `pnpm test:e2e` | korzeń repo |
 ---
 layer: infra
 status: approved          # draft | approved
@@ -24,7 +27,9 @@ Docker Compose (PostgreSQL + Mailpit), GitHub Actions (repo publiczne, ADR 0007)
 
 ## Gdzie jest kod
 
-<Uzupełnia task walking skeleton. Planowane: `docker-compose.yml`, `.env.example`, `.github/workflows/` (`ci.yml`, `security.yml`, `deploy.yml`, `mobile.yml`), `.github/dependabot.yml`, `scripts/deploy.sh`, `scripts/smoke.sh`, `Dockerfile` (API + `apps/web/dist`), `apps/api/fly.staging.toml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`, `.zap/rules.tsv`, `SECURITY.md`.>
+Istnieje (T-001): `docker-compose.yml` (PostgreSQL 17.11 na `localhost:5442`, Mailpit v1.32.0 `localhost:1025` / `8025`), `.env.example`, `.nvmrc` oraz `engines` / `packageManager` w `package.json` (Node 24, pnpm 12.11.2), `pnpm-workspace.yaml` (`allowBuilds` tylko dla esbuild), `.gitattributes` (LF), konfiguracje sprawdzeń w korzeniu: `eslint.config.js`, `.prettierrc.json`, `.jscpd.json`, `.dependency-cruiser.cjs`, `vitest.config.ts`.
+
+Planowane (kolejne taski infra): `.github/workflows/` (`ci.yml`, `security.yml`, `deploy.yml`, `mobile.yml`), `.github/dependabot.yml`, `scripts/deploy.sh`, `scripts/smoke.sh`, `Dockerfile` (API + `apps/web/dist`), `apps/api/fly.staging.toml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`, `.zap/rules.tsv`, `SECURITY.md`.
 
 ## Komendy
 

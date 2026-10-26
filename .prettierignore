@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+docs/
+.claude/
+README.md
+scripts/backlog-check.mjs
+scripts/design-check.mjs
+apps/api/drizzle/meta/

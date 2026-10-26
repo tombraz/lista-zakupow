@@ -1,1 +1,11 @@
+node_modules/
+dist/
+coverage/
+generated/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
 docs/backlog/board.html

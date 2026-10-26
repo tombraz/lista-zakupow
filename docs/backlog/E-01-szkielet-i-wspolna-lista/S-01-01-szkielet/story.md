@@ -2,7 +2,7 @@
 id: S-01-01
 epic: E-01
 title: Szkielet techniczny i staging
-status: todo           # todo | in-progress | done
+status: in-progress           # todo | in-progress | done
 requirements: [N-01, N-03, N-04]
 screens: []
 ---
