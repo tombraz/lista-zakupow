@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototyp przepływu — Wspólna lista zakupów</title>
+<style>
+/* Tokeny wygenerowane z docs/design/tokens.json przez prototypes/build-core-flow.mjs — nie edytować ręcznie */
+:root {
+  --color-bg-default: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-bg-overlay: rgba(15, 23, 42, 0.5);
+  --color-surface-brand: #0b4fbf;
+  --color-surface-brand-control: #2a64c7;
+  --color-surface-inverse: #0f172a;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-text-on-brand: #ffffff;
+  --color-text-on-accent: #0f172a;
+  --color-text-on-inverse: #ffffff;
+  --color-text-on-person: #ffffff;
+  --color-action-primary: #0b4fbf;
+  --color-action-primary-hover: #093f99;
+  --color-action-accent: #ffd23f;
+  --color-action-accent-hover: #f5c400;
+  --color-action-danger: #b91c1c;
+  --color-action-disabled: #cbd5e1;
+  --color-status-done: #15803d;
+  --color-status-warning-bg: #fff4cc;
+  --color-status-warning-text: #5c4300;
+  --color-status-error-bg: #fde8e8;
+  --color-status-error-text: #8a1414;
+  --color-status-success-bg: #dcfce7;
+  --color-status-success-text: #14532d;
+  --color-border-default: #e2e8f0;
+  --color-border-input: #64748b;
+  --color-focus-ring: #0b4fbf;
+  --color-focus-ring-on-brand: #ffd23f;
+  --color-person-1: #0b4fbf;
+  --color-person-2: #b4235a;
+  --color-person-3: #0f766e;
+  --color-person-4: #6d28d9;
+  --color-person-5: #b45309;
+  --color-person-6: #475569;
+  --typography-family-base: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --typography-weight-regular: 400;
+  --typography-weight-semibold: 600;
+  --typography-weight-bold: 700;
+  --typography-size-title-lg: 24px;
+  --typography-size-title: 20px;
+  --typography-size-item: 18px;
+  --typography-size-body: 16px;
+  --typography-size-small: 14px;
+  --typography-line-height-tight: 1.25;
+  --typography-line-height-base: 1.5;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --size-target-min: 48px;
+  --size-item-row: 60px;
+  --size-checkbox: 40px;
+  --size-avatar: 32px;
+  --size-content-max: 560px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  --elevation-sheet: 0px -4px 16px 0px rgba(15, 23, 42, 0.25);
+  --elevation-toast: 0px 4px 12px 0px rgba(15, 23, 42, 0.25);
+  --motion-fast: 120ms;
+  --motion-normal: 200ms;
+  --focus-width: 3px;
+  --focus-offset: 2px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #d9dbe0; font-family: var(--typography-family-base); color: var(--color-text-primary); }
+.sim { max-width: 900px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.sim strong { margin-right: 4px; }
+.sim button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
+.device { width: 390px; max-width: 100%; height: 780px; margin: 0 auto 24px; border: 10px solid #111; border-radius: 32px; overflow: hidden; background: var(--color-bg-default); display: flex; flex-direction: column; position: relative; }
+@media (max-width: 420px) { .device { border: 0; border-radius: 0; height: 100vh; } }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: var(--focus-width) solid var(--color-focus-ring); outline-offset: var(--focus-offset); }
+.brand :focus-visible { outline-color: var(--color-focus-ring-on-brand); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.scroll { flex: 1; overflow-y: auto; }
+h1 { margin: 0; }
+
+.bar { background: var(--color-surface-brand); color: var(--color-text-on-brand); display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-sm) var(--spacing-md); min-height: 64px; }
+.bar h1 { flex: 1; font-size: var(--typography-size-title); line-height: var(--typography-line-height-tight); }
+.ibtn { min-width: var(--size-target-min); min-height: var(--size-target-min); border: 0; border-radius: var(--radius-md); background: var(--color-surface-brand-control); color: var(--color-text-on-brand); cursor: pointer; font-size: 20px; }
+.offline { background: var(--color-surface-inverse); color: var(--color-text-on-inverse); padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--typography-size-small); }
+.status { padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--typography-size-small); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border-default); }
+
+.page { padding: var(--spacing-xl) var(--spacing-lg); }
+.page h1 { font-size: var(--typography-size-title-lg); margin-bottom: var(--spacing-lg); }
+.field { margin-bottom: var(--spacing-lg); }
+.field label { display: block; font-weight: var(--typography-weight-semibold); margin-bottom: var(--spacing-xs); }
+.field input { width: 100%; min-height: var(--size-target-min); border: 1px solid var(--color-border-input); border-radius: var(--radius-md); padding: 0 var(--spacing-md); font-size: var(--typography-size-item); background: var(--color-bg-default); }
+.hint { font-size: var(--typography-size-small); color: var(--color-text-secondary); margin-top: var(--spacing-xs); }
+.btn { min-height: var(--size-target-min); padding: 0 var(--spacing-lg); border-radius: var(--radius-md); font-weight: var(--typography-weight-bold); cursor: pointer; border: 2px solid var(--color-action-primary); }
+.btn.primary { background: var(--color-action-primary); color: var(--color-text-on-brand); }
+.btn.primary:hover { background: var(--color-action-primary-hover); }
+.btn.secondary { background: var(--color-bg-default); color: var(--color-action-primary); }
+.btn.danger { border: 0; background: none; color: var(--color-action-danger); }
+.btn.block { width: 100%; }
+.btn:disabled { background: var(--color-action-disabled); border-color: var(--color-action-disabled); color: var(--color-text-secondary); cursor: not-allowed; }
+.link { background: none; border: 0; color: var(--color-action-primary); text-decoration: underline; cursor: pointer; min-height: var(--size-target-min); padding: 0; }
+.stack-gap > * + * { margin-top: var(--spacing-md); }
+
+.alert { border-radius: var(--radius-md); padding: var(--spacing-sm) var(--spacing-md); font-size: var(--typography-size-small); margin-bottom: var(--spacing-md); }
+.alert.warning { background: var(--color-status-warning-bg); color: var(--color-status-warning-text); }
+.alert.error { background: var(--color-status-error-bg); color: var(--color-status-error-text); }
+.alert.success { background: var(--color-status-success-bg); color: var(--color-status-success-text); }
+.alert.info { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.alert .link { min-height: 0; margin-left: var(--spacing-xs); color: inherit; font-weight: var(--typography-weight-bold); }
+
+.cards { list-style: none; margin: 0; padding: var(--spacing-md); }
+.card { display: block; width: 100%; text-align: left; background: var(--color-bg-default); border: 2px solid var(--color-border-default); border-radius: var(--radius-lg); padding: var(--spacing-lg); margin-bottom: var(--spacing-md); cursor: pointer; }
+.card .t { font-size: var(--typography-size-title); font-weight: var(--typography-weight-bold); }
+.card .s { display: flex; justify-content: space-between; align-items: center; color: var(--color-text-secondary); margin-top: var(--spacing-xs); }
+.av { width: var(--size-avatar); height: var(--size-avatar); border-radius: var(--radius-full); display: inline-grid; place-items: center; color: var(--color-text-on-person); font-size: 13px; font-weight: var(--typography-weight-bold); flex: none; }
+.avs { display: flex; } .avs .av { width: 28px; height: 28px; font-size: 11px; margin-left: -6px; border: 2px solid var(--color-bg-default); }
+
+.items { list-style: none; margin: 0; padding: 0; }
+.item { display: flex; align-items: center; gap: var(--spacing-md); min-height: var(--size-item-row); padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-xs) var(--spacing-lg); border-bottom: 1px solid var(--color-border-default); transition: background var(--motion-normal); }
+.item.flash { background: var(--color-bg-subtle); }
+.item .name { flex: 1; text-align: left; background: none; border: 0; padding: var(--spacing-xs) 0; cursor: pointer; min-height: var(--size-target-min); }
+.item .n { display: block; font-size: var(--typography-size-item); font-weight: var(--typography-weight-semibold); line-height: var(--typography-line-height-tight); }
+.item .m { display: block; font-size: var(--typography-size-small); color: var(--color-text-secondary); }
+.item.done .n { color: var(--color-text-muted); text-decoration: line-through; }
+.chk { width: var(--size-target-min); height: var(--size-target-min); border: 0; background: none; cursor: pointer; display: grid; place-items: center; padding: 0; flex: none; }
+.chk span { width: var(--size-checkbox); height: var(--size-checkbox); border: 3px solid var(--color-action-primary); border-radius: var(--radius-md); display: grid; place-items: center; color: var(--color-text-on-brand); font-size: 22px; font-weight: 700; transition: background var(--motion-fast); }
+.done .chk span { background: var(--color-status-done); border-color: var(--color-status-done); }
+.chk[aria-busy="true"] span { opacity: .5; }
+.fold { width: 100%; display: flex; justify-content: space-between; min-height: 56px; padding: 0 var(--spacing-lg); background: var(--color-bg-subtle); border: 0; font-weight: var(--typography-weight-bold); font-size: var(--typography-size-body); cursor: pointer; align-items: center; }
+.empty { padding: var(--spacing-xl) var(--spacing-lg); color: var(--color-text-secondary); }
+
+.addbar { background: var(--color-surface-brand); padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md); }
+.addbar label { color: var(--color-text-on-brand); font-size: var(--typography-size-small); font-weight: var(--typography-weight-semibold); display: block; margin-bottom: var(--spacing-xs); }
+.addbar .row { display: flex; gap: var(--spacing-sm); }
+.addbar input { flex: 1; min-height: 52px; border: 0; border-radius: var(--radius-md); padding: 0 var(--spacing-md); font-size: var(--typography-size-item); min-width: 0; }
+.addbar .note { margin-top: var(--spacing-sm); width: 100%; min-height: var(--size-target-min); font-size: var(--typography-size-body); }
+.addbar .add { min-width: 64px; border: 0; border-radius: var(--radius-md); background: var(--color-action-accent); color: var(--color-text-on-accent); font-weight: 700; font-size: 16px; cursor: pointer; }
+.addbar .add:hover { background: var(--color-action-accent-hover); }
+.addbar .alert { margin: 0 0 var(--spacing-sm); }
+
+.veil { position: absolute; inset: 0; background: var(--color-bg-overlay); display: flex; align-items: flex-end; }
+.veil.center { align-items: center; padding: var(--spacing-lg); }
+.sheet { background: var(--color-bg-default); width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--spacing-xl) var(--spacing-lg); box-shadow: var(--elevation-sheet); }
+.dialog { background: var(--color-bg-default); width: 100%; border-radius: var(--radius-lg); padding: var(--spacing-xl) var(--spacing-lg); }
+.sheet h2, .dialog h2 { margin: 0 0 var(--spacing-lg); font-size: var(--typography-size-title); }
+.actions { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; justify-content: flex-end; margin-top: var(--spacing-lg); }
+.toast { position: absolute; left: var(--spacing-lg); right: var(--spacing-lg); bottom: 120px; background: var(--color-surface-inverse); color: var(--color-text-on-inverse); padding: var(--spacing-md); border-radius: var(--radius-md); box-shadow: var(--elevation-toast); }
+
+.people { list-style: none; margin: 0; padding: 0; }
+.person { display: flex; align-items: center; gap: var(--spacing-md); padding: var(--spacing-sm) var(--spacing-lg); min-height: var(--size-item-row); border-bottom: 1px solid var(--color-border-default); }
+.person .who { flex: 1; } .person .m { display: block; font-size: var(--typography-size-small); color: var(--color-text-secondary); }
+.h2 { font-size: var(--typography-size-small); font-weight: var(--typography-weight-bold); color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .04em; padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-xs); margin: 0; }
+.invite { margin: var(--spacing-sm) var(--spacing-lg); padding: var(--spacing-md); background: var(--color-bg-subtle); border-radius: var(--radius-lg); font-size: var(--typography-size-small); }
+.invite input { width: 100%; margin: var(--spacing-sm) 0; min-height: 40px; border: 1px solid var(--color-border-input); border-radius: var(--radius-sm); padding: 0 var(--spacing-sm); font-family: monospace; }
+.invite .row { display: flex; gap: var(--spacing-sm); } .invite .row .btn { flex: 1; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="sim" role="group" aria-label="Symulacja (poza aplikacją)">
+  <strong>Symulacja:</strong>
+  <button id="simRemote">Ania dopisuje „Ser żółty”</button>
+  <button id="simCheck">Kasia odhacza pierwszą pozycję</button>
+  <button id="simNet">Przełącz połączenie</button>
+  <button id="simReset">Od początku</button>
+</div>
+<div class="device" id="app"></div>
+<div class="sr" aria-live="polite" id="live"></div>
+
+<script>
+const ME = "Tomek";
+const COLOR = { Tomek: 1, Ania: 2, Kasia: 3 };
+const init = () => ({
+  screen: "login", online: true, fold: false, warn: null, sheet: null, dialog: null, toast: "", invites: [], flash: null, notice: "",
+  lists: [
+    { id: "l1", name: "Zakupy na tydzień", owner: "Tomek", people: ["Tomek", "Ania", "Kasia"] },
+    { id: "l2", name: "Biedronka — sobota", owner: "Ania", people: ["Ania", "Tomek"] },
+  ],
+  items: [
+    { id: 1, name: "Mleko", note: "2 l, 3,2%", by: "Ania" },
+    { id: 2, name: "Chleb żytni", note: "", by: "Tomek" },
+    { id: 3, name: "Jajka", note: "10 szt., z wolnego wybiegu", by: "Ania" },
+    { id: 4, name: "Pomidory", note: "ok. 1 kg", by: "Kasia" },
+    { id: 5, name: "Masło", note: "", by: "Tomek" },
+    { id: 6, name: "Papier toaletowy", note: "8 rolek", by: "Kasia" },
+    { id: 8, name: "Banany", note: "", by: "Ania", checkedBy: "Tomek" },
+    { id: 9, name: "Jogurt naturalny", note: "4 szt.", by: "Tomek", checkedBy: "Ania" },
+  ],
+});
+let s = init();
+const $ = (q) => document.querySelector(q);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const say = (t) => { const l = $("#live"); l.textContent = ""; setTimeout(() => (l.textContent = t), 30); };
+const open = () => s.items.filter((i) => !i.checkedBy);
+const done = () => s.items.filter((i) => i.checkedBy);
+const av = (n) => `<span class="av" style="background:var(--color-person-${COLOR[n] || 6})" aria-hidden="true">${n[0]}</span>`;
+const offline = () => (s.online ? "" : `<div class="offline" role="status">Brak połączenia. Zmiany nie są zapisywane.</div>`);
+const dis = () => (s.online ? "" : "disabled");
+const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const SCREENS = {
+  login: () => `<div class="scroll"><main class="page">
+      <h1 tabindex="-1">Zaloguj się</h1>
+      <form data-form="login">
+        <div class="field"><label for="em">E-mail</label><input id="em" type="email" autocomplete="email" value="tomek@example.com"></div>
+        <div class="field"><label for="pw">Hasło</label><input id="pw" type="password" autocomplete="current-password" value="haslo1234"></div>
+        <button class="btn primary block">Zaloguj się</button>
+      </form>
+      <p><button class="link" data-a="noop">Nie pamiętasz hasła?</button></p>
+      <p>Nie masz konta? <button class="btn secondary" data-a="noop">Załóż konto</button></p>
+    </main></div>`,
+
+  lists: () => `<header class="bar brand"><h1 tabindex="-1">Moje listy</h1><button class="ibtn" aria-label="Konto" data-a="noop">👤</button></header>${offline()}
+    <div class="scroll"><main>${s.notice ? `<div class="alert info" role="status" style="margin:12px">${s.notice}</div>` : ""}
+      <ul class="cards">${s.lists.map((l) => {
+        const n = l.id === "l1" ? open().length : 4;
+        return `<li><button class="card" data-a="openList" data-id="${l.id}"><span class="t">${esc(l.name)}</span>
+          <span class="s"><span>${l.owner !== ME ? `od ${l.owner} · ` : ""}${n ? n + " do kupienia" : "Wszystko kupione"}</span><span class="avs">${l.people.map(av).join("")}</span></span></button></li>`;
+      }).join("")}</ul>
+      <div style="padding:0 12px"><button class="btn primary block" ${dis()} data-a="noop">+ Nowa lista</button></div></main></div>`,
+
+  list: () => `<header class="bar brand"><button class="ibtn" aria-label="Wstecz" data-a="go" data-to="lists">←</button><h1 tabindex="-1">Zakupy na tydzień</h1>
+      <button class="ibtn" aria-label="Uczestnicy" data-a="go" data-to="people">👥</button><button class="ibtn" aria-label="Więcej opcji" data-a="noop">⋮</button></header>${offline()}
+    <div class="status" aria-live="polite">${open().length ? open().length + " do kupienia" : "Wszystko kupione."}</div>
+    <div class="scroll"><main>
+      ${s.items.length ? "" : `<p class="empty">Lista jest pusta. Dopisz pierwszą rzecz w polu na dole.</p>`}
+      <h2 class="sr">Do kupienia</h2><ul class="items">${open().map(row).join("")}</ul>
+      ${done().length ? `<h2 style="margin:0"><button class="fold" data-a="fold" aria-expanded="${s.fold}"><span>Kupione (${done().length})</span><span aria-hidden="true">${s.fold ? "▾" : "▸"}</span></button></h2>
+        ${s.fold ? `<ul class="items">${done().map(row).join("")}</ul><p style="padding:0 8px"><button class="btn danger" ${dis()} data-a="askClear">Usuń wszystkie kupione</button></p>` : ""}` : ""}
+    </main></div>
+    <form class="addbar brand" data-form="add">
+      ${s.warn ? `<div class="alert warning" role="alert">${s.warn.text}${s.warn.show ? ` <button type="button" class="link" data-a="showDup" data-id="${s.warn.show}">Pokaż</button>` : ""}</div>` : ""}
+      <label for="addName">Co kupić?</label>
+      <div class="row"><input id="addName" name="name" maxlength="100" autocomplete="off" ${dis()} value="${esc(s.warn?.value || "")}"><button class="add" aria-label="Dodaj pozycję" ${dis()}>Dodaj</button></div>
+      <input class="note" name="note" maxlength="200" aria-label="Ilość / notatka (opcjonalnie)" placeholder="Ilość / notatka (opcjonalnie)" ${dis()}>
+    </form>`,
+
+  people: () => `<header class="bar brand"><button class="ibtn" aria-label="Wstecz" data-a="go" data-to="list">←</button><h1 tabindex="-1">Uczestnicy</h1></header>${offline()}
+    <div class="scroll"><main>
+      <h2 class="h2">Na liście (3 z 20)</h2>
+      <ul class="people">
+        <li class="person">${av("Tomek")}<span class="who">Tomek<span class="m">właściciel · Ty</span></span></li>
+        <li class="person">${av("Ania")}<span class="who">Ania<span class="m">ania.nowak@gmail.com</span></span><button class="btn danger" aria-label="Usuń Anię z listy" ${dis()} data-a="noop">Usuń</button></li>
+        <li class="person">${av("Kasia")}<span class="who">Kasia<span class="m">kasia.w@wp.pl</span></span><button class="btn danger" aria-label="Usuń Kasię z listy" ${dis()} data-a="noop">Usuń</button></li>
+      </ul>
+      <h2 class="h2">Zaproszenia</h2>
+      ${s.invites.map((c) => `<div class="invite">Link jednorazowy, ważny do 2.11<input readonly aria-label="Link zaproszenia" value="lista.app/z/${c}">
+        <div class="row"><button class="btn secondary" data-a="copy" ${dis()}>Kopiuj</button><button class="btn secondary" data-a="openInvite" data-c="${c}">Otwórz jako Ola (symulacja)</button></div></div>`).join("")}
+      <div style="padding:8px 16px"><button class="btn primary block" data-a="invite" ${dis()}>Utwórz link zaproszenia</button>
+      <p class="hint">Link działa dla jednej osoby przez 7 dni. Wyślij go SMS-em lub komunikatorem.</p></div>
+    </main></div>`,
+
+  invite: () => `<div class="scroll"><main class="page">
+      <h1 tabindex="-1">Zaproszenie do listy</h1>
+      <p>Tomek zaprasza Cię do listy „Zakupy na tydzień”.</p>
+      <div class="stack-gap"><button class="btn primary block" data-a="go" data-to="lists">Załóż konto i dołącz</button>
+      <button class="btn secondary block" data-a="go" data-to="lists">Mam konto — zaloguj się</button></div>
+      <p class="hint">Symulacja ekranu SC-08 dla niezalogowanej osoby. Dalsza ścieżka: SC-02 → SC-06.</p>
+    </main></div>`,
+};
+
+function row(i) {
+  const who = i.checkedBy ? `kupił(a) ${i.checkedBy}` : `dodał(a) ${i.by}`;
+  return `<li class="item ${i.checkedBy ? "done" : ""} ${s.flash === i.id ? "flash" : ""}" id="it${i.id}">${av(i.checkedBy || i.by)}
+    <button class="name" data-a="edit" data-id="${i.id}" aria-label="Edytuj ${esc(i.name)}" ${dis()}><span class="n">${esc(i.name)}</span><span class="m">${i.note ? esc(i.note) + " · " : ""}${who}</span></button>
+    <button class="chk" data-a="toggle" data-id="${i.id}" aria-pressed="${!!i.checkedBy}" aria-label="${i.checkedBy ? "Odznacz" : "Odhacz"} ${esc(i.name)}" ${dis()}><span aria-hidden="true">${i.checkedBy ? "✓" : ""}</span></button></li>`;
+}
+
+function overlay() {
+  if (s.sheet) {
+    const i = s.items.find((x) => x.id === s.sheet.id);
+    return `<div class="veil" data-a="closeSheet"><form class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT" data-form="edit">
+      <h2 id="shT">Edytuj pozycję</h2>${s.sheet.err ? `<div class="alert warning" role="alert">${s.sheet.err}</div>` : ""}
+      <div class="field"><label for="edN">Nazwa</label><input id="edN" name="name" maxlength="100" value="${esc(s.sheet.name ?? i.name)}"></div>
+      <div class="field"><label for="edNo">Ilość / notatka (opcjonalnie)</label><input id="edNo" name="note" maxlength="200" value="${esc(i.note)}"></div>
+      <div class="actions"><button type="button" class="btn danger" data-a="del">Usuń pozycję</button><span style="flex:1"></span>
+      <button type="button" class="btn secondary" data-a="closeSheet">Anuluj</button><button class="btn primary">Zapisz</button></div></form></div>`;
+  }
+  if (s.dialog) return `<div class="veil center"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlT">
+      <h2 id="dlT">Usunąć ${done().length} kupionych pozycji?</h2>
+      <div class="actions"><button class="btn secondary" data-a="closeDialog" id="dlCancel">Anuluj</button><button class="btn primary" data-a="clear">Usuń</button></div></div></div>`;
+  return s.toast ? `<div class="toast" role="status">${s.toast}</div>` : "";
+}
+
+function render(focus) {
+  $("#app").innerHTML = SCREENS[s.screen]() + overlay();
+  const el = focus && $(focus);
+  if (el) el.focus();
+}
+function go(to) { s.screen = to; s.warn = null; s.toast = ""; render("h1"); }
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-a]");
+  if (!b || (b.classList.contains("veil") && e.target !== b)) return;
+  const a = b.dataset.a, id = +b.dataset.id;
+  if (a === "go") return go(b.dataset.to);
+  if (a === "openList") { s.notice = ""; return go("list"); }
+  if (a === "toggle") {
+    b.setAttribute("aria-busy", "true");
+    const i = s.items.find((x) => x.id === id), list = open(), idx = list.indexOf(i);
+    setTimeout(() => {
+      i.checkedBy = i.checkedBy ? undefined : ME;
+      say(`${i.checkedBy ? "Odhaczono" : "Odznaczono"} ${i.name}`);
+      const next = i.checkedBy ? list[idx + 1] || list[idx - 1] : i;
+      render(next ? `#it${next.id} .chk` : ".fold");
+    }, 250);
+    return;
+  }
+  if (a === "fold") { s.fold = !s.fold; return render(".fold"); }
+  if (a === "showDup") { s.fold = true; s.flash = id; render(`#it${id} .chk`); return setTimeout(() => { s.flash = null; render(); }, 1500); }
+  if (a === "askClear") { s.dialog = true; return render("#dlCancel"); }
+  if (a === "closeDialog") { s.dialog = false; return render(".fold"); }
+  if (a === "clear") { const n = done().length; s.items = open(); s.dialog = false; s.fold = false; say(`Usunięto ${n} pozycji`); return render("#addName"); }
+  if (a === "edit") { s.sheet = { id }; return render("#edN"); }
+  if (a === "closeSheet") { const id0 = s.sheet.id; s.sheet = null; return render(`#it${id0} .name`); }
+  if (a === "del") { const all = [...open(), ...done()], k = all.findIndex((x) => x.id === s.sheet.id), n = all[k + 1] || all[k - 1]; s.items = s.items.filter((x) => x.id !== s.sheet.id); s.sheet = null; say("Usunięto pozycję"); return render(n ? `#it${n.id} .name` : "#addName"); }
+  if (a === "invite") { s.invites.unshift(Math.random().toString(36).slice(2, 10)); return render(".invite .btn"); }
+  if (a === "copy") { s.toast = "Link skopiowany"; render(); return setTimeout(() => { s.toast = ""; render(); }, 5000); }
+  if (a === "openInvite") return go("invite");
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && (s.sheet || s.dialog)) { s.sheet ? $("[data-a=closeSheet].btn").click() : $("#dlCancel").click(); } });
+document.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = e.target.dataset.form, d = new FormData(e.target);
+  if (f === "login") return go("lists");
+  if (f === "add") {
+    const name = String(d.get("name")).trim(), note = String(d.get("note")).trim();
+    if (!name) return;
+    const dup = s.items.find((i) => same(i.name, name));
+    if (dup) s.warn = dup.checkedBy
+      ? { text: `„${esc(dup.name)}” jest już na liście jako kupione. Odznacz tę pozycję w sekcji „Kupione”, żeby kupić ponownie.`, show: dup.id, value: name }
+      : { text: `„${esc(dup.name)}” jest już na liście. Pozycja nie została dodana.`, show: dup.id, value: name };
+    else { s.warn = null; s.items.unshift({ id: Date.now(), name, note, by: ME }); say(`Dodano ${name}`); }
+    return render("#addName");
+  }
+  if (f === "edit") {
+    const name = String(d.get("name")).trim(), note = String(d.get("note")).trim(), i = s.items.find((x) => x.id === s.sheet.id);
+    if (!name) { s.sheet.err = "Wpisz nazwę pozycji."; return render("#edN"); }
+    if (s.items.some((x) => x !== i && same(x.name, name))) { s.sheet = { id: i.id, name, err: `Na liście jest już pozycja „${esc(name)}”. Wybierz inną nazwę.` }; return render("#edN"); }
+    Object.assign(i, { name, note }); s.sheet = null; say("Zapisano"); return render(`#it${i.id} .name`);
+  }
+});
+$("#simRemote").onclick = () => { if (!s.online) return; const id = Date.now(); s.items.unshift({ id, name: "Ser żółty", note: "w plastrach", by: "Ania" }); s.flash = id; render(); setTimeout(() => { s.flash = null; render(); }, 1500); };
+$("#simCheck").onclick = () => { if (!s.online) return; const i = open()[0]; if (!i) return; i.checkedBy = "Kasia"; render(); };
+$("#simNet").onclick = () => { s.online = !s.online; render(); say(s.online ? "Połączenie przywrócone" : "Brak połączenia"); };
+$("#simReset").onclick = () => { s = init(); render("h1"); };
+const start = location.hash.slice(1); if (SCREENS[start]) s.screen = start;
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(!.env.example)",
+      "Read(!.env.sample)",
+      "Read(*.pem)",
+      "Read(*.key)",
+      "Read(*.p12)",
+      "Read(*.keystore)",
+      "Bash(git push *--force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean *)",
+      "Bash(git stash drop*)",
+      "Bash(git stash clear*)",
+      "Bash(git branch -D *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh release create *)",
+      "Bash(gh workflow run *)",
+      "Bash(fly deploy *)",
+      "Bash(flyctl deploy *)",
+      "Bash(fly secrets *)",
+      "Bash(flyctl secrets *)",
+      "Bash(fly apps *)",
+      "Bash(flyctl apps *)",
+      "Bash(fly machine *)",
+      "Bash(flyctl machine *)",
+      "Bash(fly scale *)",
+      "Bash(flyctl scale *)",
+      "Bash(fly releases *)",
+      "Bash(flyctl releases *)",
+      "Bash(neonctl *)",
+      "Bash(npx neonctl *)",
+      "Bash(drizzle-kit migrate *)",
+      "Bash(drizzle-kit push *)",
+      "Bash(pnpm drizzle-kit *)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(pnpm db:migrate *)",
+      "Bash(eas build *)",
+      "Bash(eas submit *)",
+      "Bash(eas update *)",
+      "Bash(npx eas-cli *)",
+      "Bash(gh secret *)",
+      "Bash(gh variable *)",
+      "Bash(gh repo edit *)",
+      "Bash(gh api *)"
+    ],
+    "allow": [
+      "Bash(node scripts/backlog-check.mjs *)",
+      "Bash(node scripts/design-check.mjs *)"
+    ]
+  }
+}

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kierunki wizualne — Wspólna lista zakupów</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #e9e9ec; color: #1c1c1f; }
+  .switcher { position: sticky; top: 0; z-index: 10; background: #1c1c1f; color: #fff; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .switcher strong { margin-right: 8px; }
+  .switcher button { font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #2c2c30; color: #fff; cursor: pointer; }
+  .switcher button[aria-pressed="true"] { background: #fff; color: #1c1c1f; border-color: #fff; }
+  .about { max-width: 1180px; margin: 16px auto 0; padding: 0 16px; font-size: 15px; line-height: 1.5; }
+  .about h1 { font-size: 20px; margin: 0 0 4px; }
+  .frames { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; padding: 16px; max-width: 1240px; margin: 0 auto; }
+  .frame { width: 360px; max-width: 100%; }
+  .frame > .label { font-size: 13px; color: #555; margin: 0 0 6px; font-weight: 600; }
+  .phone { height: 720px; border-radius: 28px; overflow: hidden; border: 8px solid #1c1c1f; display: flex; flex-direction: column; position: relative; }
+  .scroll { flex: 1; overflow-y: auto; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  button { font: inherit; color: inherit; }
+
+  /* ---------- A: Kartka ---------- */
+  .A .phone { background: #faf7f0; color: #2b2a26; font-family: Georgia, "Times New Roman", serif; }
+  .A .bar { padding: 18px 20px 10px; display: flex; align-items: baseline; gap: 10px; }
+  .A .bar h2 { font-size: 26px; margin: 0; font-weight: normal; flex: 1; }
+  .A .bar .ico { background: none; border: 0; font-size: 22px; min-width: 44px; min-height: 44px; cursor: pointer; color: #6b675d; }
+  .A .meta { font-family: system-ui, sans-serif; font-size: 13px; color: #6b675d; padding: 0 20px 8px; }
+  .A .ruled { margin: 0; padding: 0; list-style: none; background-image: linear-gradient(#e4ddcc 1px, transparent 1px); background-size: 100% 52px; }
+  .A .ruled li { min-height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid #e4ddcc; }
+  .A .chk { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #2f6b4f; background: none; flex: none; cursor: pointer; display: grid; place-items: center; color: #fff; font-size: 14px; }
+  .A .done .chk { background: #2f6b4f; }
+  .A .name { flex: 1; font-size: 18px; }
+  .A .name small { color: #6b675d; font-size: 15px; }
+  .A .done .name { text-decoration: line-through; color: #8a857a; }
+  .A .who { font-family: system-ui, sans-serif; font-size: 12px; color: #6b675d; }
+  .A .sec { font-family: system-ui, sans-serif; font-size: 13px; color: #6b675d; padding: 18px 20px 6px; display: flex; justify-content: space-between; }
+  .A .link { background: none; border: 0; color: #2f6b4f; text-decoration: underline; cursor: pointer; font-family: system-ui, sans-serif; font-size: 14px; min-height: 44px; }
+  .A .add { border-top: 2px solid #2b2a26; padding: 10px 14px 14px; background: #faf7f0; }
+  .A .add form { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; }
+  .A .add .warn { grid-column: 1 / -1; grid-row: 1; }
+  .A .add input { flex: 1; min-height: 48px; font: 18px Georgia, serif; border: 0; border-bottom: 1px solid #b9b2a2; background: transparent; padding: 0 6px; }
+  .A .add .note { font-size: 15px; min-height: 40px; }
+  .A .add .note { grid-column: 1; }
+  .A .add button { grid-column: 2; grid-row: 2 / span 2; align-self: center; min-height: 48px; padding: 0 16px; background: #2f6b4f; color: #fff; border: 0; border-radius: 4px; font-family: system-ui, sans-serif; cursor: pointer; }
+  .A .warn { font-family: system-ui, sans-serif; font-size: 14px; background: #fbe9d0; color: #6b3d00; padding: 8px 10px; margin-bottom: 8px; border-left: 3px solid #b06a00; }
+  .A .row-list { display: block; text-decoration: none; color: inherit; }
+  .A .row-list .t { font-size: 20px; }
+  .A .btn { display: block; margin: 20px; text-align: center; padding: 14px; border: 2px solid #2b2a26; background: none; font-size: 17px; cursor: pointer; width: calc(100% - 40px); }
+
+  /* ---------- B: Sklep (duże cele) ---------- */
+  .B .phone { background: #fff; color: #0f172a; }
+  .B .bar { background: #0b4fbf; color: #fff; padding: 14px 12px 14px 16px; display: flex; align-items: center; gap: 8px; }
+  .B .bar h2 { flex: 1; font-size: 20px; margin: 0; }
+  .B .bar .ico { background: rgba(255,255,255,.15); border: 0; color: #fff; min-width: 48px; min-height: 48px; border-radius: 10px; font-size: 20px; cursor: pointer; }
+  .B .add { background: #0b4fbf; padding: 0 12px 14px; }
+  .B .add form { display: flex; gap: 8px; flex-wrap: wrap; }
+  .B .add input { flex: 1 1 60%; min-height: 52px; font-size: 18px; border: 0; border-radius: 10px; padding: 0 14px; }
+  .B .add .note { flex-basis: 100%; min-height: 44px; font-size: 16px; order: 3; }
+  .B .add button { min-width: 64px; min-height: 52px; border: 0; border-radius: 10px; background: #ffd23f; color: #0f172a; font-size: 26px; font-weight: 700; cursor: pointer; }
+  .B .warn { flex-basis: 100%; order: 4; background: #fff4cc; color: #5c4300; border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+  .B ul { list-style: none; margin: 0; padding: 0; }
+  .B .item { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 8px 12px 8px 16px; border-bottom: 1px solid #e2e8f0; }
+  .B .av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; flex: none; }
+  .B .name { flex: 1; font-size: 19px; font-weight: 600; }
+  .B .name small { display: block; font-weight: 400; font-size: 15px; color: #475569; }
+  .B .chk { width: 52px; height: 52px; border-radius: 12px; border: 3px solid #0b4fbf; background: #fff; cursor: pointer; flex: none; font-size: 26px; color: #fff; }
+  .B .done .chk { background: #15803d; border-color: #15803d; }
+  .B .done .name { text-decoration: line-through; color: #64748b; }
+  .B .fold { width: 100%; text-align: left; background: #f1f5f9; border: 0; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; min-height: 56px; }
+  .B .danger { color: #b91c1c; background: none; border: 0; font-weight: 600; cursor: pointer; min-height: 48px; padding: 0 16px; }
+  .B .card { margin: 12px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 14px; display: block; cursor: pointer; }
+  .B .card .t { font-size: 19px; font-weight: 700; }
+  .B .card .s { color: #475569; font-size: 15px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .B .stack { display: flex; }
+  .B .stack .av { width: 28px; height: 28px; font-size: 11px; margin-left: -6px; border: 2px solid #fff; }
+  .B .primary { margin: 12px; width: calc(100% - 24px); min-height: 56px; border: 0; border-radius: 12px; background: #0b4fbf; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+  .B .h { padding: 18px 16px 6px; font-size: 14px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; }
+  .B .linkbox { margin: 0 12px 12px; padding: 12px; background: #f1f5f9; border-radius: 12px; font-size: 14px; }
+  .B .linkbox code { display: block; font-size: 15px; margin: 6px 0; word-break: break-all; }
+  .B .linkbox .row { display: flex; gap: 8px; }
+  .B .linkbox button { min-height: 48px; flex: 1; border-radius: 10px; border: 2px solid #0b4fbf; background: #fff; color: #0b4fbf; font-weight: 700; cursor: pointer; }
+
+  /* ---------- C: Dwa tryby ---------- */
+  .C .phone { background: #f3f4f6; color: #111827; }
+  .C .bar { padding: 16px 16px 8px; display: flex; align-items: center; gap: 8px; }
+  .C .bar h2 { flex: 1; margin: 0; font-size: 22px; }
+  .C .bar .ico { background: #fff; border: 1px solid #d1d5db; min-width: 44px; min-height: 44px; border-radius: 50%; cursor: pointer; }
+  .C .seg { display: flex; margin: 4px 16px 12px; background: #e5e7eb; border-radius: 12px; padding: 4px; }
+  .C .seg button { flex: 1; min-height: 44px; border: 0; border-radius: 9px; background: none; font-weight: 600; cursor: pointer; color: #374151; }
+  .C .seg button[aria-pressed="true"] { background: #fff; color: #0f766e; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .C .progress { margin: 0 16px 12px; font-size: 14px; color: #374151; }
+  .C .progress .track { height: 8px; background: #d1d5db; border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  .C .progress .fill { height: 100%; background: #0f766e; }
+  .C .card { background: #fff; margin: 0 16px 8px; border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .C .item { display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 14px; min-height: 60px; }
+  .C .chk { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #0f766e; background: none; flex: none; cursor: pointer; color: #fff; font-size: 16px; }
+  .C .done .chk { background: #0f766e; }
+  .C .name { flex: 1; font-size: 17px; }
+  .C .name small { display: block; color: #4b5563; font-size: 14px; }
+  .C .name .who { display: block; color: #4b5563; font-size: 12px; }
+  .C .done .name { color: #6b7280; text-decoration: line-through; }
+  .C .tools button { background: none; border: 0; min-width: 44px; min-height: 44px; cursor: pointer; color: #4b5563; font-size: 18px; }
+  .C .shop .item { min-height: 76px; font-size: 20px; cursor: pointer; width: 100%; text-align: left; border: 0; background: none; }
+  .C .shop .chk { width: 40px; height: 40px; border-radius: 50%; }
+  .C .shop .name { font-size: 21px; font-weight: 600; }
+  .C .add { margin: 0 16px 12px; background: #fff; border-radius: 14px; padding: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .C .add form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .C .add input { min-height: 44px; border: 1px solid #d1d5db; border-radius: 10px; padding: 0 12px; font-size: 16px; }
+  .C .add .note { grid-column: 1; }
+  .C .add button { grid-row: 1 / span 2; grid-column: 2; border: 0; border-radius: 10px; background: #0f766e; color: #fff; padding: 0 16px; font-weight: 600; cursor: pointer; }
+  .C .warn { margin-top: 8px; background: #fef3c7; color: #78350f; border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+  .C .h { padding: 12px 20px 6px; font-size: 13px; color: #4b5563; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .C .h button { background: none; border: 0; color: #0f766e; font-weight: 600; cursor: pointer; min-height: 44px; }
+  .C .lcard { display: block; background: #fff; margin: 0 16px 10px; padding: 16px; border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .C .lcard .t { font-weight: 700; font-size: 18px; }
+  .C .lcard .s { font-size: 14px; color: #4b5563; margin: 4px 0 10px; }
+  .C .fab { position: absolute; right: 16px; bottom: 16px; min-height: 56px; padding: 0 20px; border-radius: 28px; border: 0; background: #0f766e; color: #fff; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.25); cursor: pointer; }
+  .C .person { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 60px; }
+  .C .person + .person { border-top: 1px solid #f3f4f6; }
+  .C .badge { font-size: 12px; background: #ccfbf1; color: #115e59; padding: 2px 8px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="switcher" role="group" aria-label="Kierunek">
+  <strong>Kierunek:</strong>
+  <button data-v="A">A · Kartka</button>
+  <button data-v="B">B · Sklep</button>
+  <button data-v="C">C · Dwa tryby</button>
+</div>
+<div class="about" id="about"></div>
+<div class="frames" id="frames"></div>
+
+<script>
+const ABOUT = {
+  A: ["A · Kartka", "Spokojna, „papierowa” lista na liniach. Jedna kolumna tekstu, minimum ozdobników, pole dopisywania na dole ekranu (pod kciukiem). Odhaczone schodzą na dół, przekreślone. Kto dodał — drobnym tekstem po prawej."],
+  B: ["B · Sklep", "Narzędzie do używania w biegu: mocny kolor, bardzo duże pola dotyku, checkbox po prawej pod kciukiem, pole dodawania na górze. Odhaczone zwinięte w sekcji „Kupione”. Kto dodał — kolorowe inicjały."],
+  C: ["C · Dwa tryby", "Karty i przełącznik „Planuję / W sklepie”. Planowanie pokazuje edycję i usuwanie; tryb sklepu ukrywa narzędzia, powiększa pozycje i pokazuje postęp. Lista list jako karty z paskiem postępu."],
+};
+const COLORS = { Tomek: "#0b4fbf", Ania: "#b4235a", Kasia: "#0f766e" };
+const state = {
+  v: "A", mode: "plan", foldOpen: false, warn: "",
+  items: [
+    { id: 1, name: "Mleko", note: "2 l, 3,2%", by: "Ania" },
+    { id: 2, name: "Chleb żytni", note: "", by: "Tomek" },
+    { id: 3, name: "Jajka", note: "10 szt., z wolnego wybiegu", by: "Ania" },
+    { id: 4, name: "Pomidory", note: "ok. 1 kg", by: "Kasia" },
+    { id: 5, name: "Masło", note: "", by: "Tomek" },
+    { id: 6, name: "Papier toaletowy", note: "8 rolek", by: "Kasia" },
+    { id: 7, name: "Kawa ziarnista", note: "ta co zwykle", by: "Tomek" },
+    { id: 8, name: "Banany", note: "", by: "Ania", checkedBy: "Tomek" },
+    { id: 9, name: "Jogurt naturalny", note: "4 szt.", by: "Tomek", checkedBy: "Ania" },
+  ],
+};
+const LISTS = [
+  { name: "Zakupy na tydzień", own: true, people: ["Tomek", "Ania", "Kasia"], open: 7, total: 9 },
+  { name: "Biedronka — sobota", own: false, owner: "Ania", people: ["Ania", "Tomek"], open: 4, total: 4 },
+  { name: "Urodziny Zosi", own: true, people: ["Tomek"], open: 12, total: 15 },
+];
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const open = () => state.items.filter((i) => !i.checkedBy);
+const done = () => state.items.filter((i) => i.checkedBy);
+const av = (n) => `<span class="av" style="background:${COLORS[n]}" aria-hidden="true">${n[0]}</span>`;
+const addForm = (btn) => `<form data-action="add">
+    <input name="name" aria-label="Nazwa pozycji" placeholder="${state.v === "A" ? "Dopisz…" : "Co kupić?"}" maxlength="100" autocomplete="off">
+    <input name="note" class="note" aria-label="Ilość lub notatka (opcjonalnie)" placeholder="ilość / notatka (opcjonalnie)" maxlength="200">
+    <button aria-label="Dodaj pozycję">${btn}</button>
+    ${state.warn ? `<div class="warn" role="alert">${state.warn}</div>` : ""}
+  </form>`;
+
+const V = {
+  A: {
+    lists: () => `<div class="bar"><h2>Moje listy</h2><button class="ico" aria-label="Konto">☰</button></div>
+      <div class="scroll"><ul class="ruled">${LISTS.map((l) => `<li><a class="row-list" href="#"><span class="t">${l.name}</span><div class="who">${l.own ? (l.people.length > 1 ? `udostępniona · ${l.people.length} osoby` : "tylko Ty") : `od: ${l.owner}`} · ${l.open} do kupienia</div></a></li>`).join("")}</ul>
+      <button class="btn">+ Nowa lista</button></div>`,
+    list: () => `<div class="bar"><h2>Zakupy na tydzień</h2><button class="ico" aria-label="Uczestnicy">👥</button><button class="ico" aria-label="Więcej">⋯</button></div>
+      <div class="meta">Tomek, Ania, Kasia · ${open().length} do kupienia</div>
+      <div class="scroll"><ul class="ruled">${open().map(itemA).join("")}</ul>
+      <div class="sec"><span>Kupione (${done().length})</span><button class="link" data-action="clear">Usuń odhaczone</button></div>
+      <ul class="ruled">${done().map(itemA).join("")}</ul></div>
+      <div class="add">${addForm("Dopisz")}</div>`,
+    people: () => `<div class="bar"><button class="ico" aria-label="Wstecz">←</button><h2>Uczestnicy</h2></div>
+      <div class="scroll"><ul class="ruled">
+        <li><span class="name">Tomek <small>— właściciel (Ty)</small></span></li>
+        <li><span class="name">Ania <small>ania.nowak@gmail.com</small></span><button class="link">Usuń</button></li>
+        <li><span class="name">Kasia <small>kasia.w@wp.pl</small></span><button class="link">Usuń</button></li></ul>
+        <div class="sec"><span>Zaproszenia (1 aktywne)</span></div>
+        <ul class="ruled"><li><span class="name"><small>Link z 24.10 · ważny do 31.10</small></span><button class="link">Unieważnij</button></li></ul>
+        <button class="btn">Utwórz link zaproszenia</button></div>`,
+  },
+  B: {
+    lists: () => `<div class="bar"><h2>Moje listy</h2><button class="ico" aria-label="Konto">👤</button></div>
+      <div class="scroll">${LISTS.map((l) => `<a class="card"><div class="t">${l.name}</div><div class="s"><span>${l.own ? "" : `od ${l.owner} · `}${l.open} do kupienia</span><span class="stack">${l.people.map(av).join("")}</span></div></a>`).join("")}
+      <button class="primary">+ Nowa lista</button></div>`,
+    list: () => `<div class="bar"><button class="ico" aria-label="Wstecz">←</button><h2>Zakupy na tydzień</h2><button class="ico" aria-label="Uczestnicy">👥</button><button class="ico" aria-label="Więcej">⋮</button></div>
+      <div class="add">${addForm("+")}</div>
+      <div class="scroll"><ul>${open().map(itemB).join("")}</ul>
+      <button class="fold" data-action="fold" aria-expanded="${state.foldOpen}"><span>Kupione (${done().length})</span><span>${state.foldOpen ? "▾" : "▸"}</span></button>
+      ${state.foldOpen ? `<ul>${done().map(itemB).join("")}</ul><button class="danger" data-action="clear">Usuń wszystkie kupione</button>` : ""}</div>`,
+    people: () => `<div class="bar"><button class="ico" aria-label="Wstecz">←</button><h2>Uczestnicy</h2></div>
+      <div class="scroll"><div class="h">Na liście (3 z 20)</div><ul>
+        <li class="item">${av("Tomek")}<span class="name">Tomek<small>właściciel · Ty</small></span></li>
+        <li class="item">${av("Ania")}<span class="name">Ania<small>ania.nowak@gmail.com</small></span><button class="danger">Usuń</button></li>
+        <li class="item">${av("Kasia")}<span class="name">Kasia<small>kasia.w@wp.pl</small></span><button class="danger">Usuń</button></li></ul>
+        <div class="h">Zaproś</div>
+        <div class="linkbox">Link jednorazowy, ważny do 31.10:<code>lista.app/z/7Kq2-mP9x</code><div class="row"><button>Kopiuj</button><button>Unieważnij</button></div></div>
+        <button class="primary">Utwórz nowy link</button></div>`,
+  },
+  C: {
+    lists: () => `<div class="bar"><h2>Moje listy</h2><button class="ico" aria-label="Konto">👤</button></div>
+      <div class="scroll">${LISTS.map((l) => `<a class="lcard"><div class="t">${l.name}</div><div class="s">${l.own ? (l.people.length > 1 ? `Twoja · ${l.people.join(", ")}` : "Twoja · prywatna") : `Udostępniona przez ${l.owner}`}</div>
+        <div class="progress" style="margin:0">${l.total - l.open} z ${l.total} kupione<div class="track"><div class="fill" style="width:${((l.total - l.open) / l.total) * 100}%"></div></div></div></a>`).join("")}</div>
+      <button class="fab">+ Nowa lista</button>`,
+    list: () => {
+      const shop = state.mode === "shop", n = state.items.length, d = done().length;
+      return `<div class="bar"><h2>Zakupy na tydzień</h2><button class="ico" aria-label="Uczestnicy">👥</button><button class="ico" aria-label="Więcej">⋯</button></div>
+      <div class="seg" role="group" aria-label="Tryb"><button data-action="mode" data-m="plan" aria-pressed="${!shop}">Planuję</button><button data-action="mode" data-m="shop" aria-pressed="${shop}">W sklepie</button></div>
+      <div class="scroll ${shop ? "shop" : ""}">
+      ${shop ? `<div class="progress">${d} z ${n} w koszyku<div class="track"><div class="fill" style="width:${(d / n) * 100}%"></div></div></div>` : `<div class="add">${addForm("Dodaj")}</div>`}
+      <div class="card">${open().map(itemC).join("")}</div>
+      <div class="h"><span>Kupione (${d})</span>${shop ? "" : `<button data-action="clear">Usuń kupione</button>`}</div>
+      <div class="card">${done().map(itemC).join("")}</div></div>`;
+    },
+    people: () => `<div class="bar"><button class="ico" aria-label="Wstecz">←</button><h2>Uczestnicy</h2></div>
+      <div class="scroll"><div class="h">Osoby (3 z 20)</div><div class="card">
+        <div class="person"><span class="name">Tomek</span><span class="badge">właściciel</span></div>
+        <div class="person"><span class="name">Ania<small>ania.nowak@gmail.com</small></span><span class="tools"><button aria-label="Usuń Anię">✕</button></span></div>
+        <div class="person"><span class="name">Kasia<small>kasia.w@wp.pl</small></span><span class="tools"><button aria-label="Usuń Kasię">✕</button></span></div></div>
+        <div class="h">Aktywne zaproszenia</div><div class="card"><div class="person"><span class="name">Link z 24.10<small>ważny do 31.10 · niewykorzystany</small></span><span class="tools"><button aria-label="Unieważnij">⊘</button></span></div></div></div>
+        <button class="fab">Zaproś osobę</button>`,
+  },
+};
+function itemA(i) {
+  return `<li class="${i.checkedBy ? "done" : ""}"><button class="chk" data-action="toggle" data-id="${i.id}" aria-pressed="${!!i.checkedBy}" aria-label="${i.checkedBy ? "Odznacz" : "Odhacz"} ${esc(i.name)}">${i.checkedBy ? "✓" : ""}</button>
+    <span class="name">${esc(i.name)}${i.note ? ` <small>— ${esc(i.note)}</small>` : ""}</span><span class="who">${i.checkedBy ? "✓ " + i.checkedBy : i.by}</span></li>`;
+}
+function itemB(i) {
+  return `<li class="item ${i.checkedBy ? "done" : ""}">${av(i.checkedBy || i.by)}<span class="name">${esc(i.name)}<small>${i.note ? esc(i.note) + " · " : ""}${i.checkedBy ? "kupił(a) " + i.checkedBy : "dodał(a) " + i.by}</small></span>
+    <button class="chk" data-action="toggle" data-id="${i.id}" aria-pressed="${!!i.checkedBy}" aria-label="${i.checkedBy ? "Odznacz" : "Odhacz"} ${esc(i.name)}">${i.checkedBy ? "✓" : ""}</button></li>`;
+}
+function itemC(i) {
+  const label = `${i.checkedBy ? "Odznacz" : "Odhacz"} ${esc(i.name)}`;
+  const body = `<span class="chk" aria-hidden="true">${i.checkedBy ? "✓" : ""}</span><span class="name">${esc(i.name)}${i.note ? `<small>${esc(i.note)}</small>` : ""}<span class="who">${i.checkedBy ? "kupił(a) " + i.checkedBy : "dodał(a) " + i.by}</span></span>`;
+  if (state.mode === "shop") return `<button class="item ${i.checkedBy ? "done" : ""}" data-action="toggle" data-id="${i.id}" aria-pressed="${!!i.checkedBy}" aria-label="${label}">${body}</button>`;
+  return `<div class="item ${i.checkedBy ? "done" : ""}"><button class="chk" data-action="toggle" data-id="${i.id}" aria-pressed="${!!i.checkedBy}" aria-label="${label}">${i.checkedBy ? "✓" : ""}</button>${body.replace(/^<span class="chk"[^>]*>.*?<\/span>/, "")}<span class="tools"><button aria-label="Edytuj ${esc(i.name)}">✎</button><button aria-label="Usuń ${esc(i.name)}">🗑</button></span></div>`;
+}
+
+function render() {
+  const v = V[state.v];
+  document.querySelectorAll(".switcher button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === state.v));
+  document.getElementById("about").innerHTML = `<h1>${ABOUT[state.v][0]}</h1><p>${ABOUT[state.v][1]} Odhaczanie, „usuń odhaczone” i blokada duplikatu działają (spróbuj dopisać „mleko” albo „banany”).</p>`;
+  document.getElementById("frames").className = "frames " + state.v;
+  document.getElementById("frames").innerHTML = [["SC-05 Moje listy", v.lists], ["SC-06 Lista", v.list], ["SC-07 Uczestnicy i zaproszenia", v.people]]
+    .map(([t, f]) => `<section class="frame"><p class="label">${t}</p><div class="phone">${f()}</div></section>`).join("");
+}
+document.addEventListener("click", (e) => {
+  const v = e.target.closest(".switcher button");
+  if (v) { state.v = v.dataset.v; state.warn = ""; history.replaceState(null, "", "?variant=" + state.v); return render(); }
+  const a = e.target.closest("[data-action]");
+  if (!a || a.tagName === "FORM") return;
+  const act = a.dataset.action;
+  if (act === "toggle") { const i = state.items.find((x) => x.id == a.dataset.id); i.checkedBy = i.checkedBy ? undefined : "Tomek"; }
+  if (act === "clear") state.items = open();
+  if (act === "fold") state.foldOpen = !state.foldOpen;
+  if (act === "mode") state.mode = a.dataset.m;
+  state.warn = "";
+  render();
+});
+document.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target), name = String(f.get("name")).trim(), note = String(f.get("note")).trim();
+  if (!name) return;
+  const dup = state.items.find((i) => i.name.toLowerCase() === name.toLowerCase());
+  if (dup) state.warn = dup.checkedBy
+    ? `„${esc(dup.name)}” jest już na liście jako kupione. Odznacz tę pozycję, żeby kupić ponownie.`
+    : `„${esc(dup.name)}” jest już na liście. Pozycja nie została dodana.`;
+  else { state.warn = ""; state.items.unshift({ id: Date.now(), name, note, by: "Tomek" }); }
+  render();
+  const input = document.querySelector('#frames input[name="name"]');
+  if (input) { if (dup) input.value = name; input.focus(); }
+});
+const q = new URLSearchParams(location.search).get("variant");
+if (V[q]) state.v = q;
+render();
+</script>
+</body>
+</html>
