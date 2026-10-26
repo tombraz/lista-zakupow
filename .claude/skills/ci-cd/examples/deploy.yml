@@ -1,0 +1,111 @@
+# EXAMPLE ONLY: build once, deploy to staging automatically, production after approval.
+# Provider-specific work lives in scripts/ (build-artifact.sh, migrate.sh, deploy.sh, smoke.sh, rollback.sh).
+# Action SHAs were the latest releases when this example was written (2026-10-23); re-check before use.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - id: version
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "version=${SHA}" >> "$GITHUB_OUTPUT"
+      - name: Build and publish artifacts once (e.g. container image tagged with the commit SHA)
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/build-artifact.sh "$VERSION"
+
+  staging:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write # OIDC: short-lived credentials, if the provider supports it
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Migrate database (backward-compatible migrations only)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: ./scripts/migrate.sh staging
+      - name: Deploy
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: ./scripts/deploy.sh staging "$VERSION"
+      - name: Smoke test
+        run: ./scripts/smoke.sh staging
+
+  dast:
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Passive baseline scan of staging. Never point active scans at production.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # .zap/rules.tsv sets each ZAP rule to IGNORE, WARN or FAIL (tab-separated: rule id, action, note).
+      # This is the blocking threshold from pipeline.md; without it, any alert fails the job.
+      - uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: ${{ vars.STAGING_URL }}
+          rules_file_name: .zap/rules.tsv
+          allow_issue_writing: false
+          fail_action: true
+
+  production:
+    needs: [build, staging, dast]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production # requires reviewer approval (configure in repository settings)
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Backup database before migrating
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: ./scripts/backup.sh production
+      - name: Migrate database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: ./scripts/migrate.sh production
+      - name: Deploy
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: ./scripts/deploy.sh production "$VERSION"
+      - name: Smoke test
+        id: smoke
+        run: ./scripts/smoke.sh production
+      - name: Roll back on failed smoke test
+        if: failure() && steps.smoke.conclusion == 'failure'
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: ./scripts/rollback.sh production
