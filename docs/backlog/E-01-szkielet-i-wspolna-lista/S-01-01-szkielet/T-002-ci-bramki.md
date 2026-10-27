@@ -151,7 +151,7 @@ Testy 3–6 to „real run” (rung 3); nie mają fazy red przed workflow, któr
 
 **Do uwagi QA**
 
-- CodeQL zgłosił alert high `js/missing-rate-limiting` w `apps/api/src/modules/health/http/routes.ts:9` (`/health/ready` dotyka bazy bez limitu; kod T-001). Wymagany check `codeql` (job) przechodzi; czerwony jest tylko informacyjny check „CodeQL” z GitHub Advanced Security na PR #1. Poza zakresem T-002 — decyzja właściciela (limit przy MC-04 albo odrzucenie alertu z uzasadnieniem).
+- CodeQL zgłosił alert high `js/missing-rate-limiting` w `apps/api/src/modules/health/http/routes.ts:9` (`/health/ready` dotyka bazy bez limitu; kod T-001). Wymagany check `codeql` (job) przechodzi; czerwony jest tylko informacyjny check „CodeQL” z GitHub Advanced Security na PR #1. Poza zakresem T-002. Decyzja właściciela (2026-10-27): limit dodaje T-004 razem z limitami MC-04 (kryterium SEC8, test #9 w planie TDD T-004); alert zostaje otwarty do tego czasu.
 - PR-y testowe #2–#7 zamknięte bez merge'a, wszystkie gałęzie `ci-test/T-002-*` usunięte (lokalnie i zdalnie).
 - Nie dodano jobu „build obrazu (bez push)” z tabeli warstwy backend — `Dockerfile` powstaje w T-010.
 
