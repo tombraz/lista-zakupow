@@ -3,7 +3,7 @@ id: T-001
 title: "Walking skeleton: API, baza i web lokalnie"
 epic: E-01
 story: S-01-01
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []         # inline list only, e.g. [T-001, T-004]; only real blockers
 size: M                # S | M (L must be split)
@@ -45,7 +45,7 @@ Each criterion must fail before the work and pass after it.
 - [x] AC4: Given strona web z podstawionym API (MSW), when API zwraca stan „gotowe” / „baza niedostępna” / błąd sieci, then strona pokazuje odpowiedni polski tekst. — verified by: test komponentu (RTL, `getByRole`)
 - [x] AC5: Given api uruchomione z buildem web, when przeglądarka otworzy stronę główną i dowolną ścieżkę spoza `/api` i `/health`, then dostaje SPA (fallback na `index.html`); skan axe nie znajduje naruszeń; `lang="pl"`. — verified by: E2E Playwright + `@axe-core/playwright` (viewport 390 × 844 i 1280 × 800)
 - [x] AC6: Given repozytorium, when uruchomię format check, lint (`--max-warnings 0`), type check, jscpd, dependency-cruiser i `design-check --scan`, then wszystkie przechodzą, a progi są jak w `CODING_STANDARDS.md` (reguły zakazu `dangerouslySetInnerHTML`, `sql.raw`, `eval` włączone). — verified by: komendy z przewodników + celowe naruszenie każdej reguły daje błąd (ręcznie, opisane w Evidence)
-- [ ] AC7: Given `docs/architecture/layers/{db,backend,web,infra}.md`, when nowa osoba wykona komendy z sekcji „Komendy”, then każda działa na Windows (PowerShell / Git Bash) i Linux; sekcje „Gdzie jest kod” wskazują istniejące ścieżki. — verified by: ręczne przejście przez QA
+- [x] AC7: Given `docs/architecture/layers/{db,backend,web,infra}.md`, when nowa osoba wykona komendy z sekcji „Komendy”, then każda działa na Windows (PowerShell / Git Bash) i Linux; sekcje „Gdzie jest kod” wskazują istniejące ścieżki. — verified by: ręczne przejście przez QA
 - [x] AC8: Given `tokens.json`, when uruchomię generowanie tokenów, then powstają `tokens.css` i `tokens.ts`, a strona web używa wyłącznie zmiennych z `tokens.css`. — verified by: test unit generatora (porównanie kilku wartości) + `design-check`
 - [x] SEC1 (TH-08, TH-15, TH-24): Given dowolna odpowiedź API (także pliki web i `index.html`), when sprawdzę nagłówki, then są `Content-Security-Policy` bez `unsafe-inline` dla skryptów, `Strict-Transport-Security`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `frame-ancestors 'none'`; CORS wyłączony (brak `Access-Control-Allow-Origin` dla obcego `Origin`). — verified by: test integracyjny `security-headers.test`
 - [x] SEC2 (TH-21): Given żądanie z nagłówkami `authorization` i `cookie` oraz polem `password` w treści, when API je zaloguje, then w logu nie ma ich wartości (redakcja pino), a każdy wpis ma `requestId`. — verified by: test integracyjny z przechwyconym strumieniem logów
@@ -229,3 +229,32 @@ Eksploracja bez uwag: path traversal (`/..%2f..%2fpackage.json`, `%2e%2e`, `..\`
 
 1. Naprawić #1 we wszystkich czterech przewodnikach warstw (tylko dokumentacja; kod bez zmian).
 2. #2 i #3 — poprawić przy okazji (minor, nie blokują same w sobie).
+
+## QA round 2 (2026-10-27)
+
+Verdict: pass
+
+Środowisko: Windows 11, Node 24.14.1, pnpm 12.11.2, Docker 29.8.2; świeży klon `05f6434` w katalogu tymczasowym. Zakres rundy: poprawki z `05f6434` (diff przejrzany: 4 przewodniki warstw, `security-headers.ts` + asercja, `CODING_STANDARDS.md`) oraz pełne odtworzenie.
+
+### Odtworzenie
+
+- Świeży klon: `pnpm install --frozen-lockfile`, `pnpm check` exit 0 (Prettier OK, ESLint 0, tsc, jscpd 0 klonów, dependency-cruiser 0 naruszeń / 73 moduły, design-check 0 kolorów na sztywno / 35 kontrastów OK, backlog-check OK, Vitest **7 plików / 24 testy**), `pnpm build` exit 0, `pnpm test:e2e` **4 passed** (1 worker). `git status` w klonie czysty po install / build / testach.
+- Spot-check: usunięty `frameguard` → `security-headers.test` 3 czerwone (`expected 'SAMEORIGIN' to be 'DENY'`) → przywrócone, `git status` czysty.
+- Testy nieosłabione: jedyna zmiana w plikach testów od `bfaf0a7` to dodana asercja `x-frame-options`.
+
+### Kryteria akceptacji
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1–AC6, AC8 | pass | jak w rundzie 1; ponownie zielone `pnpm check`, `pnpm build`, `pnpm test:e2e`; kod poza `security-headers.ts` bez zmian |
+| AC7 | pass | wszystkie 4 przewodniki zaczynają się od `---`, brak placeholdera, tabele „Komendy” pełne; wszystkie ścieżki z „Gdzie jest kod” istnieją (38 sprawdzonych); komendy z tabel uruchomione w PowerShell: `db:migrate`, `vitest run` pojedynczego pliku api i web, `--project api` (18), `--project web --project tokens` (6), `typecheck`, `design-check`, build tokenów / api / web, `start`; `services:up` w głównym repo OK. Linux: treść komend identyczna z rundą 1 (wiersze tylko przeniesione), gdzie przeszły w `node:24.14.1` |
+| SEC1 | pass | test + na żywo `pnpm start`: CSP z `frame-ancestors 'none'`, **`X-Frame-Options: DENY`**, HSTS, `no-referrer`, `nosniff`; obcy `Origin` bez `Access-Control-*` |
+| SEC2, SEC3 | pass | testy zielone; kod bez zmian od rundy 1 |
+
+### Ustalenia
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | infra / AC7 | `pnpm services:up` w drugim klonie na tej samej maszynie pada (`Bind for 0.0.0.0:1025 failed: port is already allocated`), gdy działa stos Compose z innego katalogu — porty hosta są stałe. Nie dotyczy nowej osoby z jednym klonem. | `docker ps`: `lista-zakupow-mailpit-1` na 1025 | Ewentualnie wpis w „Pułapkach” infra. |
+| 2 | note | infra | Dwa kontenery Testcontainers z 2026-10-26 (`boring_einstein`, `laughing_rubin`) nadal działają (13 h) — to samo co ustalenie #7 rundy 1; przebiegi tej rundy nie zostawiły nowych. | `docker ps --filter label=org.testcontainers=true` | Do obserwacji w T-002. |
+| 3 | note | — | Ustalenia #4–#6 i #8 z rundy 1 (pośrednie gryzienie testu 3b, format 413, `req.url` w logu → T-008, tag obrazu w trzech miejscach) pozostają aktualne; zostały świadomie odłożone. | runda 1 | Nowe taski tylko za zgodą właściciela. |
