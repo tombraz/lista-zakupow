@@ -3,7 +3,7 @@ id: T-002
 title: CI z bramkami jakości i bezpieczeństwa
 epic: E-01
 story: S-01-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001]    # inline list only, e.g. [T-001, T-004]; only real blockers
 size: M                # S | M (L must be split)
@@ -157,3 +157,50 @@ Testy 3–6 to „real run” (rung 3); nie mają fazy red przed workflow, któr
 
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-27)
+
+Verdict: pass
+
+Zakres: commity `16f0174`, `3ea2cb4`, `a9bbf49`, `83840fc`, `4d54a8f`, `af3fab1`, `625caf8` (diff `fb80790..625caf8`).
+
+**Reprodukcja (lokalnie, Windows + Docker Desktop):** `pnpm install --frozen-lockfile` bez zmian w lockfile; `pnpm check` zielony (format, lint, typy, jscpd, dependency-cruiser, design-check 0 błędów, backlog-check, 24/24 testy); `pnpm test:e2e` 4/4; `pnpm audit --audit-level high` exit 0 (1 moderate); `bash scripts/test/protect-main.test.sh` 2× `ok`; actionlint `1.7.12@sha256:b1934ee5…` exit 0.
+
+**Spot-checki (wszystkie przywrócone, `git status` czysty):**
+
+- `enforce_admins:false` w `scripts/protect-main.sh` → test 2 `FAIL dry-run wypisuje komendy gh` z diffem, exit 1.
+- kopia `ci.yml` z `run: echo "${{ github.event.pull_request.title }}"` → actionlint `[expression] … potentially untrusted`, exit 1.
+- `<img src="/x.png" />` w `StartScreen.tsx` → E2E czerwone, axe `image-alt` we wszystkich 4 testach (bramka a11y z QA planu gryzie).
+
+**Przebiegi GitHub (sprawdzone przez `gh run view`, nie z Evidence):** 40523300955 (api) — wszystkie joby warstw `success`, `infra` skipped, `ci-ok` success; 40523320866 (broken test) — `tests` failure → `ci-ok` failure; 40523340926 (docs) — tylko `changes` + `always`, reszta skipped, `ci-ok` success; 40523373127 — krok „Skan zależności”: `high │ Command Injection in lodash` → `ci-ok` failure; 40523356573 — `static`: `sql.raw jest zakazany (TH-20)`, `react/no-danger`, `dangerouslySetInnerHTML jest zakazany (TH-15)` → `ci-ok` failure; 40526979533 (PR #7 do `main`) — `ci-ok` failure. PR #1 (bieżący head epiku): `ci-ok` i `codeql` pass. PR-y #2–#7 zamknięte, zero zdalnych gałęzi `ci-test/*`.
+
+**Ustawienia repo (odczyt API):** ochrona `main`: checki `ci-ok` i `codeql` przypięte do `app_id` 15368 (GitHub Actions), `enforce_admins: true`, PR wymagany, force push i usuwanie wyłączone; secret scanning i push protection `enabled`; private vulnerability reporting `enabled: true`; CodeQL default setup `not-configured`.
+
+**Kryteria**
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | actionlint lokalnie (zielony + spot-check czerwony); job `infra` success w 40521770039 i 40526979533 |
+| AC2 | pass | run 40523300955: static (lint, typy, jakość), tests (unit + integracja Testcontainers, artefakt `coverage`), migrations, build, e2e-web (axe), `ci-ok` |
+| AC3 | pass | run 40523320866 i 40526979533 |
+| AC4 | pass | run 40523340926 |
+| AC5 | pass | job `always` w `ci.yml` bez `needs`/`if` (uruchamia się zawsze); obecny i `success` we wszystkich sprawdzonych przebiegach |
+| AC6 | pass | test 2 + spot-check; odczyt API ochrony `main`; zrzut `demo2-merge-zablokowany.png` |
+| SEC1 | pass | run 40523373127, log kroku audytu |
+| SEC2 | pass | przegląd: 6 akcji przypiętych do SHA + obraz actionlint digestem; `permissions: contents: read` na górze obu workflow, `pull-requests: read` tylko `changes`, `security-events: write` tylko `codeql`; brak `pull_request_target`, brak `secrets.*`; `dependabot.yml` npm + github-actions (`/`, `/.github/actions/*`), weekly, grupy |
+| SEC3 | pass (zrzut właściciela) | ustawienia potwierdzone przez API; samego odrzuconego pushu nie powtarzałem (wymaga utworzenia prawdziwego tokenu przez właściciela) — dowód: zrzuty `sec3-push-odrzucony-*.png` z komunikatem `GH013 … Push cannot contain secrets` |
+| SEC4 | pass | run 40523356573 (lint); `security.yml`: `pull_request`, push `main`, `cron: "17 3 * * 1"`, check `codeql` pass na PR #1 |
+
+**Ustalenia**
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | `pipeline.md` („Joby CI per warstwa”, db) nadal opisuje service container Postgres i „build obrazu (bez push)” w backendzie; implementacja używa `docker compose` (decyzja właściciela) i build obrazu jest w T-010. Evidence odkłada aktualizację „do przeglądu pipeline'u”, bez taska. | `docs/architecture/pipeline.md:50-51` vs `ci.yml` job `migrations` | Poprawić wiersz db w `pipeline.md` teraz albo dopisać to do notatek T-010. |
+| 2 | minor | docs | `tech-stack.md` „Git workflow”: „required check ci-ok” — wymagany jest też `codeql`. `layers/infra.md` „Planowane” nadal wymienia `SECURITY.md`, który już istnieje. | `docs/architecture/tech-stack.md` (Main branch), `layers/infra.md:31` | `required checks ci-ok, codeql`; usunąć `SECURITY.md` z „Planowane”. |
+| 3 | note | struktura | `apps/web/e2e/server.ts` importuje `apps/api/test/database-constants.ts` (kod testowy innej aplikacji), a ten parsuje `docker-compose.yml` wyrażeniem regularnym (pierwszy obraz `postgres:`). Działa i daje jedno źródło tagu; dependency-cruiser nie protestuje. | diff `16f0174` | Przy kolejnej zmianie można przenieść do wspólnego modułu testowego (np. `packages/test-utils`), jeśli dojdzie trzeci konsument. |
+| 4 | note | security | Alert CodeQL `js/missing-rate-limiting` (`/health/ready`) otwarty; informacyjny check „CodeQL” (GHAS) jest czerwony na PR #1, wymagany `codeql` zielony. Przekazane do T-004 (SEC8) decyzją właściciela. | `gh pr checks 1` | Zamknąć alert w T-004. |
+| 5 | note | security | „Dependabot security updates” wyłączone (alerty włączone, wersjonowanie co tydzień przez `dependabot.yml`). Kryteria tego nie wymagają. | `security_and_analysis.dependabot_security_updates: disabled` | Opcjonalnie włączyć w `protect-main.sh` — szybsze PR-y dla podatności. |
+| 6 | note | QA plan | PR z forka niesprawdzony w praktyce (brak forka). Z analizy: workflow nie używa `secrets.*` ani `pull_request_target`, więc z forka działa tak samo, z tokenem tylko do odczytu. | `grep secrets\. .github` — brak | — |
+| 7 | note | DoD | Pole „Definition of done” w tasku ma niezaznaczone checkboxy (spełnione wg weryfikacji wyżej). | treść taska | Autor zaznacza przy przekazaniu do QA. |
+
+Czas CI ~1,5 min (cel < 15 min), cache pnpm przez `setup-node` `cache: pnpm`. Brak sekretów w logach (workflow nie używa żadnych).
