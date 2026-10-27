@@ -43,10 +43,10 @@ Each criterion must fail before the work and pass after it.
 - [x] AC4: Given PR zmieniający tylko `docs/**`, when CI się zakończy, then joby warstw są pominięte, a `ci-ok` zielony (pominięty job nie blokuje). — verified by: rung 3
 - [x] AC5: Given każdy PR, when CI się zakończy, then uruchomiły się `node scripts/backlog-check.mjs` i `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated`. — verified by: rung 3
 - [x] AC6: Given skrypt ochrony repo (`gh`), when właściciel go uruchomi, then `main` wymaga PR, checków `ci-ok` i `codeql`, blokuje force push i usuwanie; skrypt ma tryb `--dry-run` wypisujący komendy. — verified by: rung 2 (`--dry-run` lokalnie) + zrzut ustawień od właściciela
-- [ ] SEC1 (TH-22): Given zależność z podatnością high lub critical, when CI się uruchomi, then `pnpm audit --audit-level high` zatrzymuje `ci-ok`. — verified by: rung 3 na gałęzi testowej
-- [ ] SEC2 (TH-22): Given workflow, when sprawdzę ich treść, then każda akcja jest przypięta do SHA, `permissions: contents: read` domyślnie i tylko niezbędne uprawnienia per job; `dependabot.yml` obejmuje npm i github-actions (co tydzień, grupowane). — verified by: przegląd + actionlint
+- [x] SEC1 (TH-22): Given zależność z podatnością high lub critical, when CI się uruchomi, then `pnpm audit --audit-level high` zatrzymuje `ci-ok`. — verified by: rung 3 na gałęzi testowej
+- [x] SEC2 (TH-22): Given workflow, when sprawdzę ich treść, then każda akcja jest przypięta do SHA, `permissions: contents: read` domyślnie i tylko niezbędne uprawnienia per job; `dependabot.yml` obejmuje npm i github-actions (co tydzień, grupowane). — verified by: przegląd + actionlint
 - [x] SEC3 (TH-22, TH-23): Given instrukcja w `SECURITY.md` i lista kroków dla właściciela, when właściciel włączy secret scanning z push protection i private vulnerability reporting, then push testowego sekretu (np. przykładowy klucz z dokumentacji GitHub) jest odrzucony. — verified by: rung 3, zrzut od właściciela
-- [ ] SEC4 (TH-15, TH-20): Given kod z `dangerouslySetInnerHTML` albo `sql.raw` z danymi, when CI uruchomi lint, then `ci-ok` jest czerwony; CodeQL (JavaScript/TypeScript) działa na PR i co tydzień. — verified by: rung 3 na gałęzi testowej
+- [x] SEC4 (TH-15, TH-20): Given kod z `dangerouslySetInnerHTML` albo `sql.raw` z danymi, when CI uruchomi lint, then `ci-ok` jest czerwony; CodeQL (JavaScript/TypeScript) działa na PR i co tydzień. — verified by: rung 3 na gałęzi testowej
 
 ## TDD plan
 
