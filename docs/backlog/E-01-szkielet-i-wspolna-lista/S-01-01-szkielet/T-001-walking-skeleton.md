@@ -3,7 +3,7 @@ id: T-001
 title: "Walking skeleton: API, baza i web lokalnie"
 epic: E-01
 story: S-01-01
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []         # inline list only, e.g. [T-001, T-004]; only real blockers
 size: M                # S | M (L must be split)
@@ -167,3 +167,51 @@ Pełny przebieg: `pnpm check` — exit 0 (Prettier OK, ESLint 0 problemów, tsc 
 - `.env` nie powstał w repo (zapis zablokowany przez uprawnienia); demo szło ze zmienną `DATABASE_URL`.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-27)
+
+Verdict: fail
+
+Środowisko: Windows 11, Node 24.14.1, pnpm 12.11.2, Docker 29.8.2; świeży klon `85bd618` w katalogu tymczasowym; Linux: kontener `node:24.14.1` (klon repo, `pnpm install --frozen-lockfile`, Testcontainers przez gniazdo Dockera).
+
+### Odtworzenie
+
+- Świeży klon: `pnpm install --frozen-lockfile` (tokeny generowane w `postinstall`), `pnpm check` exit 0 (Prettier, ESLint 0, tsc 4 pakiety, jscpd 0 klonów, dependency-cruiser 0 naruszeń / 73 moduły, design-check 0 kolorów na sztywno, backlog-check OK, Vitest **7 plików / 24 testy**), `pnpm build` exit 0, `pnpm test:e2e` **4 passed**.
+- Linux (`node:24.14.1`): install, `format:check`, `lint`, `typecheck`, `quality`, `design-check`, `vitest run` (24/24, z Testcontainers), `build` — wszystko zielone.
+- Spot-checki (mutacja → test czerwony → przywrócone, `git status` czysty): bez `securityHeaders` → 3 testy SEC1 czerwone; bez `redact` → 2 testy SEC2 czerwone; bez `bodyLimit` → test 413 czerwony; bez `truncateAllTables` → test izolacji czerwony; `/health/ready` bez zapytania do bazy → test 503 czerwony; web: `database-down` → `ready` → test AC4 czerwony; bez `watchPool` → testy zielone, ale Vitest „Unhandled Errors: terminating connection…”, exit 1 (3/3 przebiegi). Lint: `sql.raw`, `eval`, `dangerouslySetInnerHTML` → błędy; `#ff0000` w CSS → design-check `HARD-CODED`.
+
+### Kryteria akceptacji
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `health.test` (`pool.totalCount === 0` dla `/health`); na żywo przez proxy Vite 200 / 200 |
+| AC2 | pass | `health.test`; na żywo `docker compose stop postgres` → `/health/ready` 503 `{"status":"unavailable","database":"down"}`, `/health` 200, UI „API działa · baza niedostępna”; po starcie bazy 200, proces API żyje |
+| AC3 | pass | `database.test` (liczba migracji = `_journal.json`; izolacja); spot-check bez `TRUNCATE` czerwony |
+| AC4 | pass | `StartScreen.test` (role `heading` / `status`); w przeglądarce na buildzie: ładowanie „Sprawdzam połączenie…”, gotowe, błąd sieci (`route.abort`) i odpowiedź HTML 502 → „Brak połączenia z API” |
+| AC5 | pass | E2E 4/4; dodatkowo axe (WCAG 2.2 AA) bez naruszeń w stanach ładowanie / gotowe / błąd sieci / 160 px (≈ 320 px przy 200 %), brak poziomego przewijania przy 320 px |
+| AC6 | pass | `pnpm check` + celowe naruszenia (wyżej) |
+| AC7 | **fail** | Komendy działają (PowerShell, Git Bash, Linux), ale sekcje „Komendy” we wszystkich czterech przewodnikach są puste — patrz #1 |
+| AC8 | pass | `build.test` + `pnpm --filter @lista/tokens build` + design-check |
+| SEC1 | pass | `security-headers.test`; `curl` na `pnpm start`: CSP / HSTS / `no-referrer` / `nosniff` / `frame-ancestors 'none'` na `/`, `/assets/*.js`, `/health/ready`; obcy `Origin` i preflight bez `Access-Control-Allow-Origin` |
+| SEC2 | pass | `logging.test`; na żywo żądanie z `Authorization`, `Cookie`, `password`, `token` — żadna wartość w logu; każdy wpis żądania ma `requestId` |
+| SEC3 | pass | `body-limit.test`; na żywo 17 kB JSON, `chunked` i `text/plain` → 413 |
+
+Eksploracja bez uwag: path traversal (`/..%2f..%2fpackage.json`, `%2e%2e`, `..\`) → SPA albo 403, bez wycieku plików; nieznane `/api/*` i `POST` na ścieżkę SPA → 404 `not_found`; port zajęty → czytelny `EADDRINUSE`, exit 1; brak / zły `DATABASE_URL` → błąd zod bez wartości zmiennej; brak żądań do obcych domen; `.env` w `.gitignore`, `.env.example` bez wartości.
+
+### Ustalenia
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | docs / AC7 | Wiersze tabel „Komendy” zostały wstawione na **początek** plików `docs/architecture/layers/{infra,backend,db,web}.md`, przed frontmatter YAML. Sekcje „Komendy” zostały puste (pusta tabela + `<Uzupełnia task walking skeleton.>`), a pliki nie zaczynają się już od `---` (zepsuty frontmatter `layer` / `status`). Nowa osoba w sekcji „Komendy” nie znajdzie żadnej komendy. | `head -3 docs/architecture/layers/infra.md` → `\| start usług lokalnych \| …`; `git show bfaf0a7 -- docs/architecture/layers/infra.md` → hunk `@@ -1,3 +1,6 @@` z wierszami przed `---`; to samo w backend, db, web (dopiski z db i web zawierają też uwagi o `DATABASE_URL` i izolacji testów) | Wiersze w tabelach sekcji „Komendy” (z uwagami pod tabelą), placeholder usunięty, każdy plik zaczyna się od `---`. Dodać pozycję historii zmian. |
+| 2 | minor | security | `X-Frame-Options: SAMEORIGIN` (domyślne helmet) przeczy `frame-ancestors 'none'` z CSP. Nowoczesne przeglądarki biorą CSP, starsze — XFO. | `curl -D - http://127.0.0.1:3000/` | `frameguard: { action: "deny" }` w `security-headers.ts` (+ asercja w teście) |
+| 3 | minor | standardy | Prettier nie obejmuje `docs/`, `.claude/`, `README.md`, a `CODING_STANDARDS.md` mówi „całe repo”; standard wymaga wpisu przy zmianie zakresu, w Evidence jest tylko propozycja. | `.prettierignore`; `CODING_STANDARDS.md` sekcja 1 | Właściciel zatwierdza zmianę i wpis trafia do `CODING_STANDARDS.md` (albo zakres wraca do całego repo). |
+| 4 | note | testy | Test 3b przechodzi także bez poprawki (`watchPool`); suite jest czerwona tylko dzięki wykrywaniu „Unhandled Errors” przez Vitest (exit 1). Gryzie, ale pośrednio. | spot-check wyżej | Opcjonalnie asercja wprost (np. wpis `idle database connection lost` w przechwyconym logu). |
+| 5 | note | api | 413 ma domyślny format Fastify (`{"statusCode":413,"code":"FST_ERR_CTP_BODY_TOO_LARGE",…}`), nie `{"error":{"code":…}}` z `architecture.md`. Odłożone świadomie do wspólnego handlera. | `curl` 17 kB | Pierwszy task ze wspólnym handlerem błędów mapuje też błędy Fastify (413, 400 parsowania). |
+| 6 | note | logi / TH-08 | Pełny `req.url` z query stringiem trafia do logu (`/health?token=…` widoczny). Redakcja ścieżki `/invitations/:token` jest zaplanowana w T-008 (SEC5). | `start.log` | T-008: redakcja obejmuje `req.url` we wpisach `incoming request`. |
+| 7 | note | infra | Dwa kontenery Testcontainers (`postgres:17.11-alpine`) z 2026-10-26 nadal działały (12–13 h) — prawdopodobnie przerwane przebiegi; bieżące przebiegi QA sprzątały po sobie. | `docker ps --filter label=org.testcontainers=true` | Do obserwacji w T-002; ewentualnie wpis w „Pułapkach” infra. |
+| 8 | note | DRY | Tag obrazu `postgres:17.11-alpine` w trzech miejscach (autor zgłosił); `apps/web/e2e/server.ts` nie używa `POSTGRES_IMAGE`. | grep | Przy T-002/T-010 jedno źródło wersji. |
+
+### Co musi się zmienić
+
+1. Naprawić #1 we wszystkich czterech przewodnikach warstw (tylko dokumentacja; kod bez zmian).
+2. #2 i #3 — poprawić przy okazji (minor, nie blokują same w sobie).
