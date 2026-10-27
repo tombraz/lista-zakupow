@@ -88,6 +88,11 @@ What an independent tester checks beyond the automated tests:
 - Trivy na obrazie API — T-010 (obraz powstaje tam).
 - Ustawienia repozytorium zmienia właściciel: przygotuj skrypt i listę kroków, nie uruchamiaj ich.
 - Raport pokrycia jako artefakt, bez progu blokującego.
+- Przebiegi testowe (decyzja właściciela, 2026-10-27):
+  - `ci.yml` bez filtra `branches:` dla `pull_request` (każdy PR, także draft) + `push` do `main`.
+  - Gałęzie tymczasowe `ci-test/T-002-<przypadek>` (np. `ci-test/T-002-broken-test`, `-vulnerable-dep`, `-dangerous-html`, `-docs-only`) odgałęzione od gałęzi epiku; PR-y testowe mają bazę **`epic/E-01-szkielet-i-wspolna-lista`**, nie `main`. Po teście PR zamknięty bez merge'a, gałąź usunięta. Dopisać tę konwencję do „Git workflow” w `tech-stack.md` (gałęzie tymczasowe do weryfikacji CI).
+  - Demo 2 / AC6 (blokada merge): po uruchomieniu skryptu ochrony przez właściciela jeden **draft PR do `main`** z `ci-test/T-002-broken-test` — zrzut zablokowanego przycisku merge, PR zamknięty bez merge'a. Alternatywnie dowodem jest wymagany `ci-ok` na draft PR epiku.
+  - CodeQL jako workflow w repo (advanced setup); „Default setup” w ustawieniach repo wyłączony przez właściciela — inaczej workflow CodeQL się z nim zderza. Nazwa checka `codeql` stała, bo wymaga jej ochrona `main`.
 - Z QA T-001 (uwagi przekazane do tego tasku):
   - Tag obrazu `postgres:17.11-alpine` w jednym źródle: dziś jest w `docker-compose.yml`, `apps/api/test/database-constants.ts` i `apps/web/e2e/server.ts` (ten nie używa `POSTGRES_IMAGE`), a service container w CI byłby czwartym miejscem.
   - Równoległość E2E na Linuksie: T-001 ustawiło 1 worker na Windows (zamieranie API przy wielu workerach). Sprawdzić w CI, czy równoległe workery są stabilne, i zapisać decyzję w przewodniku web.
