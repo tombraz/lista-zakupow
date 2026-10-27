@@ -3,7 +3,7 @@ id: T-004
 title: Rejestracja, logowanie i wylogowanie (web)
 epic: E-01
 story: S-01-02
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001]
 size: M                # S | M (L must be split)
@@ -253,3 +253,34 @@ Odtworzenie (czysty stan, Windows, Docker): `pnpm install --frozen-lockfile` bez
 Kryteria: AC1–AC7 **pass** (testy przeczytane, E2E J-01 uruchomione); AC8 **not verifiable** (akceptacja treści przez właściciela); SEC1 **fail** (#1); SEC2 **pass** (identyczne 401, czasy odpowiedzi ~90–100 ms dla obu przypadków); SEC3, SEC4, SEC5, SEC7 **pass**; SEC6 **fail** (#2); SEC8 **pass** lokalnie, część CodeQL **not verifiable** przed PR. Inne sprawdzone bez zastrzeżeń: nadpisanie `X-Forwarded-For` przez most, `Origin: null` → 403, pozostałe trasy Better Auth → 404, nadmiarowe pola (`emailVerified`, `termsVersion`, `image`) ignorowane, imię 30 znaków / polskie znaki / emoji OK, dwie sesje jednocześnie działają, brak open redirect w `returnPath`.
 
 **Do poprawy przed rundą 2:** #1 i #2 (każdy z testem, który jest czerwony przed poprawką); minors #3–#9 w miarę możliwości w tej samej rundzie.
+
+## QA round 2 (2026-10-27)
+
+Verdict: pass
+
+Odtworzenie (czysty stan, Windows, Docker): `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych, `pnpm check` zielony (Prettier, ESLint, typecheck, jscpd, depcruise, design-check 0 zakodowanych kolorów, backlog-check, Vitest **98/98**), `pnpm build` OK, `pnpm test:e2e` **8/8**. Przejrzany diff `6bfadc9`, `eae969e` względem `85b79a0`; testy z rundy 1 nie zostały osłabione (zmiany w testach to tylko nowe przypadki).
+
+Spot-checki mutacyjne (przywrócone, `git status` czysty):
+
+- `reserve()` zamienione na nieatomowe „sprawdź, potem zapisz” → „checks at most 5 passwords… in parallel” czerwony (`got 30`) — test łapie TOCTOU z #1.
+- usunięte `passCookies` w `requireUser` → „renews the session cookie…” czerwony (#2).
+- usunięte `release()` → „does not count successful sign-ins…” czerwony (`expected 429 to be 200`).
+
+Na działającym serwerze (zbudowane API + web, `X-Forwarded-For` przez zaufane proxy):
+
+- #1: 19 złych haseł + poprawne, równolegle, z różnych IP → dokładnie 5 × 401, reszta 429 (poprawne hasło też 429); kolejne poprawne → 429. 10 żądań z `Origin: https://evil.example` → 403 `invalid_origin` i nie zjadają limitu konta (poprawne hasło potem → 200).
+- #3: dwie równoległe rejestracje → `200` i `409 email_taken`, jedno konto.
+- Inne: imię 30 znaków / polskie znaki / emoji, e-mail z wielkimi literami i spacjami → 200; hasło 128 → 200, 129 → 400 `too_long`; > 16 kB → 413; `update-user` → 404; nieznany e-mail → 401 `invalid_credentials` (identyczna treść jak złe hasło). Log API: 6 × `sign_in_failed`, 17 × `rate_limited` w `security`; 0 wystąpień e-maili, haseł i `session_token`.
+- Przeglądarki (Playwright: Chromium, Firefox, WebKit; 320 × 640, `reduced-motion`): SC-01, SC-02 (pusty i błędy), SC-05, SC-09, SC-04 bez przewijania w poziomie, także SC-02 przy `zoom: 2`; rejestracja samą klawiaturą (Tab / Spacja / Enter) → `/listy`; po pustym wysłaniu fokus na „Popraw 5 pól”; etykiety zgód 288 × 48 px; ciasteczko `HttpOnly`, `document.cookie` puste; axe SC-04 przy 320 px — 0 naruszeń.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | AC8 / prywatność | Polityka prywatności nie podaje administratora danych ani kontaktu (RODO art. 13). Właściciel zaakceptował treść SC-04 w tej rundzie pod warunkiem uzupełnienia danych przed publicznym startem. | `SC-04-regulamin/documents.tsx`; decyzja właściciela 2026-10-27. | Dane administratora i kontakt w polityce przed udostępnieniem aplikacji poza pilotażem. |
+| 2 | note | threat model | (Z rundy 1, #10, nadal otwarte) Obcy może zablokować cudze konto na 15 min pięcioma złymi hasłami; ryzyko niezapisane w `threat-model.md`. | `grep` w `threat-model.md` — brak wpisu. | Wpis: zaakceptowane ryzyko lub mitygacja. |
+| 3 | note | testy | (Z rundy 1, #11) Test zaufanego proxy nie sprawdza łańcucha `X-Forwarded-For: fałszywy, prawdziwy`. | `sign-in-rate-limit.test.ts`. | Przypadek z łańcuchem i 429 po progu. |
+| 4 | note | API | (Z rundy 1, #12) 415 dla `application/x-www-form-urlencoded` w formacie Fastify, nie `{ error: { code } }`. | `POST /api/auth/sign-out` z formularzem → `{"statusCode":415,"code":"FST_ERR_CTP_INVALID_MEDIA_TYPE",…}`. | Ujednolicenie w globalnym handlerze (osobny task). |
+| 5 | note | SEC8 / CI | Check „CodeQL” na PR #1 nie jest jeszcze możliwy do sprawdzenia: commity T-004 nie są wypchnięte (`origin/epic/E-01…` = `1480bbe`). | `git log origin/…` | Sprawdzić zamknięcie alertu `js/missing-rate-limiting` w `/review-change E-01` / `/security-review E-01` po pushu. |
+| 6 | note | dostępność | Czytnik ekranu (NVDA / VoiceOver) i prawdziwe Safari na iPhonie nie były dostępne w tym środowisku; zamiast tego WebKit w Playwright oraz testy komponentów (`role="alert"`, fokus, `aria-describedby`). | — | Sprawdzić czytnikiem w UAT epiku. |
+| 7 | note | kod | `sql.raw` w `CHECK` imienia z wyłączoną regułą lint i uzasadnieniem (stała z kodu, DDL bez parametrów) — dopuszczalne; `drizzle-kit generate` bez zmian schematu według Evidence. | `apps/api/src/db/schema.ts:33-37`. | — |
+
+Kryteria: AC1–AC7 **pass**; AC8 **pass** (test komponentu + akceptacja treści przez właściciela 2026-10-27, z uwagą #1); SEC1 **pass** (#1 z rundy 1 naprawiony, sprawdzony atakiem równoległym); SEC2–SEC5, SEC7 **pass**; SEC6 **pass** (odnowione `Set-Cookie` z `Max-Age=2592000` przy użyciu; test bije); SEC8 **pass** lokalnie, część CodeQL **not verifiable** przed pushem (#5). Minors #3–#9 z rundy 1 sprawdzone i zamknięte.
