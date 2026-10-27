@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { RATE_LIMITS } from "@lista/shared";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { signInFailure } from "../../../db/schema";
 
@@ -10,6 +10,9 @@ const WINDOW_MS = windowSeconds * 1000;
 /**
  * Licznik nieudanych logowań per konto (TH-09, ADR 0002) — uzupełnia limit per IP, który
  * nie zatrzyma prób z wielu adresów. Okno liczone od pierwszej porażki.
+ *
+ * Próba jest rezerwowana jednym atomowym zapytaniem przed sprawdzeniem hasła, więc
+ * równoległe żądania nie przejdą obok limitu; próba, która nie okazała się porażką, wraca.
  */
 export class SignInFailures {
   constructor(
@@ -23,24 +26,11 @@ export class SignInFailures {
     return createHmac("sha256", this.secret).update(normalized).digest("base64url");
   }
 
-  async isBlocked(accountKey: string): Promise<boolean> {
-    const windowStart = new Date(Date.now() - WINDOW_MS);
-    const rows = await this.db
-      .select({ failures: signInFailure.failures })
-      .from(signInFailure)
-      .where(
-        and(
-          eq(signInFailure.accountKey, accountKey),
-          gte(signInFailure.windowStartedAt, windowStart),
-        ),
-      );
-    return (rows[0]?.failures ?? 0) >= max;
-  }
-
-  async record(accountKey: string): Promise<void> {
+  /** Zalicza próbę z góry; `false`, gdy limit konta jest już wyczerpany. */
+  async reserve(accountKey: string): Promise<boolean> {
     const now = new Date();
     const windowExpired = sql`${signInFailure.windowStartedAt} < ${new Date(now.getTime() - WINDOW_MS)}::timestamptz`;
-    await this.db
+    const [row] = await this.db
       .insert(signInFailure)
       .values({ accountKey, failures: 1, windowStartedAt: now })
       .onConflictDoUpdate({
@@ -49,6 +39,16 @@ export class SignInFailures {
           failures: sql`CASE WHEN ${windowExpired} THEN 1 ELSE ${signInFailure.failures} + 1 END`,
           windowStartedAt: sql`CASE WHEN ${windowExpired} THEN ${now}::timestamptz ELSE ${signInFailure.windowStartedAt} END`,
         },
-      });
+      })
+      .returning({ failures: signInFailure.failures });
+    return (row?.failures ?? 0) <= max;
+  }
+
+  /** Oddaje zarezerwowaną próbę, która nie była porażką (np. poprawne hasło). */
+  async release(accountKey: string): Promise<void> {
+    await this.db
+      .update(signInFailure)
+      .set({ failures: sql`GREATEST(${signInFailure.failures} - 1, 0)` })
+      .where(eq(signInFailure.accountKey, accountKey));
   }
 }

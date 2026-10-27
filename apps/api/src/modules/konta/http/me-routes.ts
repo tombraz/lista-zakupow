@@ -4,8 +4,8 @@ import { requireUser } from "./require-user";
 import type { Auth } from "../infra/auth";
 
 export function meRoutes(app: FastifyInstance, auth: Auth): void {
-  app.get("/api/v1/me", async (request) => {
-    const user = await requireUser(auth, request);
+  app.get("/api/v1/me", async (request, reply) => {
+    const user = await requireUser(auth, request, reply);
     return { id: user.id, name: user.name, email: user.email } satisfies Me;
   });
 }

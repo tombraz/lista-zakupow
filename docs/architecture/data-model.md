@@ -109,7 +109,7 @@ erDiagram
 | Usunięcie wygrywa z równoczesną edycją (F-14) | `UPDATE … WHERE id = $1 AND list_id = $2`; 0 wierszy = `404` |
 | Kolejność (SC-05, SC-06) | listy: `updated_at DESC`; nieodhaczone: `created_at DESC`; odhaczone: `checked_at DESC` |
 
-Licznik nieudanych logowań per konto (TH-09, T-004): tabela `sign_in_failure (account_key PK, failures, window_started_at)`; `account_key` to HMAC-SHA256 znormalizowanego e-maila z `BETTER_AUTH_SECRET`, więc tabela nie powiela adresu. Okno 15 min liczone od pierwszej porażki.
+Licznik nieudanych logowań per konto (TH-09, T-004): tabela `sign_in_failure (account_key PK, failures, window_started_at)`; `account_key` to HMAC-SHA256 znormalizowanego e-maila z `BETTER_AUTH_SECRET`, więc tabela nie powiela adresu. Okno 15 min liczone od pierwszej porażki. Próba jest rezerwowana przed sprawdzeniem hasła jednym zapytaniem `INSERT … ON CONFLICT DO UPDATE … RETURNING failures` (odmowa, gdy wynik > 5), a próba zakończona inaczej niż 401 jest oddawana — równoległe żądania nie obejdą limitu (QA T-004 runda 1).
 
 Indeksy: `list_member (user_id)`, `item (list_id)`, `invitation (list_id)`, `shopping_list (owner_id)`, `session (user_id)`.
 

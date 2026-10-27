@@ -8,6 +8,7 @@ import type { z } from "zod";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { securityLog } from "../../../logging";
+import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { SignInFailures } from "../infra/sign-in-failures";
 
@@ -52,15 +53,13 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
   app.post("/api/auth/sign-in/email", async (request, reply) => {
     const credentials = validate(signInRequestSchema, request.body);
     const accountKey = failures.accountKey(credentials.email);
-    if (await failures.isBlocked(accountKey)) {
+    if (!(await failures.reserve(accountKey))) {
       logSecurity(request, "rate_limited", { accountKey });
       throw new ApiError(429, "rate_limited");
     }
     const response = await forward(auth, origin, request, credentials);
-    if (response.status === 401) {
-      await failures.record(accountKey);
-      logSecurity(request, "sign_in_failed", { accountKey });
-    }
+    if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
+    else await failures.release(accountKey);
     if (response.status === 429) logSecurity(request, "rate_limited", { accountKey });
     return relay(response, reply);
   });
@@ -104,7 +103,7 @@ function forward(auth: Auth, origin: string, request: FastifyRequest, body: obje
 }
 
 async function relay(response: Response, reply: FastifyReply) {
-  for (const cookie of response.headers.getSetCookie()) void reply.header("set-cookie", cookie);
+  passCookies(response.headers, reply);
   const body = (await response.json().catch(() => ({}))) as { code?: string; user?: AuthUser };
   if (response.ok) {
     const user = body.user;

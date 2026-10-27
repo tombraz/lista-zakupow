@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTestApp } from "./app";
+import { sessionCookie } from "./cookies";
 import { useTestDatabase } from "./database";
 import { createUser } from "./factories";
 
@@ -49,6 +50,21 @@ describe("session lifetime (SEC6: TH-17)", () => {
     expect((await me(app, user.cookie)).statusCode).toBe(200);
 
     expect(await expiresAt(user.id)).toBe(START.getTime() + 32 * DAY_MS);
+    await app.close();
+  });
+
+  // QA round 1, #2: przedłużenie w bazie nic nie da, jeśli przeglądarka wyrzuci ciasteczko.
+  it("renews the session cookie for another 30 days when the session is used", async () => {
+    const app = buildTestApp(db.pool);
+    const user = await createUser(app);
+
+    vi.setSystemTime(START.getTime() + 2 * DAY_MS);
+    const response = await me(app, user.cookie);
+
+    expect(response.statusCode).toBe(200);
+    const renewed = sessionCookie(response.headers["set-cookie"]);
+    expect(renewed).toContain(`Max-Age=${String((30 * DAY_MS) / 1000)}`);
+    expect(renewed).toContain("HttpOnly");
     await app.close();
   });
 

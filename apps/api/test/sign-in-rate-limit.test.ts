@@ -67,6 +67,37 @@ describe("sign-in rate limits (SEC1: TH-09)", () => {
     await app.close();
   });
 
+  // QA round 1, #1: sprawdzenie i zliczenie muszą być atomowe, inaczej seria równoległych prób
+  // przechodzi obok limitu.
+  it("checks at most 5 passwords per account when attempts arrive in parallel", async () => {
+    const app = buildTestApp(db.pool);
+    const user = await createUser(app);
+
+    const responses = await Promise.all(
+      Array.from({ length: 30 }, () =>
+        signIn(app, { email: user.email, password: "zle-haslo-1" }, randomIp()),
+      ),
+    );
+    const statuses = responses.map((response) => response.statusCode);
+
+    expect(statuses.filter((status) => status === 401)).toHaveLength(5);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(25);
+    const right = await signIn(app, { email: user.email, password: user.password }, randomIp());
+    expect(right.statusCode).toBe(429);
+    await app.close();
+  });
+
+  it("does not count successful sign-ins toward the account limit", async () => {
+    const app = buildTestApp(db.pool);
+    const user = await createUser(app);
+
+    for (let attempt = 1; attempt <= 6; attempt += 1) {
+      const right = await signIn(app, { email: user.email, password: user.password }, randomIp());
+      expect(right.statusCode).toBe(200);
+    }
+    await app.close();
+  });
+
   it("counts the account limit regardless of e-mail letter case and spaces", async () => {
     const app = buildTestApp(db.pool);
     const user = await createUser(app);

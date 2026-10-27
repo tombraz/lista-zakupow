@@ -20,7 +20,7 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 - `apps/api/src/server.ts` — start procesu (konfiguracja, pula, `listen`); `src/config.ts` — zmienne środowiskowe (zod)
 - `apps/api/src/logging.ts` — pino: redakcja, `requestId`, `securityLog()`
 - `apps/api/src/http/` — `security-headers.ts` (helmet, CSP), `web-app.ts` (pliki web + fallback SPA, 404 `not_found`)
-- `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health` (z limitem `/health/ready`) i `modules/konta` (`infra/auth.ts` — konfiguracja Better Auth, `infra/sign-in-failures.ts` — limit per konto, `http/auth-routes.ts` — most `/api/auth/*`, `http/require-user.ts`, `http/me-routes.ts`)
+- `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health` (z limitem `/health/ready`) i `modules/konta` (`infra/auth.ts` — konfiguracja Better Auth, `infra/sign-in-failures.ts` — limit per konto, `http/auth-routes.ts` — most `/api/auth/*`, `http/require-user.ts` (przekazuje odnowione ciasteczko sesji), `http/cookies.ts`, `http/me-routes.ts`)
 - `apps/api/src/http/api-error.ts` — `ApiError` z kodem z `packages/shared` i jedyny handler błędów
 - `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`, `app.ts` (`buildTestApp`), `factories.ts` (`createUser`, `signIn`, `randomIp`), `cookies.ts`
 - `packages/shared/src/` — schematy zod i typy kontraktu (`health.ts`, `api/account.ts`, `api/errors.ts`), progi limitów `limits.ts`; testy w `packages/shared/test/`

@@ -3,7 +3,7 @@ id: T-004
 title: Rejestracja, logowanie i wylogowanie (web)
 epic: E-01
 story: S-01-02
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001]
 size: M                # S | M (L must be split)
@@ -190,6 +190,20 @@ Telefon 390 px (lokalnie, poza repo): SC-01, SC-02 z błędami walidacji, SC-05 
 ### Przewodniki warstw (Step 8b)
 
 Uzupełnione „Gdzie jest kod” i „Komendy” w `layers/backend.md`, `layers/db.md`, `layers/web.md` (fakty). Propozycji zmian „Konwencji” brak.
+
+### Poprawki po QA round 1 (2026-10-27)
+
+Zakres: tylko #1 (blocker) i #2 (major). Minors #3–#9 i uwagi #10–#14 nie były ruszane w tej rundzie. Przebieg: `pnpm check` zielony (Vitest **90/90**, jscpd 0 klonów, depcruise 0 naruszeń), `pnpm build` OK, `pnpm test:e2e` **8/8**.
+
+| QA # | Test (plik) | Red: komunikat przed poprawką | Poprawka | Teraz |
+| --- | --- | --- | --- | --- |
+| 1 | `sign-in-rate-limit.test.ts` „checks at most 5 passwords per account when attempts arrive in parallel” (30 równoległych złych haseł z różnych IP → 5 × 401, 25 × 429, potem poprawne hasło → 429) | `expected [ 401, 401, …(24) ] to have a length of 5 but got 30` | `SignInFailures.reserve()` — próba rezerwowana przed sprawdzeniem hasła jednym `INSERT … ON CONFLICT DO UPDATE … RETURNING failures`; odmowa, gdy wynik > próg. `release()` oddaje próbę zakończoną inaczej niż 401 (`isBlocked`/`record` usunięte) | pass |
+| 1a | `sign-in-rate-limit.test.ts` „does not count successful sign-ins toward the account limit” (6 poprawnych logowań → 6 × 200) | strażnik zachowania `release()`: przechodził na starym kodzie; sprawdzony mutacją (bez `release`) → `expected 429 to be 200` | — | pass |
+| 2 | `session-expiry.test.ts` „renews the session cookie for another 30 days when the session is used” (`/me` po 2 dniach → `Set-Cookie` sesji z `Max-Age=2592000`, `HttpOnly`) | `Error: no session cookie in undefined` (brak `Set-Cookie` w odpowiedzi `/me`) | `requireUser(auth, request, reply)` woła `getSession({ returnHeaders: true })` i przekazuje `Set-Cookie`; wspólna `passCookies()` (`http/cookies.ts`) zamiast dwóch pętli | pass |
+
+SEC1 i SEC6 — dowody jak wyżej plus nowe testy. Dokumenty: `data-model.md` (opis rezerwacji próby), `layers/backend.md` („Gdzie jest kod”: `http/cookies.ts`, rola `require-user.ts`).
+
+Do uwagi QA: zablokowane żądania też podbijają licznik (nie są oddawane) — okno liczy się od pierwszej porażki, więc nie wydłużają blokady. Próba, przy której Better Auth zwróci 429 z limitu IP, jest oddawana (hasło nie było sprawdzone).
 
 <!-- QA rounds are appended below by /qa-task -->
 
