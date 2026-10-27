@@ -5,7 +5,7 @@ status: in-progress    # todo | in-progress | in-uat | done
 approved: 2026-10-26    # date the user approved this epic's tasks (set by /plan-backlog)
 change:                # brownfield only: the change ID this epic implements (C-NN)
 branch: epic/E-01-szkielet-i-wspolna-lista # set by /build-epic: epic/E-xx-<slug> (epic-branch workflow)
-pr:                    # set by /build-epic: link to the draft pull request
+pr: https://github.com/tombraz/lista-zakupow/pull/1 # set by /build-epic: link to the draft pull request
 requirements: [F-01, F-02, F-05, F-06, F-07, F-08, F-09, F-10, F-11, F-12, F-14, N-01, N-02, N-04, N-05, N-06]
 ---
 
