@@ -22,3 +22,4 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 await app.listen({ port: config.PORT, host: config.HOST });
+// ci-test T-002: zmiana tylko w apps/api
