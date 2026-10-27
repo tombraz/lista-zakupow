@@ -1,0 +1,30 @@
+.page {
+  composes: column from "../../styles/page.module.css";
+  overflow-wrap: anywhere;
+}
+
+.title {
+  composes: title from "../../styles/page.module.css";
+}
+
+.toc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding-left: var(--spacing-xl);
+}
+
+.section h2 {
+  margin: 0;
+  font-size: var(--typography-size-title);
+}
+
+.section h3 {
+  margin: var(--spacing-lg) 0 var(--spacing-xs);
+  font-size: var(--typography-size-body);
+}
+
+.section p {
+  margin: 0;
+}

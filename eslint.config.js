@@ -7,6 +7,7 @@ import tseslint from "typescript-eslint";
 
 // Progi i reguły: docs/architecture/CODING_STANDARDS.md (sekcja 1).
 const SOURCE = ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"];
+const TESTS = ["**/*.test.{ts,tsx}"];
 
 const sizeRules = (maxLinesPerFunction) => ({
   complexity: ["error", 10],
@@ -96,6 +97,7 @@ export default tseslint.config(
     settings: { react: { version: "detect" } },
     rules: { "react/no-danger": "error" },
   },
-  { files: SOURCE, rules: sizeRules(60) },
-  { files: ["apps/web/src/**/*.tsx"], rules: sizeRules(80) },
+  // CODING_STANDARDS.md: progi rozmiaru dla kodu źródłowego, bez testów.
+  { files: SOURCE, ignores: TESTS, rules: sizeRules(60) },
+  { files: ["apps/web/src/**/*.tsx"], ignores: TESTS, rules: sizeRules(80) },
 );

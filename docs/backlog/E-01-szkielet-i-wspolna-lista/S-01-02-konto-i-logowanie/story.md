@@ -2,7 +2,7 @@
 id: S-01-02
 epic: E-01
 title: Konto i logowanie (web)
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [F-01, F-02]
 screens: [SC-01, SC-02, SC-04]
 ---

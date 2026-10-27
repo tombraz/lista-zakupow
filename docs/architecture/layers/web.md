@@ -16,13 +16,15 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 ## Gdzie jest kod
 
-- `apps/web/index.html`, `src/main.tsx` — wejście SPA (`lang="pl"`, `QueryClientProvider`)
-- `apps/web/src/screens/<ekran>/` — ekran, `messages.ts` (teksty), `*.module.css`, hooki, `*.test.tsx`; teraz `screens/start/` (ekran startowy szkieletu); kolejne `screens/SC-xx-*/`
-- `apps/web/src/api/` — klient HTTP (teraz `health.ts`); WS dojdzie z modułem `na-zywo`
-- `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe
-- `apps/web/src/components/` — komponenty design systemu (od pierwszego taska z nimi)
-- `apps/web/test/` — setup Vitest, serwer MSW, `renderWithApi()`
-- `apps/web/e2e/` — testy Playwright i `server.ts` (kontener bazy + zbudowane API)
+- `apps/web/index.html`, `src/main.tsx` — wejście SPA (`lang="pl"`, `QueryClientProvider`, `createBrowserRouter`)
+- `apps/web/src/routes.tsx` — trasy (`/logowanie`, `/rejestracja`, `/regulamin`, `/listy`, `/konto`); test routera `routes.test.tsx`
+- `apps/web/src/session/` — `useSession` (`GET /api/v1/me`), strażnicy tras `RequireSession` / `PublicOnly`
+- `apps/web/src/screens/SC-xx-*/` — ekran, `messages.ts` (teksty i mapowanie kodów błędów), `*.module.css`, hooki, `*.test.tsx`
+- `apps/web/src/api/` — `client.ts` (`apiRequest`, `ApiRequestError`), `account.ts`; WS dojdzie z modułem `na-zywo`
+- `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe; `page.module.css` — kolumna i tytuł ekranu (`composes`)
+- `apps/web/src/components/` — komponenty design systemu (AppBar, AuthPage, Button, ConsentCheckbox, FieldError, InlineAlert, PasswordField, TextField), `useFocus.ts`, `cx.ts`
+- `apps/web/test/` — setup Vitest, serwer MSW, `renderApp(adres)` (cała aplikacja w `createMemoryRouter`), `sessionIs(user | null)`
+- `apps/web/e2e/` — testy Playwright, `fixtures.ts` (`test` z własnym adresem klienta, `expectNoAxeViolations`, `signUp`) i `server.ts` (kontener bazy + zbudowane API)
 - `packages/tokens/` — `src/build.ts` (Style Dictionary), wynik w `packages/tokens/generated/` (`tokens.css`, `tokens.ts`; poza gitem)
 
 ## Komendy
@@ -32,7 +34,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 | install | `pnpm install`; tokeny ponownie: `pnpm --filter @lista/tokens build` | korzeń repo |
 | uruchom lokalnie | `pnpm dev` (Vite `http://localhost:5173`, proxy `/api` i `/health` do API) | korzeń repo |
 | type check / lint | `pnpm typecheck` / `pnpm lint`; kolory na sztywno `pnpm design-check` | korzeń repo |
-| testy jednego pliku | `pnpm vitest run apps/web/src/screens/start/StartScreen.test.tsx` | korzeń repo |
+| testy jednego pliku | `pnpm vitest run apps/web/src/screens/SC-01-logowanie/SignInScreen.test.tsx` | korzeń repo |
 | wszystkie testy warstwy | `pnpm vitest run --project web --project tokens` | korzeń repo |
 | E2E | `pnpm test:e2e` (buduje web i API, startuje kontener bazy; pierwszy raz `pnpm --filter @lista/web exec playwright install chromium`; log API w `apps/web/test-results/api.log`; na Windows 1 worker) | korzeń repo |
 | build | `pnpm --filter @lista/web build` (`apps/web/dist`, serwowany przez API) | korzeń repo |
@@ -76,5 +78,6 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-27 | T-004: „Gdzie jest kod” (router, sesja, komponenty, helpery testów, fixtures E2E). |
 | 2026-10-27 | T-002: „Pułapki” — równoległość E2E na Linuksie w CI. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

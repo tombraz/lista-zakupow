@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildApp } from "../src/app";
+import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 
 const webDistDir = fileURLToPath(new URL("./fixtures/web-dist", import.meta.url));
@@ -11,7 +11,7 @@ describe("security headers (SEC1: TH-08, TH-15, TH-24)", () => {
   let app: FastifyInstance;
 
   beforeAll(() => {
-    app = buildApp({ pool: db.pool, webDistDir });
+    app = buildTestApp(db.pool, { webDistDir });
   });
 
   afterAll(async () => {

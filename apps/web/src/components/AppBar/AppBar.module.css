@@ -1,0 +1,40 @@
+.bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  min-height: var(--size-target-min);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  color: var(--color-text-on-brand);
+  background: var(--color-surface-brand);
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--typography-size-title);
+  line-height: var(--typography-line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.control {
+  display: inline-flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-target-min);
+  min-height: var(--size-target-min);
+  padding: 0 var(--spacing-sm);
+  color: var(--color-text-on-brand);
+  text-decoration: none;
+  background: var(--color-surface-brand-control);
+  border-radius: var(--radius-md);
+}
+
+.control:focus-visible {
+  outline-color: var(--color-focus-ring-on-brand);
+}

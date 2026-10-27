@@ -21,6 +21,8 @@ Nazwy tras Better Auth sprawdzić w dokumentacji wersji użytej w walking skelet
 
 Zgody i 16+ są weryfikowane w hooku rejestracji Better Auth (brak = 400) i zapisywane w `user`.
 
+Stan po T-004: API udostępnia z Better Auth tylko trasy z tabeli, które już mają klienta (rejestracja, logowanie, wylogowanie); pozostałe ścieżki `/api/auth/*` zwracają 404. Most w `modules/konta/http/auth-routes.ts` waliduje treść schematami z `packages/shared` (400 przed Better Auth), zwraca `{ user: { id, name, email } }` bez tokenu sesji w treści (TH-16) i tłumaczy błędy Better Auth na kody API. Obcy `Origin` = 403 `invalid_origin` (TH-14). Limity (`RATE_LIMITS` w `packages/shared`): logowanie 10/min per IP i 5 nieudanych w 15 min per konto (429 także dla poprawnego hasła), rejestracja 5/h per IP, `GET /health/ready` 30/min per IP.
+
 ## Konto (`konta`)
 
 | Operacja | Trasa | Żądanie | Odpowiedź | Błędy |

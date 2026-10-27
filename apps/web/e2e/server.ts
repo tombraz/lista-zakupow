@@ -1,5 +1,6 @@
 // Serwer E2E: czysty PostgreSQL w kontenerze, migracje, potem zbudowane API serwujące apps/web/dist.
 import { spawn, spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdirSync, openSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
@@ -14,6 +15,10 @@ const env = {
   DATABASE_URL: container.getConnectionUri(),
   PORT: port,
   HOST: "127.0.0.1",
+  APP_ORIGIN: `http://127.0.0.1:${port}`,
+  BETTER_AUTH_SECRET: randomBytes(32).toString("base64url"),
+  // Playwright łączy się z 127.0.0.1; każdy test podaje własny adres klienta (fixtures.ts).
+  TRUSTED_PROXIES: "127.0.0.1",
 };
 
 // pnpm na Windows to skrypt .cmd, który wymaga powłoki.

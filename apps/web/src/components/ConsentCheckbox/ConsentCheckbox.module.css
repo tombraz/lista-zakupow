@@ -1,0 +1,25 @@
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.label {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  min-height: var(--size-target-min);
+  cursor: pointer;
+}
+
+.label a {
+  color: var(--color-action-primary);
+}
+
+.box {
+  flex: none;
+  width: var(--spacing-xl);
+  height: var(--spacing-xl);
+  margin: 0;
+  accent-color: var(--color-action-primary);
+}

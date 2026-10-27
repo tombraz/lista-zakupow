@@ -8,6 +8,20 @@
       "when": 1793038009270,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793115629800,
+      "tag": "0001_konta",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793116121829,
+      "tag": "0002_sign_in_failure",
+      "breakpoints": true
     }
   ]
 }

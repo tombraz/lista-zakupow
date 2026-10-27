@@ -1,6 +1,6 @@
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildApp } from "../src/app";
+import { buildTestApp } from "./app";
 import { securityLog } from "../src/logging";
 import { useTestDatabase } from "./database";
 
@@ -26,7 +26,7 @@ function captureLogs() {
 describe("logging (SEC2: TH-21)", () => {
   const db = useTestDatabase();
   const logs = captureLogs();
-  const app = () => buildApp({ pool: db.pool, logger: { level: "info", stream: logs.stream } });
+  const app = () => buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
   let current: ReturnType<typeof app> | undefined;
 
   afterEach(async () => {

@@ -109,6 +109,8 @@ erDiagram
 | Usunięcie wygrywa z równoczesną edycją (F-14) | `UPDATE … WHERE id = $1 AND list_id = $2`; 0 wierszy = `404` |
 | Kolejność (SC-05, SC-06) | listy: `updated_at DESC`; nieodhaczone: `created_at DESC`; odhaczone: `checked_at DESC` |
 
+Licznik nieudanych logowań per konto (TH-09, T-004): tabela `sign_in_failure (account_key PK, failures, window_started_at)`; `account_key` to HMAC-SHA256 znormalizowanego e-maila z `BETTER_AUTH_SECRET`, więc tabela nie powiela adresu. Okno 15 min liczone od pierwszej porażki.
+
 Indeksy: `list_member (user_id)`, `item (list_id)`, `invitation (list_id)`, `shopping_list (owner_id)`, `session (user_id)`.
 
 **Token zaproszenia przechowywany jawnie.** SC-07 pokazuje aktywne linki z przyciskiem „Kopiuj” także po ponownym wejściu, więc token musi dać się odczytać. Ryzyko (wyciek bazy daje ważne linki) jest małe w porównaniu z tym, że baza i tak zawiera treść list. Opisane w `threat-model.md`.
@@ -129,7 +131,7 @@ BRD N-02: bez dodatkowych działań dostosowujących do RODO (pilotaż, ryzyko R
 | członkostwo | `list_member` | udostępnianie | do opuszczenia, usunięcia, usunięcia listy | kaskada |
 | linki zaproszeń | `invitation` | F-11, F-12 | usuwane codziennie 30 dni po wygaśnięciu | kaskada z listą |
 | aktywność dzienna | `list_daily_activity` | miary sukcesu (BRD §10) | 90 dni, usuwane codziennie | kaskada z listą i kontem |
-| tokeny resetu, liczniki limitów | `verification`, `rate_limit` | F-03, MC-04, MC-05 | do wygaśnięcia; usuwane codziennie | — |
+| tokeny resetu, liczniki limitów | `verification`, `rate_limit`, `sign_in_failure` (pseudonim e-maila) | F-03, MC-04, MC-05 | do wygaśnięcia; usuwane codziennie (`rate_limit` sprząta też Better Auth) | — |
 | logi | hosting | diagnostyka | wg hostingu (`/ci-cd`), bez danych osobowych poza identyfikatorami | — |
 | kopie bazy | hosting | N-03 | 7 dni | wygasają same |
 

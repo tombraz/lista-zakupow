@@ -1,0 +1,37 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.label {
+  font-weight: var(--typography-weight-semibold);
+}
+
+.control {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--size-target-min);
+  padding: 0 var(--spacing-md);
+  font: inherit;
+  font-size: var(--typography-size-item);
+  color: var(--color-text-primary);
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+}
+
+.invalid {
+  border: 2px solid var(--color-status-error-text);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--typography-size-small);
+  color: var(--color-text-secondary);
+}

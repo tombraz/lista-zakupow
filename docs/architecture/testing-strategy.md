@@ -58,7 +58,8 @@ Cel: WCAG 2.2 AA (`docs/design/design-decisions.md`).
 - Integracja (decyzja T-001, 2026-10-26): jeden kontener PostgreSQL na przebieg (Testcontainers, `globalSetup`), migracje uruchamiane raz do bazy-szablonu; każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE` (pliki mogą biec równolegle), a przed każdym testem `TRUNCATE … CASCADE` wszystkich tabel aplikacji (bez tabeli migracji).
 - Fabryki w `apps/api/test/factories.ts`: `createUser()`, `signIn(user)` (zwraca ciasteczko), `createList(owner)`, `addMember(list, user)`, `createItem(list, by)`, `createInvitation(list)`. Nazwy i e-maile losowe, bez prawdziwych danych.
 - E2E: api uruchomione na czystej bazie w kontenerze; użytkownicy zakładani przez API w `beforeEach`; mail resetu odczytywany z API Mailpit.
-- Zegar: wstrzykiwany `clock` w module domenowym (wygasanie zaproszeń 7 dni, resetu 1 h, aktywność dzienna).
+- Zegar: wstrzykiwany `clock` w module domenowym (wygasanie zaproszeń 7 dni, resetu 1 h, aktywność dzienna). Sesje i limity Better Auth czytają `Date.now()` wewnątrz biblioteki, więc testy tego obszaru sterują czasem przez `vi.useFakeTimers({ toFake: ["Date"] })` (T-004).
+- Limity per IP w testach: fabryki i testy podają losowy `remoteAddress` (`randomIp()` w `apps/api/test/factories.ts`); E2E — losowy `X-Forwarded-For` per test przy `TRUSTED_PROXIES=127.0.0.1` (`apps/web/e2e/fixtures.ts`).
 
 ## Pokrycie E2E
 

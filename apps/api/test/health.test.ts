@@ -1,6 +1,6 @@
 import pg from "pg";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildApp } from "../src/app";
+import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 
 const unreachableDatabase = "postgres://nobody:nothing@127.0.0.1:1/none";
@@ -11,7 +11,7 @@ describe("health", () => {
 
   function appWithoutDatabase() {
     unreachablePool = new pg.Pool({ connectionString: unreachableDatabase });
-    return { app: buildApp({ pool: unreachablePool }), pool: unreachablePool };
+    return { app: buildTestApp(unreachablePool), pool: unreachablePool };
   }
 
   afterEach(async () => {
@@ -31,7 +31,7 @@ describe("health", () => {
   });
 
   it("GET /health/ready returns 200 when the database answers", async () => {
-    const app = buildApp({ pool: db.pool });
+    const app = buildTestApp(db.pool);
 
     const response = await app.inject({ method: "GET", url: "/health/ready" });
 
@@ -53,7 +53,7 @@ describe("health", () => {
   });
 
   it("keeps running when the database drops idle connections and answers 200 again", async () => {
-    const app = buildApp({ pool: db.pool });
+    const app = buildTestApp(db.pool);
     await app.inject({ method: "GET", url: "/health/ready" });
     expect(db.pool.idleCount).toBeGreaterThan(0);
 

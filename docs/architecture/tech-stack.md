@@ -56,6 +56,9 @@ Domyślne wybory techniczne niższego rzędu, wynikające z decyzji powyżej. Ob
 | Build API | `esbuild` (bundle do `apps/api/dist/server.js`, pakiety workspace wbudowane, zależności npm zewnętrzne) | obraz bez TypeScriptu w runtime; esbuild już jest w Vite | tsc + project references |
 | Dev api + web razem | `pnpm --parallel` (bez dodatkowych paczek) | jedna komenda `pnpm dev` | concurrently |
 | Raport pokrycia (T-002) | `@vitest/coverage-v8` (`pnpm test:coverage`, artefakt CI bez progu) | oficjalny provider Vitesta | `@vitest/coverage-istanbul` |
+| Uwierzytelnianie (T-004) | `better-auth` 1.7.13 (adapter Drizzle, rate limit w bazie, telemetria wyłączona) | ADR 0002 | — |
+| Limit tras Fastify (T-004) | `@fastify/rate-limit` (licznik w pamięci, tylko `GET /health/ready`; jedna instancja, ADR 0003) | rate limit Better Auth obejmuje tylko `/api/auth/*` | własny licznik w hooku |
+| Routing web (T-004) | `react-router` 8 (`createBrowserRouter`, w testach `createMemoryRouter`) | zatwierdzona propozycja „Routing” | — |
 
 ## Git workflow
 
@@ -73,6 +76,7 @@ Powód: jeden epik MVP, jeden autor, produkt jeszcze niedostępny dla użytkowni
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-27 | `/implement-task T-004`: `better-auth`, `@fastify/rate-limit`, `react-router` (zatwierdził właściciel). |
 | 2026-10-27 | `/implement-task T-002`: gałęzie tymczasowe `ci-test/T-NNN-<przypadek>` do weryfikacji CI (decyzja właściciela); `@vitest/coverage-v8` (raport pokrycia jako artefakt CI, zatwierdził właściciel). |
 | 2026-10-26 | `/implement-task T-001`: narzędzia uruchomieniowe (pg, tsx, esbuild, `pnpm --parallel`). |
 | 2026-10-26 | `/ci-cd`: hosting (ADR 0006), brak podglądów per PR, dystrybucja iOS w pilotażu tylko przez web (ADR 0008 — zawęża „Dystrybucja mobile”). |

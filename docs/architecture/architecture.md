@@ -103,6 +103,8 @@ Dostęp do listy daje wyłącznie: `lista.owner_id = ja` albo wiersz członkostw
 | --- | --- | --- |
 | 400 | `validation_failed` | długości, puste pola, brak zgód (`fields` wskazuje pola) |
 | 401 | `unauthenticated` | brak lub nieważna sesja |
+| 401 | `invalid_credentials` | zły e-mail lub hasło przy logowaniu (ten sam dla obu, F-02) |
+| 403 | `invalid_origin` | żądanie zmieniające stan z obcego `Origin` (TH-14) |
 | 403 | `owner_only`, `owner_cannot_leave` | uczestnik próbuje akcji właściciela; właściciel opuszcza listę |
 | 404 | `not_found` | lista lub pozycja nie istnieje albo brak dostępu |
 | 409 | `duplicate_item` | F-09 |
@@ -282,4 +284,5 @@ Otwarte:
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-27 | T-004: kody `invalid_credentials` (401) i `invalid_origin` (403). |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |

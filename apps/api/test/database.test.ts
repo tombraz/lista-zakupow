@@ -23,7 +23,7 @@ describe("integration database harness", () => {
   it("has every migration from the repository applied", async () => {
     const applied = await appliedMigrationCount();
 
-    expect(journal.entries.length).toBe(1);
+    expect(journal.entries.length).toBeGreaterThan(0);
     expect(applied).toBe(journal.entries.length);
   });
 
