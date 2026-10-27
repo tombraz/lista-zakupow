@@ -116,6 +116,57 @@ describe("POST /api/auth/sign-up/email with a used e-mail (AC2)", () => {
     expect(rows).toHaveLength(1);
     await app.close();
   });
+
+  // QA round 1, #3: podwójne kliknięcie „Załóż konto” — wyścig na unikalnym e-mailu.
+  it("answers 409 email_taken to the second of two simultaneous sign-ups", async () => {
+    const app = buildTestApp(db.pool);
+    const signUp = () =>
+      app.inject({
+        method: "POST",
+        url: "/api/auth/sign-up/email",
+        headers: { origin: TEST_ORIGIN },
+        payload: newAccount,
+      });
+
+    const responses = await Promise.all([signUp(), signUp()]);
+
+    const statuses = responses.map((response) => response.statusCode).sort();
+    expect(statuses).toEqual([200, 409]);
+    const rejected = responses.find((response) => response.statusCode !== 200);
+    expect(rejected?.json()).toEqual({ error: { code: "email_taken" } });
+    const { rows } = await db.pool.query(`SELECT 1 FROM "user"`);
+    expect(rows).toHaveLength(1);
+    await app.close();
+  });
+});
+
+describe("POST /api/auth/sign-up/email when the database rejects the account", () => {
+  const db = useTestDatabase();
+
+  afterEach(async () => {
+    await db.pool.query(`DROP TRIGGER IF EXISTS reject_user ON "user"`);
+  });
+
+  // QA round 1, #3: błąd, którego API nie zna, to 500 `internal` (api.md), nie status Better Auth.
+  it("answers 500 internal", async () => {
+    await db.pool.query(`
+      CREATE OR REPLACE FUNCTION reject_user() RETURNS trigger LANGUAGE plpgsql
+        AS $$ BEGIN RAISE EXCEPTION 'rejected by test'; END $$;
+      CREATE TRIGGER reject_user BEFORE INSERT ON "user" FOR EACH ROW EXECUTE FUNCTION reject_user();
+    `);
+    const app = buildTestApp(db.pool);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/sign-up/email",
+      headers: { origin: TEST_ORIGIN },
+      payload: newAccount,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: { code: "internal" } });
+    await app.close();
+  });
 });
 
 describe("POST /api/auth/sign-up/email with invalid data (AC3)", () => {

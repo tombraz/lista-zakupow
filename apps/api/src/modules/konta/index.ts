@@ -1,16 +1,31 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { authRoutes } from "./http/auth-routes";
 import { meRoutes } from "./http/me-routes";
+import { requireUser } from "./http/require-user";
 import { createAuth, type AuthSettings } from "./infra/auth";
 import { SignInFailures } from "./infra/sign-in-failures";
 
 export type { AuthSettings } from "./infra/auth";
 
-export function accountRoutes(app: FastifyInstance, pool: Pool, settings: AuthSettings): void {
+export interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/** Publiczne API modułu dla tras innych modułów (`/api/v1/*`). */
+export interface Accounts {
+  requireUser(request: FastifyRequest, reply: FastifyReply): Promise<SessionUser>;
+}
+
+export function accountRoutes(app: FastifyInstance, pool: Pool, settings: AuthSettings): Accounts {
   const db = drizzle(pool);
   const auth = createAuth(db, settings, app.log);
   authRoutes(app, { auth, failures: new SignInFailures(db, settings.secret) }, settings.origin);
   meRoutes(app, auth);
+  return {
+    requireUser: (request, reply) => requireUser(auth, request, reply),
+  };
 }

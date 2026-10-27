@@ -20,7 +20,7 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 - `apps/api/src/server.ts` — start procesu (konfiguracja, pula, `listen`); `src/config.ts` — zmienne środowiskowe (zod)
 - `apps/api/src/logging.ts` — pino: redakcja, `requestId`, `securityLog()`
 - `apps/api/src/http/` — `security-headers.ts` (helmet, CSP), `web-app.ts` (pliki web + fallback SPA, 404 `not_found`)
-- `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health` (z limitem `/health/ready`) i `modules/konta` (`infra/auth.ts` — konfiguracja Better Auth, `infra/sign-in-failures.ts` — limit per konto, `http/auth-routes.ts` — most `/api/auth/*`, `http/require-user.ts` (przekazuje odnowione ciasteczko sesji), `http/cookies.ts`, `http/me-routes.ts`)
+- `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health` (z limitem `/health/ready`) i `modules/konta` (`index.ts` — publiczne API modułu: `accountRoutes()` zwraca `Accounts.requireUser` dla tras `/api/v1/*` innych modułów; `infra/auth.ts` — konfiguracja Better Auth, `infra/sign-in-failures.ts` — limit per konto, `http/auth-routes.ts` — most `/api/auth/*`, `http/require-user.ts` (przekazuje odnowione ciasteczko sesji), `http/cookies.ts`, `http/me-routes.ts`)
 - `apps/api/src/http/api-error.ts` — `ApiError` z kodem z `packages/shared` i jedyny handler błędów
 - `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`, `app.ts` (`buildTestApp`), `factories.ts` (`createUser`, `signIn`, `randomIp`), `cookies.ts`
 - `packages/shared/src/` — schematy zod i typy kontraktu (`health.ts`, `api/account.ts`, `api/errors.ts`), progi limitów `limits.ts`; testy w `packages/shared/test/`
@@ -36,7 +36,7 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 | wszystkie testy warstwy | `pnpm vitest run --project api --project shared` | korzeń repo |
 | build | `pnpm --filter @lista/api build` (`apps/api/dist/server.js`); start `pnpm start` | korzeń repo |
 
-Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennych środowiskowych; `APP_ORIGIN` domyślnie `http://localhost:5173` (Vite).
+Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennych środowiskowych; `APP_ORIGIN` wymagany (lokalnie `http://localhost:5173`, Vite).
 
 ## Testy w tej warstwie
 
@@ -69,6 +69,8 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 ## Pułapki
 
 - Nazwy tras i opcji Better Auth zmieniają się między wersjami (np. `forgetPassword` → `requestPasswordReset`); sprawdzić w dokumentacji przypiętej wersji.
+- Konta zakłada się wyłącznie przez most HTTP `POST /api/auth/sign-up/email` (`http/auth-routes.ts`), który waliduje zgody i 16+ schematem z `packages/shared`. Hook `databaseHooks.user.create.before` w `infra/auth.ts` stempluje znaczniki zgód bezwarunkowo, bo nie widzi pól `termsAccepted` / `ageConfirmed` (nie są polami Better Auth). Dlatego nie wołać `auth.api.signUpEmail` z kodu serwera (seed, skrypty, testy) — konto dostałoby zgody, których nikt nie udzielił; w testach używać fabryki `createUser`. (Odstępstwo od notatki T-004 „zgody weryfikowane w hooku”, QA T-004 runda 1.)
+- Better Auth zwraca przy kolizji unikalności e-maila (równoczesne rejestracje) ogólne `422 FAILED_TO_CREATE_USER`; most zamienia je na `409 email_taken`, gdy konto z tym e-mailem już istnieje. Inne nieznane statusy Better Auth → `500 internal`.
 
 ## Skille i źródła
 
@@ -82,3 +84,4 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 | 2026-10-27 | T-004: moduł `konta`, `ApiError`, fabryki testowe, nowe zmienne środowiskowe. |
 | 2026-10-26 | `/ci-cd`: API serwuje web pod jednym originem, nagłówki i CORS (ADR 0006). |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
+| 2026-10-27 | T-004 (QA round 1): `Accounts.requireUser` w publicznym API modułu `konta`, `APP_ORIGIN` wymagany, „Pułapki”: konta tylko przez most, kolizja e-maila w Better Auth. |

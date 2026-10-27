@@ -1,4 +1,5 @@
 import type { RequestErrorCode } from "../../api/client";
+import { errorText } from "../../errorText";
 
 /** Teksty z tabeli „Copy” SC-01 (docs/design/screens/SC-01-logowanie.md). */
 export const messages = {
@@ -12,14 +13,9 @@ export const messages = {
 
 /** Kod błędu API → komunikat nad formularzem (F-02: bez wskazania, co było złe). */
 export function formErrorText(code: RequestErrorCode): string {
-  switch (code) {
-    case "invalid_credentials":
-      return "Nieprawidłowy e-mail lub hasło.";
-    case "rate_limited":
-      return "Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut albo zresetuj hasło.";
-    case "network":
-      return "Brak połączenia. Sprawdź internet i spróbuj ponownie.";
-    default:
-      return "Nie udało się zalogować. Spróbuj ponownie.";
-  }
+  return errorText(code, {
+    invalid_credentials: "Nieprawidłowy e-mail lub hasło.",
+    rate_limited: "Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut albo zresetuj hasło.",
+    otherwise: "Nie udało się zalogować. Spróbuj ponownie.",
+  });
 }

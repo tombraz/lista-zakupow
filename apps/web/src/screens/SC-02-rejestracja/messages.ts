@@ -1,5 +1,6 @@
 import type { FieldErrorCode } from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
+import { errorText } from "../../errorText";
 
 export type SignUpField = "name" | "email" | "password" | "termsAccepted" | "ageConfirmed";
 
@@ -20,9 +21,6 @@ export const messages = {
     or: "albo",
     reset: "zresetuj hasło",
   },
-  rateLimited: "Zbyt wiele prób rejestracji. Spróbuj ponownie później.",
-  network: "Brak połączenia. Sprawdź internet i spróbuj ponownie.",
-  internal: "Nie udało się założyć konta. Spróbuj ponownie.",
 };
 
 /** Kod błędu pola z API lub schematu → tekst pod polem. */
@@ -40,9 +38,10 @@ export const fieldMessages: Record<SignUpField, Partial<Record<FieldErrorCode, s
 
 /** Błąd całego formularza (nie pola) → komunikat nad formularzem. */
 export function formErrorText(code: RequestErrorCode): string {
-  if (code === "rate_limited") return messages.rateLimited;
-  if (code === "network") return messages.network;
-  return messages.internal;
+  return errorText(code, {
+    rate_limited: "Zbyt wiele prób rejestracji. Spróbuj ponownie później.",
+    otherwise: "Nie udało się założyć konta. Spróbuj ponownie.",
+  });
 }
 
 const FIELD_FORMS = { one: "pole", few: "pola", many: "pól", other: "pola" } as const;

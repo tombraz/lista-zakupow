@@ -61,9 +61,9 @@ Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 | `DATABASE_URL` | API | sekrety Fly (`fly secrets`) per aplikacja | przy zmianie hasła bazy |
 | `BETTER_AUTH_SECRET` | API (sesje) | sekrety Fly per aplikacja | przy podejrzeniu wycieku (wylogowuje wszystkich) |
 | `BREVO_API_KEY` | API (mail resetu) | sekrety Fly per aplikacja | raz w roku |
-
-Zmienne API (nie sekrety, T-004): `APP_ORIGIN` — publiczny adres aplikacji (zaufany `Origin`, `Secure` ciasteczka przy `https://`); `TRUSTED_PROXIES` — adresy / CIDR proxy Fly przed API (Fastify `trustProxy`), bez nich limity per IP liczą adres proxy dla wszystkich; wartość dla Fly ustalić przy pierwszym wdrożeniu. Migracje (`db:migrate`) potrzebują tylko `DATABASE_URL`.
 | `EXPO_TOKEN` | `mobile.yml` | sekret repozytorium | raz w roku |
+
+Zmienne API (nie sekrety, T-004): `APP_ORIGIN` — publiczny adres aplikacji (zaufany `Origin`, `Secure` ciasteczka przy `https://`), wymagany — bez niego API nie wystartuje; `TRUSTED_PROXIES` — adresy / CIDR proxy Fly przed API (Fastify `trustProxy`), bez nich limity per IP liczą adres proxy dla wszystkich; wartość dla Fly ustalić przy pierwszym wdrożeniu. Migracje (`db:migrate`) potrzebują tylko `DATABASE_URL`.
 
 OIDC (krótkotrwałe poświadczenia) dla Fly: niezweryfikowane — używamy tokenów o najwęższym zakresie (deploy jednej aplikacji). Wrócić, jeśli dostawca udostępni OIDC.
 

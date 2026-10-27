@@ -1,3 +1,6 @@
+import type { RequestErrorCode } from "../../api/client";
+import { errorText } from "../../errorText";
+
 /** Teksty z tabeli „Copy” SC-09 (docs/design/screens/SC-09-konto.md). */
 export const messages = {
   title: "Konto",
@@ -7,5 +10,9 @@ export const messages = {
   name: "Imię",
   logout: "Wyloguj się",
   legal: "Regulamin i polityka prywatności",
-  logoutFailed: "Brak połączenia. Sprawdź internet i spróbuj ponownie.",
 };
+
+/** Błąd wylogowania → komunikat (tekst agenta; tabela „Copy” go nie ma). */
+export function logoutErrorText(code: RequestErrorCode): string {
+  return errorText(code, { otherwise: "Nie udało się wylogować. Spróbuj ponownie." });
+}

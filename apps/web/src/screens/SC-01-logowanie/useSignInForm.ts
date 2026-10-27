@@ -2,7 +2,7 @@ import { fieldErrors, signInRequestSchema } from "@lista/shared";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { signIn } from "../../api/account";
-import { ApiRequestError, type RequestErrorCode } from "../../api/client";
+import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { useFocusRequest } from "../../components/useFocus";
 import { useSetSession } from "../../session/useSession";
 
@@ -17,7 +17,7 @@ export function useSignInForm() {
   const mutation = useMutation({ mutationFn: signIn });
 
   const handleFailure = (error: unknown) => {
-    const code = error instanceof ApiRequestError ? error.code : "internal";
+    const { code } = asRequestError(error);
     setFormError(code);
     // SC-01, stan „Error”: hasło wyczyszczone, e-mail zostaje.
     if (code === "invalid_credentials") setValues((current) => ({ ...current, password: "" }));

@@ -2,7 +2,7 @@ import { fieldErrors, signUpRequestSchema, type FieldErrorCode } from "@lista/sh
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { signUp } from "../../api/account";
-import { ApiRequestError, type RequestErrorCode } from "../../api/client";
+import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { useFocusRequest } from "../../components/useFocus";
 import { useSetSession } from "../../session/useSession";
 import type { SignUpField } from "./messages";
@@ -42,7 +42,7 @@ export function useSignUpForm() {
   };
 
   const handleFailure = (error: unknown) => {
-    const failure = error instanceof ApiRequestError ? error : new ApiRequestError(0, "internal");
+    const failure = asRequestError(error);
     if (failure.code === "validation_failed") {
       showFieldErrors(failure.fields);
     } else if (failure.code === "email_taken") {

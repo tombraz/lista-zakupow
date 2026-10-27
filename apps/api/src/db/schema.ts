@@ -1,3 +1,4 @@
+import { NAME_MAX_LENGTH } from "@lista/shared";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -28,7 +29,14 @@ export const user = pgTable(
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   // TH-13, TH-20: baza jest ostatnią linią obrony dla długości imienia (F-01).
-  (table) => [check("user_name_length", sql`char_length(${table.name}) BETWEEN 1 AND 30`)],
+  (table) => [
+    check(
+      "user_name_length",
+      // Stała liczbowa z kodu, nie dane wejściowe: parametr ($1) jest w DDL niedozwolony.
+      // eslint-disable-next-line no-restricted-syntax
+      sql`char_length(${table.name}) BETWEEN 1 AND ${sql.raw(String(NAME_MAX_LENGTH))}`,
+    ),
+  ],
 );
 
 export const session = pgTable(

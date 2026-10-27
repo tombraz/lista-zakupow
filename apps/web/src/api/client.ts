@@ -13,6 +13,11 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** Każdy błąd żądania jako `ApiRequestError`; nieznany wyjątek to `internal`. */
+export function asRequestError(error: unknown): ApiRequestError {
+  return error instanceof ApiRequestError ? error : new ApiRequestError(0, "internal");
+}
+
 /** Względne adresy: web i API pod jednym originem (ADR 0006), ciasteczko sesji idzie samo. */
 export async function apiRequest<T>(path: string, body?: object): Promise<T> {
   let response: Response;

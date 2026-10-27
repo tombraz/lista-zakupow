@@ -1,12 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { signOut } from "../../api/account";
+import { asRequestError } from "../../api/client";
 import { AppBar } from "../../components/AppBar/AppBar";
 import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { useSession, useSetSession } from "../../session/useSession";
 import styles from "./AccountScreen.module.css";
-import { messages } from "./messages";
+import { logoutErrorText, messages } from "./messages";
 
 /** SC-09 w zakresie T-004; zmiana imienia i usunięcie konta w E-02. */
 export function AccountScreen() {
@@ -25,7 +26,11 @@ export function AccountScreen() {
     <>
       <AppBar title={messages.title} back={{ to: "/listy", label: messages.back }} />
       <main className={styles.page}>
-        {logout.isError && <InlineAlert tone="error">{messages.logoutFailed}</InlineAlert>}
+        {logout.error && (
+          <InlineAlert tone="error">
+            {logoutErrorText(asRequestError(logout.error).code)}
+          </InlineAlert>
+        )}
         <section className={styles.section} aria-labelledby="account-data">
           <h2 id="account-data">{messages.section}</h2>
           <dl className={styles.data}>

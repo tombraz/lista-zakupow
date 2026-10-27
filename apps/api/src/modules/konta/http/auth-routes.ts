@@ -47,6 +47,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     const { name, email, password } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
     if (response.status === 429) logSecurity(request, "rate_limited", {});
+    if (await lostEmailRace(auth, response, email)) throw new ApiError(409, "email_taken");
     return relay(response, reply);
   });
 
@@ -79,6 +80,18 @@ function logSecurity(
   securityLog(request.log).warn({ event, route: request.url, ...ids }, event);
 }
 
+/**
+ * Dwie równoczesne rejestracje tego samego e-maila mijają sprawdzenie Better Auth; druga
+ * odbija się od unikalności w bazie z ogólnym `FAILED_TO_CREATE_USER`. Wtedy e-mail jest zajęty.
+ */
+async function lostEmailRace(auth: Auth, response: Response, email: string): Promise<boolean> {
+  if (response.status !== 422) return false;
+  const body = (await response.clone().json()) as { code?: string };
+  if (body.code !== "FAILED_TO_CREATE_USER") return false;
+  const { internalAdapter } = await auth.$context;
+  return (await internalAdapter.findUserByEmail(email.toLowerCase())) !== null;
+}
+
 function validate<T extends z.ZodType>(schema: T, body: unknown): z.output<T> {
   const parsed = schema.safeParse(body);
   if (!parsed.success) throw new ApiError(400, "validation_failed", fieldErrors(parsed.error));
@@ -109,9 +122,8 @@ async function relay(response: Response, reply: FastifyReply) {
     const user = body.user;
     return reply.send(user ? { user: { id: user.id, name: user.name, email: user.email } } : {});
   }
-  const [status, code] = AUTH_ERRORS[body.code ?? ""] ?? [
-    response.status,
-    STATUS_CODES[response.status] ?? "internal",
-  ];
+  const known = STATUS_CODES[response.status];
+  const [status, code] =
+    AUTH_ERRORS[body.code ?? ""] ?? (known ? [response.status, known] : [500, "internal"]);
   throw new ApiError(status, code);
 }

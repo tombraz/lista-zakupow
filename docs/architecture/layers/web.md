@@ -19,7 +19,8 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - `apps/web/index.html`, `src/main.tsx` — wejście SPA (`lang="pl"`, `QueryClientProvider`, `createBrowserRouter`)
 - `apps/web/src/routes.tsx` — trasy (`/logowanie`, `/rejestracja`, `/regulamin`, `/listy`, `/konto`); test routera `routes.test.tsx`
 - `apps/web/src/session/` — `useSession` (`GET /api/v1/me`), strażnicy tras `RequireSession` / `PublicOnly`
-- `apps/web/src/screens/SC-xx-*/` — ekran, `messages.ts` (teksty i mapowanie kodów błędów), `*.module.css`, hooki, `*.test.tsx`
+- `apps/web/src/screens/SC-xx-*/` — ekran, `messages.ts` (teksty ekranu i jego kody błędów przez `errorText`), `*.module.css`, hooki, `*.test.tsx`
+- `apps/web/src/errorText.ts` — kod błędu żądania → komunikat: wspólne kody (np. `network`) w jednym miejscu, ekran podaje swoje teksty i tekst domyślny; `api/client.ts` — `apiRequest`, `ApiRequestError`, `asRequestError`
 - `apps/web/src/api/` — `client.ts` (`apiRequest`, `ApiRequestError`), `account.ts`; WS dojdzie z modułem `na-zywo`
 - `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe; `page.module.css` — kolumna i tytuł ekranu (`composes`)
 - `apps/web/src/components/` — komponenty design systemu (AppBar, AuthPage, Button, ConsentCheckbox, FieldError, InlineAlert, PasswordField, TextField), `useFocus.ts`, `cx.ts`

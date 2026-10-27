@@ -193,7 +193,7 @@ Uzupełnione „Gdzie jest kod” i „Komendy” w `layers/backend.md`, `layers
 
 ### Poprawki po QA round 1 (2026-10-27)
 
-Zakres: tylko #1 (blocker) i #2 (major). Minors #3–#9 i uwagi #10–#14 nie były ruszane w tej rundzie. Przebieg: `pnpm check` zielony (Vitest **90/90**, jscpd 0 klonów, depcruise 0 naruszeń), `pnpm build` OK, `pnpm test:e2e` **8/8**.
+Zakres: #1 (blocker), #2 (major) i — na prośbę właściciela — minors #3–#9. Uwagi #10–#14 (note) nie były ruszane. Przebieg końcowy: `pnpm check` zielony (Vitest **98/98**, jscpd 0 klonów, depcruise 0 naruszeń), `pnpm build` OK, `pnpm test:e2e` **8/8**.
 
 | QA # | Test (plik) | Red: komunikat przed poprawką | Poprawka | Teraz |
 | --- | --- | --- | --- | --- |
@@ -204,6 +204,26 @@ Zakres: tylko #1 (blocker) i #2 (major). Minors #3–#9 i uwagi #10–#14 nie by
 SEC1 i SEC6 — dowody jak wyżej plus nowe testy. Dokumenty: `data-model.md` (opis rezerwacji próby), `layers/backend.md` („Gdzie jest kod”: `http/cookies.ts`, rola `require-user.ts`).
 
 Do uwagi QA: zablokowane żądania też podbijają licznik (nie są oddawane) — okno liczy się od pierwszej porażki, więc nie wydłużają blokady. Próba, przy której Better Auth zwróci 429 z limitu IP, jest oddawana (hasło nie było sprawdzone).
+
+#### Minors #3–#9
+
+| QA # | Test (plik) | Red: komunikat przed poprawką | Poprawka | Teraz |
+| --- | --- | --- | --- | --- |
+| 3 | `sign-up.test.ts` „answers 409 email_taken to the second of two simultaneous sign-ups” | `expected [ 200, 422 ] to deeply equal [ 200, 409 ]` (powtarzalnie, 3/3) | most: przy `422 FAILED_TO_CREATE_USER` sprawdza `internalAdapter.findUserByEmail` → `409 email_taken` | pass |
+| 3a | `sign-up.test.ts` „…when the database rejects the account › answers 500 internal” (trigger w bazie odrzuca `INSERT`) | `expected 422 to be 500` | `relay`: nieznany status Better Auth → `500 internal` | pass |
+| 4 | `SC-09-konto/AccountScreen.test.tsx` (2): brak sieci → „Brak połączenia…”; `500` → „Nie udało się wylogować. Spróbuj ponownie.” | `Unable to find an element with the text: Nie udało się wylogować…` (drugi test; pierwszy przechodził) | `src/errorText.ts` — wspólne kody (`network`) w jednym miejscu, ekrany SC-01/02/09 podają swoje teksty i domyślny; `asRequestError()` w `api/client.ts` zamiast trzech kopii `instanceof` | pass |
+| 5 | `require-user.test.ts` (2): trasa innego modułu z `accounts.requireUser` — anonim → 401 `unauthenticated`, zalogowany → dane domownika | stub `not implemented`: `expected 500 to be 401`, `expected 500 to be 200` | `accountRoutes()` zwraca `Accounts { requireUser(request, reply) }` | pass |
+| 6 | refaktor bez zmiany zachowania | `drizzle-kit generate` → „No schema changes” (SQL `CHECK` identyczny z migracją `0001`) | `NAME_MAX_LENGTH` w `CHECK` przez `sql.raw(String(…))` | — |
+| 7 | dokumentacja | — | `layers/backend.md` „Pułapki”: konta tylko przez most HTTP, hook stempluje zgody bezwarunkowo, nie wołać `auth.api.signUpEmail` z serwera | — |
+| 8 | dokumentacja | — | `deployment.md`: akapit o zmiennych pod tabelą sekretów, wiersz `EXPO_TOKEN` z powrotem w tabeli | — |
+| 9 | `config.test.ts` (2): bez `APP_ORIGIN` (brak / pusty) `readConfig` rzuca błąd z nazwą zmiennej | `expected [Function] to throw an error` | `APP_ORIGIN` wymagany (bez domyślnego `http://localhost:5173`); E2E i `.env.example` już go ustawiają | pass |
+
+Do uwagi QA:
+
+- #6: reguła lint `no-restricted-syntax` (zakaz `sql.raw`, TH-20) wyłączona w jednej linii `schema.ts` z uzasadnieniem — stała liczbowa z kodu, nie dane wejściowe; zwykła interpolacja daje w DDL parametr (`BETWEEN 1 AND $1`, sprawdzone wygenerowaniem migracji, którą usunąłem). Alternatywa: zostawić literał 30.
+- #9: zmiana zachowania dla lokalnego dev — `pnpm dev` wymaga `APP_ORIGIN` w `.env` (wcześniej działał domyślny adres).
+- #4: wspólny jest tylko `network`; `rate_limited` i tekst domyślny (`internal`) różnią się treścią między ekranami (tabele „Copy”), więc zostają przy ekranach — ale mapowanie idzie przez jedną funkcję. Tekst „Nie udało się wylogować. Spróbuj ponownie.” to tekst agenta (brak w „Copy” SC-09).
+- #3: przy kolizji Better Auth loguje `Failed to create user` z obiektem błędu Postgresa (zawiera e-mail w `detail`); nasz adapter logera przekazuje tylko `message`, więc e-mail nie trafia do logów (TH-21).
 
 <!-- QA rounds are appended below by /qa-task -->
 
