@@ -24,7 +24,7 @@ describe("health", () => {
 
     const response = await app.inject({ method: "GET", url: "/health" });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual({ status: "ok" });
     expect(pool.totalCount).toBe(0);
     await app.close();
@@ -35,7 +35,7 @@ describe("health", () => {
 
     const response = await app.inject({ method: "GET", url: "/health/ready" });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual({ status: "ok", database: "up" });
     await app.close();
   });
@@ -70,7 +70,7 @@ describe("health", () => {
 
     const response = await app.inject({ method: "GET", url: "/health/ready" });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toBe(201);
     await app.close();
   });
 });
