@@ -1,11 +1,3 @@
-| install | `pnpm install` (Node 24 LTS, pnpm 12; generuje też tokeny) | korzeń repo |
-| uruchom lokalnie | `pnpm services:up`, potem `pnpm dev` (API `http://127.0.0.1:3000` + web `http://localhost:5173`) | korzeń repo |
-| type check / lint | `pnpm typecheck` / `pnpm lint` | korzeń repo |
-| testy jednego pliku | `pnpm vitest run apps/api/test/health.test.ts` | korzeń repo |
-| wszystkie testy warstwy | `pnpm vitest run --project api` | korzeń repo |
-| build | `pnpm --filter @lista/api build` (`apps/api/dist/server.js`); start `pnpm start` | korzeń repo |
-
-Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
 ---
 layer: backend
 status: approved          # draft | approved
@@ -36,14 +28,14 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 
 | Cel | Komenda | Skąd |
 | --- | --- | --- |
-| install | | |
-| uruchom lokalnie | | |
-| type check / lint | | |
-| testy jednego pliku | | |
-| wszystkie testy warstwy | | |
-| build | | |
+| install | `pnpm install` (Node 24 LTS, pnpm 12; generuje też tokeny) | korzeń repo |
+| uruchom lokalnie | `pnpm services:up`, potem `pnpm dev` (API `http://127.0.0.1:3000` + web `http://localhost:5173`) | korzeń repo |
+| type check / lint | `pnpm typecheck` / `pnpm lint` | korzeń repo |
+| testy jednego pliku | `pnpm vitest run apps/api/test/health.test.ts` | korzeń repo |
+| wszystkie testy warstwy | `pnpm vitest run --project api` | korzeń repo |
+| build | `pnpm --filter @lista/api build` (`apps/api/dist/server.js`); start `pnpm start` | korzeń repo |
 
-<Uzupełnia task walking skeleton.>
+Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
 
 ## Testy w tej warstwie
 
@@ -87,3 +79,4 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 | Data | Zmiana |
 | --- | --- |
 | 2026-10-26 | `/ci-cd`: API serwuje web pod jednym originem, nagłówki i CORS (ADR 0006). |
+| 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

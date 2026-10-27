@@ -32,6 +32,8 @@ describe("security headers (SEC1: TH-08, TH-15, TH-24)", () => {
       expect(response.headers["strict-transport-security"]).toContain("max-age=");
       expect(response.headers["referrer-policy"]).toBe("no-referrer");
       expect(response.headers["x-content-type-options"]).toBe("nosniff");
+      // Starsze przeglądarki ignorują frame-ancestors; X-Frame-Options musi mówić to samo.
+      expect(response.headers["x-frame-options"]).toBe("DENY");
     },
   );
 

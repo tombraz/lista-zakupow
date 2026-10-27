@@ -13,7 +13,7 @@ Konfigurowane w tasku walking skeleton; progi startowe, które szkielet przechod
 
 | Sprawdzenie | Narzędzie | Próg / reguła | Zakres |
 | --- | --- | --- | --- |
-| Formatowanie | Prettier (`prettier --check`) | konfiguracja domyślna + `printWidth: 100` | całe repo |
+| Formatowanie | Prettier (`prettier --check`) | konfiguracja domyślna + `printWidth: 100` | kod i konfiguracja (wyłączenia w `.prettierignore`: `docs/`, `.claude/`, `README.md`, pliki generowane i lockfile, skrypty z pipeline'u `scripts/backlog-check.mjs`, `scripts/design-check.mjs`) |
 | Lint | ESLint (flat config), `typescript-eslint` strict-type-checked | brak błędów i ostrzeżeń (`--max-warnings 0`) | całe repo |
 | Złożoność i rozmiar | ESLint core | `complexity` ≤ 10, `max-lines-per-function` ≤ 60 (bez pustych i komentarzy; komponenty React ≤ 80), `max-params` ≤ 4, `max-depth` ≤ 3, `max-lines` ≤ 300 na plik | kod źródłowy (bez testów) |
 | Duplikacja | jscpd | ≤ 3 % duplikacji, minimalny blok 50 tokenów | `apps/*/src`, `packages/*/src` |
@@ -22,6 +22,8 @@ Konfigurowane w tasku walking skeleton; progi startowe, które szkielet przechod
 | Dostępność (lint) | `eslint-plugin-jsx-a11y` (recommended, strict), `eslint-plugin-react-native-a11y` | brak błędów | `apps/web`, `apps/mobile` |
 | Bezpieczne wzorce | ESLint `no-restricted-syntax` / `react/no-danger` | zakaz `dangerouslySetInnerHTML`, `sql.raw`, `eval`, `localStorage` dla sesji | całe repo |
 | Kolory na sztywno, kontrasty | `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated` | 0 błędów | UI |
+
+Zmiany: 2026-10-27 (T-001, zatwierdził właściciel) — zakres Prettiera z „całe repo” na „kod i konfiguracja” (wyłączenia jak w tabeli).
 
 ## 2. Zasady wymagające oceny
 

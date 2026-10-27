@@ -19,6 +19,7 @@ export function securityHeaders(app: FastifyInstance): void {
         frameAncestors: ["'none'"],
       },
     },
+    frameguard: { action: "deny" },
     referrerPolicy: { policy: "no-referrer" },
   });
 }

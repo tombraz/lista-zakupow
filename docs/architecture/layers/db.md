@@ -1,11 +1,3 @@
-| baza lokalna | `pnpm services:up` (PostgreSQL na `localhost:5442`, Mailpit `localhost:8025`); stop `pnpm services:down` | korzeń repo |
-| wygeneruj migrację | `pnpm --filter @lista/api db:generate` (pusta własna: `pnpm --filter @lista/api exec drizzle-kit generate --custom --name=<nazwa>`) | korzeń repo |
-| uruchom migracje | `pnpm --filter @lista/api db:migrate` | korzeń repo |
-| testy warstwy | `pnpm vitest run --project api` (Testcontainers, wymaga działającego Dockera) | korzeń repo |
-
-Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
-
-Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do bazy `lista_template`, każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE`, przed każdym testem `TRUNCATE … RESTART IDENTITY CASCADE` wszystkich tabel schematu `public`. W pliku testów: `const db = useTestDatabase();`, potem `db.pool`.
 ---
 layer: db
 status: approved          # draft | approved
@@ -36,12 +28,14 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 | Cel | Komenda | Skąd |
 | --- | --- | --- |
-| baza lokalna | | |
-| wygeneruj migrację | | |
-| uruchom migracje | | |
-| testy warstwy | | |
+| baza lokalna | `pnpm services:up` (PostgreSQL na `localhost:5442`, Mailpit `localhost:8025`); stop `pnpm services:down` | korzeń repo |
+| wygeneruj migrację | `pnpm --filter @lista/api db:generate` (pusta własna: `pnpm --filter @lista/api exec drizzle-kit generate --custom --name=<nazwa>`) | korzeń repo |
+| uruchom migracje | `pnpm --filter @lista/api db:migrate` | korzeń repo |
+| testy warstwy | `pnpm vitest run --project api` (Testcontainers, wymaga działającego Dockera) | korzeń repo |
 
-<Uzupełnia task walking skeleton.>
+Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
+
+Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do bazy `lista_template`, każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE`, przed każdym testem `TRUNCATE … RESTART IDENTITY CASCADE` wszystkich tabel schematu `public`. W pliku testów: `const db = useTestDatabase();`, potem `db.pool`.
 
 ## Testy w tej warstwie
 
@@ -73,3 +67,9 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 - `postgres-best-practices:supabase-postgres-best-practices` — przed każdą zmianą schematu, indeksu lub migracji.
 - Dokumentacja Drizzle (drizzle-kit, transakcje, `for("update")`).
+
+## Historia zmian
+
+| Data | Zmiana |
+| --- | --- |
+| 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

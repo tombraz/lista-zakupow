@@ -1,10 +1,3 @@
-| install | `pnpm install`; tokeny ponownie: `pnpm --filter @lista/tokens build` | korzeń repo |
-| uruchom lokalnie | `pnpm dev` (Vite `http://localhost:5173`, proxy `/api` i `/health` do API) | korzeń repo |
-| type check / lint | `pnpm typecheck` / `pnpm lint`; kolory na sztywno `pnpm design-check` | korzeń repo |
-| testy jednego pliku | `pnpm vitest run apps/web/src/screens/start/StartScreen.test.tsx` | korzeń repo |
-| wszystkie testy warstwy | `pnpm vitest run --project web --project tokens` | korzeń repo |
-| E2E | `pnpm test:e2e` (buduje web i API, startuje kontener bazy; pierwszy raz `pnpm --filter @lista/web exec playwright install chromium`; log API w `apps/web/test-results/api.log`; na Windows 1 worker) | korzeń repo |
-| build | `pnpm --filter @lista/web build` (`apps/web/dist`, serwowany przez API) | korzeń repo |
 ---
 layer: web
 status: approved          # draft | approved
@@ -36,15 +29,13 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Cel | Komenda | Skąd |
 | --- | --- | --- |
-| install | | |
-| uruchom lokalnie | | |
-| type check / lint | | |
-| testy jednego pliku | | |
-| wszystkie testy warstwy | | |
-| E2E | | |
-| build | | |
-
-<Uzupełnia task walking skeleton.>
+| install | `pnpm install`; tokeny ponownie: `pnpm --filter @lista/tokens build` | korzeń repo |
+| uruchom lokalnie | `pnpm dev` (Vite `http://localhost:5173`, proxy `/api` i `/health` do API) | korzeń repo |
+| type check / lint | `pnpm typecheck` / `pnpm lint`; kolory na sztywno `pnpm design-check` | korzeń repo |
+| testy jednego pliku | `pnpm vitest run apps/web/src/screens/start/StartScreen.test.tsx` | korzeń repo |
+| wszystkie testy warstwy | `pnpm vitest run --project web --project tokens` | korzeń repo |
+| E2E | `pnpm test:e2e` (buduje web i API, startuje kontener bazy; pierwszy raz `pnpm --filter @lista/web exec playwright install chromium`; log API w `apps/web/test-results/api.log`; na Windows 1 worker) | korzeń repo |
+| build | `pnpm --filter @lista/web build` (`apps/web/dist`, serwowany przez API) | korzeń repo |
 
 ## Testy w tej warstwie
 
@@ -80,3 +71,9 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - `frontend-design` przy budowie komponentów design systemu.
 - `.claude/skills/brd-to-design/references/accessibility.md` — lista kontrolna dostępności.
 - Dokumentacja React Router, TanStack Query, Playwright, axe-core.
+
+## Historia zmian
+
+| Data | Zmiana |
+| --- | --- |
+| 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

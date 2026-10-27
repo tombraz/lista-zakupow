@@ -3,7 +3,7 @@ id: T-001
 title: "Walking skeleton: API, baza i web lokalnie"
 epic: E-01
 story: S-01-01
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []         # inline list only, e.g. [T-001, T-004]; only real blockers
 size: M                # S | M (L must be split)
@@ -165,6 +165,20 @@ Pełny przebieg: `pnpm check` — exit 0 (Prettier OK, ESLint 0 problemów, tsc 
 - `tokens.ts` dla mobile ma wymiary jako napisy (`"16px"`); T-003 może potrzebować liczb.
 - Obraz `postgres:17.11-alpine` występuje w trzech miejscach (`docker-compose.yml`, `apps/api/test/database-constants.ts`, `apps/web/e2e/server.ts`).
 - `.env` nie powstał w repo (zapis zablokowany przez uprawnienia); demo szło ze zmienną `DATABASE_URL`.
+
+### Poprawki po QA round 1 (2026-10-27)
+
+Zakres uzgodniony z właścicielem: #1 (blocker), #2 i #3 (minor). Ustalenia #4–#8 (note) bez zmian.
+
+| # | Czerwony | Poprawka | Zielony |
+| --- | --- | --- | --- |
+| 1 | Sprawdzenie ręczne (skrypt: pierwsza linia `---`, sekcja „Komendy” bez pustych komórek i placeholdera, zawiera komendy `pnpm`) — 4 × FAIL, np. `FAIL infra: pierwsza linia: \| start usług lokalnych \| …`, `FAIL infra: pusta komórka komendy`, `FAIL infra: placeholder` | Wiersze przeniesione do tabel „Komendy” w `layers/{infra,backend,db,web}.md`, uwagi (`DATABASE_URL`, izolacja testów) pod tabelą, placeholder usunięty, pozycja w „Historii zmian” (db i web: nowa sekcja). Treść komend bez zmian. | `OK: 4 przewodniki` |
+| 2 | `security-headers.test.ts` › `%s carries CSP, HSTS and the other headers` (×3): `expected 'SAMEORIGIN' to be 'DENY'` | `frameguard: { action: "deny" }` w `apps/api/src/http/security-headers.ts` | ✔ 6/6; na żywo `pnpm start` → `X-Frame-Options: DENY` obok `frame-ancestors 'none'` |
+| 3 | — (dokumentacja) | Właściciel zatwierdził zakres; `CODING_STANDARDS.md` sekcja 1: zakres Prettiera „kod i konfiguracja” z listą wyłączeń z `.prettierignore` + wpis o zmianie | — |
+
+Pełny przebieg: `pnpm check` exit 0 (Prettier, ESLint, tsc, jscpd 0 klonów, dependency-cruiser 0 naruszeń / 73 moduły, design-check, backlog-check, **Vitest 7 plików / 24 testy**), `pnpm build` exit 0, `pnpm test:e2e` 4 passed.
+
+Uwaga dla QA: w tym klonie pliki `docs/` mają w drzewie roboczym CRLF (indeks LF przez `.gitattributes`), stąd `head -1` w Git Bash może pokazać `---\r` — commit zapisuje LF.
 
 <!-- QA rounds are appended below by /qa-task -->
 

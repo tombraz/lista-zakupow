@@ -1,6 +1,3 @@
-| start usług lokalnych | `pnpm services:up` (`docker compose up -d --wait`) | korzeń repo |
-| stop i czyszczenie | `pnpm services:down` (stop); `pnpm services:reset` (usuwa też wolumen bazy) | korzeń repo |
-| lokalny przebieg CI | `pnpm check` (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, testy), potem `pnpm test:e2e` | korzeń repo |
 ---
 layer: infra
 status: approved          # draft | approved
@@ -35,11 +32,9 @@ Planowane (kolejne taski infra): `.github/workflows/` (`ci.yml`, `security.yml`,
 
 | Cel | Komenda | Skąd |
 | --- | --- | --- |
-| start usług lokalnych | | |
-| stop i czyszczenie | | |
-| lokalny przebieg CI | | |
-
-<Uzupełnia task walking skeleton.>
+| start usług lokalnych | `pnpm services:up` (`docker compose up -d --wait`) | korzeń repo |
+| stop i czyszczenie | `pnpm services:down` (stop); `pnpm services:reset` (usuwa też wolumen bazy) | korzeń repo |
+| lokalny przebieg CI | `pnpm check` (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, testy), potem `pnpm test:e2e` | korzeń repo |
 
 ## Testy w tej warstwie
 
@@ -82,3 +77,4 @@ Planowane (kolejne taski infra): `.github/workflows/` (`ci.yml`, `security.yml`,
 | Data | Zmiana |
 | --- | --- |
 | 2026-10-26 | `/ci-cd`: hosting, środowiska, weryfikacja tasków infra, konwencje workflow. Bez własnej domeny: web serwowany przez API na Fly (ADR 0006). |
+| 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
