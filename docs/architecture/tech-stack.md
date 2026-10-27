@@ -55,12 +55,14 @@ Domyślne wybory techniczne niższego rzędu, wynikające z decyzji powyżej. Ob
 | Uruchamianie API w dev | `tsx watch` | TypeScript bez kroku kompilacji, hot reload | natywne type stripping Node |
 | Build API | `esbuild` (bundle do `apps/api/dist/server.js`, pakiety workspace wbudowane, zależności npm zewnętrzne) | obraz bez TypeScriptu w runtime; esbuild już jest w Vite | tsc + project references |
 | Dev api + web razem | `pnpm --parallel` (bez dodatkowych paczek) | jedna komenda `pnpm dev` | concurrently |
+| Raport pokrycia (T-002) | `@vitest/coverage-v8` (`pnpm test:coverage`, artefakt CI bez progu) | oficjalny provider Vitesta | `@vitest/coverage-istanbul` |
 
 ## Git workflow
 
 - Variant: epic branch with draft PR
 - Main branch: main (protected, PR only, required check ci-ok, no force push)
 - Branch names: epic/E-xx-<slug>; fix/T-NNN-<slug>; hotfix/T-NNN-<slug>
+- Temporary CI verification branches: ci-test/T-NNN-<case> (e.g. ci-test/T-002-broken-test), branched from the epic branch; their test PRs target the epic branch, not main, and are closed without merge, branch deleted after the run (owner decision 2026-10-27)
 - Merge method: merge commit
 - Preview environment per PR: brak (`deployment.md`) → security review i UAT na staging przed akceptacją produkcji
 - Who merges and approves production: Tomasz Brążkiewicz (właściciel projektu)
@@ -71,5 +73,6 @@ Powód: jeden epik MVP, jeden autor, produkt jeszcze niedostępny dla użytkowni
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-27 | `/implement-task T-002`: gałęzie tymczasowe `ci-test/T-NNN-<przypadek>` do weryfikacji CI (decyzja właściciela); `@vitest/coverage-v8` (raport pokrycia jako artefakt CI, zatwierdził właściciel). |
 | 2026-10-26 | `/implement-task T-001`: narzędzia uruchomieniowe (pg, tsx, esbuild, `pnpm --parallel`). |
 | 2026-10-26 | `/ci-cd`: hosting (ADR 0006), brak podglądów per PR, dystrybucja iOS w pilotażu tylko przez web (ADR 0008 — zawęża „Dystrybucja mobile”). |

@@ -1,0 +1,203 @@
+# Bramki CI (pipeline.md, etapy 1–2; testing-strategy.md, „Bramki CI”). Jedyny wymagany check z tego
+# workflow: ci-ok. Komendy pochodzą z przewodników warstw (docs/architecture/layers/).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      db: ${{ steps.filter.outputs.db }}
+      backend: ${{ steps.filter.outputs.backend }}
+      web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          # Tabela „Joby CI per warstwa” w pipeline.md. Zmiana .github/** lub wspólnej konfiguracji
+          # (zależności, TypeScript, lint) uruchamia wszystkie warstwy.
+          filters: |
+            all: &all
+              - '.github/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.nvmrc'
+              - 'tsconfig*.json'
+              - 'eslint.config.js'
+              - 'vitest.config.ts'
+              - '.dependency-cruiser.cjs'
+              - '.jscpd.json'
+            db:
+              - *all
+              - 'apps/api/src/db/**'
+              - 'apps/api/drizzle/**'
+              - 'docker-compose.yml'
+            backend:
+              - *all
+              - 'apps/api/**'
+              - 'packages/shared/**'
+              - 'docker-compose.yml'
+            web:
+              - *all
+              - 'apps/web/**'
+              - 'packages/shared/**'
+              - 'packages/tokens/**'
+              - 'docs/design/tokens.json'
+            mobile:
+              - *all
+              - 'apps/mobile/**'
+              - 'packages/shared/**'
+              - 'packages/tokens/**'
+            infra:
+              - '.github/**'
+              - 'scripts/**'
+              - 'docker-compose.yml'
+              - 'Dockerfile'
+              - '**/fly*.toml'
+
+  # Zawsze, także dla zmian tylko w docs/.
+  always:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Format (Prettier)
+        run: pnpm format:check
+      - name: Backlog check
+        run: node scripts/backlog-check.mjs
+      - name: Design check (kontrasty, kolory na sztywno)
+        run: node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated
+      - name: Skan zależności (TH-22, próg high)
+        run: pnpm audit --audit-level high
+
+  static:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.mobile == 'true' || needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Lint (ESLint, złożoność, bezpieczne wzorce TH-15/TH-20)
+        run: pnpm lint
+      - name: Typy
+        run: pnpm typecheck
+      - name: Jakość (jscpd, dependency-cruiser)
+        run: pnpm quality
+
+  tests:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Unit, komponenty i integracja (Testcontainers)
+        run: pnpm test:coverage
+      - name: Raport pokrycia (bez progu)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  migrations:
+    needs: changes
+    if: needs.changes.outputs.db == 'true' || needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Baza z docker-compose.yml (jedno źródło obrazu Postgresa).
+      DATABASE_URL: postgres://lista:lista@localhost:5442/lista
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Pusta baza
+        run: docker compose up -d --wait postgres
+      - name: Migracje na pustej bazie
+        run: pnpm --filter @lista/api db:migrate
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+
+  e2e-web:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Przeglądarka Playwright
+        run: pnpm --filter @lista/web exec playwright install --with-deps chromium
+      - name: E2E web z axe (API serwuje build web, baza w kontenerze)
+        run: pnpm test:e2e
+      - name: Ślady i log API
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-web-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+
+  # Job mobile (Maestro, build iOS symulatora) dochodzi w T-003; filtr „mobile” już istnieje.
+
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
+      - name: Testy skryptów (--dry-run)
+        run: bash scripts/test/protect-main.test.sh
+
+  # Jedyny wymagany check tego workflow: zielony, gdy każdy uruchomiony job przeszedł (pominięty = OK).
+  ci-ok:
+    if: always()
+    needs: [changes, always, static, tests, migrations, build, e2e-web, infra]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Wynik jobów
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -Eq '"(failure|cancelled)"'; then
+            echo "Co najmniej jeden job nie przeszedł lub został anulowany."
+            exit 1
+          fi

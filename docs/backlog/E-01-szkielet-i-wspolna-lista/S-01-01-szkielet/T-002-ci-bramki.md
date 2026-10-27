@@ -3,7 +3,7 @@ id: T-002
 title: CI z bramkami jakości i bezpieczeństwa
 epic: E-01
 story: S-01-01
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001]    # inline list only, e.g. [T-001, T-004]; only real blockers
 size: M                # S | M (L must be split)

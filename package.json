@@ -16,6 +16,7 @@
     "build": "pnpm --filter @lista/web build && pnpm --filter @lista/api build",
     "start": "pnpm --filter @lista/api start",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm --filter @lista/web test:e2e",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --max-warnings 0",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
     "dependency-cruiser": "18.7.0",
     "eslint": "9.39.5",
     "eslint-plugin-jsx-a11y": "6.10.2",
