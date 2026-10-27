@@ -88,6 +88,10 @@ What an independent tester checks beyond the automated tests:
 - Trivy na obrazie API — T-010 (obraz powstaje tam).
 - Ustawienia repozytorium zmienia właściciel: przygotuj skrypt i listę kroków, nie uruchamiaj ich.
 - Raport pokrycia jako artefakt, bez progu blokującego.
+- Z QA T-001 (uwagi przekazane do tego tasku):
+  - Tag obrazu `postgres:17.11-alpine` w jednym źródle: dziś jest w `docker-compose.yml`, `apps/api/test/database-constants.ts` i `apps/web/e2e/server.ts` (ten nie używa `POSTGRES_IMAGE`), a service container w CI byłby czwartym miejscem.
+  - Równoległość E2E na Linuksie: T-001 ustawiło 1 worker na Windows (zamieranie API przy wielu workerach). Sprawdzić w CI, czy równoległe workery są stabilne, i zapisać decyzję w przewodniku web.
+  - „Pułapki” w przewodniku infra: (a) E2E na Windows z 1 workerem i dlaczego; (b) porty hosta w Compose są stałe (5442, 1025, 8025), więc drugi klon na tej samej maszynie nie wystartuje `services:up`, gdy działa pierwszy; (c) przerwane przebiegi zostawiały kontenery Testcontainers: sprzątanie (Ryuk włączony, w CI bez `TESTCONTAINERS_RYUK_DISABLED`) plus komenda `docker ps --filter label=org.testcontainers=true`.
 
 ## Definition of done
 
