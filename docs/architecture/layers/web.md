@@ -64,7 +64,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 ## Pułapki
 
-<Rośnie z ustaleniami QA.>
+- E2E: na Windows 1 worker (zamieranie API przy wielu workerach, T-001); na Linuksie w CI równoległe workery (Playwright domyślnie: 2 na `ubuntu-latest`) — stabilne w 5 przebiegach T-002 (4 testy, ~15 s). Decyzja: zostaje `workers` domyślne poza Windows (T-002).
 
 ## Skille i źródła
 
@@ -76,4 +76,5 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-27 | T-002: „Pułapki” — równoległość E2E na Linuksie w CI. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

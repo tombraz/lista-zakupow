@@ -3,7 +3,7 @@ id: T-002
 title: CI z bramkami jakości i bezpieczeństwa
 epic: E-01
 story: S-01-01
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001]    # inline list only, e.g. [T-001, T-004]; only real blockers
 size: M                # S | M (L must be split)
@@ -37,11 +37,11 @@ Każdy PR (także draft) i push do `main` uruchamia CI z bramkami z `testing-str
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given workflow w `.github/workflows/`, when uruchomię `actionlint` (obraz `rhysd/actionlint` z przypiętą wersją), then nie ma błędów; job `infra` w CI robi to samo. — verified by: rung 1 (lokalnie) + przebieg CI
-- [ ] AC2: Given PR zmieniający `apps/api/**`, when CI się zakończy, then przeszły joby: format, lint, typy, jakość (jscpd, złożoność, dependency-cruiser), unit, integracja (Testcontainers), build, sprawdzenie migracji na pustej bazie, E2E web z axe; `ci-ok` zielony. — verified by: rung 3, link do przebiegu
-- [ ] AC3: Given gałąź z celowo zepsutym testem, when CI się zakończy, then `ci-ok` jest czerwony. — verified by: rung 3, link do przebiegu (gałąź usunięta po teście)
-- [ ] AC4: Given PR zmieniający tylko `docs/**`, when CI się zakończy, then joby warstw są pominięte, a `ci-ok` zielony (pominięty job nie blokuje). — verified by: rung 3
-- [ ] AC5: Given każdy PR, when CI się zakończy, then uruchomiły się `node scripts/backlog-check.mjs` i `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated`. — verified by: rung 3
+- [x] AC1: Given workflow w `.github/workflows/`, when uruchomię `actionlint` (obraz `rhysd/actionlint` z przypiętą wersją), then nie ma błędów; job `infra` w CI robi to samo. — verified by: rung 1 (lokalnie) + przebieg CI
+- [x] AC2: Given PR zmieniający `apps/api/**`, when CI się zakończy, then przeszły joby: format, lint, typy, jakość (jscpd, złożoność, dependency-cruiser), unit, integracja (Testcontainers), build, sprawdzenie migracji na pustej bazie, E2E web z axe; `ci-ok` zielony. — verified by: rung 3, link do przebiegu
+- [x] AC3: Given gałąź z celowo zepsutym testem, when CI się zakończy, then `ci-ok` jest czerwony. — verified by: rung 3, link do przebiegu (gałąź usunięta po teście)
+- [x] AC4: Given PR zmieniający tylko `docs/**`, when CI się zakończy, then joby warstw są pominięte, a `ci-ok` zielony (pominięty job nie blokuje). — verified by: rung 3
+- [x] AC5: Given każdy PR, when CI się zakończy, then uruchomiły się `node scripts/backlog-check.mjs` i `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated`. — verified by: rung 3
 - [ ] AC6: Given skrypt ochrony repo (`gh`), when właściciel go uruchomi, then `main` wymaga PR, checków `ci-ok` i `codeql`, blokuje force push i usuwanie; skrypt ma tryb `--dry-run` wypisujący komendy. — verified by: rung 2 (`--dry-run` lokalnie) + zrzut ustawień od właściciela
 - [ ] SEC1 (TH-22): Given zależność z podatnością high lub critical, when CI się uruchomi, then `pnpm audit --audit-level high` zatrzymuje `ci-ok`. — verified by: rung 3 na gałęzi testowej
 - [ ] SEC2 (TH-22): Given workflow, when sprawdzę ich treść, then każda akcja jest przypięta do SHA, `permissions: contents: read` domyślnie i tylko niezbędne uprawnienia per job; `dependabot.yml` obejmuje npm i github-actions (co tydzień, grupowane). — verified by: przegląd + actionlint
@@ -110,6 +110,50 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+Wszystkie przebiegi 2026-10-27, commit epiku `16f0174`.
+
+**TDD plan**
+
+| # | Test | Red (przed) | Green (po) |
+| --- | --- | --- | --- |
+| 1 | actionlint (`rhysd/actionlint:1.7.12@sha256:b1934ee5…`) | workflow z `${{ github.event.pull_request.title }}` w `run:` → exit 1: `"github.event.pull_request.title" is potentially untrusted … [expression]` | `MSYS_NO_PATHCONV=1 docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:… ` → exit 0; job `infra` w CI zielony (run 40521770039) |
+| 2 | `bash scripts/test/protect-main.test.sh` (porównanie z `scripts/test/protect-main.dry-run.txt` + odrzucenie złej nazwy repo, exit 2) | stub `not implemented`: `FAIL dry-run wypisuje komendy gh` (diff 13 linii), `FAIL odrzuca niepoprawną nazwę repozytorium (exit 2)` (było 1) | `ok` ×2, exit 0; także w jobie `infra` w CI |
+| 3 | PR ze zmianą tylko `apps/api/src/server.ts` (#2) | — (pierwszy przebieg workflow) | wszystkie joby warstw zielone, `infra` pominięty, `ci-ok` zielony: [run 40523300955](https://github.com/tombraz/lista-zakupow/actions/runs/40523300955); epik PR #1 (zmiana `.github/**` → wszystkie joby): [run 40521770039](https://github.com/tombraz/lista-zakupow/actions/runs/40521770039), `codeql` [run 40521769938](https://github.com/tombraz/lista-zakupow/actions/runs/40521769938) |
+| 4 | PR z zepsutym testem (#3, `health.test.ts` 200→201) | — | job `tests`: `AssertionError: expected 200 to be 201`, `ci-ok` czerwony: [run 40523320866](https://github.com/tombraz/lista-zakupow/actions/runs/40523320866) |
+| 5 | PR tylko z `docs/ci-test.md` (#4) | — | `always` zielony, `static/tests/migrations/build/e2e-web/infra` pominięte, `ci-ok` zielony: [run 40523340926](https://github.com/tombraz/lista-zakupow/actions/runs/40523340926) |
+| 6a | PR z `lodash@4.17.20` (#6) | lokalnie `pnpm audit --audit-level high` → `2 high`, exit 1 | krok „Skan zależności”: `Severity: 4 moderate | 2 high`, `ci-ok` czerwony: [run 40523373127](https://github.com/tombraz/lista-zakupow/actions/runs/40523373127) |
+| 6b | PR z `dangerouslySetInnerHTML` i `sql.raw` (#5) | lokalnie ESLint: 3 błędy | job `static`: `sql.raw jest zakazany (TH-20)`, `react/no-danger`, `dangerouslySetInnerHTML jest zakazany (TH-15)`; `ci-ok` czerwony: [run 40523356573](https://github.com/tombraz/lista-zakupow/actions/runs/40523356573) |
+
+Testy 3–6 to „real run” (rung 3); nie mają fazy red przed workflow, który dopiero je umożliwia — dowodem bramki jest para zielony (#2, #4) / czerwony (#3, #5, #6).
+
+**Kryteria**
+
+- AC1: test 1 lokalnie + job `infra` (run 40521770039).
+- AC2: test 3 — format, lint, typy, jakość (jscpd, złożoność w ESLint, dependency-cruiser), unit + integracja (Testcontainers) z raportem pokrycia (artefakt `coverage`), build, migracje na pustej bazie (`docker compose up postgres` + `db:migrate`), E2E web z axe — zielone. Czas całego CI ~1,5 min.
+- AC3: test 4.
+- AC4: test 5.
+- AC5: w każdym PR (#1–#6) job `always` uruchomił `node scripts/backlog-check.mjs` i `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated`.
+- AC6: rung 2 zielony (test 2). **Czeka na właściciela:** uruchomienie `bash scripts/protect-main.sh` (kroki w `SECURITY.md`) i zrzut ustawień `main`; Demo 2 — draft PR do `main` z gałęzi `ci-test/T-002-broken-test` (gałąź zostawiona na ten cel).
+- SEC1: test 6a.
+- SEC2: przegląd — każda akcja przypięta do SHA (checkout v7.0.1, pnpm/action-setup v6.1.0, setup-node v7.1.0, paths-filter v4.0.3, upload-artifact v7.0.2, codeql-action v4.39.1; SHA sprawdzone przez `gh api repos/<akcja>/commits/<tag>`), actionlint w obrazie przypiętym digestem; `permissions: contents: read` na górze obu workflow, `pull-requests: read` tylko w `changes`, `security-events: write` tylko w `codeql`; brak `pull_request_target`; `dependabot.yml`: npm + github-actions (także `.github/actions/*`), co tydzień, grupowane. actionlint czysty.
+- SEC3: **czeka na właściciela** — `SECURITY.md` (zgłaszanie + kroki 1–4); secret scanning z push protection i private vulnerability reporting włącza `scripts/protect-main.sh`; test push protection opisany w `SECURITY.md`, krok 4.
+- SEC4: test 6b (lint) + CodeQL JavaScript/TypeScript na PR, push do `main` i `cron: "17 3 * * 1"` (`security.yml`), check `codeql` zielony na #1–#6.
+
+**Uwagi z QA T-001**
+
+- Tag `postgres:17.11-alpine` w jednym źródle: `docker-compose.yml`; `apps/api/test/database-constants.ts` czyta go stamtąd, `apps/web/e2e/server.ts` importuje `POSTGRES_IMAGE`, job `migrations` używa `docker compose`. Decyzja właściciela (2026-10-27): bez service containera w CI (odstępstwo od notatki „Postgres jako service container” i `pipeline.md` etap 2 — do aktualizacji przy przeglądzie pipeline'u).
+- Równoległość E2E na Linuksie: 2 workery w CI, 5 przebiegów stabilnych — zapisane w `layers/web.md` („Pułapki”).
+- „Pułapki” infra (a)–(c) dopisane w `layers/infra.md`.
+
+**Weryfikacja lokalna (ten przebieg):** `pnpm check` zielony (format, lint, typy, jakość, design-check, backlog-check, 24 testy), `pnpm test:e2e` 4/4, `pnpm test:coverage` (65,8 % instrukcji), `pnpm audit --audit-level high` exit 0.
+
+**Przewodniki warstw (Step 8b):** `layers/infra.md` — „Gdzie jest kod”, „Komendy”, „Pułapki”; `layers/web.md` — „Pułapki”. `tech-stack.md` — gałęzie `ci-test/`, `@vitest/coverage-v8` (zatwierdził właściciel).
+
+**Do uwagi QA**
+
+- CodeQL zgłosił alert high `js/missing-rate-limiting` w `apps/api/src/modules/health/http/routes.ts:9` (`/health/ready` dotyka bazy bez limitu; kod T-001). Wymagany check `codeql` (job) przechodzi; czerwony jest tylko informacyjny check „CodeQL” z GitHub Advanced Security na PR #1. Poza zakresem T-002 — decyzja właściciela (limit przy MC-04 albo odrzucenie alertu z uzasadnieniem).
+- PR-y testowe #2–#6 i gałęzie `ci-test/T-002-*` nie zostały jeszcze zamknięte/usunięte (odmowa uprawnień w sesji) — do zamknięcia przez właściciela; `ci-test/T-002-broken-test` zostaje do Demo 2.
+- Nie dodano jobu „build obrazu (bez push)” z tabeli warstwy backend — `Dockerfile` powstaje w T-010.
+
 
 <!-- QA rounds are appended below by /qa-task -->
