@@ -115,6 +115,7 @@ What an independent tester checks beyond the automated tests:
 - [ ] Full test suite, type check and lint pass
 - [ ] Every acceptance criterion checked, with evidence below
 - [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
 - [ ] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
