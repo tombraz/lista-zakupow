@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTestApp } from "./app";
+import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
 
 describe("request body limit (SEC3: TH-13)", () => {
@@ -11,7 +11,7 @@ describe("request body limit (SEC3: TH-13)", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/lists",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: TEST_ORIGIN },
       payload: JSON.stringify({ name: "x".repeat(16 * 1024) }),
     });
 
@@ -25,11 +25,12 @@ describe("request body limit (SEC3: TH-13)", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/lists",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: TEST_ORIGIN },
       payload: JSON.stringify({ name: "x".repeat(15 * 1024) }),
     });
 
-    expect(response.statusCode).toBe(404);
+    // Treść przeszła limit i dotarła do trasy, która wymaga sesji.
+    expect(response.statusCode).toBe(401);
     await app.close();
   });
 });

@@ -21,9 +21,12 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 - `apps/api/src/logging.ts` — pino: redakcja, `requestId`, `securityLog()`
 - `apps/api/src/http/` — `security-headers.ts` (helmet, CSP), `web-app.ts` (pliki web + fallback SPA, 404 `not_found`)
 - `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health` (z limitem `/health/ready`) i `modules/konta` (`index.ts` — publiczne API modułu: `accountRoutes()` zwraca `Accounts.requireUser` dla tras `/api/v1/*` innych modułów; `infra/auth.ts` — konfiguracja Better Auth, `infra/sign-in-failures.ts` — limit per konto, `http/auth-routes.ts` — most `/api/auth/*`, `http/require-user.ts` (przekazuje odnowione ciasteczko sesji), `http/cookies.ts`, `http/me-routes.ts`)
-- `apps/api/src/http/api-error.ts` — `ApiError` z kodem z `packages/shared` i jedyny handler błędów
-- `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`, `app.ts` (`buildTestApp`), `factories.ts` (`createUser`, `signIn`, `randomIp`), `cookies.ts`
-- `packages/shared/src/` — schematy zod i typy kontraktu (`health.ts`, `api/account.ts`, `api/errors.ts`), progi limitów `limits.ts`; testy w `packages/shared/test/`
+- `apps/api/src/http/api-error.ts` — `ApiError` (błędy HTTP: 400, 401, 403 `invalid_origin`) i jedyny handler błędów; mapuje też `DomainError` na status (`not_found` 404, `owner_only` 403, `limit_reached` 409) i zapisuje jego zdarzenie do logu `security`
+- `apps/api/src/domain-error.ts` — `DomainError` (kod z `packages/shared`, `limit`, zdarzenie bezpieczeństwa) rzucany przez domeny modułów
+- `apps/api/src/http/validate.ts` — treść żądania przez schemat zod (400 `validation_failed` z `fields`); `http/trusted-origin.ts` — 403 `invalid_origin` dla `POST`/`PATCH`/`DELETE` pod `/api/v1/*` z obcego `Origin` (TH-14)
+- `apps/api/src/modules/listy` — `index.ts` (`listsModule()` rejestruje trasy, zwraca `Lists.requireListAccess` dla kolejnych modułów; `createLists(pool)`), `domain/lists.ts` (`requireListAccess`, tworzenie z limitem, zmiana nazwy, usunięcie, interfejs `ListsRepository`), `infra/lists-repository.ts`, `http/routes.ts` (`/api/v1/lists*`)
+- `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`, `app.ts` (`buildTestApp`), `factories.ts` (`createUser`, `signIn`, `randomIp`, `createList(pool, owner, name?)` i `addMember(pool, list, user)` — wprost w bazie), `requests.ts` (`requestsAs(app, user | null)` — żądania `/api/v1/*` z ciasteczkiem i zaufanym `Origin`), `logs.ts` (`captureLogs()`), `cookies.ts`
+- `packages/shared/src/` — schematy zod i typy kontraktu (`health.ts`, `api/account.ts`, `api/errors.ts`, `api/lists.ts`), progi `limits.ts` (`RATE_LIMITS`, `BUSINESS_LIMITS`); testy w `packages/shared/test/`
 
 ## Komendy
 
@@ -81,6 +84,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | T-005: moduł `listy`, `DomainError`, `validate`, `trustedOrigin`, helpery testów `requestsAs`, `captureLogs`, fabryki `createList`, `addMember`. |
 | 2026-10-27 | T-004: moduł `konta`, `ApiError`, fabryki testowe, nowe zmienne środowiskowe. |
 | 2026-10-26 | `/ci-cd`: API serwuje web pod jednym originem, nagłówki i CORS (ADR 0006). |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

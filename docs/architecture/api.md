@@ -37,12 +37,14 @@ Stan po T-004: API udostępnia z Better Auth tylko trasy z tabeli, które już m
 | --- | --- | --- | --- | --- |
 | Moje listy (F-06) | `GET /api/v1/lists` | — | `[{ id, name, role: "owner" \| "participant", owner: { id, name }, toBuyCount, members: [{ id, name }], updatedAt }]` (od ostatnio zmienionej) | — |
 | Utwórz (F-05) | `POST /api/v1/lists` | `{ name }` | 201 lista | 400, 409 `limit_reached` (`lists`) |
-| Szczegóły z pozycjami | `GET /api/v1/lists/:listId` | — | `{ id, name, role, owner, items: [Item] }` | 404 |
+| Szczegóły z pozycjami | `GET /api/v1/lists/:listId` | — | `{ id, name, role, owner, members: [{ id, name }], items: [Item] }` (`members` — liczba uczestników w oknie usunięcia, SC-06) | 404 |
 | Zmień nazwę (F-05) | `PATCH /api/v1/lists/:listId` | `{ name }` | 200 lista | 400, 403 `owner_only`, 404 |
 | Usuń (F-05) | `DELETE /api/v1/lists/:listId` | — | 204 | 403 `owner_only`, 404 |
 | Uczestnicy (F-13) | `GET /api/v1/lists/:listId/members` | — | `{ owner: Person, participants: [Person] }`; `Person = { id, name, email? }` — `email` tylko gdy pyta właściciel | 404 |
 | Usuń uczestnika (F-13) | `DELETE /api/v1/lists/:listId/members/:userId` | — | 204; `access.revoked` do usuniętego | 403 `owner_only`, 404 |
 | Opuść listę (F-13) | `POST /api/v1/lists/:listId/leave` | — | 204 | 403 `owner_cannot_leave`, 404 |
+
+Stan po T-005: trasy listy (bez uczestników F-13) działają; typy `ListSummary`, `ListDetails`, `Person` i schemat `listNameRequestSchema` w `packages/shared/src/api/lists.ts`. Odpowiedź utworzenia i zmiany nazwy to `ListSummary` (kształt elementu `GET /api/v1/lists`). `members` to uczestnicy bez właściciela, w kolejności dołączenia; `toBuyCount` = 0 do czasu pozycji (T-006). Niepoprawny `listId` (nie UUID) daje ten sam 404 `not_found`. Żądania `POST` / `PATCH` / `DELETE` pod `/api/v1/*` z `Origin` innym niż `APP_ORIGIN` (także bez `Origin`) dostają 403 `invalid_origin` (TH-14, `http/trusted-origin.ts`). Odmowy dostępu (`list_access_denied`) i limit (`limit_reached`) trafiają do logu `security` z identyfikatorami.
 
 ## Pozycje (`pozycje`)
 

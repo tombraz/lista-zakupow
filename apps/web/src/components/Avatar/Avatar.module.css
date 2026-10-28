@@ -1,0 +1,48 @@
+.stack {
+  display: inline-flex;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--size-avatar) - var(--spacing-xs));
+  height: calc(var(--size-avatar) - var(--spacing-xs));
+  font-size: var(--typography-size-small);
+  font-weight: var(--typography-weight-semibold);
+  color: var(--color-text-on-person);
+  border: 2px solid var(--color-bg-default);
+  border-radius: var(--radius-full);
+}
+
+.avatar + .avatar {
+  margin-inline-start: calc(var(--spacing-sm) * -1);
+}
+
+.person1 {
+  background: var(--color-person-1);
+}
+
+.person2 {
+  background: var(--color-person-2);
+}
+
+.person3 {
+  background: var(--color-person-3);
+}
+
+.person4 {
+  background: var(--color-person-4);
+}
+
+.person5 {
+  background: var(--color-person-5);
+}
+
+.person6 {
+  background: var(--color-person-6);
+}
+
+.more {
+  background: var(--color-person-6);
+}

@@ -1,5 +1,8 @@
 import { randomInt, randomUUID } from "node:crypto";
+import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
+import type { Pool } from "pg";
+import { listMember, shoppingList } from "../src/db/schema";
 import { TEST_ORIGIN } from "./app";
 import { cookieHeader } from "./cookies";
 
@@ -51,4 +54,33 @@ export async function signIn(app: FastifyInstance, user: Pick<TestUser, "email" 
   });
   if (response.statusCode !== 200) throw new Error(`sign-in failed: ${response.body}`);
   return cookieHeader(response.headers["set-cookie"]);
+}
+
+export interface TestList {
+  id: string;
+  name: string;
+  ownerId: string;
+}
+
+/** Lista właściciela wprost w bazie (szybko, także dziesiątki list do testów limitu). */
+export async function createList(
+  pool: Pool,
+  owner: Pick<TestUser, "id">,
+  name = `Lista ${randomUUID().slice(0, 8)}`,
+): Promise<TestList> {
+  const [list] = await drizzle(pool)
+    .insert(shoppingList)
+    .values({ ownerId: owner.id, name })
+    .returning({ id: shoppingList.id });
+  if (!list) throw new Error("createList: no row");
+  return { id: list.id, name, ownerId: owner.id };
+}
+
+/** Uczestnictwo wprost w bazie, do czasu przyjmowania zaproszeń (T-008). */
+export async function addMember(
+  pool: Pool,
+  list: Pick<TestList, "id">,
+  user: Pick<TestUser, "id">,
+): Promise<void> {
+  await drizzle(pool).insert(listMember).values({ listId: list.id, userId: user.id });
 }

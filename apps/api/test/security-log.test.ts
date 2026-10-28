@@ -1,24 +1,12 @@
-import { Writable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { buildTestApp, TEST_ORIGIN } from "./app";
 import { cookieHeader } from "./cookies";
 import { useTestDatabase } from "./database";
 import { randomIp } from "./factories";
+import { captureLogs } from "./logs";
 
 const EMAIL = "tajny.adres@example.com";
 const PASSWORD = "tajne-haslo-123";
-
-function captureLogs() {
-  const lines: string[] = [];
-  const stream = new Writable({
-    write(chunk: Buffer, _encoding, done) {
-      lines.push(...chunk.toString("utf8").split("\n").filter(Boolean));
-      done();
-    },
-  });
-  const entries = () => lines.map((line) => JSON.parse(line) as Record<string, unknown>);
-  return { stream, lines, entries };
-}
 
 // TH-21: zdarzenia bezpieczeństwa z identyfikatorami; w żadnym wpisie e-mail, hasło, ciasteczko.
 describe("security log (SEC7)", () => {
@@ -65,7 +53,7 @@ describe("security log (SEC7)", () => {
       });
     }
 
-    const security = logs.entries().filter((entry) => entry["channel"] === "security");
+    const security = logs.security();
     const failed = security.filter((entry) => entry["event"] === "sign_in_failed");
     const limited = security.filter((entry) => entry["event"] === "rate_limited");
     expect(failed).toHaveLength(5);

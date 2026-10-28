@@ -3,7 +3,7 @@ id: T-005
 title: "Moje listy: tworzenie, przegląd, zmiana nazwy i usunięcie (web)"
 epic: E-01
 story: S-01-03
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-004]
 size: M                # S | M (L must be split)
@@ -37,18 +37,18 @@ Zalogowany domownik widzi swoje listy (pusty stan, gdy ich nie ma), tworzy nową
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given zalogowany domownik, when `POST /api/v1/lists { name }`, then 201 z listą, w której jest właścicielem; lista jest na początku `GET /api/v1/lists` z `role: "owner"`. — verified by: test integracyjny `lists.create.test`
-- [ ] AC2: Given nazwa pusta (po obcięciu spacji) lub 101 znaków, when tworzy lub zmienia nazwę, then 400 `validation_failed` (`fields.name`); SC-05 pokazuje „Wpisz nazwę listy” / „Nazwa listy może mieć najwyżej 100 znaków”. — verified by: test integracyjny + test komponentu SC-05
-- [ ] AC3: Given domownik ma 50 własnych list, when tworzy kolejną, then 409 `limit_reached` (`limit: "lists"`); SC-05 pokazuje komunikat o limicie i nieaktywny „+ Nowa lista”; given 49 list i dwa równoległe żądania, then powstaje dokładnie jedna. — verified by: testy integracyjne (w tym równoległy) + test komponentu
-- [ ] AC4: Given domownik jest właścicielem jednej listy i uczestnikiem innej, when `GET /api/v1/lists`, then dostaje obie, posortowane od ostatnio zmienionej, z `role`, `owner { id, name }`, `toBuyCount`, `members [{ id, name }]`; SC-05 pokazuje „od <imię>” przy udostępnionej. — verified by: test integracyjny (uczestnictwo przez fabrykę `addMember`) + test komponentu SC-05
-- [ ] AC5: Given brak list, when otworzy SC-05, then widzi pusty stan; stany ładowania (szkielety) i błędu („Nie udało się wczytać list.” + „Spróbuj ponownie”) działają. — verified by: test komponentu SC-05
-- [ ] AC6: Given właściciel, when zmieni nazwę (`PATCH`) albo usunie listę (`DELETE` po ConfirmDialog z liczbą uczestników), then nowa nazwa jest w `GET /lists/:id` i na liście list; po usunięciu lista, jej członkostwa i (później) pozycje i zaproszenia znikają (kaskada). — verified by: testy integracyjne + test komponentu SC-06 (menu, dialog)
-- [ ] AC7: Given `GET /api/v1/lists/:listId` dla własnej listy, when brak pozycji, then odpowiedź ma `items: []`, a SC-06 pokazuje pusty stan i AppBar z nazwą jako `h1`. — verified by: test integracyjny + test komponentu SC-06
-- [ ] AC8: Given SC-05 (pusty, z listami, limit, formularz z błędem) i SC-06 (pusty, brak dostępu, dialog usunięcia), when E2E je odwiedza, then axe bez naruszeń; „+ Nowa lista” przenosi fokus na pole, Esc / „Anuluj” wraca fokusem na przycisk; ConfirmDialog ma pułapkę fokusu, Esc zamyka, fokus wraca na „Więcej opcji”. — verified by: E2E Playwright + axe, testy komponentów
-- [ ] SEC1 (TH-01): Given lista domownika A, when domownik B wywoła `GET`, `PATCH` lub `DELETE /api/v1/lists/:listId`, then dostaje 404 `not_found` identyczne jak dla nieistniejącego `listId`, lista się nie zmienia, a `GET /api/v1/lists` B nie zawiera listy A; anonim dostaje 401 na każdej z tych tras. — verified by: testy integracyjne `lists.authz.test`
-- [ ] SEC2 (TH-02): Given uczestnik listy A, when wywoła `PATCH` lub `DELETE /api/v1/lists/:listId`, then 403 `owner_only`, lista bez zmian; SC-06 uczestnika nie pokazuje opcji „Zmień nazwę listy” i „Usuń listę”. — verified by: test integracyjny + test komponentu
-- [ ] SEC3 (TH-01): Given domownik B otwiera adres SC-06 listy A, when ekran się załaduje, then widzi tylko „Nie masz dostępu do tej listy.” i „Wróć do moich list”, bez nazwy ani treści listy. — verified by: E2E z dwoma kontami
-- [ ] SEC4 (TH-13): Given limit 50 list (AC3), when bot tworzy listy w pętli, then po 50 dostaje 409, a odmowa dostępu (SEC1) jest zapisana w logu `security` z identyfikatorami. — verified by: test integracyjny (log)
+- [x] AC1: Given zalogowany domownik, when `POST /api/v1/lists { name }`, then 201 z listą, w której jest właścicielem; lista jest na początku `GET /api/v1/lists` z `role: "owner"`. — verified by: test integracyjny `lists.create.test`
+- [x] AC2: Given nazwa pusta (po obcięciu spacji) lub 101 znaków, when tworzy lub zmienia nazwę, then 400 `validation_failed` (`fields.name`); SC-05 pokazuje „Wpisz nazwę listy” / „Nazwa listy może mieć najwyżej 100 znaków”. — verified by: test integracyjny + test komponentu SC-05
+- [x] AC3: Given domownik ma 50 własnych list, when tworzy kolejną, then 409 `limit_reached` (`limit: "lists"`); SC-05 pokazuje komunikat o limicie i nieaktywny „+ Nowa lista”; given 49 list i dwa równoległe żądania, then powstaje dokładnie jedna. — verified by: testy integracyjne (w tym równoległy) + test komponentu
+- [x] AC4: Given domownik jest właścicielem jednej listy i uczestnikiem innej, when `GET /api/v1/lists`, then dostaje obie, posortowane od ostatnio zmienionej, z `role`, `owner { id, name }`, `toBuyCount`, `members [{ id, name }]`; SC-05 pokazuje „od <imię>” przy udostępnionej. — verified by: test integracyjny (uczestnictwo przez fabrykę `addMember`) + test komponentu SC-05
+- [x] AC5: Given brak list, when otworzy SC-05, then widzi pusty stan; stany ładowania (szkielety) i błędu („Nie udało się wczytać list.” + „Spróbuj ponownie”) działają. — verified by: test komponentu SC-05
+- [x] AC6: Given właściciel, when zmieni nazwę (`PATCH`) albo usunie listę (`DELETE` po ConfirmDialog z liczbą uczestników), then nowa nazwa jest w `GET /lists/:id` i na liście list; po usunięciu lista, jej członkostwa i (później) pozycje i zaproszenia znikają (kaskada). — verified by: testy integracyjne + test komponentu SC-06 (menu, dialog)
+- [x] AC7: Given `GET /api/v1/lists/:listId` dla własnej listy, when brak pozycji, then odpowiedź ma `items: []`, a SC-06 pokazuje pusty stan i AppBar z nazwą jako `h1`. — verified by: test integracyjny + test komponentu SC-06
+- [x] AC8: Given SC-05 (pusty, z listami, limit, formularz z błędem) i SC-06 (pusty, brak dostępu, dialog usunięcia), when E2E je odwiedza, then axe bez naruszeń; „+ Nowa lista” przenosi fokus na pole, Esc / „Anuluj” wraca fokusem na przycisk; ConfirmDialog ma pułapkę fokusu, Esc zamyka, fokus wraca na „Więcej opcji”. — verified by: E2E Playwright + axe, testy komponentów
+- [x] SEC1 (TH-01): Given lista domownika A, when domownik B wywoła `GET`, `PATCH` lub `DELETE /api/v1/lists/:listId`, then dostaje 404 `not_found` identyczne jak dla nieistniejącego `listId`, lista się nie zmienia, a `GET /api/v1/lists` B nie zawiera listy A; anonim dostaje 401 na każdej z tych tras. — verified by: testy integracyjne `lists.authz.test`
+- [x] SEC2 (TH-02): Given uczestnik listy A, when wywoła `PATCH` lub `DELETE /api/v1/lists/:listId`, then 403 `owner_only`, lista bez zmian; SC-06 uczestnika nie pokazuje opcji „Zmień nazwę listy” i „Usuń listę”. — verified by: test integracyjny + test komponentu
+- [x] SEC3 (TH-01): Given domownik B otwiera adres SC-06 listy A, when ekran się załaduje, then widzi tylko „Nie masz dostępu do tej listy.” i „Wróć do moich list”, bez nazwy ani treści listy. — verified by: E2E z dwoma kontami
+- [x] SEC4 (TH-13): Given limit 50 list (AC3), when bot tworzy listy w pętli, then po 50 dostaje 409, a odmowa dostępu (SEC1) jest zapisana w logu `security` z identyfikatorami. — verified by: test integracyjny (log)
 
 ## TDD plan
 
@@ -101,17 +101,82 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+Przebieg 2026-10-28 (`/implement-task T-005`), Windows 11, Docker (Testcontainers `postgres:17.11-alpine`).
+
+### Komendy (ten przebieg)
+
+- `pnpm check` — Prettier, ESLint (`--max-warnings 0`), `tsc` wszystkich pakietów, jscpd **0 klonów**, dependency-cruiser **0 naruszeń** (201 modułów), design-check **0 błędów** (35 kontrastów, 0 kolorów na sztywno), backlog-check OK, Vitest **35 plików / 160 testów zielonych**.
+- `pnpm build` — web i API zbudowane.
+- `pnpm test:e2e` — **14/14** (telefon 390 × 844 i komputer 1280 × 800), w tym J-01 bez regresji.
+
+### Testy z TDD planu (red → green)
+
+| # | Plik / test | Red (pierwsze uruchomienie) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `apps/api/test/lists.access.test.ts` (4 testy: właściciel, uczestnik, uczestnik przy `owner`, obcy = nieistniejąca = nie-UUID) | 4× `AssertionError: expected Error: not implemented to match object { code: 'not_found' }` (i analogicznie `resolves.toEqual`) na stubie | ✔ |
+| 2 | `packages/shared/test/lists.test.ts` (trim, 1 i 100 znaków, emoji jak `char_length`, pusta, 101) | 3× `expected { name: '  Zakupy na tydzień  ' } to deeply equal …`, `expected {} to deeply equal { name: 'required' }`, `… { name: 'too_long' }` | ✔ |
+| 3 | `apps/api/test/lists.create.test.ts` (201 z właścicielem, UUID v7; nowa lista pierwsza w `GET`) | `expected 501 to be 201` | ✔ |
+| 4 | `apps/api/test/lists.validation.test.ts` (tworzenie, zmiana nazwy) | zmiana nazwy: `expected 404 to be 400`. Tworzenie przeszło od razu (walidacja weszła w zielonym kroku testu 3); spot-check: bez `validate` w `POST` → `expected 201 to be 400` | ✔ |
+| 5 | `apps/api/test/lists.limit.test.ts` (409 przy 51., 2 równoległe przy 49, **20 równoległych przy 40**, liczone tylko własne, bot w pętli + log) | `expected 201 to be 409`, `expected [ 201, 201 ] to deeply equal [ 201, 409 ]`, `… length of 50 but got 52` | ✔ (3 przebiegi pod rząd) |
+| 6 | `apps/api/test/lists.overview.test.ts` (własne + udostępnione, kolejność, kształt, uczestnik widzi tylko swoje, pusty) | przeszedł od razu (zapytanie przeglądu z zielonego kroku testu 3); spot-check: sortowanie rosnąco → 2 testy czerwone; bez warunku członkostwa → 3 czerwone | ✔ |
+| 7 | `apps/api/test/lists.owner-actions.test.ts` (zmiana nazwy z trim i przesunięciem na górę; usunięcie z kaskadą członkostw, 204) | `expected 501 to be 200`, `expected 404 to be 204` | ✔ |
+| 8 | `apps/api/test/lists.details.test.ts` (`items: []`, `members`, rola uczestnika, nowa nazwa po `PATCH`) | `expected 404 to be 200` (2×), `expected { error: { code: 'not_found' } } to match object { name: 'Nowa' }` | ✔ |
+| 9 | `apps/api/test/lists.authz.test.ts` (obcy 404 = nieistniejąca = nie-UUID dla GET/PATCH/DELETE, identyczna treść; anonim 401 na 5 trasach; uczestnik 403; log `security`; obcy `Origin` 403) | `Origin`: `expected 201 to be 403`. Reszta przeszła od razu (`requireListAccess` z testów 1 i 7); spot-check: `PATCH` z rolą `member` → `expected 200 to be 403` | ✔ |
+| 10 | `apps/web/src/screens/SC-05-moje-listy/ListsScreen.test.tsx` (13 testów) | pusty stan: `Unable to find an element with the text: Nie masz jeszcze żadnej listy.`; ładowanie: `expected … to have a length of 3 but got +0`, potem `toHaveAttribute("aria-busy", "true")`; błąd: `Unable to find role="alert"`; karty: `expected [ null, null ] to deeply equal [ 'Dom, 3 do kupienia', … ]`; formularz: `Unable to find role="button" and name "+ Nowa lista"`, `… role "textbox" and name "Nazwa listy"`; limit: `Unable to find an element with the text: Masz już 50 list…` (2 testy); błąd tworzenia: `Unable to find role="alert"`. Anulowanie / Esc i błędy nazwy przeszły od razu (zbudowane razem z formularzem); spot-check: bez powrotu fokusu → `toHaveFocus` czerwony; bez Esc → `expected <input …> to be null`; bez błędu pola → 2 testy czerwone | ✔ |
+| 11 | `apps/web/src/screens/SC-06-lista/ListScreen.test.tsx` (15 testów) | nagłówek / pusty: `Unable to find … Lista jest pusta…`; ładowanie: `toHaveAttribute("aria-busy", "true")`; błąd: `Unable to find role="alert"`; brak dostępu: `Unable to find role="heading" and name "Nie masz dostępu do tej listy."`; menu: `Unable to find role="button" and name "Więcej opcji"`; arkusz: 3× `Unable to find an accessible element with the role "dialog" and name "Zmień nazwę listy"`; dialog usunięcia: 5× `… role "alertdialog"`; błąd usunięcia: `Unable to find role="alert"`. Test uczestnika przeszedł trywialnie (menu jeszcze nie było); spot-check po zbudowaniu menu: menu dla każdej roli → `expected <button …> to be null` | ✔ |
+| 12 | `apps/web/e2e/j02-listy.spec.ts` (J-02; SEC3 dwa konta; limit 50) | napisany po zachowaniu na szybszych seamach (Step 6); spot-check: bez pułapki fokusu w `Modal` → J-02 czerwony (`toBeFocused` na „Usuń listę” w oknie) | ✔ 6/6 |
+
+Testy dopisane do planu w trakcie (zachowania, których plan nie wymieniał):
+
+- 9 — obcy `Origin` dla `POST` / `PATCH` / `DELETE` (TH-14). Przewodnik backendu wymaga sprawdzenia `Origin` dla żądań zmieniających stan, a to pierwsze takie trasy w `/api/v1`.
+- 5 — 20 równoległych żądań. Wersja z dwoma żądaniami przechodziła **także bez** `FOR UPDATE` (`inject` praktycznie ich nie nakłada). Spot-check: bez blokady 20 żądań daje 51 list (`expected … to have a length of 10 but got 11`), z blokadą 3/3 zielone.
+- 10 — nieudane utworzenie (500): komunikat „Nie udało się utworzyć listy. Spróbuj ponownie.”, nazwa zostaje w polu.
+- 11 — nieudane usunięcie (500): komunikat w oknie, okno zostaje otwarte.
+- `apps/web/src/queryClient.test.ts` — `shouldRetry`: ponawiane tylko błędy sieci i 5xx; 404 (brak dostępu) od razu, inaczej SC-06 pokazywałby „brak dostępu” dopiero po ~7 s ponowień. Spot-check: odwrócona reguła → 2 testy czerwone.
+
+Zmiana istniejącego testu: `apps/api/test/body-limit.test.ts` (T-001) używał `/api/v1/lists` jako trasy, której nie było (404), i nie wysyłał `Origin`. Teraz wysyła zaufany `Origin`, a żądanie „pod limitem” dochodzi do trasy i dostaje 401 zamiast 404. Sens testu (413 powyżej 16 kB) bez zmian. `security-log.test.ts` korzysta teraz ze wspólnego `test/logs.ts` (bez zmiany asercji).
+
+### Kryteria akceptacji
+
+- **AC1** — `lists.create.test` (201, `role: "owner"`, lista pierwsza w `GET`); SC-05 „creates the list from the empty state and opens it”; E2E J-02.
+- **AC2** — `lists.validation.test` (400 `validation_failed`, `fields.name` `required` / `too_long` przy tworzeniu i zmianie nazwy, nic nie zapisane); `packages/shared/test/lists.test.ts`; SC-05 „explains a blank or too long name…”, „shows the name error the API returns”; SC-06 „explains a blank name…”; E2E (formularz z błędem + axe).
+- **AC3** — `lists.limit.test` (409 `limit_reached` z `limit: "lists"`, równoległe przy 49 i przy 40, liczone tylko własne); SC-05 „limit of 50 own lists” (3 testy); E2E „SC-05 at 50 own lists…” + axe.
+- **AC4** — `lists.overview.test` (obie listy, `updated_at DESC`, `role`, `owner`, `toBuyCount`, `members`; uczestnictwo fabryką `addMember`); SC-05 „shows own and shared lists as links…” („od Tomek”, nazwa dostępna „Działka, udostępniona przez Tomek, 0 do kupienia”).
+- **AC5** — SC-05: pusty stan, 3 szkielety z `aria-busy`, błąd „Nie udało się wczytać list.” + „Spróbuj ponownie”.
+- **AC6** — `lists.owner-actions.test` (nowa nazwa w `GET /lists`, kaskada `list_member`), `lists.details.test` (nowa nazwa w `GET /lists/:id`); SC-06: arkusz, dialog z liczbą uczestników, usunięcie → SC-05; E2E J-02.
+- **AC7** — `lists.details.test` (`items: []`); SC-06 „shows the list name as h1 and the empty state”.
+- **AC8** — E2E J-02, SEC3 i limit: axe bez naruszeń dla SC-05 (pusty, z listami, limit, formularz z błędem) i SC-06 (pusty, arkusz zmiany nazwy, dialog usunięcia, brak dostępu). Fokus: „Utwórz pierwszą listę” → pole, Esc → z powrotem na przycisk; ConfirmDialog: fokus na „Anuluj”, Tab zostaje w oknie, Esc zamyka, fokus na „Więcej opcji”. Komponenty: SC-05 „opens in place of the button…”, „closes on „Anuluj” or Esc…”; SC-06 menu, arkusz i dialog (Tab / Shift+Tab).
+- **SEC1** — `lists.authz.test` „answers someone else's list exactly like a list that does not exist” (GET / PATCH / DELETE: obcy, losowy UUID i „nie-uuid” — ten sam 404 `not_found` i identyczna treść; nazwa bez zmian; `GET /lists` B pusty) oraz „answers 401 to an anonymous request on every list route” (5 tras).
+- **SEC2** — `lists.authz.test` „refuses a participant…” (403 `owner_only`, nazwa bez zmian), `lists.access.test`; SC-06 „does not offer a participant rename or delete”.
+- **SEC3** — E2E „SEC3 another account sees no content of someone else's list” (dwa konteksty przeglądarki: tylko „Nie masz dostępu do tej listy.” i „Wróć do moich list”, nazwy listy brak, „Więcej opcji” brak, axe).
+- **SEC4** — `lists.limit.test` „stops a bot creating lists in a loop after 50…” (50 × 201, potem 409; log `security` `limit_reached` z `userId`, bez nazwy listy); `lists.authz.test` „logs a refused access…” (`list_access_denied` z `userId`, `listId`, `requestId`; nazwa listy nie trafia do logu).
+
+### Decyzje do wglądu QA
+
+- **`Origin` w `/api/v1/*` (TH-14):** hook `http/trusted-origin.ts` odrzuca `POST` / `PATCH` / `DELETE` z `Origin` innym niż `APP_ORIGIN`, **także bez nagłówka `Origin`** (przeglądarki wysyłają go przy tych metodach). Klient bez `Origin` (np. aplikacja mobilna w E-04) będzie wymagał decyzji w swoim tasku.
+- **`members` w `GET /lists/:listId`:** dopisane do kontraktu (`api.md`), bo okno usunięcia pokazuje liczbę uczestników.
+- **Teksty agenta (brak w tabelach „Copy”):** okno usunięcia przy 0 uczestników — „Tego nie można cofnąć.” (zamiast „Zniknie też u 0 uczestników.”); przy 1 — „Zniknie też u 1 uczestnika.”; nieudane utworzenie — „Nie udało się utworzyć listy. Spróbuj ponownie.”; nieudane usunięcie i zmiana nazwy — Copy SC-06 `saveError`. Tytuł arkusza „Zmień nazwę listy” (jak pozycja menu), przycisk „Zapisz” (`edit.save`). Na ekranie „brak dostępu” `h1` to „Nie masz dostępu do tej listy.”.
+- **Karta listy:** zawsze „N do kupienia”; „Wszystko kupione” (`card.allBought`) dopiero z pozycjami (T-006 / T-007) — dziś nie da się odróżnić pustej listy od listy, na której wszystko kupiono.
+- **Menu „Więcej opcji”:** wzorzec disclosure (przycisk z `aria-expanded` + lista przycisków), nie `role="menu"` ze strzałkami. Uczestnik nie widzi przycisku wcale, bo „Opuść listę” to E-02 (F-13).
+- **Dialogi:** własny `Modal` (portal, `aria-modal`, pułapka Tab, Esc, powrót fokusu) zamiast `<dialog>.showModal()` — jsdom go nie obsługuje, więc testy komponentów nie mogłyby sprawdzić zachowania.
+- **UUID v7:** `src/db/uuid.ts` (PostgreSQL 17 nie ma `uuidv7()`), zgodnie z „Identyfikatory: UUID (v7)” w `architecture.md`.
+- **Ponawianie zapytań:** `createQueryClient()` ponawia tylko błędy sieci i 5xx (wcześniej domyślnie każdy błąd 3×).
+- **Poza zakresem (zgodnie z taskiem):** zdarzenia na żywo i komunikat „Lista została usunięta albo nie masz już do niej dostępu” (T-009); pole dodawania i fokus na nim po utworzeniu listy (T-006); ikona „Uczestnicy” (T-008); OfflineBanner (E-02).
+- **Obserwacja:** pierwszy przebieg testów web po zimnym starcie raz oblał 3 testy (w tym istniejące SC-01) na limicie `findBy` 1 s; kolejne 4 przebiegi zielone. Do obserwacji w CI.
+
+### Przewodniki warstw (Step 8b)
+
+Uzupełnione „Gdzie jest kod” w `layers/db.md`, `layers/backend.md`, `layers/web.md` (nowe pliki, helpery testów, fabryki `createList(pool, owner)` / `addMember(pool, list, user)`) oraz `api.md` („Stan po T-005”, `members` w szczegółach). Bez zmian w „Conventions”.
 
 <!-- QA rounds are appended below by /qa-task -->

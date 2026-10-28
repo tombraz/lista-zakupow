@@ -13,5 +13,14 @@ export {
   type SignInRequest,
   type SignUpRequest,
 } from "./api/account";
-export type { ApiErrorBody, ErrorCode } from "./api/errors";
-export { RATE_LIMITS, type RateLimit } from "./limits";
+export type { ApiErrorBody, DomainErrorCode, ErrorCode, LimitName } from "./api/errors";
+export { BUSINESS_LIMITS, RATE_LIMITS, type RateLimit } from "./limits";
+export {
+  LIST_NAME_MAX_LENGTH,
+  listNameRequestSchema,
+  type ListDetails,
+  type ListNameRequest,
+  type ListRole,
+  type ListSummary,
+  type Person,
+} from "./api/lists";

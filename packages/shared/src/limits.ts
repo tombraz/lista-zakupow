@@ -11,3 +11,8 @@ export const RATE_LIMITS = {
   // Odpytuje bazę; zapas dla smoke testu i ręcznych sprawdzeń (CodeQL js/missing-rate-limiting).
   healthReadyPerIp: { windowSeconds: 60, max: 30 },
 } as const satisfies Record<string, RateLimit>;
+
+/** Limity biznesowe (F-05, F-07, F-12, TH-13); jedyne miejsce tych wartości. */
+export const BUSINESS_LIMITS = {
+  listsPerOwner: 50,
+} as const;

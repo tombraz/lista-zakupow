@@ -28,6 +28,13 @@
   border: 2px solid var(--color-action-primary);
 }
 
+/* Niebezpieczny-tekstowy: `action.danger` bez tła. */
+.danger {
+  color: var(--color-action-danger);
+  background: none;
+  border: 0;
+}
+
 .button:disabled {
   color: var(--color-text-secondary);
   background: var(--color-action-disabled);

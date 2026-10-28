@@ -1,12 +1,7 @@
-import {
-  fieldErrors,
-  signInRequestSchema,
-  signUpRequestSchema,
-  type ErrorCode,
-} from "@lista/shared";
-import type { z } from "zod";
+import { signInRequestSchema, signUpRequestSchema, type ErrorCode } from "@lista/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
+import { validate } from "../../../http/validate";
 import { securityLog } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
@@ -90,12 +85,6 @@ async function lostEmailRace(auth: Auth, response: Response, email: string): Pro
   if (body.code !== "FAILED_TO_CREATE_USER") return false;
   const { internalAdapter } = await auth.$context;
   return (await internalAdapter.findUserByEmail(email.toLowerCase())) !== null;
-}
-
-function validate<T extends z.ZodType>(schema: T, body: unknown): z.output<T> {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) throw new ApiError(400, "validation_failed", fieldErrors(parsed.error));
-  return parsed.data;
 }
 
 function forward(auth: Auth, origin: string, request: FastifyRequest, body: object) {

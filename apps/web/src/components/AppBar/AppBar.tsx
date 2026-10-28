@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { Link } from "react-router";
 import styles from "./AppBar.module.css";
 
@@ -36,5 +36,20 @@ export function AppBarLink({ to, label, icon }: AppBarLinkProps) {
     <Link className={styles.control} to={to} aria-label={label}>
       <span aria-hidden="true">{icon}</span>
     </Link>
+  );
+}
+
+interface AppBarButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  label: string;
+  icon: string;
+  ref?: Ref<HTMLButtonElement> | undefined;
+}
+
+/** Przycisk-ikona na pasku marki; nazwa dostępna = `label`. */
+export function AppBarButton({ label, icon, ...button }: AppBarButtonProps) {
+  return (
+    <button type="button" {...button} className={styles.control} aria-label={label}>
+      <span aria-hidden="true">{icon}</span>
+    </button>
   );
 }

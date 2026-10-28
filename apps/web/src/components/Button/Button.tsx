@@ -1,11 +1,12 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import { cx } from "../cx";
 import styles from "./Button.module.css";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "danger";
   /** Stan ładowania: etykieta zostaje, obok wskaźnik; przycisk nieaktywny. */
   loading?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({ variant = "primary", loading = false, children, ...button }: ButtonProps) {

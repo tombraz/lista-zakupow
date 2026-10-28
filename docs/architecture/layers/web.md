@@ -17,14 +17,16 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 ## Gdzie jest kod
 
 - `apps/web/index.html`, `src/main.tsx` — wejście SPA (`lang="pl"`, `QueryClientProvider`, `createBrowserRouter`)
-- `apps/web/src/routes.tsx` — trasy (`/logowanie`, `/rejestracja`, `/regulamin`, `/listy`, `/konto`); test routera `routes.test.tsx`
+- `apps/web/src/routes.tsx` — trasy (`/logowanie`, `/rejestracja`, `/regulamin`, `/listy`, `/listy/:listId`, `/konto`); test routera `routes.test.tsx`
+- `apps/web/src/queryClient.ts` — `QueryClient` aplikacji: ponawiane tylko błędy sieci i 5xx (`shouldRetry`), nigdy 4xx
+- `apps/web/src/lists/` — `useLists`, `useList` (`noAccess` przy 404), `listName.ts` (`useListNameForm`, teksty błędów nazwy), `ListNameField.tsx` (pole nazwy listy dla SC-05 i SC-06)
 - `apps/web/src/session/` — `useSession` (`GET /api/v1/me`), strażnicy tras `RequireSession` / `PublicOnly`
 - `apps/web/src/screens/SC-xx-*/` — ekran, `messages.ts` (teksty ekranu i jego kody błędów przez `errorText`), `*.module.css`, hooki, `*.test.tsx`
 - `apps/web/src/errorText.ts` — kod błędu żądania → komunikat: wspólne kody (np. `network`) w jednym miejscu, ekran podaje swoje teksty i tekst domyślny; `api/client.ts` — `apiRequest`, `ApiRequestError`, `asRequestError`
-- `apps/web/src/api/` — `client.ts` (`apiRequest`, `ApiRequestError`), `account.ts`; WS dojdzie z modułem `na-zywo`
+- `apps/web/src/api/` — `client.ts` (`apiRequest(path, { method, body })`, `ApiRequestError`), `account.ts`, `lists.ts`; WS dojdzie z modułem `na-zywo`
 - `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe; `page.module.css` — kolumna i tytuł ekranu (`composes`)
-- `apps/web/src/components/` — komponenty design systemu (AppBar, AuthPage, Button, ConsentCheckbox, FieldError, InlineAlert, PasswordField, TextField), `useFocus.ts`, `cx.ts`
-- `apps/web/test/` — setup Vitest, serwer MSW, `renderApp(adres)` (cała aplikacja w `createMemoryRouter`), `sessionIs(user | null)`
+- `apps/web/src/components/` — komponenty design systemu (AppBar z `AppBarLink` / `AppBarButton`, AuthPage, Avatar (`AvatarStack`), Button (`primary`, `secondary`, `danger`), ConfirmDialog, ConsentCheckbox, EmptyState, FieldError, InlineAlert, ListCard, LoadError, Modal (portal, pułapka fokusu, Esc, powrót fokusu — baza ConfirmDialog i arkuszy), MoreMenu, PasswordField, Skeleton, TextField), `useFocus.ts`, `cx.ts`
+- `apps/web/test/` — setup Vitest, serwer MSW, `renderApp(adres)` (cała aplikacja w `createMemoryRouter`), `sessionIs(user | null)`, `lists.ts` (`aList`, `detailsOf`, `listsAre`, `apiError`, `ANIA`, `TOMEK`)
 - `apps/web/e2e/` — testy Playwright, `fixtures.ts` (`test` z własnym adresem klienta, `expectNoAxeViolations`, `signUp`) i `server.ts` (kontener bazy + zbudowane API)
 - `packages/tokens/` — `src/build.ts` (Style Dictionary), wynik w `packages/tokens/generated/` (`tokens.css`, `tokens.ts`; poza gitem)
 
@@ -79,6 +81,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | T-005: „Gdzie jest kod” (SC-05, SC-06, `src/lists/`, `queryClient.ts`, nowe komponenty, helpery testów). |
 | 2026-10-27 | T-004: „Gdzie jest kod” (router, sesja, komponenty, helpery testów, fixtures E2E). |
 | 2026-10-27 | T-002: „Pułapki” — równoległość E2E na Linuksie w CI. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

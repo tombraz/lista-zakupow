@@ -1,11 +1,13 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { securityHeaders } from "./http/security-headers";
+import { trustedOrigin } from "./http/trusted-origin";
 import { webApp } from "./http/web-app";
 import { loggingOptions, type LogSettings } from "./logging";
 import { apiErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
 import { accountRoutes, type AuthSettings } from "./modules/konta";
+import { listsModule } from "./modules/listy";
 
 // TH-13: żadna trasa nie potrzebuje więcej niż 16 kB treści.
 const BODY_LIMIT_BYTES = 16 * 1024;
@@ -28,8 +30,10 @@ export function buildApp(options: AppOptions): FastifyInstance {
   watchPool(app, options.pool);
   apiErrors(app);
   securityHeaders(app);
+  trustedOrigin(app, options.auth.origin);
   healthRoutes(app, options.pool);
-  accountRoutes(app, options.pool, options.auth);
+  const accounts = accountRoutes(app, options.pool, options.auth);
+  listsModule(app, options.pool, accounts);
   webApp(app, options.webDistDir);
   return app;
 }

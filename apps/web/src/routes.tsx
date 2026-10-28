@@ -3,6 +3,7 @@ import { SignInScreen } from "./screens/SC-01-logowanie/SignInScreen";
 import { SignUpScreen } from "./screens/SC-02-rejestracja/SignUpScreen";
 import { TermsScreen } from "./screens/SC-04-regulamin/TermsScreen";
 import { ListsScreen } from "./screens/SC-05-moje-listy/ListsScreen";
+import { ListScreen } from "./screens/SC-06-lista/ListScreen";
 import { AccountScreen } from "./screens/SC-09-konto/AccountScreen";
 import { PublicOnly, RequireSession } from "./session/guards";
 
@@ -20,6 +21,7 @@ export const routes: RouteObject[] = [
     element: <RequireSession />,
     children: [
       { path: "/listy", element: <ListsScreen /> },
+      { path: "/listy/:listId", element: <ListScreen /> },
       { path: "/konto", element: <AccountScreen /> },
       { path: "*", element: <Navigate to="/listy" replace /> },
     ],

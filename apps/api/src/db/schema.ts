@@ -1,4 +1,4 @@
-import { NAME_MAX_LENGTH } from "@lista/shared";
+import { LIST_NAME_MAX_LENGTH, NAME_MAX_LENGTH } from "@lista/shared";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -7,9 +7,12 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
+import { uuidv7 } from "./uuid";
 
 // Tabele Better Auth w kształcie biblioteki (ADR 0002), rozszerzone o zgody z F-01 (data-model.md).
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
@@ -97,6 +100,47 @@ export const rateLimit = pgTable("rate_limit", {
   count: integer("count").notNull(),
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
+
+// Lista i członkostwo (data-model.md). Właściciel nie jest wierszem `list_member`.
+export const shoppingList = pgTable(
+  "shopping_list",
+  {
+    id: uuid("id").primaryKey().$defaultFn(uuidv7),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("shopping_list_owner_id_idx").on(table.ownerId),
+    // TH-13, TH-20: długość nazwy listy (F-05) także w bazie.
+    check(
+      "shopping_list_name_length",
+      // Stała liczbowa z kodu, nie dane wejściowe: parametr ($1) jest w DDL niedozwolony.
+      // eslint-disable-next-line no-restricted-syntax
+      sql`char_length(${table.name}) BETWEEN 1 AND ${sql.raw(String(LIST_NAME_MAX_LENGTH))}`,
+    ),
+  ],
+);
+
+export const listMember = pgTable(
+  "list_member",
+  {
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => shoppingList.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    joinedAt: timestamptz("joined_at").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.listId, table.userId] }),
+    index("list_member_user_id_idx").on(table.userId),
+  ],
+);
 
 // TH-09: nieudane logowania per konto. Klucz to HMAC e-maila, żeby nie powielać adresu.
 export const signInFailure = pgTable("sign_in_failure", {

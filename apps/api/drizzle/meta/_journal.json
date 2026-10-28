@@ -22,6 +22,13 @@
       "when": 1793116121829,
       "tag": "0002_sign_in_failure",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793176837681,
+      "tag": "0003_listy",
+      "breakpoints": true
     }
   ]
 }

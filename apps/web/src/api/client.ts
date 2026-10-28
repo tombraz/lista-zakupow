@@ -18,12 +18,21 @@ export function asRequestError(error: unknown): ApiRequestError {
   return error instanceof ApiRequestError ? error : new ApiRequestError(0, "internal");
 }
 
+export interface RequestOptions {
+  /** Domyślnie POST z treścią, GET bez niej. */
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  body?: object;
+}
+
 /** Względne adresy: web i API pod jednym originem (ADR 0006), ciasteczko sesji idzie samo. */
-export async function apiRequest<T>(path: string, body?: object): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  { method, body }: RequestOptions = {},
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
-      method: body ? "POST" : "GET",
+      method: method ?? (body ? "POST" : "GET"),
       credentials: "same-origin",
       ...(body
         ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }

@@ -16,13 +16,13 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 ## Gdzie jest kod
 
-- `apps/api/src/db/schema.ts` — schemat Drizzle (`user`, `session`, `account`, `verification`, `rate_limit`, `sign_in_failure`; tabele kolejnych modułów dochodzą w taskach)
-- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa, `0001_konta.sql` tabele Better Auth + zgody, `0002_sign_in_failure.sql`) i `meta/_journal.json`
+- `apps/api/src/db/schema.ts` — schemat Drizzle (`user`, `session`, `account`, `verification`, `rate_limit`, `sign_in_failure`, `shopping_list`, `list_member`; tabele kolejnych modułów dochodzą w taskach); `src/db/uuid.ts` — `uuidv7()` dla kluczy UUID (PostgreSQL 17 nie ma wbudowanego)
+- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa, `0001_konta.sql` tabele Better Auth + zgody, `0002_sign_in_failure.sql`, `0003_listy.sql` listy i członkostwa) i `meta/_journal.json`
 - `apps/api/drizzle.config.ts` — konfiguracja drizzle-kit
 - `apps/api/src/db/pool.ts` — pula `pg` (bezczynne połączenia zamykane po 30 s)
 - `apps/api/src/db/migrate.ts`, `migrate-cli.ts` — uruchamianie migracji
 - `apps/api/test/global-setup.ts`, `test/database.ts` — kontener testowy, baza-szablon, `useTestDatabase()`
-- repozytoria: `apps/api/src/modules/<moduł>/infra/` (od pierwszego modułu z tabelami)
+- repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`)
 
 ## Komendy
 
@@ -72,5 +72,6 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | T-005: `shopping_list`, `list_member`, migracja `0003_listy`, `uuidv7()`. |
 | 2026-10-27 | T-004: tabele kont w „Gdzie jest kod”. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |

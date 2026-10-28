@@ -2,7 +2,7 @@
 id: S-01-03
 epic: E-01
 title: Moje listy (web)
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [F-05, F-06]
 screens: [SC-05, SC-06]
 ---

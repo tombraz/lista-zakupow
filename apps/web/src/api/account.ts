@@ -2,17 +2,21 @@ import type { Me, SignInRequest, SignUpRequest } from "@lista/shared";
 import { apiRequest, ApiRequestError } from "./client";
 
 export async function signUp(account: SignUpRequest): Promise<Me> {
-  const { user } = await apiRequest<{ user: Me }>("/api/auth/sign-up/email", account);
+  const { user } = await apiRequest<{ user: Me }>("/api/auth/sign-up/email", {
+    body: account,
+  });
   return user;
 }
 
 export async function signIn(credentials: SignInRequest): Promise<Me> {
-  const { user } = await apiRequest<{ user: Me }>("/api/auth/sign-in/email", credentials);
+  const { user } = await apiRequest<{ user: Me }>("/api/auth/sign-in/email", {
+    body: credentials,
+  });
   return user;
 }
 
 export async function signOut(): Promise<void> {
-  await apiRequest("/api/auth/sign-out", {});
+  await apiRequest("/api/auth/sign-out", { body: {} });
 }
 
 /** Zalogowany domownik albo `null` dla anonima. */

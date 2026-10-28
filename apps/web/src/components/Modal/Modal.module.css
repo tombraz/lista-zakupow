@@ -1,0 +1,43 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: var(--color-bg-overlay);
+}
+
+.dialog,
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
+  max-width: var(--size-content-max);
+  max-height: 100%;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  overflow-y: auto;
+  background: var(--color-bg-default);
+  box-shadow: var(--elevation-sheet);
+}
+
+.dialog {
+  border-radius: var(--radius-lg);
+}
+
+/* Arkusz: przyklejony do dołu ekranu. */
+.sheet {
+  align-self: flex-end;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--typography-size-title);
+}
+
+.description {
+  margin: 0;
+}
