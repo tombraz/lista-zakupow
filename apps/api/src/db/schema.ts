@@ -9,6 +9,7 @@ import {
   bigint,
   boolean,
   check,
+  date,
   index,
   integer,
   pgTable,
@@ -180,6 +181,26 @@ export const item = pgTable(
       // eslint-disable-next-line no-restricted-syntax
       sql`char_length(${table.note}) <= ${sql.raw(String(ITEM_NOTE_MAX_LENGTH))}`,
     ),
+  ],
+);
+
+// BRD §10: odhaczenia per lista, dzień (Europe/Warsaw) i domownik — dane do miar sukcesu.
+export const listDailyActivity = pgTable(
+  "list_daily_activity",
+  {
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => shoppingList.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    checks: integer("checks").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.listId, table.day, table.userId] }),
+    // Kaskada przy usunięciu konta (F-04) szuka wierszy po `user_id`.
+    index("list_daily_activity_user_id_idx").on(table.userId),
   ],
 );
 

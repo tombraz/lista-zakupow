@@ -33,6 +33,22 @@ export const messages = {
     added: (name: string) => `Dodano ${name}`,
   },
   edit: (name: string) => `Edytuj ${name}`,
+  check: (name: string) => `Odhacz ${name}`,
+  uncheck: (name: string) => `Odznacz ${name}`,
+  checked: (name: string) => `Odhaczono ${name}`,
+  toBuy: (count: number) => `${String(count)} do kupienia`,
+  allBought: "Wszystko kupione.",
+  bought: (count: number) => `Kupione (${String(count)})`,
+  boughtHeading: "Kupione",
+  clearBought: {
+    open: "Usuń wszystkie kupione",
+    question: (count: number) => `Usunąć ${String(count)} kupionych pozycji?`,
+    consequence: "Tego nie można cofnąć.",
+    confirm: "Usuń kupione",
+  },
+  dupBought: (name: string) =>
+    `„${name}” jest już na liście jako kupione. Odznacz tę pozycję w sekcji „Kupione”, żeby kupić ponownie.`,
+  dupShow: "Pokaż",
   editSheet: {
     title: "Edytuj pozycję",
     name: "Nazwa",
@@ -49,6 +65,11 @@ export const messages = {
 /** Podpis autora pozycji (Copy `addedBy`, `deletedUser`). */
 export function addedByText(person: Person | null): string {
   return `dodał(a) ${person?.name ?? "usunięty użytkownik"}`;
+}
+
+/** Podpis odhaczającego (Copy `boughtBy`, `deletedUser`). */
+export function boughtByText(person: Person | null): string {
+  return `kupił(a) ${person?.name ?? "usunięty użytkownik"}`;
 }
 
 /** SC-06 „Error — długość”; pusta nazwa — tekst agenta jak „Wpisz nazwę listy” na SC-05. */

@@ -34,3 +34,50 @@
   color: var(--color-text-secondary);
   overflow-wrap: anywhere;
 }
+
+/* Odhaczona: nazwa wyciszona i przekreślona (design-system.md, ItemRow). */
+.row[data-checked="true"] .name {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+/* Obszar dotyku 48 px, widoczne pole 40 px. */
+.checkbox {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.checkbox[aria-busy="true"] {
+  cursor: progress;
+}
+
+.box {
+  display: grid;
+  place-items: center;
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  box-sizing: border-box;
+  font-size: var(--typography-size-item);
+  font-weight: bold;
+  color: var(--color-text-on-brand);
+  border: 2px solid var(--color-border-input);
+  border-radius: var(--radius-sm);
+}
+
+.checkbox[aria-pressed="true"] .box {
+  background: var(--color-status-done);
+  border-color: var(--color-status-done);
+}
+
+/* Wskaźnik zapisu jak w Button (także bez animacji przy „ogranicz ruch”). */
+.spinner {
+  composes: spinner from "../Button/Button.module.css";
+  color: var(--color-text-secondary);
+}

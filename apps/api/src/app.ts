@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { systemClock, type Clock } from "./clock";
 import { securityHeaders } from "./http/security-headers";
 import { trustedOrigin } from "./http/trusted-origin";
 import { webApp } from "./http/web-app";
@@ -20,6 +21,8 @@ export interface AppOptions {
   /** Adresy / CIDR zaufanych proxy przed API; od nich adres klienta dla limitów per IP. */
   trustedProxies?: string;
   logger?: LogSettings;
+  /** Czas dla domeny (odhaczenie, aktywność dzienna); testy podają własny. */
+  clock?: Clock;
 }
 
 export function buildApp(options: AppOptions): FastifyInstance {
@@ -36,7 +39,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
   const accounts = accountRoutes(app, options.pool, options.auth);
   // Pozycje zależą od dostępu do listy, a szczegóły listy pokazują pozycje (ListItems).
   const lists = listsModule(app, options.pool, accounts, createItems(options.pool));
-  itemsModule(app, options.pool, accounts, lists);
+  itemsModule(app, options.pool, { accounts, lists, clock: options.clock ?? systemClock });
   webApp(app, options.webDistDir);
   return app;
 }

@@ -6,7 +6,8 @@ export const messages = {
   title: "Moje listy",
   account: "Konto",
   card: {
-    toBuy: (count: number) => `${String(count)} do kupienia`,
+    // `card.toBuy` / `card.allBought`: bez nieodhaczonych pozycji nie ma nic do kupienia.
+    toBuy: (count: number) => (count > 0 ? `${String(count)} do kupienia` : "Wszystko kupione"),
     sharedBy: (name: string) => `od ${name}`,
     sharedByLabel: (name: string) => `udostępniona przez ${name}`,
   },

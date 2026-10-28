@@ -64,11 +64,23 @@ describe("SC-05 Moje listy", () => {
     const cards = within(await screen.findByRole("list")).getAllByRole("link");
     expect(cards.map((card) => card.getAttribute("aria-label"))).toEqual([
       "Dom, 3 do kupienia",
-      "Działka, udostępniona przez Tomek, 0 do kupienia",
+      "Działka, udostępniona przez Tomek, Wszystko kupione",
     ]);
     expect(cards[0]).toHaveAttribute("href", `/listy/${own.id}`);
     expect(within(cards[1] as HTMLElement).getByText("od Tomek")).toBeVisible();
     expect(within(cards[0] as HTMLElement).queryByText(/^od /)).toBeNull();
+  });
+
+  // AC7 (T-007): „N do kupienia” / „Wszystko kupione” z `toBuyCount`.
+  it("shows „2 do kupienia” and „Wszystko kupione” when nothing is left to buy", async () => {
+    listsAre([aList({ name: "Dom", toBuyCount: 2 }), aList({ name: "Działka", toBuyCount: 0 })]);
+
+    renderApp("/listy");
+
+    const cards = within(await screen.findByRole("list")).getAllByRole("link");
+    expect(within(cards[0] as HTMLElement).getByText("2 do kupienia")).toBeVisible();
+    expect(within(cards[1] as HTMLElement).getByText("Wszystko kupione")).toBeVisible();
+    expect(cards[1]).toHaveAttribute("aria-label", "Działka, Wszystko kupione");
   });
 
   describe("new list form", () => {

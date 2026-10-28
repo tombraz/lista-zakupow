@@ -34,10 +34,14 @@ export const createItemRequestSchema = z.object({
 
 export type CreateItemRequest = z.input<typeof createItemRequestSchema>;
 
-/** Treść `PATCH /api/v1/lists/:listId/items/:itemId`: zmienia tylko podane pola. */
+/**
+ * Treść `PATCH /api/v1/lists/:listId/items/:itemId`: zmienia tylko podane pola; `checked`
+ * odhacza lub odznacza pozycję (F-08).
+ */
 export const updateItemRequestSchema = z.object({
   name: itemName.optional(),
   note: itemNote.optional(),
+  checked: z.boolean({ error: "invalid" }).optional(),
 });
 
 export type UpdateItemRequest = z.input<typeof updateItemRequestSchema>;
@@ -53,4 +57,9 @@ export interface Item {
   checkedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Odpowiedź `POST /api/v1/lists/:listId/items/clear-checked` (F-08). */
+export interface ClearCheckedResponse {
+  deletedIds: string[];
 }

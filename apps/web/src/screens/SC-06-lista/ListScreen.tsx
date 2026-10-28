@@ -2,6 +2,7 @@ import type { ListDetails } from "@lista/shared";
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AppBar } from "../../components/AppBar/AppBar";
+import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { LoadError } from "../../components/LoadError/LoadError";
 import { MoreMenu } from "../../components/MoreMenu/MoreMenu";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
@@ -10,9 +11,11 @@ import { AddItemBar } from "./AddItemBar";
 import { DeleteListDialog } from "./DeleteListDialog";
 import { Items } from "./Items";
 import styles from "./ListScreen.module.css";
-import { messages } from "./messages";
+import { messages, saveErrorText } from "./messages";
 import { RenameSheet } from "./RenameSheet";
 import { useAddItem } from "./useAddItem";
+import { useCheckboxFocus } from "./useCheckboxFocus";
+import { useCheckItem } from "./useCheckItem";
 
 const BACK = { to: "/listy", label: messages.back };
 
@@ -41,7 +44,11 @@ function ListBar({ list }: { list: ListDetails | undefined }) {
 }
 
 function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof useList> }) {
-  const adding = useAddItem(listId, list.data?.items);
+  const items = list.data?.items ?? [];
+  const adding = useAddItem(listId, items);
+  const checkboxFocus = useCheckboxFocus(items);
+  const checking = useCheckItem(listId, { items, onFocus: checkboxFocus.focus });
+  const [boughtOpen, setBoughtOpen] = useState(false);
   return (
     <>
       <main className={styles.page} aria-busy={list.isPending || undefined}>
@@ -54,14 +61,50 @@ function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof us
             }}
           />
         )}
-        {list.data && <Items list={list.data} addNameRef={adding.nameRef} />}
+        {list.data && <StatusLine items={items} />}
+        {checking.failure && (
+          <InlineAlert tone="error">{saveErrorText(checking.failure)}</InlineAlert>
+        )}
+        {list.data && (
+          <Items
+            list={list.data}
+            addNameRef={adding.nameRef}
+            checking={checking}
+            checkboxFocus={checkboxFocus}
+            bought={{ open: boughtOpen, setOpen: setBoughtOpen }}
+          />
+        )}
         <p className={styles.visuallyHidden} role="status">
           {adding.announcement}
         </p>
+        <p className={styles.visuallyHidden} role="status">
+          {checking.announcement}
+        </p>
       </main>
       {/* Loading: AddBar nieaktywny, dopóki lista nie jest wczytana. */}
-      <AddItemBar state={adding} disabled={!list.data} />
+      <AddItemBar
+        state={adding}
+        disabled={!list.data}
+        onShowBought={(itemId) => {
+          setBoughtOpen(true);
+          checkboxFocus.focus({ itemId });
+        }}
+      />
     </>
+  );
+}
+
+/**
+ * Linia stanu (region `polite`): „N do kupienia”; bez nieodhaczonych „Wszystko kupione.”, przy
+ * pustej liście nic (jest pusty stan).
+ */
+function StatusLine({ items }: { items: ListDetails["items"] }) {
+  const toBuy = items.filter((item) => !item.checked).length;
+  const text = toBuy > 0 ? messages.toBuy(toBuy) : items.length > 0 ? messages.allBought : "";
+  return (
+    <p className={styles.status} role="status">
+      {text}
+    </p>
   );
 }
 

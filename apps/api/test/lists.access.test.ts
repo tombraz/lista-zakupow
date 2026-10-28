@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createLists } from "../src/modules/listy";
+import { createItems } from "../src/modules/pozycje";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { addMember, createList, createUser } from "./factories";
@@ -19,7 +20,13 @@ describe("requireListAccess", () => {
     await app.close();
     const list = await createList(db.pool, owner);
     await addMember(db.pool, list, participant);
-    return { lists: createLists(db.pool), list, owner, participant, stranger };
+    return {
+      lists: createLists(db.pool, createItems(db.pool)),
+      list,
+      owner,
+      participant,
+      stranger,
+    };
   }
 
   it("gives the owner the role owner, also when owner rights are required", async () => {

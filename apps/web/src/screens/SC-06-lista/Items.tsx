@@ -1,56 +1,82 @@
-import type { Item, ListDetails } from "@lista/shared";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import type { Item, ListDetails, Person } from "@lista/shared";
+import { useEffect, useRef, useState, type Ref, type RefObject } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { ItemRow } from "../../components/ItemRow/ItemRow";
+import { BoughtSection } from "./BoughtSection";
 import { EditItemSheet } from "./EditItemSheet";
 import styles from "./ListScreen.module.css";
-import { addedByText, messages } from "./messages";
+import { addedByText, boughtByText, messages } from "./messages";
+import type { CheckboxFocus } from "./useCheckboxFocus";
+import type { CheckItemState } from "./useCheckItem";
 
 interface ItemsProps {
   list: ListDetails;
   /** Pole „Co kupić?”: fokus po usunięciu ostatniej pozycji. */
   addNameRef: RefObject<HTMLInputElement | null>;
+  checking: CheckItemState;
+  checkboxFocus: CheckboxFocus;
+  bought: { open: boolean; setOpen: (open: boolean) => void };
 }
 
 /**
- * Nieodhaczone pozycje, od najnowszej (kolejność z API), albo pusty stan; nazwa otwiera arkusz
- * edycji. Pusty stan jest tu, nie wyżej: po usunięciu ostatniej pozycji fokus trafia do AddBar.
+ * Nieodhaczone pozycje (od najnowszej) albo pusty stan, pod nimi sekcja „Kupione”; nazwa
+ * otwiera arkusz edycji, checkbox odhacza. Pusty stan jest tu, nie wyżej: po usunięciu ostatniej
+ * pozycji fokus trafia do AddBar.
  */
-export function Items({ list, addNameRef }: ItemsProps) {
-  const people = [list.owner, ...list.members];
+export function Items({ list, addNameRef, checking, checkboxFocus, bought }: ItemsProps) {
+  const people: Person[] = [list.owner, ...list.members];
   const [editing, setEditing] = useState<Item | null>(null);
   const focus = useFocusAfterRemoval(list.items, addNameRef);
+  const toBuy = list.items.filter((item) => !item.checked);
+  const checked = list.items.filter((item) => item.checked);
   // SC-06 Empty: pusta lista otwiera się z fokusem w „Co kupić?” — tylko przy wejściu, bo zmiany
   // innych osób nie przenoszą fokusu.
   const openedEmpty = useRef(list.items.length === 0);
   useEffect(() => {
     if (openedEmpty.current) addNameRef.current?.focus();
   }, [addNameRef]);
+
+  const row = (item: Item) => (
+    <Row
+      key={item.id}
+      item={item}
+      people={people}
+      checking={checking}
+      checkboxRef={checkboxFocus.register(item.id)}
+      editRef={focus.register(item.id)}
+      onEdit={(button) => {
+        focus.trigger.current = button;
+        setEditing(item);
+      }}
+    />
+  );
+
   return (
-    <section aria-labelledby="to-buy">
-      <h2 id="to-buy" className={styles.visuallyHidden}>
-        {messages.toBuyHeading}
-      </h2>
-      {list.items.length === 0 ? (
-        <EmptyState text={messages.empty} />
-      ) : (
-        <ul className={styles.items} aria-labelledby="to-buy">
-          {list.items.map((item) => (
-            <ItemRow
-              key={item.id}
-              name={item.name}
-              details={[item.note, addedByText(item.addedBy)].filter(Boolean).join(" · ")}
-              person={item.addedBy}
-              personIndex={people.findIndex((person) => person.id === item.addedBy?.id)}
-              editLabel={messages.edit(item.name)}
-              editRef={focus.register(item.id)}
-              onEdit={(button) => {
-                focus.trigger.current = button;
-                setEditing(item);
-              }}
-            />
-          ))}
-        </ul>
+    <>
+      <section aria-labelledby="to-buy">
+        <h2 id="to-buy" className={styles.visuallyHidden}>
+          {messages.toBuyHeading}
+        </h2>
+        {list.items.length === 0 && <EmptyState text={messages.empty} />}
+        {toBuy.length > 0 && (
+          <ul className={styles.items} aria-labelledby="to-buy">
+            {toBuy.map(row)}
+          </ul>
+        )}
+      </section>
+      {checked.length > 0 && (
+        <BoughtSection
+          listId={list.id}
+          items={checked}
+          open={bought.open}
+          onToggle={() => {
+            bought.setOpen(!bought.open);
+          }}
+          toggleRef={checkboxFocus.boughtToggle}
+          onCleared={focus.toAddBar}
+        >
+          {checked.map(row)}
+        </BoughtSection>
       )}
       {editing && (
         <EditItemSheet
@@ -67,7 +93,43 @@ export function Items({ list, addNameRef }: ItemsProps) {
           }}
         />
       )}
-    </section>
+    </>
+  );
+}
+
+interface RowProps {
+  item: Item;
+  /** Właściciel i uczestnicy w kolejności dołączenia (kolor awatara). */
+  people: Person[];
+  checking: CheckItemState;
+  checkboxRef: Ref<HTMLButtonElement>;
+  editRef: Ref<HTMLButtonElement>;
+  onEdit: (button: HTMLButtonElement) => void;
+}
+
+/** Wiersz pozycji; odhaczona ma awatar i podpis osoby, która kupiła (F-10). */
+function Row({ item, people, checking, checkboxRef, editRef, onEdit }: RowProps) {
+  const person = item.checked ? item.checkedBy : item.addedBy;
+  const signature = item.checked ? boughtByText(item.checkedBy) : addedByText(item.addedBy);
+  return (
+    <ItemRow
+      name={item.name}
+      details={[item.note, signature].filter(Boolean).join(" · ")}
+      person={person}
+      personIndex={people.findIndex(({ id }) => id === person?.id)}
+      editLabel={messages.edit(item.name)}
+      editRef={editRef}
+      onEdit={onEdit}
+      checkbox={{
+        checked: item.checked,
+        label: (item.checked ? messages.uncheck : messages.check)(item.name),
+        saving: checking.isSaving(item.id),
+        onToggle: () => {
+          checking.toggle(item);
+        },
+      }}
+      checkboxRef={checkboxRef}
+    />
   );
 }
 
@@ -91,6 +153,10 @@ function useFocusAfterRemoval(items: Item[], addNameRef: RefObject<HTMLInputElem
     register: (id: string) => (button: HTMLButtonElement | null) => {
       if (button) buttons.current.set(id, button);
       else buttons.current.delete(id);
+    },
+    /** Fokus w polu „Co kupić?” (np. po usunięciu kupionych). */
+    toAddBar: () => {
+      setTarget({ id: null });
     },
     afterRemoving: (id: string) => {
       const index = items.findIndex((item) => item.id === id);

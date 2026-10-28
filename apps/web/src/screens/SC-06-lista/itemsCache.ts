@@ -13,3 +13,25 @@ export function updateItems(
     (current) => current && { ...current, items: change(current.items) },
   );
 }
+
+const newestFirst = (a: string | null, b: string | null) => (b ?? "").localeCompare(a ?? "");
+
+/**
+ * Kolejność jak w API (data-model.md, „Kolejność”): nieodhaczone od najnowszej, pod nimi
+ * odhaczone od ostatnio odhaczonej. Potrzebna, gdy pozycja zmienia sekcję po odpowiedzi API.
+ */
+export function inListOrder(items: Item[]): Item[] {
+  return items.toSorted(
+    (a, b) =>
+      Number(a.checked) - Number(b.checked) ||
+      newestFirst(a.checkedAt, b.checkedAt) ||
+      newestFirst(a.createdAt, b.createdAt),
+  );
+}
+
+/** Pozycja potwierdzona przez API zastępuje swoją poprzednią wersję. */
+export function replaceItem(client: QueryClient, listId: string, item: Item) {
+  updateItems(client, listId, (items) =>
+    inListOrder(items.map((current) => (current.id === item.id ? item : current))),
+  );
+}

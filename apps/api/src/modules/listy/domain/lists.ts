@@ -46,6 +46,8 @@ export interface ListsRepository {
  */
 export interface ListItems {
   itemsOf(listId: string): Promise<Item[]>;
+  /** Liczba nieodhaczonych pozycji każdej z list (SC-05 „N do kupienia”); brak = 0. */
+  toBuyCounts(listIds: string[]): Promise<Map<string, number>>;
 }
 
 /**

@@ -19,7 +19,25 @@ type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
  * Ostrzeżenie nad polami AddBar: duplikat (F-09) albo limit 500 pozycji (F-07). Limit z API
  * pamięta liczbę pozycji, przy której przyszedł: obowiązuje, dopóki ich nie ubędzie.
  */
-export type AddWarning = { kind: "duplicate"; name: string } | { kind: "limit"; atCount: number };
+export type AddWarning =
+  /** `bought`: pozycja z listy, gdy jest odhaczona — jedyną drogą jest jej odznaczenie (F-09). */
+  { kind: "duplicate"; name: string; bought: Item | null } | { kind: "limit"; atCount: number };
+
+/** dup.bought wygasa, gdy tej pozycji już nie ma wśród kupionych (odznaczona, usunięta). */
+function stillValid(warning: AddWarning | null, items: Item[]): AddWarning | null {
+  if (warning?.kind !== "duplicate" || warning.bought === null) return warning;
+  const { id } = warning.bought;
+  return items.some((item) => item.id === id && item.checked) ? warning : null;
+}
+
+function duplicateOf(items: Item[], typed: string): AddWarning {
+  const existing = sameNameAs(items, typed);
+  return {
+    kind: "duplicate",
+    name: existing?.name ?? typed,
+    bought: existing?.checked ? existing : null,
+  };
+}
 
 /**
  * AddBar (SC-06, F-07, F-09): walidacja i sprawdzenie duplikatu tymi samymi regułami co API,
@@ -46,7 +64,7 @@ export function useAddItem(listId: string, items: Item[] = []) {
 
   const failed = (error: unknown, typed: string) => {
     const { code, fields: invalid } = asRequestError(error);
-    if (code === "duplicate_item") setWarning({ kind: "duplicate", name: typed });
+    if (code === "duplicate_item") setWarning(duplicateOf(items, typed));
     else if (code === "limit_reached") setWarning({ kind: "limit", atCount: items.length });
     else if (code === "validation_failed") setFields(invalid);
     else setFailure(code);
@@ -59,9 +77,8 @@ export function useAddItem(listId: string, items: Item[] = []) {
     const parsed = createItemRequestSchema.safeParse(sent);
     setFields(parsed.success ? {} : fieldErrors(parsed.error));
     if (!parsed.success) return;
-    const existing = sameNameAs(items, parsed.data.name);
-    if (existing) {
-      setWarning({ kind: "duplicate", name: existing.name });
+    if (sameNameAs(items, parsed.data.name)) {
+      setWarning(duplicateOf(items, parsed.data.name));
       return;
     }
     mutation.mutate(
@@ -80,7 +97,7 @@ export function useAddItem(listId: string, items: Item[] = []) {
   return {
     ...draft,
     fields,
-    warning,
+    warning: stillValid(warning, items),
     failure,
     limitReached,
     announcement,

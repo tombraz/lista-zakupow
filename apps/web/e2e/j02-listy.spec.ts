@@ -56,10 +56,10 @@ test("J-02 creates, renames and deletes a list", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Więcej opcji" })).toBeFocused();
 
   await page.getByRole("link", { name: /Wstecz/ }).click();
-  await expect(page.getByRole("link", { name: "Dom, 0 do kupienia" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Dom, Wszystko kupione" })).toBeVisible();
   await expectNoAxeViolations(page);
 
-  await page.getByRole("link", { name: "Dom, 0 do kupienia" }).click();
+  await page.getByRole("link", { name: "Dom, Wszystko kupione" }).click();
   await page.getByRole("button", { name: "Więcej opcji" }).click();
   await page.getByRole("button", { name: "Usuń listę" }).click();
   const dialog = page.getByRole("alertdialog", { name: "Usunąć listę „Dom”?" });

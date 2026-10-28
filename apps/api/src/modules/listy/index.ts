@@ -18,8 +18,8 @@ export interface Lists {
   requireListAccess(userId: string, listId: string, required: RequiredRole): Promise<ListAccess>;
 }
 
-export function createLists(pool: Pool): Lists {
-  return listsApi(new DrizzleListsRepository(drizzle(pool)));
+export function createLists(pool: Pool, items: ListItems): Lists {
+  return listsApi(new DrizzleListsRepository(drizzle(pool), items));
 }
 
 /** Trasy `/api/v1/lists*`; zwraca publiczne API modułu dla kolejnych modułów. */
@@ -29,7 +29,7 @@ export function listsModule(
   accounts: Accounts,
   items: ListItems,
 ): Lists {
-  const repository = new DrizzleListsRepository(drizzle(pool));
+  const repository = new DrizzleListsRepository(drizzle(pool), items);
   listRoutes(app, accounts, repository, items);
   return listsApi(repository);
 }

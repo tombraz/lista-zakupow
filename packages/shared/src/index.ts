@@ -20,6 +20,7 @@ export {
   ITEM_NOTE_MAX_LENGTH,
   normalizeItemName,
   updateItemRequestSchema,
+  type ClearCheckedResponse,
   type CreateItemRequest,
   type Item,
   type UpdateItemRequest,

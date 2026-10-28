@@ -63,10 +63,9 @@ describe("SC-06 AddBar", () => {
     expect(screen.queryByRole("button", { name: "Edytuj Mleko" })).toBeNull();
     expect(await screen.findByRole("button", { name: "Edytuj Mleko" })).toBeVisible();
     const rows = within(screen.getByRole("list", { name: "Do kupienia" })).getAllByRole("listitem");
-    expect(rows.map((row) => within(row).getByRole("button").textContent)).toEqual([
-      "Mleko",
-      "Chleb",
-    ]);
+    expect(
+      rows.map((row) => within(row).getByRole("button", { name: /^Edytuj / }).textContent),
+    ).toEqual(["Mleko", "Chleb"]);
     expect(name).toHaveValue("");
     expect(name).toHaveFocus();
     expect(screen.getByText("Dodano Mleko")).toHaveAttribute("role", "status");

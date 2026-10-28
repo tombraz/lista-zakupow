@@ -1,10 +1,12 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { alias } from "drizzle-orm/pg-core";
 import { item, shoppingList, user } from "../../../db/schema";
+import { recordCheck } from "../../statystyki";
 import type {
   InsertResult,
   ItemChanges,
+  ItemCheck,
   ItemsRepository,
   ListItem,
   NewItem,
@@ -24,6 +26,16 @@ export class DrizzleItemsRepository implements ItemsRepository {
 
   itemsOf(listId: string): Promise<ListItem[]> {
     return selectItems(this.db, eq(item.listId, listId));
+  }
+
+  async toBuyCounts(listIds: string[]): Promise<Map<string, number>> {
+    if (listIds.length === 0) return new Map();
+    const rows = await this.db
+      .select({ listId: item.listId, count: sql<number>`count(*)::int` })
+      .from(item)
+      .where(and(inArray(item.listId, listIds), isNull(item.checkedAt)))
+      .groupBy(item.listId);
+    return new Map(rows.map(({ listId, count }) => [listId, count]));
   }
 
   async insert(values: NewItem, limit: number): Promise<InsertResult> {
@@ -97,6 +109,39 @@ export class DrizzleItemsRepository implements ItemsRepository {
       return true;
     });
   }
+
+  async deleteChecked(listId: string): Promise<string[]> {
+    return this.db.transaction(async (tx) => {
+      const deleted = await tx
+        .delete(item)
+        .where(and(eq(item.listId, listId), isNotNull(item.checkedAt)))
+        .returning({ id: item.id });
+      if (deleted.length > 0) await touchList(tx, listId);
+      return deleted.map(({ id }) => id);
+    });
+  }
+
+  async check(listId: string, itemId: string, check: ItemCheck): Promise<ListItem | null> {
+    return this.db.transaction(async (tx) => {
+      const onList = and(eq(item.id, itemId), eq(item.listId, listId));
+      // Odhaczenie tylko nieodhaczonej: podwójne kliknięcie nie zmienia podpisu (F-10).
+      const [row] = await tx
+        .update(item)
+        .set(
+          check.checked
+            ? { checkedAt: check.at, checkedBy: check.by, updatedAt: check.at }
+            : { checkedAt: null, checkedBy: null, updatedAt: check.at },
+        )
+        .where(check.checked ? and(onList, isNull(item.checkedAt)) : onList)
+        .returning({ id: item.id });
+      if (row) {
+        await touchList(tx, listId);
+        if (check.checked) await recordCheck(tx, { listId, userId: check.by, at: check.at });
+      }
+      const [found] = await selectItems(tx, onList);
+      return found ?? null;
+    });
+  }
 }
 
 const NAME_KEY_UNIQUE = "item_list_id_name_key_unique";
@@ -122,7 +167,7 @@ async function selectItem(db: Db, id: string): Promise<ListItem> {
   return found;
 }
 
-async function selectItems(db: Db, where: ReturnType<typeof eq>): Promise<ListItem[]> {
+async function selectItems(db: Db, where: SQL | undefined): Promise<ListItem[]> {
   const rows = await db
     .select({
       id: item.id,
@@ -140,7 +185,13 @@ async function selectItems(db: Db, where: ReturnType<typeof eq>): Promise<ListIt
     .leftJoin(adder, eq(adder.id, item.addedBy))
     .leftJoin(checker, eq(checker.id, item.checkedBy))
     .where(where)
-    .orderBy(desc(item.createdAt), desc(item.id));
+    // data-model.md, „Kolejność”: nieodhaczone od najnowszej, pod nimi od ostatnio odhaczonej.
+    .orderBy(
+      sql`${item.checkedAt} IS NOT NULL`,
+      desc(item.checkedAt),
+      desc(item.createdAt),
+      desc(item.id),
+    );
   return rows.map(({ adderId, adderName, checkerId, checkerName, ...row }) => ({
     ...row,
     addedBy: person(adderId, adderName),

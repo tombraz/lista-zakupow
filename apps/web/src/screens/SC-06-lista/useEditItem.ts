@@ -9,7 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { deleteItem, updateItem } from "../../api/items";
-import { updateItems } from "./itemsCache";
+import { replaceItem, updateItems } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 
 type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
@@ -48,7 +48,7 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
   const removal = useRemoveItem(listId, item, callbacks.onRemoved);
 
   const saved = (updated: Item) => {
-    updateItems(client, listId, (all) => all.map((it) => (it.id === updated.id ? updated : it)));
+    replaceItem(client, listId, updated);
     callbacks.onSaved();
   };
 

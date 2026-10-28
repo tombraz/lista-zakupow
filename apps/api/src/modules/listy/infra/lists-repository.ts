@@ -1,10 +1,14 @@
 import { and, asc, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { listMember, shoppingList, user } from "../../../db/schema";
-import type { ListRole, ListsRepository, Person, ShoppingList } from "../domain/lists";
+import type { ListItems, ListRole, ListsRepository, Person, ShoppingList } from "../domain/lists";
 
 export class DrizzleListsRepository implements ListsRepository {
-  constructor(private readonly db: NodePgDatabase) {}
+  constructor(
+    private readonly db: NodePgDatabase,
+    /** Pozycje posiada moduł `pozycje` (granice modułów, CODING_STANDARDS.md). */
+    private readonly items: Pick<ListItems, "toBuyCounts">,
+  ) {}
 
   async roleOf(userId: string, listId: string): Promise<ListRole | null> {
     const [row] = await this.db
@@ -79,14 +83,17 @@ export class DrizzleListsRepository implements ListsRepository {
       )
       // data-model.md: od ostatnio zmienionej; id (UUID v7) rozstrzyga remis.
       .orderBy(desc(shoppingList.updatedAt), desc(shoppingList.id));
-    const members = await this.membersOf(rows.map((row) => row.id));
+    const listIds = rows.map((row) => row.id);
+    const [members, toBuy] = await Promise.all([
+      this.membersOf(listIds),
+      this.items.toBuyCounts(listIds),
+    ]);
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
       owner: { id: row.ownerId, name: row.ownerName },
       members: members.get(row.id) ?? [],
-      // T-006: liczba nieodhaczonych pozycji; do tego czasu list nie mają pozycji.
-      toBuyCount: 0,
+      toBuyCount: toBuy.get(row.id) ?? 0,
       updatedAt: row.updatedAt,
     }));
   }
