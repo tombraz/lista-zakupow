@@ -21,7 +21,7 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 - `apps/api/src/logging.ts` — pino: redakcja, `requestId`, `securityLog()`
 - `apps/api/src/http/` — `security-headers.ts` (helmet, CSP), `web-app.ts` (pliki web + fallback SPA, 404 `not_found`)
 - `apps/api/src/modules/<moduł>/{domain,http,infra}` + `index.ts`; teraz `modules/health` (z limitem `/health/ready`) i `modules/konta` (`index.ts` — publiczne API modułu: `accountRoutes()` zwraca `Accounts.requireUser` dla tras `/api/v1/*` innych modułów; `infra/auth.ts` — konfiguracja Better Auth, `infra/sign-in-failures.ts` — limit per konto, `http/auth-routes.ts` — most `/api/auth/*`, `http/require-user.ts` (przekazuje odnowione ciasteczko sesji), `http/cookies.ts`, `http/me-routes.ts`)
-- `apps/api/src/http/api-error.ts` — `ApiError` (błędy HTTP: 400, 401, 403 `invalid_origin`) i jedyny handler błędów; mapuje też `DomainError` na status (`not_found` 404, `owner_only` 403, `limit_reached` 409) i zapisuje jego zdarzenie do logu `security`
+- `apps/api/src/http/api-error.ts` — `ApiError` (błędy HTTP: 400, 401, 403 `invalid_origin`) i jedyny handler błędów; mapuje też `DomainError` na status (`not_found` 404, `owner_only` 403, `limit_reached` 409) i zapisuje jego zdarzenie do logu `security`; każdy inny wyjątek (poza błędami klienta Fastify < 500, np. 413) → `500 {"error":{"code":"internal","requestId":…}}`, a do logu tylko typ, kod i ramki stosu
 - `apps/api/src/domain-error.ts` — `DomainError` (kod z `packages/shared`, `limit`, zdarzenie bezpieczeństwa) rzucany przez domeny modułów
 - `apps/api/src/http/validate.ts` — treść żądania przez schemat zod (400 `validation_failed` z `fields`); `http/trusted-origin.ts` — 403 `invalid_origin` dla `POST`/`PATCH`/`DELETE` pod `/api/v1/*` z obcego `Origin` (TH-14)
 - `apps/api/src/modules/listy` — `index.ts` (`listsModule()` rejestruje trasy, zwraca `Lists.requireListAccess` dla kolejnych modułów; `createLists(pool)`), `domain/lists.ts` (`requireListAccess`, tworzenie z limitem, zmiana nazwy, usunięcie, interfejs `ListsRepository`), `infra/lists-repository.ts`, `http/routes.ts` (`/api/v1/lists*`)
@@ -74,6 +74,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 - Nazwy tras i opcji Better Auth zmieniają się między wersjami (np. `forgetPassword` → `requestPasswordReset`); sprawdzić w dokumentacji przypiętej wersji.
 - Konta zakłada się wyłącznie przez most HTTP `POST /api/auth/sign-up/email` (`http/auth-routes.ts`), który waliduje zgody i 16+ schematem z `packages/shared`. Hook `databaseHooks.user.create.before` w `infra/auth.ts` stempluje znaczniki zgód bezwarunkowo, bo nie widzi pól `termsAccepted` / `ageConfirmed` (nie są polami Better Auth). Dlatego nie wołać `auth.api.signUpEmail` z kodu serwera (seed, skrypty, testy) — konto dostałoby zgody, których nikt nie udzielił; w testach używać fabryki `createUser`. (Odstępstwo od notatki T-004 „zgody weryfikowane w hooku”, QA T-004 runda 1.)
 - Better Auth zwraca przy kolizji unikalności e-maila (równoczesne rejestracje) ogólne `422 FAILED_TO_CREATE_USER`; most zamienia je na `409 email_taken`, gdy konto z tym e-mailem już istnieje. Inne nieznane statusy Better Auth → `500 internal`.
+- Nieznany wyjątek nie może dojść do domyślnego handlera Fastify — wysyła on klientowi `message` (np. SQL z parametrami z `DrizzleQueryError`, wartość pola z błędu pg). Dlatego `apiErrors` sam odpowiada `500 internal` i loguje `summarize(error)` zamiast `err`; nie logować surowego wyjątku z bazy. Wejście, którego baza nie przyjmie (NUL w tekście), odrzuca schemat w `packages/shared` (QA T-005 runda 1).
 
 ## Skille i źródła
 
@@ -84,6 +85,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | T-005 (QA round 1): handler nieoczekiwanych błędów (`500 internal` z `requestId`), „Pułapki”: domyślny handler Fastify. |
 | 2026-10-28 | T-005: moduł `listy`, `DomainError`, `validate`, `trustedOrigin`, helpery testów `requestsAs`, `captureLogs`, fabryki `createList`, `addMember`. |
 | 2026-10-27 | T-004: moduł `konta`, `ApiError`, fabryki testowe, nowe zmienne środowiskowe. |
 | 2026-10-26 | `/ci-cd`: API serwuje web pod jednym originem, nagłówki i CORS (ADR 0006). |

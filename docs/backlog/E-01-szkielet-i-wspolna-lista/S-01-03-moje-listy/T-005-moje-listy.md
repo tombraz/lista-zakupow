@@ -3,7 +3,7 @@ id: T-005
 title: "Moje listy: tworzenie, przegląd, zmiana nazwy i usunięcie (web)"
 epic: E-01
 story: S-01-03
-status: in-progress          # todo | in-progress | in-qa | done | blocked
+status: in-qa                # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-004]
 size: M                # S | M (L must be split)
@@ -49,7 +49,7 @@ Each criterion must fail before the work and pass after it.
 - [x] SEC2 (TH-02): Given uczestnik listy A, when wywoła `PATCH` lub `DELETE /api/v1/lists/:listId`, then 403 `owner_only`, lista bez zmian; SC-06 uczestnika nie pokazuje opcji „Zmień nazwę listy” i „Usuń listę”. — verified by: test integracyjny + test komponentu
 - [x] SEC3 (TH-01): Given domownik B otwiera adres SC-06 listy A, when ekran się załaduje, then widzi tylko „Nie masz dostępu do tej listy.” i „Wróć do moich list”, bez nazwy ani treści listy. — verified by: E2E z dwoma kontami
 - [x] SEC4 (TH-13): Given limit 50 list (AC3), when bot tworzy listy w pętli, then po 50 dostaje 409, a odmowa dostępu (SEC1) jest zapisana w logu `security` z identyfikatorami. — verified by: test integracyjny (log)
-- [ ] SEC5 (QA round 1 #1): Given dowolna trasa `/api/v1/*`, when obsługa żądania rzuci nieoczekiwany wyjątek (np. błąd bazy), then odpowiedź to `500 {"error":{"code":"internal"}}` z `requestId`, bez treści wyjątku, SQL ani parametrów, a log zawiera `requestId` i typ błędu bez parametrów zapytania z treścią użytkownika (np. nazwy listy); nazwa listy ze znakiem NUL daje 400 `validation_failed` (`fields.name`). — verified by: test integracyjny handlera (wymuszony wyjątek, np. awaria repozytorium) + test jednostkowy schematu + test integracyjny `POST`/`PATCH` z NUL
+- [x] SEC5 (QA round 1 #1): Given dowolna trasa `/api/v1/*`, when obsługa żądania rzuci nieoczekiwany wyjątek (np. błąd bazy), then odpowiedź to `500 {"error":{"code":"internal"}}` z `requestId`, bez treści wyjątku, SQL ani parametrów, a log zawiera `requestId` i typ błędu bez parametrów zapytania z treścią użytkownika (np. nazwy listy); nazwa listy ze znakiem NUL daje 400 `validation_failed` (`fields.name`). — verified by: test integracyjny handlera (wymuszony wyjątek, np. awaria repozytorium) + test jednostkowy schematu + test integracyjny `POST`/`PATCH` z NUL
 
 ## TDD plan
 
@@ -182,6 +182,29 @@ Zmiana istniejącego testu: `apps/api/test/body-limit.test.ts` (T-001) używał 
 ### Przewodniki warstw (Step 8b)
 
 Uzupełnione „Gdzie jest kod” w `layers/db.md`, `layers/backend.md`, `layers/web.md` (nowe pliki, helpery testów, fabryki `createList(pool, owner)` / `addMember(pool, list, user)`) oraz `api.md` („Stan po T-005”, `members` w szczegółach). Bez zmian w „Conventions”.
+
+### Poprawki po QA round 1 (2026-10-28)
+
+Zakres: tylko znalezisko #1 (major) → SEC5. Minory #2, #3 i notatki #4–#6 nie ruszane (do decyzji przy kolejnej rundzie / osobno).
+
+**Komendy (ten przebieg):** `pnpm check` — Prettier, ESLint, `tsc`, jscpd, dependency-cruiser, design-check, backlog-check OK, Vitest **36 plików / 163 testy zielone**; `pnpm build` OK; `pnpm test:e2e` **14/14** (J-01, J-02, SEC3, limit — bez regresji).
+
+| # | Plik / test | Red (pierwsze uruchomienie) | Teraz |
+| --- | --- | --- | --- |
+| 13 | `packages/shared/test/lists.test.ts` „rejects a name containing the NUL character as invalid” | `expected {} to deeply equal { name: 'invalid' }` | ✔ |
+| 14 | `apps/api/test/unexpected-error.test.ts` „answers 500 internal with the requestId and logs no exception message” (trasa testowa `GET /api/v1/test/failing-query` z prawdziwym błędem bazy: `SELECT $1::int` z wartością „Prezent dla Ani”) | odtwarza znalezisko: `expected { statusCode, code, … } to deeply equal { error: { code: 'internal', … } }`, otrzymane `"message": "invalid input syntax for type integer: \"Prezent dla Ani\""` | ✔ |
+| 14 | `apps/api/test/unexpected-error.test.ts` „rejects a list name with the NUL character with 400…” (`POST` i `PATCH`) | przeszedł od razu (schemat poprawiony w teście 13); spot-check: bez `refine` w schemacie → `expected 500 to be 400` | ✔ |
+
+Spot-check logu: `request.log.error({ err: error })` zamiast `summarize(error)` → `expected '{"level":30,…' not to contain 'Prezent dla Ani'`. Przywrócone, zielone.
+
+**SEC5** — odpowiedź `500 {"error":{"code":"internal","requestId":"<uuid>"}}` bez treści wyjątku i SQL; w logu jeden wpis `level: 50` z tym samym `requestId` i `err: { type: "DatabaseError", code: "22P02", stack }` (tylko ramki `at …`, bez komunikatu; `cause` streszczana tak samo, np. pg pod `DrizzleQueryError`); NUL w nazwie → 400 `validation_failed`, `fields.name: "invalid"` przy `POST` i `PATCH`.
+
+**Decyzje do wglądu QA:**
+
+- `requestId` w treści błędu `internal` (pole opcjonalne `ApiErrorBody.error.requestId` w `packages/shared`): klient może go pokazać / zgłosić. Wpisane w tabeli błędów `architecture.md`.
+- Błędy klienta z Fastify (`statusCode` < 500: 413, zły JSON, zły `content-type`) dalej obsługuje domyślny handler — jego komunikaty nie niosą danych użytkownika (`body-limit.test` bez zmian).
+- Schemat odrzuca tylko NUL (kod `invalid` — jedyny znak, którego PostgreSQL nie zapisze w `text`). Innych znaków sterujących i niewidocznych (#5) nie ruszałem, bo to zmiana reguły F-05, a nie błąd. Web dla `invalid` pokazuje „Wpisz nazwę listy” (`listNameErrorText`); NUL nie da się wpisać w pole przeglądarki, więc tekstu nie dodawałem.
+- „Pułapki” w `layers/backend.md` (zgodnie z notatką implementacyjną), „Gdzie jest kod” dla `api-error.ts`, wiersz 500 w `architecture.md`.
 
 <!-- QA rounds are appended below by /qa-task -->
 

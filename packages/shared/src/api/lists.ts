@@ -9,7 +9,9 @@ export const listNameRequestSchema = z.object({
     .string({ error: "required" })
     .trim()
     .min(1, { error: "required" })
-    .max(LIST_NAME_MAX_LENGTH, { error: "too_long" }),
+    .max(LIST_NAME_MAX_LENGTH, { error: "too_long" })
+    // PostgreSQL nie zapisze NUL w kolumnie tekstowej; bez tego INSERT kończy się 500.
+    .refine((name) => !name.includes("\u0000"), { error: "invalid" }),
 });
 
 export type ListNameRequest = z.input<typeof listNameRequestSchema>;

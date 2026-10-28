@@ -30,4 +30,10 @@ describe("listNameRequestSchema (AC2, F-05)", () => {
     expect(errorsOf({ name: "a".repeat(101) })).toEqual({ name: "too_long" });
     expect(errorsOf({ name: "🛒".repeat(101) })).toEqual({ name: "too_long" });
   });
+
+  // SEC5: PostgreSQL nie zapisze NUL w kolumnie tekstowej.
+  it("rejects a name containing the NUL character as invalid", () => {
+    expect(errorsOf({ name: "a\u0000b" })).toEqual({ name: "invalid" });
+    expect(errorsOf({ name: "\u0000" })).toEqual({ name: "invalid" });
+  });
 });

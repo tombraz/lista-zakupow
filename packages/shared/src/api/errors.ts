@@ -22,5 +22,7 @@ export interface ApiErrorBody {
     code: ErrorCode;
     fields?: Partial<Record<string, FieldErrorCode>>;
     limit?: LimitName;
+    /** Tylko przy `internal`: identyfikator żądania do odszukania szczegółów w logu. */
+    requestId?: string;
   };
 }

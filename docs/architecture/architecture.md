@@ -113,7 +113,7 @@ Dostęp do listy daje wyłącznie: `lista.owner_id = ja` albo wiersz członkostw
 | 410 | `invitation_invalid` | link wykorzystany, wygasły lub unieważniony (F-11) |
 | 409 | `already_member`, `own_list` | F-12 |
 | 429 | `rate_limited` | MC-04, MC-05 |
-| 500 | `internal` | błąd serwera; szczegóły tylko w logach z identyfikatorem żądania |
+| 500 | `internal` (`requestId`) | błąd serwera; szczegóły tylko w logach z identyfikatorem żądania |
 
 - Konflikty (F-14): ostatni zapis wygrywa (zwykły `UPDATE`); edycja usuniętej pozycji zwraca 404, klient pokazuje „pozycja usunięta przez inną osobę”.
 - UI nie pokazuje zmiany jako zapisanej przed odpowiedzią serwera (bez optymistycznych aktualizacji, F-15).
