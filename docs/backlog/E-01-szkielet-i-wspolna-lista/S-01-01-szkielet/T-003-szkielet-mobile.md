@@ -3,7 +3,7 @@ id: T-003
 title: Szkielet aplikacji mobilnej
 epic: E-01
 story: S-01-01
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001, T-002]
 size: M                # S | M (L must be split)
@@ -36,13 +36,13 @@ Aplikacja Expo (Android i iOS) uruchamia się, pokazuje stan API i bazy z lokaln
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given ekran startowy z podstawionym API (MSW), when API zwraca „gotowe” / „baza niedostępna” / błąd sieci, then ekran pokazuje odpowiedni polski tekst z rolą i etykietą dostępną. — verified by: test ekranu (Jest + RNTL, `getByRole` / `getByText`)
-- [ ] AC2: Given lokalne api, when uruchomię flow Maestro na emulatorze Androida, then aplikacja pokazuje „API działa · baza działa”. — verified by: Maestro flow `health.yaml`
-- [ ] AC3: Given PR zmieniający `apps/mobile/**` lub `packages/shared/**`, when CI się zakończy, then job mobile (lint z `eslint-plugin-react-native-a11y`, typy, testy, design check, Maestro Android, build iOS symulatora) przeszedł i wchodzi do `ci-ok`; PR bez tych zmian go pomija. — verified by: rung 3, link do przebiegu
-- [ ] AC4: Given aplikacja, when sprawdzę wygląd, then wartości kolorów, odstępów i typografii pochodzą wyłącznie z `tokens.ts`; `design-check --scan apps/mobile/src` przechodzi. — verified by: `design-check` w CI
-- [ ] AC5: Given `docs/architecture/layers/mobile.md`, when nowa osoba wykona komendy z sekcji „Komendy” (install, start, testy, E2E, build lokalny), then działają; adres API pochodzi z konfiguracji środowiska Expo (emulator: `10.0.2.2`). — verified by: ręczne przejście przez QA
-- [ ] SEC1 (TH-23): Given paczka aplikacji i `app.config`, when przeszukam je, then zawierają tylko publiczny adres API, bez kluczy i sekretów; build wydania nie ma menu deweloperskiego. — verified by: test konfiguracji (unit) sprawdzający dozwolone klucze `extra` + przegląd w QA
-- [ ] SEC2 (TH-16): Given konfiguracja projektu, when ktoś doda zapis do AsyncStorage pod kluczem związanym z sesją, then lint zgłasza błąd (sesja tylko w `expo-secure-store`). — verified by: reguła `no-restricted-imports` / `no-restricted-syntax` + celowe naruszenie (Evidence)
+- [x] AC1: Given ekran startowy z podstawionym API (MSW), when API zwraca „gotowe” / „baza niedostępna” / błąd sieci, then ekran pokazuje odpowiedni polski tekst z rolą i etykietą dostępną. — verified by: test ekranu (Jest + RNTL, `getByRole` / `getByText`)
+- [x] AC2: Given lokalne api, when uruchomię flow Maestro na emulatorze Androida, then aplikacja pokazuje „API działa · baza działa”. — verified by: Maestro flow `health.yaml`
+- [x] AC3: Given PR zmieniający `apps/mobile/**` lub `packages/shared/**`, when CI się zakończy, then job mobile (lint z `eslint-plugin-react-native-a11y`, typy, testy, design check, Maestro Android, build iOS symulatora) przeszedł i wchodzi do `ci-ok`; PR bez tych zmian go pomija. — verified by: rung 3, link do przebiegu
+- [x] AC4: Given aplikacja, when sprawdzę wygląd, then wartości kolorów, odstępów i typografii pochodzą wyłącznie z `tokens.ts`; `design-check --scan apps/mobile/src` przechodzi. — verified by: `design-check` w CI
+- [x] AC5: Given `docs/architecture/layers/mobile.md`, when nowa osoba wykona komendy z sekcji „Komendy” (install, start, testy, E2E, build lokalny), then działają; adres API pochodzi z konfiguracji środowiska Expo (emulator: `10.0.2.2`). — verified by: ręczne przejście przez QA
+- [x] SEC1 (TH-23): Given paczka aplikacji i `app.config`, when przeszukam je, then zawierają tylko publiczny adres API, bez kluczy i sekretów; build wydania nie ma menu deweloperskiego. — verified by: test konfiguracji (unit) sprawdzający dozwolone klucze `extra` + przegląd w QA
+- [x] SEC2 (TH-16): Given konfiguracja projektu, when ktoś doda zapis do AsyncStorage pod kluczem związanym z sesją, then lint zgłasza błąd (sesja tylko w `expo-secure-store`). — verified by: reguła `no-restricted-imports` / `no-restricted-syntax` + celowe naruszenie (Evidence)
 
 ## TDD plan
 
@@ -110,18 +110,18 @@ Przebieg 2026-10-28 (implementer, autonomicznie), gałąź `epic/E-01-szkielet-i
 | 2c | (dopisany, infra rung 2) `bash scripts/test/mobile.test.sh`: `--dry-run` trzech skryptów porównany z `scripts/test/*.dry-run.txt` | brak skryptów: `FAIL android-emulator --dry-run wypisuje kroki`, `FAIL mobile-e2e …`, `FAIL ios-simulator-build …` | 3× `ok` |
 | 2d | (dopisany po przebiegu CI 1) `scripts/test/android-emulator-boot.test.sh` (wołany z `mobile.test.sh`): atrapy `sdkmanager`/`avdmanager`/`adb`/`emulator` w PATH; emulator pada od razu albo wisi, `BOOT_TIMEOUT_S=4` → skrypt kończy się błędem (nie 124) i wypisuje koniec logu emulatora | stary skrypt wisiał na `adb wait-for-device`: `FAIL emulator padł… (exit 124)`, `FAIL emulator wisi… (exit 124)` (limit 60 s testu) | 2× `ok`, ~7 s |
 | 2e | (dopisany po przebiegu CI 2) ten sam plik, „AVD z avdmanager widoczne dla emulatora”: atrapa `avdmanager` zapisuje AVD w `$ANDROID_AVD_HOME` (bez niej w `$ANDROID_USER_HOME/avd`), atrapa `emulator` szuka w `$ANDROID_AVD_HOME` albo `$HOME/.android/avd` | stary skrypt: `FAIL … (exit 1)`, `Emulator zakończył działanie przed końcem rozruchu`, `ERROR \| Unknown AVD name [lista-e2e]` (to samo co w CI) | ✔; `mobile.test.sh` 6× ok |
-| 3 | `apps/mobile/e2e/health.yaml` (Maestro) | **nieuruchomiony**, zob. „Open question” | — |
-| 4 | job mobile w CI na PR | **nieuruchomiony** (wymaga push), zob. „Open question” | — |
+| 3 | `apps/mobile/e2e/health.yaml` (Maestro) | przebiegi CI 1 i 2: job `mobile-android` padał przed flow (zawieszenie, potem `Unknown AVD name`), naprawione testami 2d i 2e | [przebieg 3](https://github.com/tombraz/lista-zakupow/actions/runs/40746173059/job/123020547663): `[Passed] Stan API i bazy (6s)`, `1/1 Flow Passed` ✔ |
+| 4 | job mobile w CI na PR | przebiegi 1 i 2: `ci-ok` czerwony przez `mobile-android` | [przebieg 3](https://github.com/tombraz/lista-zakupow/actions/runs/40746173059) na PR #1: wszystkie joby i `ci-ok` zielone ✔; PR #8 (docs-only) pomija joby mobile ✔ |
 
 **Weryfikacja lokalna (ten przebieg):** `pnpm lint` 0, `pnpm typecheck` 0 (z `@lista/mobile`), `pnpm format:check` 0, `pnpm quality` (jscpd 0 klonów, także `apps/mobile/src`; dependency-cruiser 0 naruszeń), `pnpm design-check` 0 błędów i 0 kolorów na sztywno, `pnpm test` 49 plików / 247 testów ✔, `pnpm test:mobile` 10/10 ✔, `bash scripts/test/mobile.test.sh` 3× ok, `bash scripts/test/protect-main.test.sh` 2× ok, actionlint `1.7.12@sha256:b1934ee5…` exit 0, `pnpm audit --audit-level high` exit 0. Pierwszy przebieg `pnpm check` miał 12 czerwonych plików api (`Connection terminated due to connection timeout`) i timeout jednego testu web: maszyna była obciążona równoległym buildem Gradle i emulatorem. Powtórka bez obciążenia: zielona.
 
 **Kryteria**
 
 - [x] AC1: testy 1 i 1a. Tytuł z rolą `header`; stan w `Text` z `accessibilityRole="text"`, `accessibilityLabel="Stan serwera: <stan>"` i `accessibilityLiveRegion="polite"`; ekran w `SafeAreaView`. Zapytania `getByRole` / `findByRole` / `getByText`.
-- [ ] AC2: flow `apps/mobile/e2e/health.yaml` i `scripts/mobile-e2e.sh` są napisane, ale **nieuruchomione** (Open question).
-- [ ] AC3: w `ci.yml` są joby `mobile` (Jest, design check), `mobile-android` (KVM, JDK 17, Maestro 2.11.0 z sumą SHA-256, `scripts/android-emulator.sh`, `scripts/mobile-e2e.sh`, artefakty przy porażce) i `mobile-ios` (`macos-latest`, `scripts/ios-simulator-build.sh`). Wszystkie są w `needs` joba `ci-ok`, z warunkiem `needs.changes.outputs.mobile == 'true'` (filtr `apps/mobile/**`, `packages/shared/**`, `packages/tokens/**` plus wspólna konfiguracja). Lint (z `eslint-plugin-react-native-a11y`) i typy `apps/mobile` biegną w istniejącym jobie `static` (`pnpm lint`, `pnpm typecheck`), który też startuje przy zmianie mobile. actionlint czysty; **brak przebiegu na GitHub** (Open question).
+- [x] AC2: flow `apps/mobile/e2e/health.yaml` (`assertVisible` „Wspólna lista zakupów”, potem `extendedWaitUntil` „API działa · baza działa”) przeszedł na emulatorze Androida w CI z buildem wydania i lokalnym api (`scripts/mobile-e2e.sh`): [job mobile-android](https://github.com/tombraz/lista-zakupow/actions/runs/40746173059/job/123020547663), `[Passed] Stan API i bazy (6s)`.
+- [x] AC3: w `ci.yml` są joby `mobile` (Jest, design check), `mobile-android` (KVM, JDK 17, Maestro 2.11.0 z sumą SHA-256, `scripts/android-emulator.sh`, `scripts/mobile-e2e.sh`, artefakty przy porażce) i `mobile-ios` (`macos-latest`, `scripts/ios-simulator-build.sh`). Wszystkie są w `needs` joba `ci-ok`, z warunkiem `needs.changes.outputs.mobile == 'true'` (filtr `apps/mobile/**`, `packages/shared/**`, `packages/tokens/**` plus wspólna konfiguracja). Lint (z `eslint-plugin-react-native-a11y`) i typy `apps/mobile` biegną w istniejącym jobie `static` (`pnpm lint`, `pnpm typecheck`), który też startuje przy zmianie mobile. Przebieg [40746173059](https://github.com/tombraz/lista-zakupow/actions/runs/40746173059) (PR #1, commit 3afd96f): `changes`, `static`, `tests`, `build`, `migrations`, `e2e-web`, `infra`, `always`, `mobile`, `mobile-android`, `mobile-ios` i [`ci-ok`](https://github.com/tombraz/lista-zakupow/actions/runs/40746173059/job/123034374721) zielone. Pominięcie dla PR bez zmian mobile: przebieg [40742600233](https://github.com/tombraz/lista-zakupow/actions/runs/40742600233) na PR #8, `ci-ok` zielony.
 - [x] AC4 (lokalnie; w CI razem z AC3): `src/theme.ts` jest jedynym miejscem, które importuje `@lista/tokens/tokens`. `StartScreen` bierze z `theme` kolory, odstępy, rozmiar i wagę fontu oraz interlinię. `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated` → `Hard-coded colours: 0`, `OK: no errors`.
-- [ ] AC5: sekcje „Gdzie jest kod” i „Komendy” w `layers/mobile.md` są uzupełnione; adres API idzie z `app.config.ts` (`API_URL`, emulator `10.0.2.2`). Sprawdzone lokalnie: install, testy, typy, lint, `expo config` (`extra.apiUrl` z `API_URL`), `expo prebuild --platform android`. **Niesprawdzone:** build Androida i E2E (Open question). Ręczne przejście należy do QA.
+- [x] AC5: sekcje „Gdzie jest kod” i „Komendy” w `layers/mobile.md` są uzupełnione; adres API idzie z `app.config.ts` (`API_URL`, emulator `10.0.2.2`). Sprawdzone lokalnie: install, testy, typy, lint, `expo config` (`extra.apiUrl` z `API_URL`), `expo prebuild --platform android`. Build wydania Androida (Gradle lokalnie w jobie, bez EAS), start emulatora i E2E idą tymi samymi skryptami co w „Komendy” (`scripts/android-emulator.sh`, `scripts/mobile-e2e.sh`) i przeszły w CI na Linuksie (przebieg 3). Na Windows build Gradle pada na błędzie Expo SDK 58 (`generateInlineModules`, opis w pierwszym „Open question”). Ręczne przejście należy do QA.
 - [x] SEC1 (TH-23): testy 2, 2a i 2b. `npx expo config --type public --json` z `API_URL=https://example.test` daje `extra = {"apiUrl":"https://example.test","router":{"asyncRoutes":{"web":true}}}`; `router` dokłada plugin expo-router (konfiguracja tras, nie sekret). Brak `expo-dev-client`. Brak menu deweloperskiego w buildzie `--variant release` sprawdza QA na urządzeniu.
 - [x] SEC2 (TH-16): `no-restricted-syntax` w bloku `apps/mobile/**` w `eslint.config.js` łapie `setItem` / `mergeItem` z kluczem (literał albo szablon) pasującym do `/sess|token|auth|cookie|jwt/i`. Celowe naruszenie w `apps/mobile/src/session-violation.ts` (plik usunięty po teście): przed regułą lint zgłaszał tylko `no-unsafe-call` (brak paczki). Po dodaniu reguły: `error Sesja tylko w expo-secure-store, nigdy w AsyncStorage (TH-16) no-restricted-syntax` dla `setItem("session_token", …)` i dla `setItem` z szablonem `authToken:${user}`; `setItem("lastFilter", …)` przechodzi bez błędu.
 
@@ -208,3 +208,15 @@ Poprawka katalogu AVD jest w commicie na gałęzi epiku i czeka na push przez w�
 - **Alternatywa:** przed pushem właściciel uruchamia lokalnie `bash scripts/android-emulator.sh` na Linuksie lub WSL z KVM. To potwierdzi poprawkę bez przebiegu CI, ale nie zastąpi dowodu AC3 z GitHub.
 
 Answer: Właściciel wypchnął gałąź epiku z poprawką ANDROID_AVD_HOME (49132ac); ci-test/T-003-docs bez zmian. Zbierz dowody mobile-android/Maestro z nowego przebiegu na PR #1; kolejne pushe nadal przez NEEDS_USER.
+
+## Przebieg CI 3 (wznowienie 2026-10-28)
+
+Właściciel wypchnął poprawkę `ANDROID_AVD_HOME` (49132ac). Przebieg [40746173059](https://github.com/tombraz/lista-zakupow/actions/runs/40746173059) na PR #1 (commit 3afd96f): **wszystkie joby zielone, `ci-ok` zielony**.
+
+- `mobile-android`: emulator wstał w 55 s, krok E2E (build wydania Gradle, lokalne api, Maestro) trwał 24 min 11 s, `[Passed] Stan API i bazy (6s)`. To dowód AC2 i części AC3 dla Androida.
+- `mobile-ios`: build na symulator zielony trzeci raz.
+- Dowód pominięcia dla PR bez zmian mobile: PR #8, przebieg 2 (bez zmian).
+
+Poprawka po przebiegu (w commicie przekazania do QA): krok E2E w `mobile-android` zużył 24 min 11 s z limitu 25 min, więc limit kroku podniosłem do 35 min (job ma 45). Zmiana dotyczy tylko `timeout-minutes`, actionlint `1.7.12` exit 0, `prettier --check` 0. Nie ma osobnego przebiegu CI, bo push robi właściciel.
+
+Propozycje do `docs/architecture/` (nie edytuję): `pipeline.md` powinien opisywać trzy joby mobile (`mobile`, `mobile-android`, `mobile-ios`) i to, że build Gradle i Maestro trwają około 25 min.

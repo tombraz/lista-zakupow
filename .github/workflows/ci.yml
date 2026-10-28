@@ -222,7 +222,7 @@ jobs:
         timeout-minutes: 12
         run: bash scripts/android-emulator.sh
       - name: E2E Android (lokalne api, build wydania, Maestro)
-        timeout-minutes: 25
+        timeout-minutes: 35
         run: bash scripts/mobile-e2e.sh
       - name: Raport Maestro i logi
         if: failure() || cancelled()
