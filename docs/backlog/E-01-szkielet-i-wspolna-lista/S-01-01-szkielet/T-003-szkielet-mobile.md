@@ -3,7 +3,7 @@ id: T-003
 title: Szkielet aplikacji mobilnej
 epic: E-01
 story: S-01-01
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-001, T-002]
 size: M                # S | M (L must be split)
@@ -220,3 +220,38 @@ Właściciel wypchnął poprawkę `ANDROID_AVD_HOME` (49132ac). Przebieg [407461
 Poprawka po przebiegu (w commicie przekazania do QA): krok E2E w `mobile-android` zużył 24 min 11 s z limitu 25 min, więc limit kroku podniosłem do 35 min (job ma 45). Zmiana dotyczy tylko `timeout-minutes`, actionlint `1.7.12` exit 0, `prettier --check` 0. Nie ma osobnego przebiegu CI, bo push robi właściciel.
 
 Propozycje do `docs/architecture/` (nie edytuję): `pipeline.md` powinien opisywać trzy joby mobile (`mobile`, `mobile-android`, `mobile-ios`) i to, że build Gradle i Maestro trwają około 25 min.
+
+## QA round 1 (2026-10-28)
+
+Verdict: pass
+
+Niezależny przebieg QA (świeży kontekst), Windows 11 + Docker, gałąź `epic/E-01-szkielet-i-wspolna-lista` @ a6093ec.
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych), `pnpm services:up`, `pnpm check` exit 0: format, lint, typecheck, jscpd 0 klonów, depcruise, design-check `Hard-coded colours: 0`, backlog-check OK, Vitest 49 plików / 247 testów, Jest mobile 2 pliki / 10 testów. `bash scripts/test/mobile.test.sh` 6× ok.
+
+**Kryteria**
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `StartScreen.test.tsx` 5/5; zapytania `getByRole("header")`, `findByRole("text", { name: "Stan serwera: …" })`, `getByText` dla trzech stanów. Spot-checki (każdy cofnięty): `fetchApiStatus` zawsze `"ready"` → 1 test czerwony; rola `header` → `text` → 1 czerwony; `refetchInterval` wyłączony → test ponowienia czerwony. |
+| AC2 | pass | `gh run view 40746173059 --job 123020547663 --log`: `[Passed] Stan API i bazy (6s)`, `1/1 Flow Passed in 6s` (build wydania, lokalne api, emulator). |
+| AC3 | pass | `gh run view 40746173059` (PR #1, 3afd96f): wszystkie 12 jobów `success`, w tym `mobile`, `mobile-android`, `mobile-ios`, `ci-ok`. `gh run view 40742600233` (PR #8, docs-only): joby mobile `skipped`, `ci-ok` `success`. `ci-ok.needs` zawiera trzy joby mobile. Lint z `react-native-a11y` i typy w jobie `static`. Ostatni commit (limit kroku E2E 25→35 min) nie ma własnego przebiegu CI (patrz #6). |
+| AC4 | pass | `theme.ts` jedynym importerem `@lista/tokens/tokens`; `StartScreen` bez literałów wyglądu; `design-check --scan apps/web/src apps/mobile/src --allow generated` OK. |
+| AC5 | pass (częściowo nieweryfikowalne lokalnie) | Wykonane z „Komendy”: install, typecheck, `eslint apps/mobile --max-warnings 0`, test jednego pliku (5/5), `test:mobile`, `expo config` (`extra.apiUrl` = `http://10.0.2.2:3000` domyślnie). Emulator, build Gradle i E2E: brak emulatora/KVM na tej maszynie; te same skrypty przeszły w CI (AC2). `expo start` zob. #2. |
+| SEC1 (TH-23) | pass | `app-config.test.ts` 5/5; spot-check: dodanie `apiKey` do `extra` → 2 testy czerwone (cofnięte). `expo config --type public`: `extra = {apiUrl, router}`. `expo export --platform android` z `API_URL=https://example.test`: w paczce Hermes brak `secret`, `BETTER_AUTH`, `DATABASE_URL`, `postgres://` (trafienia „password” to stałe z bibliotek i `@lista/shared`). Brak `expo-dev-client`; CI buduje `--variant release`. Brak `console.*` w `apps/mobile/src`. |
+| SEC2 (TH-16) | pass (z zastrzeżeniem #1) | Celowe naruszenie w pliku tymczasowym (usunięty): `setItem("session_token", …)` i `mergeItem(\`authToken:${user}\`, …)` → `error … (TH-16) no-restricted-syntax`; `setItem("lastFilter", …)` bez błędu. |
+
+**Nieweryfikowalne w tym środowisku:** TalkBack/VoiceOver, największy rozmiar tekstu, prawdziwy telefon, uruchomienie na symulatorze iOS (jest tylko build w CI), brak menu deweloperskiego na urządzeniu. Brak emulatora Androida i Maca na maszynie QA. Kod: `accessibilityRole`, `accessibilityLabel`, `accessibilityLiveRegion`, `SafeAreaView`, rozmiary fontu bez `allowFontScaling={false}`, czyli bez przeszkód dla skalowania.
+
+**Przegląd kodu i testów:** testy na uzgodnionych granicach (MSW na `fetch`, `app.config` z zewnątrz), oczekiwania jako literały ze specyfikacji, mocki tylko modułu natywnego `expo-constants`. Dowód „red” jest w Evidence dla każdego testu planu (2b opisowy, z uzasadnieniem). Wyłączenie `has-accessibility-hint` ma uzasadnienie w konfiguracji. Brak dead code i zmian poza zakresem.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security / lint (TH-16) | Reguła SEC2 sprawdza tylko literał albo pierwszy fragment szablonu jako klucz. Omija ją klucz ze stałej i szablon, w którym nazwa sesji nie stoi na początku. | Plik tymczasowy: `const KEY = "better-auth.session"; setItem(KEY, …)` i `setItem(\`user:${user}:session\`, …)` → brak błędu lintu. | Mocniejsza reguła, np. `no-restricted-imports` dla `@react-native-async-storage/async-storage` poza jednym dozwolonym modułem albo sprawdzanie każdego fragmentu szablonu i nazw identyfikatorów. Najlepiej przed E-04 (logowanie mobile). |
+| 2 | minor | DX / AC5 | `pnpm --filter @lista/mobile start` przepisuje śledzony `apps/mobile/tsconfig.json`: usuwa `expo-env.d.ts` z `include` i formatuje wieloliniowo, więc po zwykłym `start` `pnpm format:check` jest czerwony, a w `git status` jest zmiana. | `git diff apps/mobile/tsconfig.json` po `CI=1 pnpm --filter @lista/mobile start` (cofnięte). | Konfiguracja w formie, której Expo nie przepisuje (np. bez `expo-env.d.ts` w `include` albo z `.expo/types` jak w szablonie Expo), albo wpis w „Pułapki”. |
+| 3 | minor | zależności | `npx expo install --check` zgłasza 5 nieaktualnych wersji patch (`expo` 58.0.19 → ~58.0.21, `expo-constants`, `expo-linking`, `expo-router`, `jest-expo`). Komunikat: „Your project may not work correctly…”. | wynik `expo install --check` | Podnieść przy następnej zmianie mobile, jeśli `minimumReleaseAge` na to pozwala, albo zapisać świadome odstępstwo. |
+| 4 | minor | docs / pipeline | Krok E2E Android trwa ok. 24 min, głównie przez build Gradle (`testing-strategy.md`: E2E mobile „całość < 10 min”). `pipeline.md` opisuje jeden „job mobile”, a są trzy. Implementer zgłosił to sam i nie zmieniał `docs/architecture/`. | log przebiegu 40746173059; `pipeline.md` etap 2 | Uaktualnić `pipeline.md` i `testing-strategy.md` (albo cache Gradle / prebuild w CI). |
+| 5 | note | testy | Stan „Sprawdzam połączenie…” (przed pierwszą odpowiedzią) nie ma testu. Nie wymaga go ani AC, ani QA plan. | `StartScreen.test.tsx` | Opcjonalny test, gdy ekran startowy dostanie specyfikację SC. |
+| 6 | note | CI | Commit przekazania (9023950) podnosi `timeout-minutes` kroku E2E do 35. Ta zmiana nie miała przebiegu CI; dowód AC3 pochodzi z 3afd96f. | `git diff 3afd96f HEAD -- .github/workflows/ci.yml` (1 linia) | Następny push potwierdzi; ryzyko niskie. |
+
+**Spot-checki cofnięte:** `git status` czysty przed commitem raportu, poza plikami backlogu.
