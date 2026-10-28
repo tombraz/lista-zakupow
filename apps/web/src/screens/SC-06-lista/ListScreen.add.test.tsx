@@ -1,5 +1,6 @@
 import type { Item, ListSummary } from "@lista/shared";
-import { screen, within } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -82,6 +83,32 @@ describe("SC-06 AddBar", () => {
       screen.getByText("Lista jest pusta. Dopisz pierwszą rzecz w polu na dole."),
     ).toBeVisible();
     expect(name).toHaveFocus();
+  });
+
+  it("leaves focus alone when a list with items opens (T-011)", async () => {
+    const { name } = await openList([anItem({ name: "Chleb" })]);
+
+    expect(screen.getByRole("button", { name: "Edytuj Chleb" })).toBeVisible();
+    expect(name).not.toHaveFocus();
+  });
+
+  it("does not move focus when the list becomes empty after a refresh (T-011)", async () => {
+    const { list, name } = await openList([anItem({ name: "Chleb" })]);
+    const back = screen.getByRole("link", { name: "Wstecz" });
+    back.focus();
+    listIs(list);
+
+    // Odświeżenie jak po powrocie do karty: ktoś inny usunął ostatnią pozycję.
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    expect(
+      await screen.findByText("Lista jest pusta. Dopisz pierwszą rzecz w polu na dole."),
+    ).toBeVisible();
+    expect(back).toHaveFocus();
+    expect(name).not.toHaveFocus();
   });
 });
 

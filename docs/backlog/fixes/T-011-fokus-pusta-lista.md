@@ -65,7 +65,7 @@ Przebieg 2026-10-28, Windows 11, Docker (Testcontainers `postgres:17.11-alpine`)
 
 **Co by zapobiegło:** kryteria T-006 objęły zasady fokusu z sekcji „Accessibility” SC-06, ale nie zachowania zapisane w tabeli „States” (tam był fokus stanu Empty). Plan nie wymagał, żeby każdy dotknięty wiersz „States” miał kryterium i test.
 
-Propozycje dla użytkownika (niezastosowane, czekają na decyzję):
+Propozycje dla użytkownika (2026-10-28: przyjęte wszystkie trzy; 1 i 2 zastosowane, 3 — osobny `/fix`):
 
 1. Szablon zadania (`.claude/skills/plan-backlog/templates/task.md`), punkt „UI tasks”: każdy wiersz tabeli „States” dotkniętego ekranu ma kryterium akceptacji z testem, łącznie z fokusem i ogłoszeniami, a nie tylko skan axe.
 2. QA round 1 #1 (minor): dopisać 2 testy przypinające zawężenia — lista z pozycjami po otwarciu nie przenosi fokusu; lista opróżniona przez odświeżenie danych nie przenosi fokusu.
@@ -95,3 +95,8 @@ Verdict: pass
 **Code review.** Zmiana minimalna, w komponencie, który już zarządza fokusem pustego stanu (`Items`). `useRef` z wartością początkową poprawnie ogranicza efekt do wejścia; brak scope creep. Security: brak zmian po stronie API, brak danych w logach.
 
 `git status` po spot-checkach i teście w przeglądarce: czysty.
+
+### Po QA round 1 (2026-10-28, decyzja użytkownika)
+
+- **Propozycja 1** — szablon zadania, „Acceptance criteria”: w zadaniach UI każdy osiągalny wiersz tabeli „States” dotkniętego ekranu ma kryterium (z fokusem i ogłoszeniami), wiersze odłożone są nazwane w „Implementation notes”.
+- **Propozycja 2 (QA #1)** — `ListScreen.add.test.tsx`: „leaves focus alone when a list with items opens (T-011)” i „does not move focus when the list becomes empty after a refresh (T-011)” (odświeżenie przez `focusManager`, jak po powrocie do karty). Przechodzą na obecnym kodzie (przypinają zachowanie). Spot-check: mutant „fokus zawsze przy montowaniu” → pada tylko pierwszy z nich; mutant „fokus przy każdym opróżnieniu” (`[list.items.length]`) → pada tylko drugi; `Items.tsx` przywrócony. Testy SC-06 47/47.
