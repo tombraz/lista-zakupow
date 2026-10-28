@@ -217,12 +217,15 @@ jobs:
           echo "$MAESTRO_SHA256  $RUNNER_TEMP/maestro.zip" | sha256sum --check
           unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      # Limity kroków: zawieszony krok kończy się błędem z logami, a nie dopiero limitem joba.
       - name: Emulator Androida
+        timeout-minutes: 12
         run: bash scripts/android-emulator.sh
       - name: E2E Android (lokalne api, build wydania, Maestro)
+        timeout-minutes: 25
         run: bash scripts/mobile-e2e.sh
       - name: Raport Maestro i logi
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-mobile-android

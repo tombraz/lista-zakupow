@@ -11,7 +11,7 @@ if [[ "${1-}" == "--dry-run" ]]; then dry_run=1; fi
 API_LEVEL=35
 IMAGE="system-images;android-$API_LEVEL;default;x86_64"
 AVD=lista-e2e
-BOOT_TIMEOUT_S=300
+BOOT_TIMEOUT_S=${BOOT_TIMEOUT_S:-300}
 
 step() { echo "# $1"; }
 run() { if ((dry_run)); then echo "$*"; else "$@"; fi; }
@@ -24,24 +24,32 @@ else
   echo no | avdmanager create avd --force --name "$AVD" --package "$IMAGE" --device pixel_6
 fi
 
+step "Akceleracja KVM"
+run emulator -accel-check
+
 step "Start emulatora bez okna i czekanie na koniec rozruchu"
 emulator_args=(-avd "$AVD" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect)
 if ((dry_run)); then
   echo "emulator ${emulator_args[*]}"
-else
-  nohup emulator "${emulator_args[@]}" >"${RUNNER_TEMP:-/tmp}/emulator.log" 2>&1 &
-fi
-run adb wait-for-device
-if ((dry_run)); then
   echo "adb shell getprop sys.boot_completed"
 else
+  emulator_log="${RUNNER_TEMP:-/tmp}/emulator.log"
+  nohup emulator "${emulator_args[@]}" >"$emulator_log" 2>&1 &
+  emulator_pid=$!
+  # Bez `adb wait-for-device`: nie ma limitu czasu i wisi bez końca, gdy emulator padnie (CI 40734724299).
+  fail_boot() {
+    echo "$1" >&2
+    echo "--- koniec logu emulatora ($emulator_log) ---" >&2
+    tail -n 60 "$emulator_log" >&2 || true
+    kill "$emulator_pid" 2>/dev/null || true
+    exit 1
+  }
+  booted() { [[ "$(timeout 10 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '')" == "1" ]]; }
   deadline=$((SECONDS + BOOT_TIMEOUT_S))
-  until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; do
-    if ((SECONDS > deadline)); then
-      echo "Emulator nie wystartował w ${BOOT_TIMEOUT_S} s" >&2
-      exit 1
-    fi
-    sleep 5
+  until booted; do
+    kill -0 "$emulator_pid" 2>/dev/null || fail_boot "Emulator zakończył działanie przed końcem rozruchu"
+    ((SECONDS <= deadline)) || fail_boot "Emulator nie wystartował w ${BOOT_TIMEOUT_S} s"
+    sleep 2
   done
 fi
 

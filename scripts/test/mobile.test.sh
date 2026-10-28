@@ -20,4 +20,7 @@ for script in android-emulator mobile-e2e ios-simulator-build; do
   check "$script --dry-run wypisuje kroki" "$(cat "scripts/test/$script.dry-run.txt" 2>/dev/null)" "$actual"
 done
 
+# Zachowanie przy awarii rozruchu emulatora (atrapy SDK w PATH).
+bash scripts/test/android-emulator-boot.test.sh || failures=$((failures + $?))
+
 exit "$failures"

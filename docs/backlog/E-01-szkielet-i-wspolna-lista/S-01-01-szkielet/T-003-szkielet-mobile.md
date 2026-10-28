@@ -108,6 +108,7 @@ Przebieg 2026-10-28 (implementer, autonomicznie), gałąź `epic/E-01-szkielet-i
 | 2a | (dopisany) ten sam plik: HTTP bez TLS na Androidzie (`android:usesCleartextTraffic`) tylko dla API `http://`, brak dla `https://` | `Expected: "true" Received: undefined` | ✔ |
 | 2b | (dopisany) ten sam plik: brak `expo-dev-client` w zależnościach (wydanie bez menu deweloperskiego) | przechodzi od początku (opisuje stan); dowód przeglądowy | ✔ |
 | 2c | (dopisany, infra rung 2) `bash scripts/test/mobile.test.sh`: `--dry-run` trzech skryptów porównany z `scripts/test/*.dry-run.txt` | brak skryptów: `FAIL android-emulator --dry-run wypisuje kroki`, `FAIL mobile-e2e …`, `FAIL ios-simulator-build …` | 3× `ok` |
+| 2d | (dopisany po przebiegu CI 1) `scripts/test/android-emulator-boot.test.sh` (wołany z `mobile.test.sh`): atrapy `sdkmanager`/`avdmanager`/`adb`/`emulator` w PATH; emulator pada od razu albo wisi, `BOOT_TIMEOUT_S=4` → skrypt kończy się błędem (nie 124) i wypisuje koniec logu emulatora | stary skrypt wisiał na `adb wait-for-device`: `FAIL emulator padł… (exit 124)`, `FAIL emulator wisi… (exit 124)` (limit 60 s testu) | 2× `ok`, ~7 s |
 | 3 | `apps/mobile/e2e/health.yaml` (Maestro) | **nieuruchomiony**, zob. „Open question” | — |
 | 4 | job mobile w CI na PR | **nieuruchomiony** (wymaga push), zob. „Open question” | — |
 
@@ -157,3 +158,26 @@ Kod, skrypty (tryb `--dry-run` przetestowany), flow `health.yaml` i joby CI (act
 Przy okazji do potwierdzenia: override `"@expo/cli>zod": 4.6.7` (zamiast wyjątku w audycie) i identyfikator aplikacji `dev.tombraz.listazakupow`.
 
 Answer: Rekomendacja przyjęta: właściciel pushuje gałąź epiku (CI na PR #1 uruchomi joby mobile); implementer po wznowieniu poprawia błędy jobów i wpisuje linki do przebiegów. Gałąź ci-test/T-003-docs przygotuj lokalnie (commit) i zgłoś przez NEEDS_USER do wypchnięcia przez właściciela; nie pushuj sam. Override "@expo/cli>zod": 4.6.7 i app id dev.tombraz.listazakupow zatwierdzone.
+
+## Przebieg CI 1 (wznowienie 2026-10-28)
+
+Właściciel wypchnął gałąź epiku. Przebieg [40734724299](https://github.com/tombraz/lista-zakupow/actions/runs/40734724299) (PR #1): `changes`, `static`, `tests`, `build`, `migrations`, `e2e-web`, `infra`, `always`, `mobile` i **`mobile-ios` zielone** (build iOS na symulator działa w CI). **`mobile-android` zawisł** w kroku „Emulator Androida” na `adb wait-for-device` (17:21:11 → anulowany przez właściciela 18:04). Log emulatora nie trafił do artefaktów, bo upload miał tylko `if: failure()`. `ci-ok` czerwony.
+
+Poprawka (commit „T-003: WIP - needs user” po tej sekcji):
+
+- `scripts/android-emulator.sh`: bez `adb wait-for-device`. Pętla `getprop sys.boot_completed` (każde `adb` z `timeout 10`) sprawdza też, czy proces emulatora żyje. Gdy emulator padnie albo nie wstanie w `BOOT_TIMEOUT_S` (domyślnie 300, nadpisywalne env), skrypt kończy się błędem i wypisuje 60 ostatnich linii `emulator.log`. Nowy krok `emulator -accel-check` pokazuje w logu stan KVM.
+- `ci.yml`, `mobile-android`: `timeout-minutes: 12` na kroku emulatora i 25 na kroku E2E. Upload raportu i logów `if: failure() || cancelled()`.
+- Test 2d (powyżej) odtwarza zawieszenie (red: exit 124) i jest zielony. `mobile.test.sh` 5× ok, actionlint `1.7.12@sha256:b1934ee5…` exit 0, `pnpm format:check` 0.
+
+Przyczyna padnięcia emulatora jest **nieznana**, bo log nie został zachowany. Następny przebieg pokaże ją w logu kroku albo w artefakcie `e2e-mobile-android`.
+
+Gałąź `ci-test/T-003-docs` (zgodnie z odpowiedzią): przygotowana lokalnie, oparta na commicie z poprawką, zmienia tylko `docs/ci-test.md`. Nie wypchnięta.
+
+## Open question
+
+Poprawka zawieszenia emulatora jest w commicie na gałęzi epiku, a gałąź `ci-test/T-003-docs` jest gotowa lokalnie. Obie czekają na push przez właściciela.
+
+**Pytanie:** proszę wypchnąć gałąź epiku i `ci-test/T-003-docs`, potem otworzyć PR testowy do gałęzi epiku i wznowić T-003.
+
+- **Rekomendacja:** `git push origin epic/E-01-szkielet-i-wspolna-lista ci-test/T-003-docs`, potem `gh pr create --base epic/E-01-szkielet-i-wspolna-lista --head ci-test/T-003-docs --draft --title "ci-test T-003: docs-only (nie mergować)"`. Po wznowieniu implementer czyta przebiegi: albo `mobile-android` przechodzi (link do dowodu AC2/AC3), albo log emulatora wskazuje kolejną poprawkę. Dla PR testowego dowodem jest pominięcie jobów mobile.
+- **Alternatywa:** wypchnąć na razie tylko gałąź epiku, a PR testowy otworzyć dopiero po zielonym `mobile-android`. Każdy wznowiony przebieg zmienia wtedy jedną rzecz, kosztem jeszcze jednej rundy pushu.
