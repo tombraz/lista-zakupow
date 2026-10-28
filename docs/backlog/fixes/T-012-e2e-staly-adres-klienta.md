@@ -4,7 +4,7 @@ title: "E2E: drugi klient z losowym adresem zamiast stałego x-forwarded-for"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-005]
 layers: [web]          # names from docs/architecture/layers/
 requirements: []       # F-xx the expected behaviour comes from
@@ -68,3 +68,22 @@ Przebieg 2026-10-28, Windows 11 (1 worker), Docker (Testcontainers).
 Część poprawki na życzenie użytkownika (raport): reguła ESLint w jobie CI `static` (`pnpm lint`) odrzuca stały `x-forwarded-for` i własne `newContext` w specach E2E; jedyne źródło adresu klienta to `fixtures.ts`.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-28)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | lint (AC2) | Reguła `E2E_CLIENT_SYNTAX` łapie tylko `Literal` i `.newContext(` przez kropkę; obejście świadome: szablon `` `x-forwarded-for` `` (TemplateLiteral) i `browser["newContext"]()` przechodzą bez błędu. | Sonda `apps/web/e2e/zz-probe.spec.ts` (usunięta): błędy dla `newContext({...})`, `"X-Forwarded-For"`, `"X-FORWARDED-FOR"`; brak błędu dla linii z szablonem i z `browser["newContext"]()`. | Opcjonalnie dodać selektory `TemplateElement[value.raw=/^x-forwarded-for$/i]` i `CallExpression[callee.property.value='newContext']`. Nie blokuje — przypadkowy powrót do starego wzorca jest łapany. |
+
+**Reprodukcja (Windows 11, 1 worker, Docker):**
+
+- `pnpm install --frozen-lockfile` — bez zmian w plikach śledzonych.
+- `pnpm check` — Prettier, ESLint, `tsc`, jscpd, dependency-cruiser, design-check, backlog-check OK; Vitest 49 plików / 247 testów zielone.
+- AC1: `playwright test e2e/j02-listy.spec.ts --project=komputer --repeat-each=6` → **18/18** — pass.
+- Spot-check AC1 (red): przywrócony `j02-listy.spec.ts` sprzed poprawki (`a778832~1`, stały `10.200.0.2`), `--repeat-each=6 -g SEC3` → 5 passed, 1 failed (SEC3). Plik przywrócony `git checkout`, `git status` czysty.
+- AC2: sonda w `apps/web/e2e/` — `browser.newContext(...)` i literał `X-Forwarded-For` / `X-FORWARDED-FOR` dają błąd `no-restricted-syntax`; `fixtures.ts` wyłączony z reguły (ignores), obecne specy czyste — pass. Regresja TH-20: `sql.raw` w pliku `apps/web/e2e/` nadal błąd (SAFE_SYNTAX powtórzone w nadpisaniu) — OK. Kolejność bloków w `eslint.config.js`: późniejsze bloki (`sizeRules`) nie nadpisują `no-restricted-syntax`.
+- AC3: `pnpm test:e2e` → **22/22** — pass.
+- Root cause: wyjaśnia, czemu zwykły przebieg nie łapał błędu (2 rejestracje z adresu przy limicie 5) — OK. Grep `newContext|forwarded` w `apps/web/e2e/` — wystąpienia tylko w `fixtures.ts`.
+- Kod: `clientHeaders()` usuwa duplikację wiedzy o adresie; `newClient` ma 2 użycia; aktualizacja `docs/architecture/layers/web.md` w zakresie. Brak zmian produkcyjnych.
