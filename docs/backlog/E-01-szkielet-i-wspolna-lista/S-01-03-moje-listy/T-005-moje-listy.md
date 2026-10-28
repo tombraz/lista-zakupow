@@ -3,7 +3,7 @@ id: T-005
 title: "Moje listy: tworzenie, przegląd, zmiana nazwy i usunięcie (web)"
 epic: E-01
 story: S-01-03
-status: in-progress              # todo | in-progress | in-qa | done | blocked
+status: in-qa                # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-004]
 size: M                # S | M (L must be split)
@@ -205,6 +205,22 @@ Spot-check logu: `request.log.error({ err: error })` zamiast `summarize(error)` 
 - Błędy klienta z Fastify (`statusCode` < 500: 413, zły JSON, zły `content-type`) dalej obsługuje domyślny handler — jego komunikaty nie niosą danych użytkownika (`body-limit.test` bez zmian).
 - Schemat odrzuca tylko NUL (kod `invalid` — jedyny znak, którego PostgreSQL nie zapisze w `text`). Innych znaków sterujących i niewidocznych (#5) nie ruszałem, bo to zmiana reguły F-05, a nie błąd. Web dla `invalid` pokazuje „Wpisz nazwę listy” (`listNameErrorText`); NUL nie da się wpisać w pole przeglądarki, więc tekstu nie dodawałem.
 - „Pułapki” w `layers/backend.md` (zgodnie z notatką implementacyjną), „Gdzie jest kod” dla `api-error.ts`, wiersz 500 w `architecture.md`.
+
+### Poprawki po QA round 2 (2026-10-28)
+
+Zakres: tylko znalezisko #1 (blocker, niestabilny test SC-06). Minory #2, #3 i notatka #4 nie ruszane.
+
+**Przyczyna (pomiar).** Test „shows the list name as h1 and the empty state (AC7)” jest pierwszym testem w pliku i płaci za zimny start workera jsdom. Bez obciążenia (tymczasowy test z `performance.now()`, usunięty): pierwszy render 109 ms, pierwsze żądanie MSW (`/me` → `/lists/:id`) do 293 ms, `findByRole(heading, name)` dopiero po 605 ms (pierwsze wyliczenie nazwy dostępnej / `getComputedStyle`). Ten sam scenariusz w drugim teście: 89 ms. W aplikacji nie ma błędu, to koszt startu, który rośnie z obciążeniem CPU. Pierwsze testy innych plików mają ten sam profil: `routes.test.tsx` 1,7 s, `SignInScreen.test.tsx` 1,6–1,9 s, `ListsScreen.test.tsx` (SC-05) 1,4 s. Domyślny `asyncUtilTimeout` Testing Library wynosi 1 s.
+
+**Red (odtworzenie deterministyczne).** `vitest run --project web` przy wszystkich 8 rdzeniach zajętych pętlą (skrypt w workerach, symulacja testów API z Testcontainers): **3/3 czerwone**, ten sam test (2,1–2,3 s), `TestingLibraryElementError: Unable to find role="heading" and name "Dom"`, DOM z pustym `<h1>` (jak w QA round 2).
+
+**Poprawka.** `apps/web/test/setup.ts`: `configure({ asyncUtilTimeout: 3000 })` z komentarzem, który uzasadnia wartość. Limit jest wspólny dla wszystkich plików web, więc obejmuje też SC-05. Asercje testów bez zmian, bez ponowień. 3 s to nadal mniej niż limit testu Vitest (5 s), więc brak elementu kończy się czytelnym błędem zapytania, a nie timeoutem testu.
+
+**Green.**
+
+- Ten sam scenariusz z obciążeniem CPU: **5/5 zielone** (59/59, test AC7 w 2,0–2,5 s).
+- `pnpm check` 5 razy z rzędu: **5/5 exit 0**, za każdym razem 36 plików / 163 testy zielone, a Prettier, ESLint, `tsc`, jscpd, dependency-cruiser, design-check i backlog-check OK.
+- `pnpm build` OK. Kod produkcyjny bez zmian, więc E2E nie uruchamiałem ponownie.
 
 <!-- QA rounds are appended below by /qa-task -->
 
