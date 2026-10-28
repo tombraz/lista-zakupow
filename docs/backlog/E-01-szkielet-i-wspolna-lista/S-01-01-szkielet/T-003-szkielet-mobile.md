@@ -181,3 +181,5 @@ Poprawka zawieszenia emulatora jest w commicie na gałęzi epiku, a gałąź `ci
 
 - **Rekomendacja:** `git push origin epic/E-01-szkielet-i-wspolna-lista ci-test/T-003-docs`, potem `gh pr create --base epic/E-01-szkielet-i-wspolna-lista --head ci-test/T-003-docs --draft --title "ci-test T-003: docs-only (nie mergować)"`. Po wznowieniu implementer czyta przebiegi: albo `mobile-android` przechodzi (link do dowodu AC2/AC3), albo log emulatora wskazuje kolejną poprawkę. Dla PR testowego dowodem jest pominięcie jobów mobile.
 - **Alternatywa:** wypchnąć na razie tylko gałąź epiku, a PR testowy otworzyć dopiero po zielonym `mobile-android`. Każdy wznowiony przebieg zmienia wtedy jedną rzecz, kosztem jeszcze jednej rundy pushu.
+
+Answer: Właściciel wypchnął epic/E-01-szkielet-i-wspolna-lista (94a2e03) i ci-test/T-003-docs (cb7f308) oraz otworzył draft PR testowy https://github.com/tombraz/lista-zakupow/pull/8 (baza: gałąź epiku). Zbierz dowody z przebiegów na PR #1 i PR #8; kolejne pushe nadal przez NEEDS_USER.
