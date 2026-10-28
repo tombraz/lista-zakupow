@@ -6,3 +6,4 @@
 2026-10-28 20:13 | T-003 | qa | PASS | 0 blocker/0 major/4 minor; m.in. lint SEC2, tsconfig nadpisywany przez expo start, E2E Android ~24 min
 2026-10-28 21:07 | T-007 | implementer | IN_QA | odhaczanie, kto kupił, czyszczenie kupionych (web); 285 testów + 26 E2E zielone
 2026-10-28 21:22 | T-007 | qa | PASS | 0/0/4 minor; S-01-04 done; brak wpisów w data-model.md/api.md, pusta lista SC-05 = Wszystko kupione
+2026-10-28 22:48 | T-008 | implementer | IN_QA | linki zaproszeń (7 dni, jednorazowe) i przyjęcie SC-08; 340 vitest + 32 E2E zielone
