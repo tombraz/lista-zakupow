@@ -155,3 +155,5 @@ Kod, skrypty (tryb `--dry-run` przetestowany), flow `health.yaml` i joby CI (act
 - **Alternatywa:** właściciel pozwala implementerowi na czas tego taska pushować gałęzie `ci-test/T-003-*` i używać `gh pr create` (jak w T-002), żeby poprawki CI szły bez czekania na człowieka.
 
 Przy okazji do potwierdzenia: override `"@expo/cli>zod": 4.6.7` (zamiast wyjątku w audycie) i identyfikator aplikacji `dev.tombraz.listazakupow`.
+
+Answer: Rekomendacja przyjęta: właściciel pushuje gałąź epiku (CI na PR #1 uruchomi joby mobile); implementer po wznowieniu poprawia błędy jobów i wpisuje linki do przebiegów. Gałąź ci-test/T-003-docs przygotuj lokalnie (commit) i zgłoś przez NEEDS_USER do wypchnięcia przez właściciela; nie pushuj sam. Override "@expo/cli>zod": 4.6.7 i app id dev.tombraz.listazakupow zatwierdzone.
