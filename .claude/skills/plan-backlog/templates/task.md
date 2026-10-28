@@ -34,6 +34,8 @@ screens: []            # e.g. [SC-02]
 
 Each criterion must fail before the work and pass after it.
 
+UI tasks: every row of the "States" table of each touched screen that this task makes reachable is covered by a criterion, including the focus and announcements the row names (an axe scan alone does not cover it). Rows left for a later task are named in "Implementation notes".
+
 - [ ] AC1: Given <context>, when <action>, then <result>. — verified by: <test name or manual check>
 - [ ] AC2: …
 - [ ] SEC1 (for each threat in `threats:`): Given <attacker context, e.g. another user>, when <attempt>, then <refused, no data>. — verified by: <negative test>
