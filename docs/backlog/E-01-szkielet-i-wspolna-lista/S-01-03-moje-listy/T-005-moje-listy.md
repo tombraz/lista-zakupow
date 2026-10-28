@@ -3,7 +3,7 @@ id: T-005
 title: "Moje listy: tworzenie, przegląd, zmiana nazwy i usunięcie (web)"
 epic: E-01
 story: S-01-03
-status: in-qa                # todo | in-progress | in-qa | done | blocked
+status: in-progress              # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-004]
 size: M                # S | M (L must be split)
@@ -238,3 +238,30 @@ Verdict: fail
 
 1. #1: jeden handler dla nieoczekiwanych błędów w `/api/v1/*`, który zwraca `500 {"error":{"code":"internal"}}` z `requestId` i loguje wyjątek bez parametrów zapytania z treścią użytkownika. Test integracyjny, który to udowadnia. Odrzucenie NUL (i rozważenie innych znaków sterujących) w `listNameRequestSchema` z testem jednostkowym i integracyjnym (400 `validation_failed`, `fields.name`).
 2. #2 i #3 opcjonalnie w tej samej rundzie (minor).
+
+## QA round 2 (2026-10-28)
+
+Verdict: fail
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | web (testy, Step 3) | Pakiet testów jest niestabilny: test SC-06 „shows the list name as h1 and the empty state (AC7)” (pierwszy w `ListScreen.test.tsx`) oblewa w pełnym przebiegu Vitest. Ekran jest jeszcze w stanie ładowania (pusty `h1`), gdy mija domyślny limit `findBy` (1 s). Przy pełnym obciążeniu (testy API z Testcontainers w tym samym czasie) pierwszy render pliku trwa dłużej. Evidence wspomina to jako „do obserwacji w CI”, ale tu oblało w 2 z 4 pełnych przebiegów, w tym w `pnpm check` (bramka CI → exit 1). | `pnpm check` → `Tests 1 failed / 162 passed`, `Unable to find role="heading" and name "Dom"`, DOM z `<h1 class="title"/>`. `pnpm test` 3×: zielony, czerwony (ten sam test), zielony. `vitest --project web` 3×: zielony. | `pnpm check` zielony w powtarzanych pełnych przebiegach (np. 5/5). Przyczyna usunięta, a nie zamaskowana ponowieniem testu: np. wspólny `configure({ asyncUtilTimeout })` w `apps/web/test/setup.ts` z uzasadnieniem albo rozgrzanie modułów ekranu przed pierwszym testem. Asercje testu bez zmian. |
+| 2 | minor | web (dostępność) | Bez zmian od rundy 1, #2: SC-06 w stanach ładowania i błędu ma pusty `h1` (`ListScreen.tsx:34`, `title={list?.name ?? ""}`). | Ten sam DOM widać w zrzucie z oblanego testu (#1). | Jak w rundzie 1. |
+| 3 | minor | backend (DRY) | Bez zmian od rundy 1, #3: rola wyznaczana dwa razy (`infra/lists-repository.ts:12`, `domain/lists.ts:64`). | grep | Jak w rundzie 1. |
+| 4 | note | backend (błędy) | `isClientError` przekazuje każdy błąd ze `statusCode` < 500 do domyślnego handlera Fastify, który odsyła `message`. Dziś dotyczy to tylko błędów Fastify (komunikaty bez treści żądania: zły JSON z nazwą listy → komunikat ogólny, w logu 0 wystąpień nazwy). Biblioteka, która w przyszłości rzuci 4xx z danymi w `message`, ominie ochronę. | `POST` z uciętym JSON-em `{"name":"Tajny prezent dla Ani"` → `400 FST_ERR_CTP_INVALID_JSON_BODY`, ogólny komunikat. | Do rozważenia: lista dozwolonych kodów `FST_ERR_*` zamiast progu `statusCode`. |
+
+**Co sprawdziłem i przeszło**
+
+- Zakres rundy: commit `ee66c86` (handler `apiErrors`, `summarize`, `requestId` w `ApiErrorBody`, `refine` dla NUL, testy 13 i 14) oraz regresja całości.
+- Czysta instalacja (`pnpm install --frozen-lockfile`) bez zmian w śledzonych plikach. Prettier, ESLint, `tsc`, jscpd 0 klonów, dependency-cruiser 0 naruszeń (202 moduły), design-check 0 błędów: OK. Vitest 36 plików / 163 testy, ale niestabilnie (#1). `pnpm build` OK. `pnpm test:e2e` **14/14** (J-01, J-02, SEC3, limit).
+- Red evidence dla testów 13 i 14 jest w Evidence. Spot-checki (każdy cofnięty, `git status` czysty): przywrócenie `throw error` w handlerze → test 500 czerwony (`expected undefined to deeply equal Any<String>`). Usunięcie `refine` z NUL → 2 testy czerwone (jednostkowy i integracyjny). Test 500 używa prawdziwego błędu bazy z wartością użytkownika i sprawdza treść odpowiedzi i logu literałami.
+- SEC5 na żywym API (lokalny Postgres w Dockerze, dwa nowe konta): NUL w `POST` i `PATCH` → `400 validation_failed`, `fields.name: "invalid"`. Zatrzymana baza → `POST` i `GET /api/v1/lists` dają `500 {"error":{"code":"internal","requestId":"<uuid>"}}`. W logu wpis `level 50` z tym samym `requestId`, `err.type` / `cause.type` i same ramki stosu. W logu 0 wystąpień nazw list („Prezent dla Ani”, „Zakupy QA”, „Tajny…”). Samotny surogat i znaki sterujące inne niż NUL → 201, bez 500.
+- Regresja SEC1 / TH-01: `GET` / `PATCH` / `DELETE` cudzej listy i losowego UUID → identyczne `404 {"error":{"code":"not_found"}}`. W logu `security` jest `list_access_denied` z `userId` i `listId`. Anonim → 401.
+- AC1–AC8, SEC1–SEC4: bez zmian w kodzie od rundy 1 (pass), testy zielone poza niestabilnym #1. SEC5: **pass**.
+- Nie sprawdziłem (jak w rundzie 1): Safari na iOS, czytnik ekranu na urządzeniu.
+- Lokalna tabela `rate_limit` wyczyszczona przed rejestracją kont testowych (limit z wcześniejszych przebiegów E2E). Tylko baza deweloperska w Dockerze.
+
+**Do zmiany przed kolejną rundą**
+
+1. #1: usunąć przyczynę niestabilności testów komponentów SC-06 (i sprawdzić SC-05, który ma ten sam wzorzec), bez osłabiania asercji. W Evidence podać kilka kolejnych zielonych pełnych przebiegów `pnpm check`.
+2. #2 i #3 opcjonalnie (minor).
