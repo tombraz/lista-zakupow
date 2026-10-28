@@ -23,6 +23,7 @@ const DOMAIN_STATUS: Record<DomainErrorCode, number> = {
   not_found: 404,
   owner_only: 403,
   limit_reached: 409,
+  duplicate_item: 409,
 };
 
 function domainErrorBody(error: DomainError): ApiErrorBody {

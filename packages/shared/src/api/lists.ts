@@ -1,26 +1,17 @@
 import { z } from "zod";
+import type { Item } from "./items";
+import type { Person } from "./person";
+import { requiredName } from "./text";
+
+export type { Person };
 
 /** Nazwa listy 1–100 znaków (F-05). */
 export const LIST_NAME_MAX_LENGTH = 100;
 
 /** Treść `POST /api/v1/lists` i `PATCH /api/v1/lists/:listId`. */
-export const listNameRequestSchema = z.object({
-  name: z
-    .string({ error: "required" })
-    .trim()
-    .min(1, { error: "required" })
-    .max(LIST_NAME_MAX_LENGTH, { error: "too_long" })
-    // PostgreSQL nie zapisze NUL w kolumnie tekstowej; bez tego INSERT kończy się 500.
-    .refine((name) => !name.includes("\u0000"), { error: "invalid" }),
-});
+export const listNameRequestSchema = z.object({ name: requiredName(LIST_NAME_MAX_LENGTH) });
 
 export type ListNameRequest = z.input<typeof listNameRequestSchema>;
-
-/** Osoba widoczna na liście: imię bez e-maila (N-02). */
-export interface Person {
-  id: string;
-  name: string;
-}
 
 /** Rola domownika na liście (słownik BRD: właściciel, uczestnik). */
 export type ListRole = "owner" | "participant";
@@ -44,6 +35,6 @@ export interface ListDetails {
   role: ListRole;
   owner: Person;
   members: Person[];
-  /** Pozycje dochodzą w T-006 (`Item` z api.md). */
-  items: never[];
+  /** Nieodhaczone od najnowszej (data-model.md, „Kolejność”). */
+  items: Item[];
 }

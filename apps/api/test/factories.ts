@@ -2,7 +2,8 @@ import { randomInt, randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { listMember, shoppingList } from "../src/db/schema";
+import { normalizeItemName } from "@lista/shared";
+import { item, listMember, shoppingList } from "../src/db/schema";
 import { TEST_ORIGIN } from "./app";
 import { cookieHeader } from "./cookies";
 
@@ -83,4 +84,24 @@ export async function addMember(
   user: Pick<TestUser, "id">,
 ): Promise<void> {
   await drizzle(pool).insert(listMember).values({ listId: list.id, userId: user.id });
+}
+
+export interface TestItem {
+  id: string;
+  name: string;
+}
+
+/** Pozycja wprost w bazie (np. 500 pozycji do testu limitu); `by: null` = autor usunięty. */
+export async function createItem(
+  pool: Pool,
+  list: Pick<TestList, "id">,
+  by: Pick<TestUser, "id"> | null,
+  name = `Pozycja ${randomUUID().slice(0, 8)}`,
+): Promise<TestItem> {
+  const [row] = await drizzle(pool)
+    .insert(item)
+    .values({ listId: list.id, name, nameKey: normalizeItemName(name), addedBy: by?.id ?? null })
+    .returning({ id: item.id });
+  if (!row) throw new Error("createItem: no row");
+  return { id: row.id, name };
 }

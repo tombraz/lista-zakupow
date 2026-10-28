@@ -25,8 +25,11 @@ Node.js LTS, TypeScript strict, Fastify, `@fastify/websocket`, `@fastify/helmet`
 - `apps/api/src/domain-error.ts` — `DomainError` (kod z `packages/shared`, `limit`, zdarzenie bezpieczeństwa) rzucany przez domeny modułów
 - `apps/api/src/http/validate.ts` — treść żądania przez schemat zod (400 `validation_failed` z `fields`); `http/trusted-origin.ts` — 403 `invalid_origin` dla `POST`/`PATCH`/`DELETE` pod `/api/v1/*` z obcego `Origin` (TH-14)
 - `apps/api/src/modules/listy` — `index.ts` (`listsModule()` rejestruje trasy, zwraca `Lists.requireListAccess` dla kolejnych modułów; `createLists(pool)`), `domain/lists.ts` (`requireListAccess`, tworzenie z limitem, zmiana nazwy, usunięcie, interfejs `ListsRepository`), `infra/lists-repository.ts`, `http/routes.ts` (`/api/v1/lists*`)
-- `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`, `app.ts` (`buildTestApp`), `factories.ts` (`createUser`, `signIn`, `randomIp`, `createList(pool, owner, name?)` i `addMember(pool, list, user)` — wprost w bazie), `requests.ts` (`requestsAs(app, user | null)` — żądania `/api/v1/*` z ciasteczkiem i zaufanym `Origin`), `logs.ts` (`captureLogs()`), `cookies.ts`
-- `packages/shared/src/` — schematy zod i typy kontraktu (`health.ts`, `api/account.ts`, `api/errors.ts`, `api/lists.ts`), progi `limits.ts` (`RATE_LIMITS`, `BUSINESS_LIMITS`); testy w `packages/shared/test/`
+- `apps/api/src/modules/pozycje` — `index.ts` (`itemsModule()` rejestruje trasy `/api/v1/lists/:listId/items*`; `createItems(pool)` daje `Items.itemsOf` — pozycje w kształcie API dla `GET /api/v1/lists/:listId`), `domain/items.ts` (`addItem` z limitem 500 i idempotentnym `id`, `updateItem`, `deleteItem`, interfejs `ItemsRepository`), `infra/items-repository.ts`, `http/routes.ts`, `http/item-response.ts` (`Item` z API: osoby tylko `{ id, name }`, TH-19)
+- Zależność `listy` ↔ `pozycje`: `pozycje` zależy od `Lists.requireListAccess`, a szczegóły listy pokazują pozycje. Żeby nie było cyklu, domena `listy` definiuje interfejs `ListItems`, a `app.ts` podaje implementację z `createItems`. Odstępstwo od „moduł posiada swoje tabele”: `pozycje/infra` blokuje wiersz `shopping_list` (`FOR UPDATE` dla limitu 500, jak każe `data-model.md`) i ustawia jego `updated_at`, bo musi to zrobić w tej samej transakcji co zmiana pozycji (T-006)
+- `apps/api/src/ids.ts` — `isUuid()` dla identyfikatorów z adresu (`listId`, `itemId`): inny tekst = 404 bez zapytania do bazy
+- `apps/api/test/` — testy integracyjne (`*.test.ts`), harness bazy, `fixtures/`, `app.ts` (`buildTestApp`), `factories.ts` (`createUser`, `signIn`, `randomIp`, `createList(pool, owner, name?)`, `addMember(pool, list, user)` i `createItem(pool, list, by | null, name?)` — wprost w bazie), `requests.ts` (`requestsAs(app, user | null)` — żądania `/api/v1/*` z ciasteczkiem i zaufanym `Origin`), `logs.ts` (`captureLogs()`), `cookies.ts`
+- `packages/shared/src/` — schematy zod i typy kontraktu (`health.ts`, `api/account.ts`, `api/errors.ts`, `api/lists.ts`, `api/items.ts` z `normalizeItemName`, `api/person.ts`, `api/text.ts` — `requiredName(max)` i `withoutNul` dla nazw list i pozycji), progi `limits.ts` (`RATE_LIMITS`, `BUSINESS_LIMITS`); testy w `packages/shared/test/`
 
 ## Komendy
 
@@ -85,6 +88,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | T-006: moduł `pozycje`, `ListItems` w `listy`, `ids.ts`, kod `duplicate_item` (409), fabryka `createItem`. |
 | 2026-10-28 | T-005 (QA round 1): handler nieoczekiwanych błędów (`500 internal` z `requestId`), „Pułapki”: domyślny handler Fastify. |
 | 2026-10-28 | T-005: moduł `listy`, `DomainError`, `validate`, `trustedOrigin`, helpery testów `requestsAs`, `captureLogs`, fabryki `createList`, `addMember`. |
 | 2026-10-27 | T-004: moduł `konta`, `ApiError`, fabryki testowe, nowe zmienne środowiskowe. |

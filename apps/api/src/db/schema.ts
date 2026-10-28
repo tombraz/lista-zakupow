@@ -1,4 +1,9 @@
-import { LIST_NAME_MAX_LENGTH, NAME_MAX_LENGTH } from "@lista/shared";
+import {
+  ITEM_NAME_MAX_LENGTH,
+  ITEM_NOTE_MAX_LENGTH,
+  LIST_NAME_MAX_LENGTH,
+  NAME_MAX_LENGTH,
+} from "@lista/shared";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -10,6 +15,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import { uuidv7 } from "./uuid";
@@ -139,6 +145,41 @@ export const listMember = pgTable(
   (table) => [
     primaryKey({ columns: [table.listId, table.userId] }),
     index("list_member_user_id_idx").on(table.userId),
+  ],
+);
+
+export const item = pgTable(
+  "item",
+  {
+    id: uuid("id").primaryKey().$defaultFn(uuidv7),
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => shoppingList.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // ADR 0004: liczone wyłącznie przez `normalizeItemName` z `packages/shared`.
+    nameKey: text("name_key").notNull(),
+    note: text("note"),
+    // F-10: usunięte konto autora zostawia pozycję z podpisem „usunięty użytkownik”.
+    addedBy: text("added_by").references(() => user.id, { onDelete: "set null" }),
+    checkedAt: timestamptz("checked_at"),
+    checkedBy: text("checked_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // F-09: duplikat wśród wszystkich pozycji listy; indeks służy też wyszukiwaniu po `list_id`.
+    unique("item_list_id_name_key_unique").on(table.listId, table.nameKey),
+    // TH-13, TH-20: długości z F-07 także w bazie. Stałe liczbowe z kodu, nie dane wejściowe.
+    check(
+      "item_name_length",
+      // eslint-disable-next-line no-restricted-syntax
+      sql`char_length(${table.name}) BETWEEN 1 AND ${sql.raw(String(ITEM_NAME_MAX_LENGTH))}`,
+    ),
+    check(
+      "item_note_length",
+      // eslint-disable-next-line no-restricted-syntax
+      sql`char_length(${table.note}) <= ${sql.raw(String(ITEM_NOTE_MAX_LENGTH))}`,
+    ),
   ],
 );
 

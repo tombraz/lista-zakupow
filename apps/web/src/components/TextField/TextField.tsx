@@ -10,13 +10,15 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   error?: ReactNode;
   /** Limit znaków: licznik pokazywany od 80 % (design-system.md, TextField). */
   maxChars?: number;
+  /** `onBrand`: na pasku marki (AddBar) — etykieta `text.on-brand`, pole i błąd na jasnym tle. */
+  variant?: "standard" | "onBrand";
   /** Element obok pola (np. „Pokaż” w polu hasła). */
   addon?: ReactNode;
-  ref?: Ref<HTMLInputElement>;
+  ref?: Ref<HTMLInputElement> | undefined;
 }
 
 export function TextField(props: TextFieldProps) {
-  const { id, label, hint, error, maxChars, addon, ref, ...input } = props;
+  const { id, label, hint, error, maxChars, variant, addon, ref, ...input } = props;
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const hintId = hint ? `${inputId}-hint` : undefined;
@@ -24,7 +26,7 @@ export function TextField(props: TextFieldProps) {
   const describedBy = [hintId, errorId].filter(Boolean).join(" ");
 
   return (
-    <div className={styles.field}>
+    <div className={cx(styles.field, variant === "onBrand" && styles.onBrand)}>
       <label className={styles.label} htmlFor={inputId}>
         {label}
       </label>

@@ -10,6 +10,21 @@ function colorClass(index: number): string | undefined {
   return styles[`person${String((index % PERSON_COLORS) + 1)}`];
 }
 
+/**
+ * Awatar osoby przy pozycji (32 px). `index` = kolejność dołączenia do listy (właściciel 0);
+ * osoba spoza listy albo usunięta (`null`) dostaje kolor neutralny.
+ */
+export function Avatar({ person, index }: { person: Person | null; index: number }) {
+  return (
+    <span
+      className={cx(styles.avatar, styles.single, index < 0 ? styles.more : colorClass(index))}
+      aria-hidden="true"
+    >
+      {person ? Array.from(person.name)[0]?.toLocaleUpperCase("pl-PL") : "?"}
+    </span>
+  );
+}
+
 /** Stos awatarów (28 px): maks. 4 + „+N”; dekoracyjny, bo imiona są w tekście obok. */
 export function AvatarStack({ people }: { people: Person[] }) {
   if (people.length === 0) return null;

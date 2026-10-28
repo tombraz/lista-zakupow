@@ -15,4 +15,5 @@ export const RATE_LIMITS = {
 /** Limity biznesowe (F-05, F-07, F-12, TH-13); jedyne miejsce tych wartości. */
 export const BUSINESS_LIMITS = {
   listsPerOwner: 50,
+  itemsPerList: 500,
 } as const;

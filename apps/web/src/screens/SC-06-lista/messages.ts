@@ -1,3 +1,10 @@
+import {
+  BUSINESS_LIMITS,
+  ITEM_NAME_MAX_LENGTH,
+  ITEM_NOTE_MAX_LENGTH,
+  type FieldErrorCode,
+  type Person,
+} from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
 import { errorText } from "../../errorText";
 
@@ -16,7 +23,44 @@ export const messages = {
   },
   cancel: "Anuluj",
   empty: "Lista jest pusta. Dopisz pierwszą rzecz w polu na dole.",
+  toBuyHeading: "Do kupienia",
+  add: {
+    form: "Dodaj pozycję",
+    label: "Co kupić?",
+    noteLabel: "Ilość / notatka (opcjonalnie)",
+    submit: "Dodaj",
+    submitName: "Dodaj pozycję",
+    added: (name: string) => `Dodano ${name}`,
+  },
+  edit: (name: string) => `Edytuj ${name}`,
+  editSheet: {
+    title: "Edytuj pozycję",
+    name: "Nazwa",
+    save: "Zapisz",
+    delete: "Usuń pozycję",
+    deleted: "Ta pozycja została usunięta przez inną osobę.",
+    close: "Zamknij",
+  },
+  dupRename: (name: string) => `Na liście jest już pozycja „${name}”. Wybierz inną nazwę.`,
+  dupOpen: (name: string) => `„${name}” jest już na liście. Pozycja nie została dodana.`,
+  limit: `Lista ma ${String(BUSINESS_LIMITS.itemsPerList)} pozycji — to limit. Usuń kupione albo niepotrzebne pozycje.`,
 };
+
+/** Podpis autora pozycji (Copy `addedBy`, `deletedUser`). */
+export function addedByText(person: Person | null): string {
+  return `dodał(a) ${person?.name ?? "usunięty użytkownik"}`;
+}
+
+/** SC-06 „Error — długość”; pusta nazwa — tekst agenta jak „Wpisz nazwę listy” na SC-05. */
+export function itemNameErrorText(code: FieldErrorCode): string {
+  return code === "too_long"
+    ? `Nazwa może mieć najwyżej ${String(ITEM_NAME_MAX_LENGTH)} znaków`
+    : "Wpisz nazwę pozycji";
+}
+
+export function itemNoteErrorText(): string {
+  return `Notatka może mieć najwyżej ${String(ITEM_NOTE_MAX_LENGTH)} znaków`;
+}
 
 /** Nieudany zapis zmiany (SC-06, „Error — zapis”). */
 export function saveErrorText(code: RequestErrorCode): string {

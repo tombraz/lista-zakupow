@@ -3,7 +3,8 @@ import { cx } from "../cx";
 import styles from "./Button.module.css";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "danger";
+  /** `accent` tylko na pasku dodawania (design-system.md, Button). */
+  variant?: "primary" | "secondary" | "danger" | "accent";
   /** Stan ładowania: etykieta zostaje, obok wskaźnik; przycisk nieaktywny. */
   loading?: boolean;
   ref?: Ref<HTMLButtonElement>;

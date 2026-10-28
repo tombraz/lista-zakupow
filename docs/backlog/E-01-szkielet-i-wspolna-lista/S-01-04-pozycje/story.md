@@ -2,7 +2,7 @@
 id: S-01-04
 epic: E-01
 title: Pozycje i zakupy (web)
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [F-07, F-08, F-09, F-10]
 screens: [SC-06]
 ---

@@ -15,6 +15,13 @@
   border-radius: var(--radius-full);
 }
 
+.single {
+  flex: none;
+  width: var(--size-avatar);
+  height: var(--size-avatar);
+  border: 0;
+}
+
 .avatar + .avatar {
   margin-inline-start: calc(var(--spacing-sm) * -1);
 }

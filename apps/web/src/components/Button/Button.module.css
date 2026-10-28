@@ -28,6 +28,17 @@
   border: 2px solid var(--color-action-primary);
 }
 
+/* Akcentowy „Dodaj” na pasku marki. */
+.accent {
+  color: var(--color-text-on-accent);
+  background: var(--color-action-accent);
+  border: 0;
+}
+
+.accent:hover {
+  background: var(--color-action-accent-hover);
+}
+
 /* Niebezpieczny-tekstowy: `action.danger` bez tła. */
 .danger {
   color: var(--color-action-danger);

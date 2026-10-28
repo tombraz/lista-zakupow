@@ -9,6 +9,7 @@ import {
   listsOf,
   renameList,
   requireListAccess,
+  type ListItems,
   type ListsRepository,
   type ListView,
 } from "../domain/lists";
@@ -35,6 +36,7 @@ export function listRoutes(
   app: FastifyInstance,
   accounts: Accounts,
   repository: ListsRepository,
+  items: ListItems,
 ): void {
   app.get("/api/v1/lists", async (request, reply) => {
     const user = await accounts.requireUser(request, reply);
@@ -59,7 +61,7 @@ export function listRoutes(
       role: list.role,
       owner: list.owner,
       members: list.members,
-      items: [],
+      items: await items.itemsOf(access.listId),
     } satisfies ListDetails;
   });
 

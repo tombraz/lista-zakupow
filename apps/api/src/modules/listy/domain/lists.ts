@@ -1,5 +1,6 @@
-import { BUSINESS_LIMITS, type ListRole, type Person } from "@lista/shared";
+import { BUSINESS_LIMITS, type Item, type ListRole, type Person } from "@lista/shared";
 import { DomainError } from "../../../domain-error";
+import { isUuid } from "../../../ids";
 
 export type { ListRole, Person };
 
@@ -39,7 +40,13 @@ export interface ListsRepository {
   listsOf(userId: string, listId?: string): Promise<ShoppingList[]>;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/**
+ * Pozycje listy dla jej szczegółów. Posiada je moduł `pozycje`, który sam zależy od `listy`
+ * (dostęp), więc implementację podaje `app.ts` (odwrócenie zależności, CODING_STANDARDS.md).
+ */
+export interface ListItems {
+  itemsOf(listId: string): Promise<Item[]>;
+}
 
 /**
  * Jedyne miejsce sprawdzania dostępu do listy (TH-01, TH-02). Cudza lista daje ten sam
@@ -51,7 +58,7 @@ export async function requireListAccess(
   listId: string,
   required: RequiredRole,
 ): Promise<ListAccess> {
-  const valid = UUID.test(listId);
+  const valid = isUuid(listId);
   const role = valid ? await repository.roleOf(userId, listId) : null;
   // Do logu tylko identyfikatory; dowolny tekst z adresu zostaje poza logiem.
   const security = { event: "list_access_denied", ids: valid ? { userId, listId } : { userId } };

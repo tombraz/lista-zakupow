@@ -58,6 +58,8 @@ Stan po T-005: trasy listy (bez uczestników F-13) działają; typy `ListSummary
 | Usuń (F-07) | `DELETE /api/v1/lists/:listId/items/:itemId` | — | 204 | 404 |
 | Usuń odhaczone (F-08) | `POST /api/v1/lists/:listId/items/clear-checked` | — | 200 `{ deletedIds: [uuid] }` | 404 |
 
+Stan po T-006: dodawanie, edycja nazwy i notatki oraz usuwanie działają (odhaczanie i „usuń odhaczone” — T-007); typ `Item`, schematy `createItemRequestSchema` / `updateItemRequestSchema` i `normalizeItemName` w `packages/shared/src/api/items.ts`. Pusta notatka (także `""` w `PATCH`) = `null`. `PATCH` zmienia tylko podane pola; web wysyła tylko zmienione. `id` klienta należące do pozycji innej listy daje 404 `not_found` (nie zdradza jej istnienia). Niepoprawny `itemId` (nie UUID) = 404. Limit sprawdzany przed duplikatem: przy 500 pozycjach odpowiedź to `limit_reached`. Każda zmiana pozycji przesuwa listę na początek `GET /api/v1/lists` (`updated_at`). `GET /api/v1/lists/:listId` zwraca `items` od najnowszej. Przekroczenie limitu 500 trafia do logu `security` (`userId`, `listId`).
+
 ## Zaproszenia (`zaproszenia`)
 
 | Operacja | Trasa | Żądanie | Odpowiedź | Błędy |

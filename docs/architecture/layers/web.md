@@ -21,12 +21,13 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - `apps/web/src/queryClient.ts` — `QueryClient` aplikacji: ponawiane tylko błędy sieci i 5xx (`shouldRetry`), nigdy 4xx
 - `apps/web/src/lists/` — `useLists`, `useList` (`noAccess` przy 404), `listName.ts` (`useListNameForm`, teksty błędów nazwy), `ListNameField.tsx` (pole nazwy listy dla SC-05 i SC-06)
 - `apps/web/src/session/` — `useSession` (`GET /api/v1/me`), strażnicy tras `RequireSession` / `PublicOnly`
+- `apps/web/src/screens/SC-06-lista/` — `ListScreen` (pasek, przewijany `main`, AddBar w przepływie pod nim — nie zasłania fokusu, 2.4.11), `Items` (wiersze, pusty stan, fokus po usunięciu), `AddItemBar` + `useAddItem` (jedno `id` klienta na wpisywaną pozycję), `EditItemSheet` + `useEditItem` (zapis tylko zmienionych pól, 404 = „usunięta przez inną osobę”), `sameName.ts` (lokalne sprawdzenie duplikatu przez `normalizeItemName`), `itemsCache.ts` (pozycje w cache po odpowiedzi API)
 - `apps/web/src/screens/SC-xx-*/` — ekran, `messages.ts` (teksty ekranu i jego kody błędów przez `errorText`), `*.module.css`, hooki, `*.test.tsx`
 - `apps/web/src/errorText.ts` — kod błędu żądania → komunikat: wspólne kody (np. `network`) w jednym miejscu, ekran podaje swoje teksty i tekst domyślny; `api/client.ts` — `apiRequest`, `ApiRequestError`, `asRequestError`
-- `apps/web/src/api/` — `client.ts` (`apiRequest(path, { method, body })`, `ApiRequestError`), `account.ts`, `lists.ts`; WS dojdzie z modułem `na-zywo`
+- `apps/web/src/api/` — `client.ts` (`apiRequest(path, { method, body })`, `ApiRequestError`), `account.ts`, `lists.ts`, `items.ts`; WS dojdzie z modułem `na-zywo`
 - `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe; `page.module.css` — kolumna i tytuł ekranu (`composes`)
-- `apps/web/src/components/` — komponenty design systemu (AppBar z `AppBarLink` / `AppBarButton`, AuthPage, Avatar (`AvatarStack`), Button (`primary`, `secondary`, `danger`), ConfirmDialog, ConsentCheckbox, EmptyState, FieldError, InlineAlert, ListCard, LoadError, Modal (portal, pułapka fokusu, Esc, powrót fokusu — baza ConfirmDialog i arkuszy), MoreMenu, PasswordField, Skeleton, TextField), `useFocus.ts`, `cx.ts`
-- `apps/web/test/` — setup Vitest, serwer MSW, `renderApp(adres)` (cała aplikacja w `createMemoryRouter`), `sessionIs(user | null)`, `lists.ts` (`aList`, `detailsOf`, `listsAre`, `apiError`, `ANIA`, `TOMEK`)
+- `apps/web/src/components/` — komponenty design systemu (AddBar, AppBar z `AppBarLink` / `AppBarButton`, AuthPage, Avatar (`Avatar` 32 px, `AvatarStack`), Button (`primary`, `secondary`, `danger`, `accent`), ItemRow, ConfirmDialog, ConsentCheckbox, EmptyState, FieldError, InlineAlert (`urgent` — `role="alert"` dla ostrzeżenia), ListCard, LoadError, Modal (portal, pułapka fokusu, Esc, powrót fokusu — baza ConfirmDialog i arkuszy), MoreMenu, PasswordField, Skeleton, TextField (`variant="onBrand"` na pasku marki: błąd i licznik na jasnym tle)), `useFocus.ts`, `cx.ts`
+- `apps/web/test/` — setup Vitest, serwer MSW, `renderApp(adres)` (cała aplikacja w `createMemoryRouter`), `sessionIs(user | null)`, `lists.ts` (`aList`, `anItem`, `detailsOf(list, items?)`, `listsAre`, `apiError`, `ANIA`, `TOMEK`)
 - `apps/web/e2e/` — testy Playwright, `fixtures.ts` (`test` z własnym adresem klienta, `expectNoAxeViolations`, `signUp`) i `server.ts` (kontener bazy + zbudowane API)
 - `packages/tokens/` — `src/build.ts` (Style Dictionary), wynik w `packages/tokens/generated/` (`tokens.css`, `tokens.ts`; poza gitem)
 
@@ -70,6 +71,8 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 ## Pułapki
 
 - E2E: na Windows 1 worker (zamieranie API przy wielu workerach, T-001); na Linuksie w CI równoległe workery (Playwright domyślnie: 2 na `ubuntu-latest`) — stabilne w 5 przebiegach T-002 (4 testy, ~15 s). Decyzja: zostaje `workers` domyślne poza Windows (T-002).
+- E2E na Windows: otwarcie drugiej strony (`context.newPage()`) w trakcie testu wstrzymuje API na ~10 s (w logu API przerwa po ostatnim żądaniu), więc następne żądanie przekracza limit asercji. Zmianę „innej osoby” test robi przez `page.request` w tej samej sesji; drugą kartę sprawdza QA ręcznie (T-006).
+- Po `page.reload()` AddBar jest nieaktywny, dopóki lista się nie wczyta: przed `focus()` / `fill()` czekać na `toBeEnabled()` (T-006).
 
 ## Skille i źródła
 
@@ -81,6 +84,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | T-006: „Gdzie jest kod” (SC-06 z pozycjami, AddBar, ItemRow, warianty Button / TextField / InlineAlert, `api/items.ts`, `anItem`); „Pułapki”: druga strona w E2E na Windows, AddBar po przeładowaniu. |
 | 2026-10-28 | T-005: „Gdzie jest kod” (SC-05, SC-06, `src/lists/`, `queryClient.ts`, nowe komponenty, helpery testów). |
 | 2026-10-27 | T-004: „Gdzie jest kod” (router, sesja, komponenty, helpery testów, fixtures E2E). |
 | 2026-10-27 | T-002: „Pułapki” — równoległość E2E na Linuksie w CI. |

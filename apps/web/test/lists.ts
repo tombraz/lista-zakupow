@@ -1,4 +1,4 @@
-import type { ListDetails, ListSummary, Me } from "@lista/shared";
+import type { Item, ListDetails, ListSummary, Me } from "@lista/shared";
 import { http, HttpResponse } from "msw";
 import { server } from "./msw-server";
 
@@ -23,9 +23,26 @@ export function aList(overrides: Partial<ListSummary> = {}): ListSummary {
 }
 
 /** Szczegóły listy w kształcie `GET /api/v1/lists/:listId`. */
-export function detailsOf(list: ListSummary): ListDetails {
+export function detailsOf(list: ListSummary, items: Item[] = []): ListDetails {
   const { id, name, role, owner, members } = list;
-  return { id, name, role, owner, members, items: [] };
+  return { id, name, role, owner, members, items };
+}
+
+/** Nieodhaczona pozycja dodana przez Anię, w kształcie `Item` z API. */
+export function anItem(overrides: Partial<Item> = {}): Item {
+  sequence += 1;
+  return {
+    id: `00000000-0000-7000-9000-${String(sequence).padStart(12, "0")}`,
+    name: `Pozycja ${String(sequence)}`,
+    note: null,
+    addedBy: { id: ANIA.id, name: ANIA.name },
+    checked: false,
+    checkedBy: null,
+    checkedAt: null,
+    createdAt: "2026-10-28T10:00:00.000Z",
+    updatedAt: "2026-10-28T10:00:00.000Z",
+    ...overrides,
+  };
 }
 
 /** `GET /api/v1/lists` odpowiada podanymi listami. */

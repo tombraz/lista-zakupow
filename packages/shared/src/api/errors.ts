@@ -1,7 +1,7 @@
 import type { FieldErrorCode } from "./account";
 
 /** Kody błędów reguł biznesowych (rzucane przez domenę API). */
-export type DomainErrorCode = "not_found" | "owner_only" | "limit_reached";
+export type DomainErrorCode = "not_found" | "owner_only" | "limit_reached" | "duplicate_item";
 
 /** Kody błędów API (architecture.md, „Konwencje API i błędów”); klient mapuje je na teksty. */
 export type ErrorCode =

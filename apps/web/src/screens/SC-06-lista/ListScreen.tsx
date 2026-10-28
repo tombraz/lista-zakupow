@@ -2,29 +2,31 @@ import type { ListDetails } from "@lista/shared";
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AppBar } from "../../components/AppBar/AppBar";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { LoadError } from "../../components/LoadError/LoadError";
 import { MoreMenu } from "../../components/MoreMenu/MoreMenu";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { useList } from "../../lists/useList";
+import { AddItemBar } from "./AddItemBar";
+import { DeleteListDialog } from "./DeleteListDialog";
+import { Items } from "./Items";
 import styles from "./ListScreen.module.css";
 import { messages } from "./messages";
-import { DeleteListDialog } from "./DeleteListDialog";
 import { RenameSheet } from "./RenameSheet";
+import { useAddItem } from "./useAddItem";
 
 const BACK = { to: "/listy", label: messages.back };
 
-/** SC-06 w zakresie T-005: nagłówek, pusty stan, menu właściciela; pozycje w T-006. */
+/** SC-06: pozycje do kupienia, dodawanie i edycja; menu właściciela. */
 export function ListScreen() {
   const { listId = "" } = useParams();
   const list = useList(listId);
   if (list.noAccess) return <NoAccess />;
 
   return (
-    <>
+    <div className={styles.screen}>
       <ListBar list={list.data} />
-      <ListBody list={list} />
-    </>
+      <ListBody listId={listId} list={list} />
+    </div>
   );
 }
 
@@ -38,20 +40,28 @@ function ListBar({ list }: { list: ListDetails | undefined }) {
   );
 }
 
-function ListBody({ list }: { list: ReturnType<typeof useList> }) {
+function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof useList> }) {
+  const adding = useAddItem(listId, list.data?.items);
   return (
-    <main className={styles.page} aria-busy={list.isPending || undefined}>
-      {list.isPending && <Skeleton rows={5} variant="row" />}
-      {list.isError && (
-        <LoadError
-          text={messages.loadError}
-          onRetry={() => {
-            void list.refetch();
-          }}
-        />
-      )}
-      {list.data?.items.length === 0 && <EmptyState text={messages.empty} />}
-    </main>
+    <>
+      <main className={styles.page} aria-busy={list.isPending || undefined}>
+        {list.isPending && <Skeleton rows={5} variant="row" />}
+        {list.isError && (
+          <LoadError
+            text={messages.loadError}
+            onRetry={() => {
+              void list.refetch();
+            }}
+          />
+        )}
+        {list.data && <Items list={list.data} addNameRef={adding.nameRef} />}
+        <p className={styles.visuallyHidden} role="status">
+          {adding.announcement}
+        </p>
+      </main>
+      {/* Loading: AddBar nieaktywny, dopóki lista nie jest wczytana. */}
+      <AddItemBar state={adding} disabled={!list.data} />
+    </>
   );
 }
 

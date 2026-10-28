@@ -8,6 +8,7 @@ import { apiErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
 import { accountRoutes, type AuthSettings } from "./modules/konta";
 import { listsModule } from "./modules/listy";
+import { createItems, itemsModule } from "./modules/pozycje";
 
 // TH-13: żadna trasa nie potrzebuje więcej niż 16 kB treści.
 const BODY_LIMIT_BYTES = 16 * 1024;
@@ -33,7 +34,9 @@ export function buildApp(options: AppOptions): FastifyInstance {
   trustedOrigin(app, options.auth.origin);
   healthRoutes(app, options.pool);
   const accounts = accountRoutes(app, options.pool, options.auth);
-  listsModule(app, options.pool, accounts);
+  // Pozycje zależą od dostępu do listy, a szczegóły listy pokazują pozycje (ListItems).
+  const lists = listsModule(app, options.pool, accounts, createItems(options.pool));
+  itemsModule(app, options.pool, accounts, lists);
   webApp(app, options.webDistDir);
   return app;
 }

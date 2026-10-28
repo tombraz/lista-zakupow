@@ -1,9 +1,36 @@
+/* Pasek, przewijana treść i AddBar w przepływie: AddBar nigdy nie zasłania treści (2.4.11). */
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
 .page {
   composes: column from "../../styles/page.module.css";
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

@@ -2,11 +2,16 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { Accounts } from "../konta";
-import { requireListAccess, type ListAccess, type RequiredRole } from "./domain/lists";
+import {
+  requireListAccess,
+  type ListAccess,
+  type ListItems,
+  type RequiredRole,
+} from "./domain/lists";
 import { listRoutes } from "./http/routes";
 import { DrizzleListsRepository } from "./infra/lists-repository";
 
-export type { ListAccess, ListRole, RequiredRole } from "./domain/lists";
+export type { ListAccess, ListItems, ListRole, RequiredRole } from "./domain/lists";
 
 /** Publiczne API modułu: jedyne miejsce sprawdzania dostępu do listy (architecture.md). */
 export interface Lists {
@@ -18,9 +23,14 @@ export function createLists(pool: Pool): Lists {
 }
 
 /** Trasy `/api/v1/lists*`; zwraca publiczne API modułu dla kolejnych modułów. */
-export function listsModule(app: FastifyInstance, pool: Pool, accounts: Accounts): Lists {
+export function listsModule(
+  app: FastifyInstance,
+  pool: Pool,
+  accounts: Accounts,
+  items: ListItems,
+): Lists {
   const repository = new DrizzleListsRepository(drizzle(pool));
-  listRoutes(app, accounts, repository);
+  listRoutes(app, accounts, repository, items);
   return listsApi(repository);
 }
 

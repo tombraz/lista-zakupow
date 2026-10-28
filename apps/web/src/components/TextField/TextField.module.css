@@ -26,6 +26,18 @@
   border-radius: var(--radius-md);
 }
 
+.onBrand .label {
+  color: var(--color-text-on-brand);
+}
+
+/* Błąd i licznik na jasnym tle: pary kontrastu nie obejmują tekstu błędu na tle marki. */
+.onBrand > p {
+  align-self: flex-start;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-default);
+  border-radius: var(--radius-sm);
+}
+
 .invalid {
   border: 2px solid var(--color-status-error-text);
 }
