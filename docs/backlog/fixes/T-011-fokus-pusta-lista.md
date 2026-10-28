@@ -4,7 +4,7 @@ title: "SC-06 Empty: fokus w polu dodawania po otwarciu pustej listy"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-006]
 layers: [web]          # names from docs/architecture/layers/
 requirements: [F-07]   # F-xx the expected behaviour comes from
@@ -66,3 +66,26 @@ Przebieg 2026-10-28, Windows 11, Docker (Testcontainers `postgres:17.11-alpine`)
 <filled in Step 8>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-28)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | web (testy) | Test nie przypina zawężeń poprawki: „tylko przy pustej liście” i „tylko przy wejściu” (SC-06 „Accessibility”: zmiany innych osób nie przenoszą fokusu). Dwa mutanty przeżywają: fokus bezwarunkowo przy montowaniu oraz fokus przy każdym opróżnieniu listy (`[list.items.length]`). | Spot-check w `Items.tsx`: `addNameRef.current?.focus()` bez warunku → testy SC-06 45/45 zielone; warunek `list.items.length === 0` z zależnością `list.items.length` → 45/45 zielone (przywrócone `git checkout`). | Test: lista z pozycjami po otwarciu nie przenosi fokusu do „Co kupić?”; lista opróżniona przez odświeżenie danych (inna osoba) nie przenosi fokusu. |
+| 2 | minor | web (E2E, poza zakresem) | SEC3 w `e2e/j02-listy.spec.ts` rejestruje drugie konto ze stałym `x-forwarded-for: 10.200.0.2`, a `signUpPerIp` = 5 / h. Kolejne przebiegi E2E w ciągu godziny wyczerpują limit i SEC3 oblewa na „Moje listy” po rejestracji Bartka. | `playwright test e2e/j02-listy.spec.ts --project=komputer --repeat-each=6` → 17/18, `x 17 SEC3 …` `expect(locator).toBeVisible() failed` (j02-listy.spec.ts:94). Kod sprzed T-011. | Losowy adres jak w `fixtures.ts` (wspólny helper drugiego klienta). |
+| 3 | note | web (E2E) | Pierwszy pełny `pnpm test:e2e` w tej rundzie: 21/22 (jeden test w `j02-listy.spec.ts`, log nie zachowany — prawdopodobnie #2). Drugi pełny przebieg 22/22; przepływy z pustą listą (J-02 :24, J-03 :33) `--repeat-each=8` → 32/32. | Logi w scratchpadzie QA. | — |
+| 4 | note | a11y | Fokus programowy przeskakuje tekst pustego stanu; czytnik ogłosi pole „Co kupić?”, ale nie „Lista jest pusta…”. Spec tego nie wymaga. Ręczny test czytnikiem ekranu: nie wykonany (brak czytnika w środowisku QA). | — | Do rozważenia: `aria-describedby` pola na tekst pustego stanu, gdy lista jest pusta. |
+
+**Reprodukcja.** `pnpm install --frozen-lockfile` bez zmian w śledzonych plikach. `pnpm check` (Prettier, ESLint, `tsc`, jscpd, dependency-cruiser, design-check 0 błędów, backlog-check OK, Vitest **49 plików / 245 testów**) zielony. `pnpm build` OK. `pnpm test:e2e` 22/22 (patrz #3).
+
+**Kryteria.**
+- AC1: **pass**. Test „focuses the add field when an empty list opens (SC-06 Empty, T-011)” asertuje tekst pustego stanu i `toHaveFocus()` na polu „Co kupić?”. Spot-check: bez `focus()` test oblewa (`Received element with focus: <body>`). W prawdziwej przeglądarce (Chromium, 390 px i 1280 px, tymczasowy spec Playwright, usunięty): po utworzeniu listy fokus w „Co kupić?”; przy wolnym wczytaniu (1,5 s) w trakcie Loading fokus na `<body>`, pole nieaktywne, po wczytaniu fokus w polu; błąd wczytania → „Spróbuj ponownie” → po wczytaniu pustej listy fokus w polu.
+- AC2: **pass**. Lista z pozycjami po odświeżeniu: fokus na `<body>` (bez zmian). Dodanie: fokus zostaje w polu. Usunięcie ostatniej pozycji: fokus w polu. E2E J-02, J-03 zielone; testy SC-06 45/45.
+
+**Fix task.** „Root cause” wyjaśnia, czemu testy nie złapały błędu (reguła z tabeli „States” nie trafiła do kryteriów T-006; E2E sprawdzało tylko tekst i axe). Test odtwarzający oblewa bez poprawki (spot-check wyżej).
+
+**Code review.** Zmiana minimalna, w komponencie, który już zarządza fokusem pustego stanu (`Items`). `useRef` z wartością początkową poprawnie ogranicza efekt do wejścia; brak scope creep. Security: brak zmian po stronie API, brak danych w logach.
+
+`git status` po spot-checkach i teście w przeglądarce: czysty.
