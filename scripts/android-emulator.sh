@@ -12,17 +12,22 @@ API_LEVEL=35
 IMAGE="system-images;android-$API_LEVEL;default;x86_64"
 AVD=lista-e2e
 BOOT_TIMEOUT_S=${BOOT_TIMEOUT_S:-300}
+# avdmanager i emulator domyślnie szukają AVD w różnych katalogach; na runnerze GitHub emulator nie widział
+# AVD z avdmanager („Unknown AVD name”, CI 40742587020). Wspólny katalog dla obu narzędzi:
+export ANDROID_AVD_HOME=${ANDROID_AVD_HOME:-$HOME/.android/avd}
 
 step() { echo "# $1"; }
 run() { if ((dry_run)); then echo "$*"; else "$@"; fi; }
 
 step "System image Androida i AVD"
+if ((dry_run)); then echo 'mkdir -p $ANDROID_AVD_HOME'; else mkdir -p "$ANDROID_AVD_HOME"; fi
 run sdkmanager --install "$IMAGE" platform-tools emulator
 if ((dry_run)); then
   echo "avdmanager create avd --force --name $AVD --package $IMAGE --device pixel_6"
 else
   echo no | avdmanager create avd --force --name "$AVD" --package "$IMAGE" --device pixel_6
 fi
+run emulator -list-avds
 
 step "Akceleracja KVM"
 run emulator -accel-check
@@ -44,7 +49,8 @@ else
     kill "$emulator_pid" 2>/dev/null || true
     exit 1
   }
-  booted() { [[ "$(timeout 10 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '')" == "1" ]]; }
+  booted() { [[ "$(timeout 10 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '
+')" == "1" ]]; }
   deadline=$((SECONDS + BOOT_TIMEOUT_S))
   until booted; do
     kill -0 "$emulator_pid" 2>/dev/null || fail_boot "Emulator zakończył działanie przed końcem rozruchu"

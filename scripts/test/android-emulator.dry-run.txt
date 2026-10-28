@@ -1,6 +1,8 @@
 # System image Androida i AVD
+mkdir -p $ANDROID_AVD_HOME
 sdkmanager --install system-images;android-35;default;x86_64 platform-tools emulator
 avdmanager create avd --force --name lista-e2e --package system-images;android-35;default;x86_64 --device pixel_6
+emulator -list-avds
 # Akceleracja KVM
 emulator -accel-check
 # Start emulatora bez okna i czekanie na koniec rozruchu

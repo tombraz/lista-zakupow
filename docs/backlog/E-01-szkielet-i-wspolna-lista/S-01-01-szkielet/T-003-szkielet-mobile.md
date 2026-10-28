@@ -109,6 +109,7 @@ Przebieg 2026-10-28 (implementer, autonomicznie), gałąź `epic/E-01-szkielet-i
 | 2b | (dopisany) ten sam plik: brak `expo-dev-client` w zależnościach (wydanie bez menu deweloperskiego) | przechodzi od początku (opisuje stan); dowód przeglądowy | ✔ |
 | 2c | (dopisany, infra rung 2) `bash scripts/test/mobile.test.sh`: `--dry-run` trzech skryptów porównany z `scripts/test/*.dry-run.txt` | brak skryptów: `FAIL android-emulator --dry-run wypisuje kroki`, `FAIL mobile-e2e …`, `FAIL ios-simulator-build …` | 3× `ok` |
 | 2d | (dopisany po przebiegu CI 1) `scripts/test/android-emulator-boot.test.sh` (wołany z `mobile.test.sh`): atrapy `sdkmanager`/`avdmanager`/`adb`/`emulator` w PATH; emulator pada od razu albo wisi, `BOOT_TIMEOUT_S=4` → skrypt kończy się błędem (nie 124) i wypisuje koniec logu emulatora | stary skrypt wisiał na `adb wait-for-device`: `FAIL emulator padł… (exit 124)`, `FAIL emulator wisi… (exit 124)` (limit 60 s testu) | 2× `ok`, ~7 s |
+| 2e | (dopisany po przebiegu CI 2) ten sam plik, „AVD z avdmanager widoczne dla emulatora”: atrapa `avdmanager` zapisuje AVD w `$ANDROID_AVD_HOME` (bez niej w `$ANDROID_USER_HOME/avd`), atrapa `emulator` szuka w `$ANDROID_AVD_HOME` albo `$HOME/.android/avd` | stary skrypt: `FAIL … (exit 1)`, `Emulator zakończył działanie przed końcem rozruchu`, `ERROR \| Unknown AVD name [lista-e2e]` (to samo co w CI) | ✔; `mobile.test.sh` 6× ok |
 | 3 | `apps/mobile/e2e/health.yaml` (Maestro) | **nieuruchomiony**, zob. „Open question” | — |
 | 4 | job mobile w CI na PR | **nieuruchomiony** (wymaga push), zob. „Open question” | — |
 
@@ -183,3 +184,25 @@ Poprawka zawieszenia emulatora jest w commicie na gałęzi epiku, a gałąź `ci
 - **Alternatywa:** wypchnąć na razie tylko gałąź epiku, a PR testowy otworzyć dopiero po zielonym `mobile-android`. Każdy wznowiony przebieg zmienia wtedy jedną rzecz, kosztem jeszcze jednej rundy pushu.
 
 Answer: Właściciel wypchnął epic/E-01-szkielet-i-wspolna-lista (94a2e03) i ci-test/T-003-docs (cb7f308) oraz otworzył draft PR testowy https://github.com/tombraz/lista-zakupow/pull/8 (baza: gałąź epiku). Zbierz dowody z przebiegów na PR #1 i PR #8; kolejne pushe nadal przez NEEDS_USER.
+
+## Przebieg CI 2 (wznowienie 2026-10-28)
+
+- **PR #8** (docs-only, `ci-test/T-003-docs`), przebieg [40742600233](https://github.com/tombraz/lista-zakupow/actions/runs/40742600233): `changes` i `always` zielone, `static`, `tests`, `build`, `migrations`, `e2e-web`, `infra`, `mobile`, `mobile-android`, `mobile-ios` **pominięte**, `ci-ok` **zielony**. To dowód części AC3 „PR bez tych zmian go pomija”.
+- **PR #1** (gałąź epiku), przebieg [40742587020](https://github.com/tombraz/lista-zakupow/actions/runs/40742587020): wszystkie joby zielone (`mobile` z Jest i design check, **`mobile-ios` drugi raz zielony**) poza **`mobile-android`**. Ten job padł po ~1 min w kroku „Emulator Androida”, już bez zawieszenia, bo zadziałała poprawka z przebiegu 1. Log emulatora: `Unknown AVD name [lista-e2e]` / `no file lista-e2e.ini in $HOME/.android/avd`. KVM działał (`KVM (version 12) is installed and usable`), a `avdmanager` utworzył AVD w katalogu, którego emulator nie przeszukuje. Pierwsze zawieszenie (~42 min na `adb wait-for-device`) miało najpewniej tę samą przyczynę. `ci-ok` czerwony.
+
+Poprawka (commit „T-003: WIP - needs user” po tej sekcji), `scripts/android-emulator.sh`:
+
+- `export ANDROID_AVD_HOME=${ANDROID_AVD_HOME:-$HOME/.android/avd}` i `mkdir -p`, żeby `avdmanager` i `emulator` używały jednego katalogu.
+- Przed startem `emulator -list-avds`, żeby log pokazał, czy AVD jest widoczne.
+- Test 2e odtwarza błąd (red) i jest zielony. Fixture `android-emulator.dry-run.txt` uzupełniony. `bash scripts/test/mobile.test.sh` 6× ok, `pnpm format:check` 0. `ci.yml` bez zmian.
+
+Dalej nie mają dowodu AC2 (Maestro na emulatorze) i AC3 dla `mobile-android`. Ten przebieg pierwszy raz dojdzie do kroku E2E (build wydania Gradle, lokalne api, Maestro).
+
+## Open question
+
+Poprawka katalogu AVD jest w commicie na gałęzi epiku i czeka na push przez właściciela. Dowód dla PR #8 jest już zebrany, więc gałąź `ci-test/T-003-docs` nie potrzebuje nowego pushu.
+
+**Pytanie:** proszę wypchnąć gałąź epiku (`git push origin epic/E-01-szkielet-i-wspolna-lista`) i wznowić T-003.
+
+- **Rekomendacja:** push samej gałęzi epiku. Po wznowieniu implementer czyta przebieg na PR #1: albo `mobile-android` przechodzi (link jako dowód AC2/AC3, potem `in-qa`), albo log kroku E2E wskazuje kolejną poprawkę.
+- **Alternatywa:** przed pushem właściciel uruchamia lokalnie `bash scripts/android-emulator.sh` na Linuksie lub WSL z KVM. To potwierdzi poprawkę bez przebiegu CI, ale nie zastąpi dowodu AC3 z GitHub.
