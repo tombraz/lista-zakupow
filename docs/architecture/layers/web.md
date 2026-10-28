@@ -28,7 +28,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - `apps/web/src/styles/global.css` — import `@lista/tokens/tokens.css`, style bazowe; `page.module.css` — kolumna i tytuł ekranu (`composes`)
 - `apps/web/src/components/` — komponenty design systemu (AddBar, AppBar z `AppBarLink` / `AppBarButton`, AuthPage, Avatar (`Avatar` 32 px, `AvatarStack`), Button (`primary`, `secondary`, `danger`, `accent`), ItemRow, ConfirmDialog, ConsentCheckbox, EmptyState, FieldError, InlineAlert (`urgent` — `role="alert"` dla ostrzeżenia), ListCard, LoadError, Modal (portal, pułapka fokusu, Esc, powrót fokusu — baza ConfirmDialog i arkuszy), MoreMenu, PasswordField, Skeleton, TextField (`variant="onBrand"` na pasku marki: błąd i licznik na jasnym tle)), `useFocus.ts`, `cx.ts`
 - `apps/web/test/` — setup Vitest, serwer MSW, `renderApp(adres)` (cała aplikacja w `createMemoryRouter`), `sessionIs(user | null)`, `lists.ts` (`aList`, `anItem`, `detailsOf(list, items?)`, `listsAre`, `apiError`, `ANIA`, `TOMEK`)
-- `apps/web/e2e/` — testy Playwright, `fixtures.ts` (`test` z własnym adresem klienta, `expectNoAxeViolations`, `signUp`) i `server.ts` (kontener bazy + zbudowane API)
+- `apps/web/e2e/` — testy Playwright, `fixtures.ts` (`test` i `newClient` — każdy klient z własnym losowym adresem, `expectNoAxeViolations`, `signUp`) i `server.ts` (kontener bazy + zbudowane API)
 - `packages/tokens/` — `src/build.ts` (Style Dictionary), wynik w `packages/tokens/generated/` (`tokens.css`, `tokens.ts`; poza gitem)
 
 ## Komendy

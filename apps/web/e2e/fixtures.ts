@@ -1,19 +1,29 @@
 import { randomInt, randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test as base, type Page } from "@playwright/test";
+import { expect, test as base, type Browser, type Page } from "@playwright/test";
 
 /**
- * Każdy test jako osobny klient: własny adres w X-Forwarded-For (API ufa proxy 127.0.0.1,
- * e2e/server.ts), żeby limity per IP z MC-04 / MC-05 nie łączyły testów.
+ * Każdy klient (test i każdy drugi kontekst) ma własny adres w X-Forwarded-For (API ufa proxy
+ * 127.0.0.1, e2e/server.ts), żeby limity per IP z MC-04 / MC-05 nie łączyły klientów. Lint
+ * (T-012) zabrania nadawania adresu i tworzenia kontekstów poza tym plikiem.
  */
+function clientHeaders() {
+  const ip = `10.${String(randomInt(256))}.${String(randomInt(256))}.${String(randomInt(1, 255))}`;
+  return { "x-forwarded-for": ip };
+}
+
 export const test = base.extend({
   // Drugi argument fixture to `use` Playwrighta; inna nazwa, bo lint bierze `use` za hook Reacta.
   context: async ({ context }, provide) => {
-    const ip = `10.${String(randomInt(256))}.${String(randomInt(256))}.${String(randomInt(1, 255))}`;
-    await context.setExtraHTTPHeaders({ "x-forwarded-for": ip });
+    await context.setExtraHTTPHeaders(clientHeaders());
     await provide(context);
   },
 });
+
+/** Drugi klient w teście (np. inne konto): osobny kontekst z własnym losowym adresem. */
+export function newClient(browser: Browser) {
+  return browser.newContext({ extraHTTPHeaders: clientHeaders() });
+}
 
 export { expect };
 

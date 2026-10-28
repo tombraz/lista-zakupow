@@ -1,4 +1,4 @@
-import { expect, expectNoAxeViolations, newAccount, signUp, test } from "./fixtures";
+import { expect, expectNoAxeViolations, newAccount, newClient, signUp, test } from "./fixtures";
 
 // J-01: rejestracja → „Moje listy” → konto → wylogowanie → logowanie (AC4–AC7, SEC5).
 test("J-01 registers, signs out and signs in again", async ({ page, context }) => {
@@ -71,7 +71,7 @@ test("SC-02 shows a taken e-mail and SC-04 opens without signing in (AC2, AC7)",
   browser,
 }) => {
   const account = newAccount();
-  const other = await browser.newContext();
+  const other = await newClient(browser);
   await signUp(await other.newPage(), account);
   await other.close();
 

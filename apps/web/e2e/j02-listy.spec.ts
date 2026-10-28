@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, expectNoAxeViolations, newAccount, signUp, test } from "./fixtures";
+import { expect, expectNoAxeViolations, newAccount, newClient, signUp, test } from "./fixtures";
 
 const NAME_FIELD = "Nazwa listy";
 
@@ -86,9 +86,7 @@ test("SEC3 another account sees no content of someone else's list", async ({ pag
   await createListViaUi(page, "Tajna lista Ani");
   const address = new URL(page.url()).pathname;
 
-  const other = await browser.newContext({
-    extraHTTPHeaders: { "x-forwarded-for": "10.200.0.2" },
-  });
+  const other = await newClient(browser);
   const bartek = await other.newPage();
   await signUp(bartek, { ...newAccount(), name: "Bartek" });
   await expect(bartek.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();

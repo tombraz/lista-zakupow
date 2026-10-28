@@ -9,6 +9,30 @@ import tseslint from "typescript-eslint";
 const SOURCE = ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"];
 const TESTS = ["**/*.test.{ts,tsx}"];
 
+const SAFE_SYNTAX = [
+  {
+    selector: "MemberExpression[object.name='sql'][property.name='raw']",
+    message: "sql.raw jest zakazany (TH-20): używaj zapytań parametryzowanych Drizzle.",
+  },
+  {
+    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+    message: "dangerouslySetInnerHTML jest zakazany (TH-15): renderuj treść jako tekst.",
+  },
+];
+
+// T-012: limity per IP (MC-04 / MC-05) łączą klientów z tym samym adresem; adres nadaje tylko fixtures.ts.
+const E2E_CLIENT_SYNTAX = [
+  {
+    selector: "Literal[value=/^x-forwarded-for$/i]",
+    message:
+      "Adres klienta E2E nadaje fixtures.ts (losowy); stały X-Forwarded-For wyczerpuje limity.",
+  },
+  {
+    selector: "CallExpression[callee.property.name='newContext']",
+    message: "Drugi klient E2E przez newClient(browser) z fixtures.ts (własny losowy adres).",
+  },
+];
+
 const sizeRules = (maxLinesPerFunction) => ({
   complexity: ["error", 10],
   "max-lines-per-function": [
@@ -54,17 +78,7 @@ export default tseslint.config(
       "no-eval": "error",
       "no-implied-eval": "error",
       "no-new-func": "error",
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "MemberExpression[object.name='sql'][property.name='raw']",
-          message: "sql.raw jest zakazany (TH-20): używaj zapytań parametryzowanych Drizzle.",
-        },
-        {
-          selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-          message: "dangerouslySetInnerHTML jest zakazany (TH-15): renderuj treść jako tekst.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...SAFE_SYNTAX],
       "no-restricted-globals": [
         "error",
         { name: "localStorage", message: "Sesja tylko w ciasteczku HttpOnly (TH-16)." },
@@ -96,6 +110,12 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
     settings: { react: { version: "detect" } },
     rules: { "react/no-danger": "error" },
+  },
+  {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
+    files: ["apps/web/e2e/**/*.ts"],
+    ignores: ["apps/web/e2e/fixtures.ts"],
+    rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...E2E_CLIENT_SYNTAX] },
   },
   // CODING_STANDARDS.md: progi rozmiaru dla kodu źródłowego, bez testów.
   { files: SOURCE, ignores: TESTS, rules: sizeRules(60) },
