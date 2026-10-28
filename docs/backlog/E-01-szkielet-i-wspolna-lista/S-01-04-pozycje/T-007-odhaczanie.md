@@ -3,7 +3,7 @@ id: T-007
 title: Odhaczanie, „kto kupił” i usuwanie kupionych (web)
 epic: E-01
 story: S-01-04
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-006]
 size: S                # S | M (L must be split)
@@ -153,3 +153,30 @@ Jeden łańcuch (2026-10-28), kod wyjścia 0: `pnpm typecheck` ✔ · `pnpm lint
 Layer guides (krok 8b, tylko fakty): `db.md`, `backend.md`, `web.md` — „Gdzie jest kod” i historia zmian.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-28)
+
+Verdict: pass
+
+Środowisko: lokalnie (Windows, Docker/Testcontainers). `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych · `format:check`, `lint` (0 ostrzeżeń), `typecheck`, `quality` (0 klonów, 0 naruszeń zależności), `design-check` (0 kolorów na sztywno), build ✔ · `pnpm vitest run` — 57 plików / 285 testów ✔ (pierwszy przebieg: 1 błąd infrastruktury `Connection terminated due to connection timeout` w `lists.authz.test` przy `truncateAllTables`, test spoza zadania; 2 ponowienia pliku i pełny przebieg zielone) · `pnpm test:e2e` — 26 passed (telefon + komputer, w tym `j03-kupione.spec.ts` z axe i `reducedMotion`).
+
+Kryteria akceptacji: AC1 pass · AC2 pass · AC3 pass (komponent + E2E: spacja, fokus na „Odhacz Mleko”, przy ostatniej na „Kupione (1)”, 0 animacji przy „ogranicz ruch”) · AC4 pass · AC5 pass · AC6 pass (strefa `Europe/Warsaw`: 23:30 UTC 28.10 → `day` 2026-10-29) · AC7 pass · AC8 pass (axe: zwinięta, rozwinięta, dialog, „Wszystko kupione.”) · SEC1 pass.
+
+Spot-checki (każdy przywrócony `git checkout`, `git status` czysty):
+- `items-repository.ts` `check()`: `.where(onList)` zamiast warunku `isNull(checkedAt)` → `items.activity.test` „does not decrease … nor count a repeated check” czerwony.
+- `useCheckItem.ts`: usunięte `onFocus(neighbourOf(…))` → 2 testy fokusu w `ListScreen.check.test` czerwone.
+- `domain/items.ts` `clearChecked` zwraca `[]` → 2 testy `items.clear-checked.test` czerwone.
+
+Exploity TH-01 (tymczasowy test przez `buildTestApp` + `fastify.inject`, usunięty): domownik B → `POST /lists/<A>/items/clear-checked` (także z UUID wielkimi literami) = 404 `not_found`, pozycje A nietknięte; anonim 401 (test zadania); pozycja A przez listę B = 404. Wejście: `checked: "true" | null | 1` → 400 `validation_failed`; 2 MB tekstu → 415. Dwa równoległe `PATCH { checked: true }` tej samej pozycji → 200/200, aktywność `checks = 1` (warunkowy `UPDATE`). Uczestnik (nie właściciel) odhacza → 200, `checkedBy { id, name }` bez e-maila. `{ name: "chleb", checked: false }` przy istniejącym „Chleb” → 409, pozycja bez zmian. Ponowne `clear-checked` → `{ deletedIds: [] }`.
+
+Ręczne sprawdzenia dostępności: czytnik ekranu, zoom 200 % / 320 px i Safari — nie wykonane (brak narzędzi w trybie autonomicznym); pokryte częściowo przez E2E telefon/komputer i axe. Do UAT.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | dokumentacja | DoD „Architecture docs updated” niespełniony: strefa dnia aktywności `Europe/Warsaw` nie jest zapisana w `data-model.md`; `api.md` nadal mówi „Stan po T-006 … odhaczanie i „usuń odhaczone” — T-007” i „`GET /lists/:listId` zwraca `items` od najnowszej” (teraz: nieodhaczone, pod nimi odhaczone `checked_at DESC`). | `docs/architecture/data-model.md` (tabela `list_daily_activity`), `docs/architecture/api.md:61`; Evidence zadania, „Decyzje”. | Dopisać strefę i kolejność w `data-model.md`, „Stan po T-007” w `api.md` (no-op ponownego odhaczenia, `PATCH` z `name` + `checked`). |
+| 2 | minor | design (SC-05) | Pusta lista (0 pozycji) pokazuje na karcie „Wszystko kupione” — wprowadza w błąd dla nowej listy. Spec SC-05 nie definiuje karty pustej listy; implementer zgłosił to w „Decyzjach”. | `SC-05-moje-listy/messages.ts:9`; nowa lista „Dom” bez pozycji. | Decyzja projektowa: np. „Pusta lista” / „0 do kupienia” (wymaga informacji o kupionych w `ListSummary` albo nowej kopii). |
+| 3 | minor | web (SC-06) | Stan rozwinięcia „Kupione” przeżywa „Usuń wszystkie kupione”: po wyczyszczeniu i kolejnym odhaczeniu sekcja pojawia się od razu rozwinięta, choć spec mówi „domyślnie zwinięta”. | `ListScreen.tsx` `boughtOpen` nie jest zerowane w `onCleared`. | Po usunięciu kupionych (sekcja znika) stan wraca do zwiniętej. |
+| 4 | minor | backend | `PATCH { name|note, checked }` wykonuje edycję i odhaczenie w dwóch osobnych transakcjach — przy błędzie drugiej (np. 404 po równoczesnym usunięciu) edycja zostaje zapisana, a klient dostaje błąd. `PATCH { checked: false }` na nieodhaczonej przesuwa listę na górę SC-05 (`touchList`) bez faktycznej zmiany. | `domain/items.ts` `changeItem`; `items-repository.ts` `check()` (warunek tylko dla `checked: true`). | Jedna transakcja albo odrzucenie łączenia pól; odznaczenie nieodhaczonej jako no-op jak ponowne odhaczenie. |
+| 5 | note | zgodność z Demo | Odznaczona pozycja wraca na swoje miejsce wg `created_at DESC`, nie „na górę” (Demo pkt 2). Zgodne z `data-model.md` „Kolejność” i SC-06 („najnowsze na górze”), więc przyjęte. | Evidence, „Decyzje”. | Ewentualnie poprawić tekst Demo w szablonie zadań. |
+| 6 | note | testy | TDD: czerwone przebiegi udokumentowane dla testów 1–9; test 5 (authz) przeszedł od razu, z udokumentowanym sprawdzeniem, że gryzie; E2E (10) bez czerwonego przebiegu zgodnie z regułą „E2E na końcu”. | Evidence, tabela TDD. | — |
+| 7 | note | infrastruktura testów | Sporadyczny timeout połączenia w `truncateAllTables` przy wielu równoległych kontenerach Testcontainers. | `apps/api/test/database.ts:49`, pierwszy pełny przebieg. | Obserwować; ewentualnie `connectionTimeoutMillis` / mniejsza równoległość. |
