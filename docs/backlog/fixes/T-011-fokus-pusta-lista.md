@@ -63,7 +63,13 @@ Przebieg 2026-10-28, Windows 11, Docker (Testcontainers `postgres:17.11-alpine`)
 
 ## Prevention
 
-<filled in Step 8>
+**Co by zapobiegło:** kryteria T-006 objęły zasady fokusu z sekcji „Accessibility” SC-06, ale nie zachowania zapisane w tabeli „States” (tam był fokus stanu Empty). Plan nie wymagał, żeby każdy dotknięty wiersz „States” miał kryterium i test.
+
+Propozycje dla użytkownika (niezastosowane, czekają na decyzję):
+
+1. Szablon zadania (`.claude/skills/plan-backlog/templates/task.md`), punkt „UI tasks”: każdy wiersz tabeli „States” dotkniętego ekranu ma kryterium akceptacji z testem, łącznie z fokusem i ogłoszeniami, a nie tylko skan axe.
+2. QA round 1 #1 (minor): dopisać 2 testy przypinające zawężenia — lista z pozycjami po otwarciu nie przenosi fokusu; lista opróżniona przez odświeżenie danych nie przenosi fokusu.
+3. QA round 1 #2 (minor, poza zakresem, kod sprzed T-011): SEC3 w `e2e/j02-listy.spec.ts:90` używa stałego `x-forwarded-for: 10.200.0.2` przy limicie rejestracji na IP, więc powtórzone przebiegi E2E w ciągu godziny oblewają. Osobny `/fix`: wspólny helper drugiego klienta z losowym IP (jak `fixtures.ts`) i sprawdzenie w CI, które odrzuca literalny `x-forwarded-for` w specach.
 
 <!-- QA rounds are appended below by /qa-task -->
 
