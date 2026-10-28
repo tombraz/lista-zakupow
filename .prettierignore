@@ -5,3 +5,6 @@ README.md
 scripts/backlog-check.mjs
 scripts/design-check.mjs
 apps/api/drizzle/meta/
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/.expo/

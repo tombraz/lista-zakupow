@@ -1,0 +1,4 @@
+# Projekt natywny iOS (expo prebuild, CocoaPods)
+pnpm --filter @lista/mobile exec expo prebuild --platform ios --clean
+# Build Release na symulator, bez podpisu (ADR 0008: bez dystrybucji iOS)
+xcodebuild -workspace apps/mobile/ios/<projekt>.xcworkspace -scheme <projekt> -configuration Release -sdk iphonesimulator -destination generic/platform=iOS Simulator -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO build

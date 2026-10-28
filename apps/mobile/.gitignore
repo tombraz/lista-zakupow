@@ -1,0 +1,6 @@
+# Projekty natywne generuje `expo prebuild` (Continuous Native Generation); źródłem jest app.config.ts.
+android/
+ios/
+.expo/
+expo-env.d.ts
+e2e/results/

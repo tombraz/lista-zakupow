@@ -28,6 +28,8 @@ Istnieje (T-001): `docker-compose.yml` (PostgreSQL 17.11 na `localhost:5442`, Ma
 
 Istnieje (T-002): `.github/workflows/ci.yml` (joby per warstwa przez `dorny/paths-filter`, zbiorczy `ci-ok`), `.github/workflows/security.yml` (CodeQL, check `codeql`), `.github/actions/setup/` (pnpm, Node z `.nvmrc`, `pnpm install` z cache), `.github/dependabot.yml`, `SECURITY.md`, `scripts/protect-main.sh` (ustawienia repo, uruchamia właściciel) z testem `scripts/test/protect-main.test.sh`. Tag obrazu Postgresa ma jedno źródło: `docker-compose.yml` (czytają go `apps/api/test/database-constants.ts`, E2E i job `migrations` w CI).
 
+Istnieje (T-003): joby `mobile`, `mobile-android` (emulator z KVM, Maestro przypięty wersją i SHA-256) i `mobile-ios` (`macos-latest`) w `.github/workflows/ci.yml`; skrypty `scripts/android-emulator.sh`, `scripts/mobile-e2e.sh`, `scripts/ios-simulator-build.sh` z testem `scripts/test/mobile.test.sh` (oczekiwane wyjścia `--dry-run` w `scripts/test/*.dry-run.txt`).
+
 Planowane (kolejne taski infra): `.github/workflows/deploy.yml`, `mobile.yml`, `scripts/deploy.sh`, `scripts/smoke.sh`, `Dockerfile` (API + `apps/web/dist`), `apps/api/fly.staging.toml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`, `.zap/rules.tsv`, `SECURITY.md`.
 
 ## Komendy
@@ -39,7 +41,7 @@ Planowane (kolejne taski infra): `.github/workflows/deploy.yml`, `mobile.yml`, `
 | lokalny przebieg CI | `pnpm check` (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, testy), potem `pnpm test:e2e` | korzeń repo |
 | raport pokrycia | `pnpm test:coverage` (wynik w `coverage/`) | korzeń repo |
 | actionlint (rung 1) | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` (Git Bash na Windows: poprzedź `MSYS_NO_PATHCONV=1`) | korzeń repo |
-| testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh` | korzeń repo |
+| testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh`; `bash scripts/test/mobile.test.sh` | korzeń repo |
 | skan zależności | `pnpm audit --audit-level high` | korzeń repo |
 | ochrona `main` i ustawienia bezpieczeństwa (właściciel) | `bash scripts/protect-main.sh --dry-run`, potem bez `--dry-run` (kroki w `SECURITY.md`) | korzeń repo |
 

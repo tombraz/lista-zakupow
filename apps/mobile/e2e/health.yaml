@@ -1,0 +1,10 @@
+# AC2 (T-003): aplikacja z prawdziwym lokalnym api pokazuje stan API i bazy.
+appId: dev.tombraz.listazakupow
+name: Stan API i bazy
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Wspólna lista zakupów"
+- extendedWaitUntil:
+    visible: "API działa · baza działa"
+    timeout: 30000

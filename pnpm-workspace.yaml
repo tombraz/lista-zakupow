@@ -21,3 +21,7 @@ allowBuilds:
   cpu-features: false
   protobufjs: false
   ssh2: false
+  "@parcel/watcher": false
+  unrs-resolver: false
+overrides:
+  "@expo/cli>zod": 4.6.7

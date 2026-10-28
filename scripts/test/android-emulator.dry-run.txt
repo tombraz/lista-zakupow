@@ -1,0 +1,11 @@
+# System image Androida i AVD
+sdkmanager --install system-images;android-35;default;x86_64 platform-tools emulator
+avdmanager create avd --force --name lista-e2e --package system-images;android-35;default;x86_64 --device pixel_6
+# Start emulatora bez okna i czekanie na koniec rozruchu
+emulator -avd lista-e2e -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+adb wait-for-device
+adb shell getprop sys.boot_completed
+# Bez animacji (stabilne flowy Maestro)
+adb shell settings put global window_animation_scale 0
+adb shell settings put global transition_animation_scale 0
+adb shell settings put global animator_duration_scale 0

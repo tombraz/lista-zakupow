@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
+import reactNativeA11y from "eslint-plugin-react-native-a11y";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -33,6 +34,18 @@ const E2E_CLIENT_SYNTAX = [
   },
 ];
 
+// TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
+// Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
+const SESSION_KEY = "/sess|token|auth|cookie|jwt/i";
+const STORAGE_WRITE = "CallExpression[callee.property.name=/^(setItem|mergeItem)$/]";
+const MOBILE_SESSION_SYNTAX = [
+  `${STORAGE_WRITE}[arguments.0.type='Literal'][arguments.0.value=${SESSION_KEY}]`,
+  `${STORAGE_WRITE}[arguments.0.type='TemplateLiteral'][arguments.0.quasis.0.value.raw=${SESSION_KEY}]`,
+].map((selector) => ({
+  selector,
+  message: "Sesja tylko w expo-secure-store, nigdy w AsyncStorage (TH-16).",
+}));
+
 const sizeRules = (maxLinesPerFunction) => ({
   complexity: ["error", 10],
   "max-lines-per-function": [
@@ -53,6 +66,10 @@ export default tseslint.config(
       "**/coverage/**",
       "**/test-results/**",
       "**/playwright-report/**",
+      // Projekty natywne generuje expo prebuild.
+      "apps/mobile/android/**",
+      "apps/mobile/ios/**",
+      "apps/mobile/.expo/**",
       "scripts/backlog-check.mjs",
       "scripts/design-check.mjs",
       ".claude/**",
@@ -110,6 +127,23 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
     settings: { react: { version: "detect" } },
     rules: { "react/no-danger": "error" },
+  },
+  {
+    files: ["apps/mobile/**/*.{ts,tsx}"],
+    extends: [
+      react.configs.flat.recommended,
+      react.configs.flat["jsx-runtime"],
+      reactHooks.configs.flat["recommended-latest"],
+    ],
+    plugins: { "react-native-a11y": reactNativeA11y },
+    settings: { react: { version: "detect" } },
+    rules: {
+      ...reactNativeA11y.configs.all.rules,
+      // Podpowiedź opisuje skutek akcji; wymagana tylko przy elementach interaktywnych (przegląd QA).
+      "react-native-a11y/has-accessibility-hint": "off",
+      // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
+      "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...MOBILE_SESSION_SYNTAX],
+    },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
