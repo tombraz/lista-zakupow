@@ -3,7 +3,7 @@ id: T-006
 title: "Pozycje: dodawanie, edycja, usuwanie i blokada duplikatu (web)"
 epic: E-01
 story: S-01-04
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -250,3 +250,43 @@ Niezależna weryfikacja w nowej sesji (Windows 11, Docker, Testcontainers `postg
 **Do poprawy w rundzie 2 (`/implement-task T-006` w nowej sesji):** #1, #2, #3 — każdy z testem komponentu, który najpierw jest czerwony; #4 poprawić albo zapisać jako odstępstwo. #6–#8 opcjonalnie.
 
 **Krok 10:** pierwsza w projekcie seria usterek „stan klienta w czasie trwającej / nieudanej mutacji” (#1–#3). Jeśli wróci w T-007 (odhaczanie), warto dopisać do „Pułapek” w `layers/web.md` regułę: każdy hook mutacji ma test z opóźnioną i zerwaną odpowiedzią oraz zmianą danych w międzyczasie.
+
+## QA round 2 (2026-10-28)
+
+Verdict: pass
+
+Niezależna weryfikacja w nowej sesji (Windows 11, Docker, Testcontainers `postgres:17.11-alpine`, Playwright Chromium). Zakres rundy: poprawka `23489b8` (tylko `useAddItem.ts` + 4 testy w `ListScreen.add.test.tsx`) oraz regresja całości.
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych); `pnpm check` — Prettier, ESLint `--max-warnings 0`, `tsc`, jscpd 0 klonów, dependency-cruiser 0 naruszeń (237 modułów), design-check 0 błędów / 0 kolorów na sztywno, backlog-check OK, Vitest **49 plików / 244 testy zielone**; `pnpm build` OK; `pnpm test:e2e` **22/22** (telefon i komputer, J-01, J-02, J-03 bez regresji).
+
+**Spot-checki poprawek (mutacja → test, cofnięte, `git status` czysty):**
+
+- #1: `clear` czyści zawsze → pada tylko „keeps text typed while the previous item is saving…”.
+- #2: `idFor` zawsze używa poprzedniego `id` → pada tylko „sends a new id when the text changed after a lost response”.
+- #3: limit z API bez `atCount` → pada tylko „enables the AddBar again when an item is deleted after the API's limit”.
+- strażnik AC6: `idFor` zawsze nowe `id` → pada tylko „repeats the same id when the unchanged text is sent again”.
+
+Czerwień przed poprawką jest w Evidence dla #1–#3 (strażnik AC6 opisany jako przypinający, i rzeczywiście gryzie). Diff testów względem rundy 1 to same dodane przypadki, żadnej osłabionej asercji.
+
+**Powtórka scenariuszy z rundy 1 w przeglądarce (Playwright, 390 × 844):**
+
+| Scenariusz | Wynik |
+| --- | --- |
+| X9 (#1): `POST` opóźniony 1,5 s, „Mleko” + Enter, w trakcie „Chleb” + Enter | pole po zapisie ma „Chleb”, Enter dodaje „Chleb”; na serwerze `[Chleb, Mleko]`, pole puste — **naprawione** |
+| X3b (#2): zerwana odpowiedź na „Ser”, zmiana na „Jajka” + Enter | na liście „Jajka”, ogłoszenie „Dodano Jajka”, dwa różne `id` — **naprawione** (patrz #2 niżej) |
+| X3c (AC6): zerwana odpowiedź, ponowienie bez zmian | jedna pozycja „Ser” na serwerze — AC6 zachowane |
+| X1 (#3): 499 w UI, 500. od innego klienta, „Moja” → 409 limit; usunięcie „P 0” | komunikat limitu znika, pole i „Dodaj” aktywne, „Moja” zostaje w polu i dodaje się (500 na serwerze); kolejna → limit z liczby pozycji — **naprawione** |
+| X10: potrójny Enter na zwykłej sieci | jedna pozycja, brak ostrzeżeń |
+
+Kryteria AC1–AC9 i SEC1–SEC3 zweryfikowane w rundzie 1 (tabela wyżej) nadal przechodzą: ich testy są zielone, a poprawka dotyka tylko stanu AddBar po stronie klienta (bez zmian w API, autoryzacji i schematach). Przegląd kodu poprawki: pojedyncza odpowiedzialność `useItemDraft` (pola + `id` próby), aktualizacje funkcyjne stanu zamiast nieaktualnego domknięcia, bez zmian poza zakresem.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | web / SC-06 Empty | (z rundy 1, #4) Nadal brak fokusu w polu dodawania na pustej liście, a odstępstwo nie zostało zapisane. | `document.activeElement` = `<body>` po otwarciu nowej pustej listy (X0); SC-06 „States”: „Empty … fokus na polu dodawania”. | Fokus w „Co kupić?” po wczytaniu pustej listy albo odstępstwo zapisane w SC-06 — osobne zadanie. |
+| 2 | minor | web / AddBar (F-15) | Po zerwanej odpowiedzi pozycja zapisana na serwerze nie pojawia się do przeładowania. Gdy użytkownik wpisze ją ponownie inną wielkością liter („ser”), dostaje ostrzeżenie duplikatu o pozycji, której nie widzi na ekranie. | X3b: UI `[Jajka]`, serwer `[Jajka, Ser]`, po przeładowaniu 2 wiersze. X3d: „ser” → „„ser” jest już na liście…”, na liście 0 wierszy. | Po błędzie sieci przy dodaniu (oraz po 409 `duplicate_item`, którego nie ma w cache) odświeżyć listę (`invalidateQueries`); albo przy T-009 (zdarzenia na żywo). |
+| 3 | note | web / AddBar | Notatka wpisana w trakcie zapisu zostawia w polach także wysłaną nazwę („Mleko” + „2 l”), więc Enter kończy się ostrzeżeniem duplikatu. Tekst nie ginie, a ostrzeżenie jest zrozumiałe. | X9b. | Ewentualnie czyścić nazwę, gdy zmieniła się tylko notatka. |
+| 4 | note | web / arkusz, backend | Uwagi #6–#8 z rundy 1 bez zmian (`dup.rename` z wpisaną nazwą, `PATCH {}` podbija `updated_at`, 413 w kształcie Fastify). | — | Jak w rundzie 1. |
+
+Usterki minor i uwagi nie blokują. Nowe zadanie (np. #1 + #2) tylko po zgodzie użytkownika.
+
+**Krok 10:** seria „stan klienta w czasie trwającej / nieudanej mutacji” (runda 1 #1–#3, runda 2 #2) dotyczy na razie tylko T-006. Propozycja autora (wpis do „Pułapek” w `layers/web.md`: każdy hook mutacji ma test z opóźnioną i zerwaną odpowiedzią oraz zmianą danych w międzyczasie) warta przyjęcia przed T-007 (odhaczanie).
