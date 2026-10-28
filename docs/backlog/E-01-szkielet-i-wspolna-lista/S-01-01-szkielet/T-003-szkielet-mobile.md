@@ -206,3 +206,5 @@ Poprawka katalogu AVD jest w commicie na gałęzi epiku i czeka na push przez w�
 
 - **Rekomendacja:** push samej gałęzi epiku. Po wznowieniu implementer czyta przebieg na PR #1: albo `mobile-android` przechodzi (link jako dowód AC2/AC3, potem `in-qa`), albo log kroku E2E wskazuje kolejną poprawkę.
 - **Alternatywa:** przed pushem właściciel uruchamia lokalnie `bash scripts/android-emulator.sh` na Linuksie lub WSL z KVM. To potwierdzi poprawkę bez przebiegu CI, ale nie zastąpi dowodu AC3 z GitHub.
+
+Answer: Właściciel wypchnął gałąź epiku z poprawką ANDROID_AVD_HOME (49132ac); ci-test/T-003-docs bez zmian. Zbierz dowody mobile-android/Maestro z nowego przebiegu na PR #1; kolejne pushe nadal przez NEEDS_USER.
