@@ -4,3 +4,4 @@
 2026-10-28 19:32 | T-003 | implementer | NEEDS_USER | AC3 skip udowodniony (PR #8), mobile-ios zielony; poprawka ANDROID_AVD_HOME, prosi o push epiku
 2026-10-28 20:01 | T-003 | implementer | IN_QA | CI na PR #1 zielone (Maestro passed), skip na PR #8; limit E2E podniesiony do 35 min (niewypchnięty)
 2026-10-28 20:13 | T-003 | qa | PASS | 0 blocker/0 major/4 minor; m.in. lint SEC2, tsconfig nadpisywany przez expo start, E2E Android ~24 min
+2026-10-28 21:07 | T-007 | implementer | IN_QA | odhaczanie, kto kupił, czyszczenie kupionych (web); 285 testów + 26 E2E zielone
