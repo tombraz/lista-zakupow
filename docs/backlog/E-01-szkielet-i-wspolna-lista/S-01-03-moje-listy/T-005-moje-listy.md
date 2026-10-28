@@ -49,6 +49,7 @@ Each criterion must fail before the work and pass after it.
 - [x] SEC2 (TH-02): Given uczestnik listy A, when wywoła `PATCH` lub `DELETE /api/v1/lists/:listId`, then 403 `owner_only`, lista bez zmian; SC-06 uczestnika nie pokazuje opcji „Zmień nazwę listy” i „Usuń listę”. — verified by: test integracyjny + test komponentu
 - [x] SEC3 (TH-01): Given domownik B otwiera adres SC-06 listy A, when ekran się załaduje, then widzi tylko „Nie masz dostępu do tej listy.” i „Wróć do moich list”, bez nazwy ani treści listy. — verified by: E2E z dwoma kontami
 - [x] SEC4 (TH-13): Given limit 50 list (AC3), when bot tworzy listy w pętli, then po 50 dostaje 409, a odmowa dostępu (SEC1) jest zapisana w logu `security` z identyfikatorami. — verified by: test integracyjny (log)
+- [ ] SEC5 (QA round 1 #1): Given dowolna trasa `/api/v1/*`, when obsługa żądania rzuci nieoczekiwany wyjątek (np. błąd bazy), then odpowiedź to `500 {"error":{"code":"internal"}}` z `requestId`, bez treści wyjątku, SQL ani parametrów, a log zawiera `requestId` i typ błędu bez parametrów zapytania z treścią użytkownika (np. nazwy listy); nazwa listy ze znakiem NUL daje 400 `validation_failed` (`fields.name`). — verified by: test integracyjny handlera (wymuszony wyjątek, np. awaria repozytorium) + test jednostkowy schematu + test integracyjny `POST`/`PATCH` z NUL
 
 ## TDD plan
 
@@ -73,6 +74,8 @@ Each criterion must fail before the work and pass after it.
 | 10 | SC-05: pusty, ładowanie, błąd, lista kart, formularz, limit, fokus | component | Vitest + RTL + MSW | AC2–AC5, AC8 |
 | 11 | SC-06: nagłówek, pusty stan, menu właściciela / uczestnika, dialog usunięcia, brak dostępu | component | Vitest + RTL + MSW | AC6–AC8, SEC2 |
 | 12 | E2E J-02: utworzenie, zmiana nazwy, usunięcie; drugie konto na obcym adresie; axe | E2E | Playwright + axe | AC8, SEC3 |
+| 13 | schemat nazwy listy odrzuca NUL | unit | Vitest | SEC5 |
+| 14 | nieoczekiwany wyjątek w `/api/v1/*` → `500 internal` z `requestId`, bez szczegółów w odpowiedzi i bez parametrów zapytania w logu; NUL w `POST` / `PATCH` → 400 | integration | Vitest + Testcontainers | SEC5 |
 
 **Run:** komendy „wszystkie testy warstwy” z przewodników backend i web oraz E2E web
 
@@ -98,6 +101,7 @@ What an independent tester checks beyond the automated tests:
 - `toBuyCount` liczony z pozycji (0, dopóki T-006 ich nie doda); kształt odpowiedzi od razu pełny wg `api.md`.
 - Publikacja zdarzeń na żywo (`list.updated`, `list.deleted`, `lists.changed`) — T-009.
 - Skill `postgres-best-practices:supabase-postgres-best-practices` przy migracji i zapytaniach z blokadą.
+- SEC5 (dopisane po QA round 1): handler nieoczekiwanych błędów w `http/api-error.ts` (jeden dla wszystkich modułów); wpis w „Pitfalls” w `docs/architecture/layers/backend.md`: „nieznany wyjątek nie może dojść do domyślnego handlera Fastify — wysyła on `message` (np. SQL z parametrami `DrizzleQueryError`)”.
 
 ## Definition of done
 
