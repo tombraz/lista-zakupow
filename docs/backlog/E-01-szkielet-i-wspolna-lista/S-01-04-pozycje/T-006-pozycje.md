@@ -3,7 +3,7 @@ id: T-006
 title: "Pozycje: dodawanie, edycja, usuwanie i blokada duplikatu (web)"
 epic: E-01
 story: S-01-04
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -186,3 +186,47 @@ Zmiany istniejących testów: `apps/web/test/lists.ts` — `detailsOf(list, item
 Zaktualizowane fakty w „Gdzie jest kod” / „Pułapki”: `layers/db.md` (tabela `item`, migracja `0004_pozycje`, limit i duplikat w repozytorium), `layers/backend.md` (moduł `pozycje`, `ListItems`, `ids.ts`, `createItem`, pliki `shared`), `layers/web.md` (pliki SC-06, nowe komponenty i warianty, `anItem`, dwie pułapki E2E). Poza tym `api.md` („Stan po T-006”) i `data-model.md` (indeks `item (list_id)` pokryty unikalnym `(list_id, name_key)`). Propozycji zmian „Conventions” brak.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-28)
+
+Verdict: fail
+
+Niezależna weryfikacja w nowej sesji (Windows 11, Docker, Testcontainers `postgres:17.11-alpine`, Playwright Chromium).
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych), `pnpm check` — Prettier, ESLint, `tsc`, jscpd 0 klonów, dependency-cruiser 0 naruszeń, design-check 0 błędów / 0 kolorów na sztywno, backlog-check OK, Vitest **49 plików / 240 testów zielonych**; `pnpm build` OK; `pnpm test:e2e` **22/22**.
+
+**Spot-checki (mutacje, cofnięte, `git status` czysty):** bez `.for("update")` → pada „never exceeds 500 items under many parallel requests”; `UPDATE`/`DELETE` bez `list_id` → pada „answers 404 when an item of list A is addressed through own list B”; `normalizeItemName` bez `toLocaleLowerCase` → 7 testów czerwonych (shared + `items.duplicate`); `sameNameAs` bez `exceptId` → 4 testy arkusza czerwone. Testy rzeczywiście pilnują zachowania. Formy NFC w testach są naprawdę rozłożone (`Z U+0307 o U+0301`).
+
+**Kryteria akceptacji:**
+
+| AC | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `items.create.test`, `ListScreen.add.test`; E2E; ręcznie: pozycja na górze, pola puste, fokus w „Co kupić?”, „Dodano …” w `role="status"` |
+| AC2 | pass | testy + ręcznie „żółty SER” przy „Żółty ser” → `dup.open` jako `role="alert"`, tekst zostaje; „Żółty  ser” (spacja w środku) dodaje się |
+| AC3 | pass | `items.update.test`, arkusz; ręcznie „MLEKO” → `dup.rename`; równoległa zmiana notatki przez innego klienta + zmiana nazwy w arkuszu → obie zmiany zostają (per pole) |
+| AC4 | pass | testy + ręcznie 101 / 201 znaków → komunikaty pod polem; dokładnie 100 / 200 → 201; emoji liczone jako znaki (spójnie z `char_length`) |
+| AC5 | pass | testy (w tym 20 równoległych) + E2E 500 pozycji; patrz jednak #3 (stan po zejściu poniżej limitu) |
+| AC6 | pass | `items.idempotency.test`; ręcznie: zerwana odpowiedź + ponowienie bez zmian → jedna pozycja; patrz jednak #2 |
+| AC7 | pass | testy + **ręcznie z drugą kartą (Demo 4)**: usunięcie w drugiej karcie, zapis w otwartym arkuszu → „Ta pozycja została usunięta przez inną osobę.”, fokus na „Zamknij”, Esc zamyka, pozycja znika |
+| AC8 | pass | `items.deleted-author.test`, `ListScreen.items.test` |
+| AC9 | pass | E2E + axe (8 stanów SC-06); pułapka fokusu, Esc, powrót fokusu, fokus nad AddBar |
+| SEC1 | pass | `items.authz.test` + ręcznie: nieistniejąca / nie-UUID lista → 404, `itemId` nie-UUID i `..%2F` → 404, żądanie bez `Origin` → 403 |
+| SEC2 | pass | test kształtu; ręcznie odpowiedzi `POST` / `PATCH` / `GET` bez e-maili |
+| SEC3 | pass | `items.limit.test`; ręcznie notatka 20 000 znaków → 413 |
+
+**Eksploracja (inne wyniki OK):** `<img onerror>` w nazwie wyświetla się jako tekst, skrypt się nie wykonał; podwójny / potrójny Enter na wolnej sieci → jedna pozycja; treść spoza schematu (`addedBy`, `checked`, `listId`) ignorowana; `PATCH {}` → 200; 320 px bez poziomego przewijania, wiersz 86 px, „Dodaj” 48 px wysokości; arkusz mieści się na 320 × 640.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | major | web / AddBar (F-07, F-15) | Pozycja wpisana w trakcie zapisu poprzedniej **ginie bez śladu**. Pole „Co kupić?” jest edytowalne podczas zapisu, Enter jest wtedy po cichu ignorowany (`AddBar`: `if (!pending) onSubmit()`), a po odpowiedzi API `draft.reset()` czyści pole z nowym tekstem. Użytkownik widzi pusty pasek i uważa, że dodał obie rzeczy. | Opóźnienie `POST` 1,5 s: „Mleko” + Enter, potem „Chleb” + Enter → na liście tylko „Mleko”, pole puste, brak komunikatu (`X9`; zrzut 320 px pokazuje „Mleko” wpisane przy kręcącym się „Dodaj”). Ten sam efekt wystąpił mimowolnie dwa razy przy zwykłym szybkim wpisywaniu w teście eksploracyjnym na lokalnym API. | Tekst wpisany po wysłaniu nie może zniknąć: albo czyścić tylko to, co zostało wysłane (zostawić nowy tekst), albo zablokować pole na czas zapisu, albo wysłać kolejną pozycję po zakończeniu poprzedniej. Test komponentu z opóźnioną odpowiedzią, który to pilnuje. |
+| 2 | major | web / AddBar (AC6, F-15) | `id` klienta nie jest związane z treścią: po błędzie sieci (serwer zapisał, odpowiedź przepadła) użytkownik poprawia tekst i ponawia — serwer zwraca starą pozycję (200, to samo `id`), web ogłasza „Dodano <stara nazwa>”, czyści pole, a **nowy tekst przepada**. | Zerwana odpowiedź na „Ser” (`route.fetch` + `abort`) → „Brak połączenia…”; zmiana pola na „Jajka” + Enter → na liście „Ser”, „Jajek” brak, ogłoszenie „Dodano Ser”, pole puste (`X3b`). | Nowe `id`, gdy po nieudanym wysłaniu zmieni się nazwa lub notatka (ponowienie tylko tej samej treści używa tego samego `id`); test komponentu na ten przypadek. |
+| 3 | major | web / limit (F-07, AC5) | Ostrzeżenie limitu z odpowiedzi API jest „lepkie”: `limitReached = items.length >= 500 \|\| warning?.kind === "limit"`, a `warning` zeruje tylko `submit`, którego nie da się wywołać, bo AddBar jest nieaktywny. Po usunięciu pozycji AddBar zostaje zablokowany do przeładowania strony. | 499 pozycji w UI, 500. dodana przez innego klienta, „Moja” + Enter → 409 i komunikat limitu (poprawnie); usunięcie „P 0” w arkuszu → na liście 499, AddBar nadal nieaktywny, komunikat limitu nadal widoczny (`X1`, zrzut `x1-after-delete`). | Limit wynika z aktualnej liczby pozycji: ostrzeżenie z API znika, gdy liczba pozycji spadnie poniżej 500 (np. po usunięciu); test komponentu: limit z API → usunięcie pozycji → AddBar aktywny. |
+| 4 | minor | web / SC-06 Empty | Stan „Empty” wg SC-06: „fokus na polu dodawania” — po wejściu na pustą listę fokus jest na `body`. | `document.activeElement` = `<body>` na nowej pustej liście (`X5`). | Fokus w „Co kupić?” po wczytaniu pustej listy (albo zapisane odstępstwo, jeśli celowo). |
+| 5 | minor | TDD (Step 5) | Test 12 (8 z 9 przypadków), 15 (E2E) oraz testy 7, 10, 11, 14 bez czerwieni przed kodem. Autor uczciwie to opisał i dla każdej gałęzi pokazał spot-check (mutacja → czerwony test), a moje 4 mutacje potwierdzają, że testy gryzą; DoD „written test-first” słusznie nie odhaczone. | Evidence, wiersze 7, 10–15. | W rundzie poprawek testy do #1–#3 najpierw czerwone, z komunikatem w Evidence. |
+| 6 | note | web / arkusz | `dup.rename` z odpowiedzi API pokazuje nazwę wpisaną przez użytkownika, nie istniejącą pozycję (przy lokalnym sprawdzeniu — istniejącą). Przy nieaktualnym cache: „Na liście jest już pozycja „MLEKO”” zamiast „Mleko”. | `useEditItem.failed`: `setDuplicate(typed)`. | Do rozważenia razem z T-009 (cache na żywo zmniejszy ten przypadek). |
+| 7 | note | backend | `PATCH` bez zmian (`{}` — „Zapisz” w arkuszu bez edycji) podbija `updated_at` pozycji i listy, więc lista wskakuje na górę SC-05 bez żadnej zmiany. | `PATCH {}` → 200, `updatedAt` nowszy (`X8`). | Pominąć zapis (albo zamknąć arkusz bez żądania), gdy nic się nie zmieniło. |
+| 8 | note | backend (T-001) | 413 ma domyślny kształt Fastify (`FST_ERR_CTP_BODY_TOO_LARGE`, `message`), nie `{ error: { code } }` z `api.md`. Sprzed T-006. | `POST` z notatką 20 000 znaków (`X8`). | Ewentualnie osobne zadanie. |
+
+**Do poprawy w rundzie 2 (`/implement-task T-006` w nowej sesji):** #1, #2, #3 — każdy z testem komponentu, który najpierw jest czerwony; #4 poprawić albo zapisać jako odstępstwo. #6–#8 opcjonalnie.
+
+**Krok 10:** pierwsza w projekcie seria usterek „stan klienta w czasie trwającej / nieudanej mutacji” (#1–#3). Jeśli wróci w T-007 (odhaczanie), warto dopisać do „Pułapek” w `layers/web.md` regułę: każdy hook mutacji ma test z opóźnioną i zerwaną odpowiedzią oraz zmianą danych w międzyczasie.
