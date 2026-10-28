@@ -3,7 +3,7 @@ id: T-005
 title: "Moje listy: tworzenie, przegląd, zmiana nazwy i usunięcie (web)"
 epic: E-01
 story: S-01-03
-status: in-qa                # todo | in-progress | in-qa | done | blocked
+status: done                 # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-004]
 size: M                # S | M (L must be split)
@@ -281,3 +281,26 @@ Verdict: fail
 
 1. #1: usunąć przyczynę niestabilności testów komponentów SC-06 (i sprawdzić SC-05, który ma ten sam wzorzec), bez osłabiania asercji. W Evidence podać kilka kolejnych zielonych pełnych przebiegów `pnpm check`.
 2. #2 i #3 opcjonalnie (minor).
+
+## QA round 3 (2026-10-28)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | web (dostępność) | Bez zmian od rundy 1, #2: SC-06 w stanach ładowania i błędu ma pusty `h1` (`ListScreen.tsx:34`, `title={list?.name ?? ""}`). | Jak w rundzie 2. | Jak w rundzie 1. |
+| 2 | minor | backend (DRY) | Bez zmian od rundy 1, #3: rola wyznaczana dwa razy (`infra/lists-repository.ts:12`, `domain/lists.ts:64`). | grep | Jak w rundzie 1. |
+| 3 | note | backend (błędy) | Bez zmian od rundy 2, #4: `isClientError` przepuszcza każdy błąd ze `statusCode` < 500 do domyślnego handlera Fastify. | Jak w rundzie 2. | Do rozważenia: lista dozwolonych kodów `FST_ERR_*`. |
+| 4 | note | web (testy T-004) | Przy sztucznym obciążeniu wszystkich rdzeni CPU (pętla w `worker_threads` na każdym rdzeniu) 3 testy T-004 przekraczają limit testu Vitest 5 s: SC-01 „explains the attempt limit and a network failure (SEC1)”, SC-02 „links each summary entry…” i „sends trimmed data…” (długie wpisywanie `user-event`). Dzieje się tak z poprawką tej rundy i bez niej, więc to nie regresja T-005. W normalnych przebiegach (5× `pnpm check`) zielone. | `Error: Test timed out in 5000ms.` `SignUpScreen.test.tsx:79`, 3/3 przebiegi pod obciążeniem. Bez obciążenia: SC-01 i SC-02 13/13. | Do obserwacji w CI. Jeśli tam się pojawi: krótsze dane w testach wpisywania albo `user.setup({ delay: null })` / `paste`, nie podnoszenie limitu. |
+
+**Co sprawdziłem i przeszło**
+
+- Zakres rundy: commit `03947ab` (tylko `apps/web/test/setup.ts`: `configure({ asyncUtilTimeout: 3000 })` z uzasadnieniem). Pliki testów i kod produkcyjny bez zmian od rundy 2 (`git diff 6d993b3 03947ab`), więc asercje nie zostały osłabione.
+- Czysta instalacja (`pnpm install --frozen-lockfile`) bez zmian w śledzonych plikach.
+- `pnpm check` **5 razy z rzędu: 5/5 exit 0**, za każdym razem 36 plików / 163 testy zielone (Prettier, ESLint, `tsc`, jscpd, dependency-cruiser, design-check, backlog-check). `pnpm build` OK. `pnpm test:e2e` **14/14** (J-01, J-02, SEC3, limit).
+- Spot-check przyczyny (wszystkie rdzenie zajęte, `vitest run` dla web, 3 przebiegi na wariant): z poprawką testy SC-05 i SC-06 zielone 3/3. Po przywróceniu `asyncUtilTimeout: 1000` oblewają SC-05 „explains the empty state… (AC5)” i SC-06 „shows the list name as h1… (AC7)”, czyli wzorzec z rundy 2. Poprawka trafia w przyczynę i obejmuje oba ekrany. Plik przywrócony (`git checkout`), `git status` czysty.
+- 3 s to mniej niż limit testu Vitest (5 s), więc brak elementu nadal kończy się błędem zapytania z DOM. Testy, które sprawdzają nieobecność (`queryBy…` / `not`), nie czekają na limit, więc ich czas się nie wydłuża.
+- AC1–AC8, SEC1–SEC5: **pass** (kod produkcyjny bez zmian od rundy 2, gdzie zostały sprawdzone ręcznie i testami; teraz testy stabilnie zielone).
+- Nie sprawdziłem (jak w rundach 1–2): Safari na iOS, czytnik ekranu na urządzeniu.
+
+**Historia S-01-03:** T-005 jest jedynym taskiem. Biznesowe kryteria historii sprawdzone E2E (J-02: pusty stan, utworzenie, zmiana nazwy, usunięcie po potwierdzeniu, błędy nazwy, limit 50; SEC3: obce konto bez treści) oraz testami integracyjnymi i ręcznie w rundach 1–2 (lista udostępniona „od <imię>”, uczestnik bez menu i z 403, usunięcie widoczne u uczestnika). Historia → `done`.

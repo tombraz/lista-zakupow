@@ -2,7 +2,7 @@
 id: S-01-03
 epic: E-01
 title: Moje listy (web)
-status: in-progress    # todo | in-progress | done
+status: done           # todo | in-progress | done
 requirements: [F-05, F-06]
 screens: [SC-05, SC-06]
 ---
@@ -13,13 +13,13 @@ screens: [SC-05, SC-06]
 
 ## Acceptance criteria (business)
 
-- [ ] Given domownik bez list, when otworzy aplikację, then widzi zdanie wyjaśnienia i przycisk „Utwórz pierwszą listę”.
-- [ ] Given zalogowany domownik, when utworzy listę z nazwą, then lista pojawia się wśród jego list, a on jest jej właścicielem.
-- [ ] Given domownik ma własne i udostępnione listy, when otworzy aplikację, then widzi wszystkie i wie, które są udostępnione mu przez innych.
-- [ ] Given właściciel, when zmieni nazwę albo usunie listę (po potwierdzeniu), then zmiana dotyczy wszystkich uczestników.
-- [ ] Given uczestnik, when próbuje zmienić nazwę lub usunąć listę, then nie może tego zrobić.
-- [ ] Given nazwa pusta lub > 100 znaków albo 50 własnych list, when domownik próbuje zapisać, then widzi czytelny komunikat.
-- [ ] Given domownik bez dostępu do listy, when podmieni jej adres, then nie widzi zawartości (MC-01).
+- [x] Given domownik bez list, when otworzy aplikację, then widzi zdanie wyjaśnienia i przycisk „Utwórz pierwszą listę”.
+- [x] Given zalogowany domownik, when utworzy listę z nazwą, then lista pojawia się wśród jego list, a on jest jej właścicielem.
+- [x] Given domownik ma własne i udostępnione listy, when otworzy aplikację, then widzi wszystkie i wie, które są udostępnione mu przez innych.
+- [x] Given właściciel, when zmieni nazwę albo usunie listę (po potwierdzeniu), then zmiana dotyczy wszystkich uczestników.
+- [x] Given uczestnik, when próbuje zmienić nazwę lub usunąć listę, then nie może tego zrobić.
+- [x] Given nazwa pusta lub > 100 znaków albo 50 własnych list, when domownik próbuje zapisać, then widzi czytelny komunikat.
+- [x] Given domownik bez dostępu do listy, when podmieni jej adres, then nie widzi zawartości (MC-01).
 
 ## Tasks
 
