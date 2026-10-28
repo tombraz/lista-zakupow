@@ -60,6 +60,8 @@ Each criterion must fail before the work and pass after it.
 
 **Mocks:** only at system boundaries (<external service, clock>). Never mock own modules.
 
+**Client state during writes** (UI tasks that save through the API): for each write, a component test with a delayed response (the user keeps acting meanwhile; nothing is lost silently), a lost response after the server saved (retry does not duplicate, changed input does not return the old result, the screen matches the server), and data changing meanwhile (a warning from the API expires when its cause is gone). See "Pitfalls" in the layer guide.
+
 ## QA plan
 
 What an independent tester checks beyond the automated tests:

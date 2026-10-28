@@ -73,6 +73,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - E2E: na Windows 1 worker (zamieranie API przy wielu workerach, T-001); na Linuksie w CI równoległe workery (Playwright domyślnie: 2 na `ubuntu-latest`) — stabilne w 5 przebiegach T-002 (4 testy, ~15 s). Decyzja: zostaje `workers` domyślne poza Windows (T-002).
 - E2E na Windows: otwarcie drugiej strony (`context.newPage()`) w trakcie testu wstrzymuje API na ~10 s (w logu API przerwa po ostatnim żądaniu), więc następne żądanie przekracza limit asercji. Zmianę „innej osoby” test robi przez `page.request` w tej samej sesji; drugą kartę sprawdza QA ręcznie (T-006).
 - Po `page.reload()` AddBar jest nieaktywny, dopóki lista się nie wczyta: przed `focus()` / `fill()` czekać na `toBeEnabled()` (T-006).
+- Każdy hook zapisu (`useMutation`) ma testy komponentu (MSW) z: **opóźnioną odpowiedzią** — użytkownik pisze, klika lub naciska Enter w trakcie zapisu i nic nie ginie po cichu; **zerwaną odpowiedzią** (`HttpResponse.error()` po zapisie na serwerze) — ponowienie tej samej treści nie dubluje, zmieniona treść nie zwraca starej, a stan na ekranie zgadza się z serwerem; **zmianą danych w międzyczasie** — ostrzeżenie z odpowiedzi API (limit, duplikat) wygasa, gdy jego przyczyna zniknie. Bez tych testów T-006 wróciło z QA dwa razy (runda 1 #1–#3, runda 2 #2).
 
 ## Skille i źródła
 
@@ -84,6 +85,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-28 | QA T-006 (krok 10): „Pułapki” — testy hooków zapisu z opóźnioną i zerwaną odpowiedzią oraz zmianą danych w międzyczasie. |
 | 2026-10-28 | T-006: „Gdzie jest kod” (SC-06 z pozycjami, AddBar, ItemRow, warianty Button / TextField / InlineAlert, `api/items.ts`, `anItem`); „Pułapki”: druga strona w E2E na Windows, AddBar po przeładowaniu. |
 | 2026-10-28 | T-005: „Gdzie jest kod” (SC-05, SC-06, `src/lists/`, `queryClient.ts`, nowe komponenty, helpery testów). |
 | 2026-10-27 | T-004: „Gdzie jest kod” (router, sesja, komponenty, helpery testów, fixtures E2E). |
