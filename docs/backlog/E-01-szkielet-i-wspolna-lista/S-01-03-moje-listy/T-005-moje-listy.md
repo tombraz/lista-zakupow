@@ -3,7 +3,7 @@ id: T-005
 title: "Moje listy: tworzenie, przegląd, zmiana nazwy i usunięcie (web)"
 epic: E-01
 story: S-01-03
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-004]
 size: M                # S | M (L must be split)
@@ -180,3 +180,34 @@ Zmiana istniejącego testu: `apps/api/test/body-limit.test.ts` (T-001) używał 
 Uzupełnione „Gdzie jest kod” w `layers/db.md`, `layers/backend.md`, `layers/web.md` (nowe pliki, helpery testów, fabryki `createList(pool, owner)` / `addMember(pool, list, user)`) oraz `api.md` („Stan po T-005”, `members` w szczegółach). Bez zmian w „Conventions”.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-28)
+
+Verdict: fail
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | major | backend (bezpieczeństwo, błędy) | Nieoczekiwany błąd w trasach `/api/v1/lists*` wraca do klienta z treścią wyjątku: zapytanie SQL i jego parametry (id listy, `owner_id`, nazwa). `apiErrors` przekazuje nieznane błędy do domyślnego handlera Fastify, a ten dla 500 wysyła `message`. Wywołać to może każdy zalogowany: nazwa z `\u0000` przechodzi przez `listNameRequestSchema`, a PostgreSQL odrzuca ją przy `INSERT`. Ten sam komunikat z parametrami (w tym nazwą listy) trafia do logu, wbrew „logi bez nazw list” z QA planu. Rejestracja przy tym samym wejściu odpowiada bezpiecznie (`{"error":{"code":"internal"}}`). | `POST /api/v1/lists {"name":"a\u0000b"}` → `500 {"statusCode":500,"error":"Internal Server Error","message":"Failed query: insert into \"shopping_list\" (\"id\", \"owner_id\", \"name\", …) values ($1, $2, $3, default, default) returning \"id\"\nparams: 01a18209-…,q0NnyP9B…,a\u0000b"}`; w logu serwera `err.message` z tymi samymi parametrami. SC-05 pokazuje wtedy „Nie udało się utworzyć listy. Spróbuj ponownie.” | CODING_STANDARDS.md, „Obsługa błędów”: „Nieoczekiwany błąd: 500 z `requestId`, szczegóły tylko w logu”. Handler zwraca `500 {"error":{"code":"internal"}}` z `requestId`, bez treści wyjątku, i ma na to test (np. trasa testowa albo awaria repozytorium). Schemat nazwy odrzuca znaki, których baza nie przyjmie (NUL), z 400 `validation_failed`, i ma na to test w `packages/shared/test/lists.test.ts`. Do logu trafiają identyfikatory, nie parametry zapytania z nazwą listy. |
+| 2 | minor | web (dostępność) | SC-06 w stanach ładowania i błędu ma pusty `h1` (`AppBar title=""`) i tytuł karty „· Wspólna lista zakupów”. AC8 nie obejmuje tych stanów, więc E2E tego nie łapie. | axe `empty-heading` (best practice) na SC-06 w ładowaniu i po błędzie; zestaw WCAG bez naruszeń. Zrzut stanu błędu: pasek z samym „← Wstecz”. | Nagłówek nie jest pusty, np. `h1` „Lista” albo tekst błędu, dopóki nazwa nieznana, i taki sam tytuł karty. |
+| 3 | minor | backend (DRY) | Reguła „kto jest właścicielem” jest zapisana dwa razy: w SQL `roleOf` (`CASE WHEN owner_id = …`) i w `viewOf` (`list.owner.id === userId`). | `infra/lists-repository.ts:12`, `domain/lists.ts:63` | Jedno miejsce wyznaczania roli, np. `listsOf` zwraca rolę z repozytorium albo `roleOf` korzysta z tej samej reguły. |
+| 4 | note | backend (API) | Treść `[]` albo brak treści daje `400 validation_failed` z `fields: {}`. Klient nie ma wtedy błędu pola do pokazania. | `POST /api/v1/lists` z `[]` → `{"error":{"code":"validation_failed","fields":{}}}` | Do rozważenia: `fields.name: "required"` dla treści, która nie jest obiektem. |
+| 5 | note | domena (F-05) | Nazwa złożona tylko ze znaku o zerowej szerokości (`​`) jest przyjmowana, bo `trim()` go nie usuwa. Lista ma wtedy na ekranie pustą nazwę. | `POST {"name":"​"}` → 201 | Do rozważenia razem z #1: normalizacja w schemacie (znaki niewidoczne / sterujące). |
+| 6 | note | backend (YAGNI) | `createLists(pool)` w `modules/listy/index.ts` używa dziś tylko `lists.access.test.ts`. To seam z TDD planu (test 1), a `pozycje` w T-006 skorzysta z `requireListAccess`, więc to nie nadmiar. | `grep createLists` | Bez zmian, jeśli T-006 tego użyje. |
+
+**Co sprawdziłem i przeszło**
+
+- Czysta instalacja (`pnpm install --frozen-lockfile`) i `pnpm check`: Prettier, ESLint, `tsc`, jscpd 0 klonów, dependency-cruiser 0 naruszeń (201 modułów), design-check 0 błędów, backlog-check, Vitest **35 plików / 160 testów** zielonych. `pnpm build` OK. `pnpm test:e2e` **14/14** (telefon i komputer), w tym J-01 bez regresji. Instalacja i build nie zmieniły śledzonych plików.
+- Spot-checki (każdy cofnięty, `git status` czysty): wyłączenie reguły `owner` w `requireListAccess` → 3 testy czerwone (`lists.access`, `lists.authz` ×2); usunięcie `.for("update")` → test 20 równoległych żądań czerwony; menu właściciela dla każdej roli na SC-06 → test uczestnika czerwony; przegląd bez warunku członkostwa → 3 testy `lists.overview` czerwone.
+- Red evidence jest dla każdego testu z planu. Testy, które przeszły od razu, mają opisany spot-check. Testy sprawdzają zachowanie na uzgodnionych seamach (`inject`, funkcja modułu, RTL + MSW), a wartości oczekiwane są literałami.
+- AC1–AC8 i SEC1–SEC4: **pass** (testy przeczytane, zachowanie sprawdzone ręcznie). AC2 i SEC1 przechodzą w swoim zakresie, ale znalezisko #1 dotyczy wejścia, którego kryteria nie wymieniają.
+- TH-01 (curl, drugie konto): `GET` / `PATCH` / `DELETE` cudzej listy dają bajt w bajt taką samą odpowiedź `404 {"error":{"code":"not_found"}}` jak losowy UUID. `HEAD` też 404. UUID wielkimi literami nie omija sprawdzenia. Nieprawidłowa treść `PATCH` daje 400 i dla cudzej, i dla nieistniejącej listy (walidacja przed dostępem, więc nic nie wycieka). Lista A bez zmian, `GET /lists` B pusty. Anonim dostaje 401. W logu `security` jest `list_access_denied` z `userId` i `listId`, bez nazwy listy.
+- TH-02: uczestnik (dodany do `list_member` w bazie) nie widzi „Więcej opcji”. API z rolą uczestnika daje 403 `owner_only` (testy i spot-check).
+- TH-13: 51. lista daje 409. Treść ponad 16 kB daje 413. Dodatkowe pola (`ownerId`, `id`) są ignorowane. `Origin` obcy, z końcowym `/` albo bez nagłówka daje 403 `invalid_origin`.
+- Przypadki brzegowe: obcięte spacje, dokładnie 100 znaków, 100 emoji (201) i 101 (400), polskie znaki, HTML / SQL w nazwie zapisane dosłownie. Podwójne kliknięcie „Utwórz” i podwójny Enter tworzą jedną listę. Ponowne `DELETE` daje 404.
+- UI (Chromium 390 px i 320 px, Firefox): wszystkie stany SC-05 (pusty, ładowanie, błąd + „Spróbuj ponownie”, limit, błędy nazwy, nieudane utworzenie z zachowaną nazwą, brak sieci) i SC-06 (pusty, ładowanie, błąd, brak dostępu). Lista usunięta przy otwartej drugiej karcie właściciela i u uczestnika po odświeżeniu pokazuje „Nie masz dostępu do tej listy.”, a SC-05 uczestnika jest pusty. Wygasła sesja na SC-06 → SC-01. Okno usunięcia: „Zniknie też u 1 uczestnika.”, fokus na „Anuluj”, pułapka Tab (Chromium i Firefox), Esc wraca na „Więcej opcji”. Esc w arkuszu i menu wraca na „Więcej opcji”. Karta uczestnika: „od Ania”, nazwa dostępna „Enter, udostępniona przez Ania, 0 do kupienia”. 320 px i tekst 200 %: bez przewijania w poziomie (SC-05 z formularzem, SC-06 z menu i arkuszem). Cele ≥ 48 px. Przy „ogranicz ruch” szkielety bez animacji. axe (WCAG 2.2 AA) bez naruszeń także dla stanów ładowania i błędu SC-05 i SC-06. CSP blokuje wstrzyknięte style inline.
+- Nie sprawdziłem: Safari (iOS) i czytnik ekranu na urządzeniu. Brak narzędzi w tym środowisku.
+
+**Do zmiany przed kolejną rundą**
+
+1. #1: jeden handler dla nieoczekiwanych błędów w `/api/v1/*`, który zwraca `500 {"error":{"code":"internal"}}` z `requestId` i loguje wyjątek bez parametrów zapytania z treścią użytkownika. Test integracyjny, który to udowadnia. Odrzucenie NUL (i rozważenie innych znaków sterujących) w `listNameRequestSchema` z testem jednostkowym i integracyjnym (400 `validation_failed`, `fields.name`).
+2. #2 i #3 opcjonalnie w tej samej rundzie (minor).
