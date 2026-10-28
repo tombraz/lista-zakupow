@@ -20,6 +20,12 @@ export function Items({ list, addNameRef }: ItemsProps) {
   const people = [list.owner, ...list.members];
   const [editing, setEditing] = useState<Item | null>(null);
   const focus = useFocusAfterRemoval(list.items, addNameRef);
+  // SC-06 Empty: pusta lista otwiera się z fokusem w „Co kupić?” — tylko przy wejściu, bo zmiany
+  // innych osób nie przenoszą fokusu.
+  const openedEmpty = useRef(list.items.length === 0);
+  useEffect(() => {
+    if (openedEmpty.current) addNameRef.current?.focus();
+  }, [addNameRef]);
   return (
     <section aria-labelledby="to-buy">
       <h2 id="to-buy" className={styles.visuallyHidden}>

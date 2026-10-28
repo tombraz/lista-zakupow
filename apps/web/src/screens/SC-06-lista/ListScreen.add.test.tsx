@@ -74,6 +74,15 @@ describe("SC-06 AddBar", () => {
     expect(id).toMatch(UUID);
     expect(sent).toEqual({ name: "Mleko", note: "2 l" });
   });
+
+  it("focuses the add field when an empty list opens (SC-06 Empty, T-011)", async () => {
+    const { name } = await openList();
+
+    expect(
+      screen.getByText("Lista jest pusta. Dopisz pierwszą rzecz w polu na dole."),
+    ).toBeVisible();
+    expect(name).toHaveFocus();
+  });
 });
 
 describe("SC-06 AddBar warnings", () => {
