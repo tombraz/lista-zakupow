@@ -1,4 +1,9 @@
-import { signInRequestSchema, signUpRequestSchema, type ErrorCode } from "@lista/shared";
+import {
+  signInRequestSchema,
+  signUpRequestSchema,
+  type ErrorCode,
+  type SignUpInvitation,
+} from "@lista/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { validate } from "../../../http/validate";
@@ -10,7 +15,12 @@ import type { SignInFailures } from "../infra/sign-in-failures";
 interface AuthDeps {
   auth: Auth;
   failures: SignInFailures;
+  /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
+  invitationOnSignUp: () => InvitationOnSignUp | undefined;
 }
+
+/** Przyjmuje zaproszenie dla nowego konta; błąd zaproszenia wraca w treści, nie jako status. */
+export type InvitationOnSignUp = (userId: string, token: string) => Promise<SignUpInvitation>;
 
 // Kody Better Auth, które klient musi rozróżnić; resztę mapuje sam status HTTP.
 const AUTH_ERRORS: Record<string, [status: number, code: ErrorCode]> = {
@@ -39,11 +49,15 @@ interface AuthUser {
 export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string): void {
   const { auth, failures } = deps;
   app.post("/api/auth/sign-up/email", async (request, reply) => {
-    const { name, email, password } = validate(signUpRequestSchema, request.body);
+    const { name, email, password, invitationToken } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
     if (response.status === 429) logSecurity(request, "rate_limited", {});
     if (await lostEmailRace(auth, response, email)) throw new ApiError(409, "email_taken");
-    return relay(response, reply);
+    const accept = deps.invitationOnSignUp();
+    if (invitationToken === undefined || !accept) return relay(response, reply);
+    return relay(response, reply, async (user) => ({
+      invitation: await accept(user.id, invitationToken),
+    }));
   });
 
   app.post("/api/auth/sign-in/email", async (request, reply) => {
@@ -104,12 +118,18 @@ function forward(auth: Auth, origin: string, request: FastifyRequest, body: obje
   );
 }
 
-async function relay(response: Response, reply: FastifyReply) {
+async function relay(
+  response: Response,
+  reply: FastifyReply,
+  extra: (user: AuthUser) => Promise<object> = () => Promise.resolve({}),
+) {
   passCookies(response.headers, reply);
   const body = (await response.json().catch(() => ({}))) as { code?: string; user?: AuthUser };
   if (response.ok) {
     const user = body.user;
-    return reply.send(user ? { user: { id: user.id, name: user.name, email: user.email } } : {});
+    if (!user) return reply.send({});
+    const account = { id: user.id, name: user.name, email: user.email };
+    return reply.send({ user: account, ...(await extra(account)) });
   }
   const known = STATUS_CODES[response.status];
   const [status, code] =

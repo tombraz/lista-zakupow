@@ -1,0 +1,20 @@
+/* Nad dolną krawędzią, na środku kolumny; nie zasłania fokusu (krótki, bez akcji). */
+.region {
+  position: fixed;
+  right: var(--spacing-lg);
+  bottom: var(--spacing-xl);
+  left: var(--spacing-lg);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: var(--size-content-max);
+  margin: 0;
+  padding: var(--spacing-md) var(--spacing-lg);
+  color: var(--color-text-on-inverse);
+  background: var(--color-surface-inverse);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-toast);
+}

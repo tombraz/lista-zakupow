@@ -9,6 +9,7 @@ export const messages = {
   submit: "Zaloguj się",
   noAccount: "Nie masz konta?",
   register: "Załóż konto",
+  invitation: (list: string) => `Zaloguj się, żeby dołączyć do listy „${list}”.`,
 };
 
 /** Kod błędu API → komunikat nad formularzem (F-02: bez wskazania, co było złe). */

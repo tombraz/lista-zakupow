@@ -1,11 +1,9 @@
-import type { Me, SignInRequest, SignUpRequest } from "@lista/shared";
+import type { Me, SignInRequest, SignUpRequest, SignUpResponse } from "@lista/shared";
 import { apiRequest, ApiRequestError } from "./client";
 
-export async function signUp(account: SignUpRequest): Promise<Me> {
-  const { user } = await apiRequest<{ user: Me }>("/api/auth/sign-up/email", {
-    body: account,
-  });
-  return user;
+/** Z `invitationToken` odpowiedź mówi też, czy rejestracja dołączyła do listy (F-12). */
+export function signUp(account: SignUpRequest): Promise<SignUpResponse> {
+  return apiRequest<SignUpResponse>("/api/auth/sign-up/email", { body: account });
 }
 
 export async function signIn(credentials: SignInRequest): Promise<Me> {

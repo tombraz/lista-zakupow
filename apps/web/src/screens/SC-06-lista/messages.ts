@@ -15,6 +15,9 @@ export const messages = {
   noAccess: "Nie masz dostępu do tej listy.",
   backToLists: "Wróć do moich list",
   more: "Więcej opcji",
+  participants: "Uczestnicy",
+  // SC-08, „Copy” → joined: komunikat po dołączeniu pokazuje SC-06.
+  joined: (name: string) => `Dołączyłeś(-aś) do listy „${name}”.`,
   menu: { rename: "Zmień nazwę listy", delete: "Usuń listę" },
   rename: { title: "Zmień nazwę listy", label: "Nazwa listy", save: "Zapisz" },
   delete: {

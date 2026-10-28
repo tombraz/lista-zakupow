@@ -2,8 +2,10 @@ import { randomInt, randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { normalizeItemName } from "@lista/shared";
-import { item, listMember, shoppingList } from "../src/db/schema";
+import { INVITATION_VALIDITY_DAYS, normalizeItemName } from "@lista/shared";
+import { invitation, item, listMember, shoppingList } from "../src/db/schema";
+import { invitationToken } from "../src/modules/zaproszenia/domain/token";
+import { cryptoRandomBytes } from "../src/modules/zaproszenia/infra/random";
 import { TEST_ORIGIN } from "./app";
 import { cookieHeader } from "./cookies";
 
@@ -104,4 +106,25 @@ export async function createItem(
     .returning({ id: item.id });
   if (!row) throw new Error("createItem: no row");
   return { id: row.id, name };
+}
+
+export interface TestInvitation {
+  id: string;
+  token: string;
+}
+
+/** Aktywny link zaproszenia wprost w bazie; `createdAt` domyślnie teraz, ważny 7 dni. */
+export async function createInvitation(
+  pool: Pool,
+  list: Pick<TestList, "id">,
+  createdAt = new Date(),
+): Promise<TestInvitation> {
+  const token = invitationToken(cryptoRandomBytes);
+  const expiresAt = new Date(createdAt.getTime() + INVITATION_VALIDITY_DAYS * 86_400_000);
+  const [row] = await drizzle(pool)
+    .insert(invitation)
+    .values({ listId: list.id, token, createdAt, expiresAt })
+    .returning({ id: invitation.id });
+  if (!row) throw new Error("createInvitation: no row");
+  return { id: row.id, token };
 }

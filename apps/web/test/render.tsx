@@ -21,9 +21,13 @@ export function sessionIs(user: Me | null) {
   );
 }
 
-/** Cała aplikacja (trasy jak w przeglądarce) od podanego adresu. */
-export function renderApp(entry: InitialEntry) {
-  const router = createMemoryRouter(routes, { initialEntries: [entry] });
+/** Cała aplikacja (trasy jak w przeglądarce) od podanego adresu (ostatniego z historii). */
+export function renderApp(entry: InitialEntry | InitialEntry[]) {
+  const initialEntries = Array.isArray(entry) ? entry : [entry];
+  const router = createMemoryRouter(routes, {
+    initialEntries,
+    initialIndex: initialEntries.length - 1,
+  });
   const view = render(
     <QueryClientProvider client={testQueryClient()}>
       <RouterProvider router={router} />

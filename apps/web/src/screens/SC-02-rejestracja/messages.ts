@@ -15,6 +15,7 @@ export const messages = {
   submit: "Załóż konto",
   haveAccount: "Masz już konto?",
   signIn: "Zaloguj się",
+  invitation: (list: string) => `Po założeniu konta dołączysz do listy „${list}”.`,
   emailTaken: {
     before: "Konto z tym adresem już istnieje.",
     signIn: "Zaloguj się",

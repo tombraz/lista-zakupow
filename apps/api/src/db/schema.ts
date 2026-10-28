@@ -184,6 +184,28 @@ export const item = pgTable(
   ],
 );
 
+// F-11, ADR 0005: token jawny (SC-07 pokazuje link ponownie); jednorazowy, 7 dni, unieważnialny.
+export const invitation = pgTable(
+  "invitation",
+  {
+    id: uuid("id").primaryKey().$defaultFn(uuidv7),
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => shoppingList.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    usedAt: timestamptz("used_at"),
+    usedBy: text("used_by").references(() => user.id, { onDelete: "set null" }),
+    revokedAt: timestamptz("revoked_at"),
+    createdAt: timestamptz("created_at").notNull(),
+  },
+  (table) => [
+    index("invitation_list_id_idx").on(table.listId),
+    // `SET NULL` przy usunięciu konta (F-04) szuka wierszy po `used_by`.
+    index("invitation_used_by_idx").on(table.usedBy),
+  ],
+);
+
 // BRD §10: odhaczenia per lista, dzień (Europe/Warsaw) i domownik — dane do miar sukcesu.
 export const listDailyActivity = pgTable(
   "list_daily_activity",

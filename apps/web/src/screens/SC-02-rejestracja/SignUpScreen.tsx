@@ -8,6 +8,8 @@ import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { PasswordField } from "../../components/PasswordField/PasswordField";
 import { TextField } from "../../components/TextField/TextField";
 import { useFocusTargets } from "../../components/useFocus";
+import { EntryLink } from "../../invitations/EntryLink";
+import type { InvitationContext } from "../../invitations/invitationContext";
 import { ErrorSummary } from "./ErrorSummary";
 import { fieldMessages, formErrorText, messages, type SignUpField } from "./messages";
 import styles from "./SignUpScreen.module.css";
@@ -37,6 +39,9 @@ export function SignUpScreen() {
 
   return (
     <AuthPage title={messages.title} legalInNewTab>
+      {form.invitation && (
+        <InlineAlert tone="info">{messages.invitation(form.invitation.listName)}</InlineAlert>
+      )}
       {form.formError && (
         <InlineAlert tone="error" ref={alertRef}>
           {formErrorText(form.formError)}
@@ -99,10 +104,19 @@ export function SignUpScreen() {
           {messages.submit}
         </Button>
       </form>
-      <p className={styles.switch}>
-        {messages.haveAccount} <Link to="/logowanie">{messages.signIn}</Link>
-      </p>
+      <SignInSwitch email={values.email} invitation={form.invitation} />
     </AuthPage>
+  );
+}
+
+function SignInSwitch(props: { email: string; invitation: InvitationContext | null }) {
+  return (
+    <p className={styles.switch}>
+      {messages.haveAccount}{" "}
+      <EntryLink to="/logowanie" {...props}>
+        {messages.signIn}
+      </EntryLink>
+    </p>
   );
 }
 

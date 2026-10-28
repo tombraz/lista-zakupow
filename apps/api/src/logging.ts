@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { LogController, type FastifyBaseLogger, type FastifyServerOptions } from "fastify";
+import {
+  LogController,
+  type FastifyBaseLogger,
+  type FastifyRequest,
+  type FastifyServerOptions,
+} from "fastify";
 import type { DestinationStream } from "pino";
 
 export interface LogSettings {
@@ -20,6 +25,37 @@ const REDACTED_PATHS = [
   'res.headers["set-cookie"]',
 ];
 
+// TH-08: token zaproszenia w ścieżce to uprawnienie do listy; do logu tylko jego miejsce.
+const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/)[^/?#]+/;
+
+/** Ścieżka żądania bez tokenu zaproszenia (`/api/v1/invitations/[redacted]/accept`). */
+export function redactedUrl(url: string): string {
+  return url.replace(INVITATION_TOKEN_PATH, "$1[redacted]");
+}
+
+interface LoggedRequest {
+  [key: string]: unknown;
+  method?: string;
+  url?: string;
+  host?: string;
+  remoteAddress?: string;
+  remotePort?: number;
+}
+
+// Jak domyślny serializer Fastify, ale z `redactedUrl`. `Partial`: pino stosuje go do każdego
+// pola `req` w logu, nie tylko do żądania Fastify.
+function serializeRequest(request: FastifyRequest): LoggedRequest {
+  const raw: Partial<FastifyRequest> = request;
+  const logged: LoggedRequest = {};
+  if (raw.method !== undefined) logged.method = raw.method;
+  if (raw.url !== undefined) logged.url = redactedUrl(raw.url);
+  if (raw.host !== undefined) logged.host = raw.host;
+  if (raw.ip !== undefined) logged.remoteAddress = raw.ip;
+  const port = raw.socket?.remotePort;
+  if (port !== undefined) logged.remotePort = port;
+  return logged;
+}
+
 export function loggingOptions(settings: LogSettings | undefined) {
   return {
     logger: settings
@@ -27,6 +63,7 @@ export function loggingOptions(settings: LogSettings | undefined) {
           level: settings.level,
           ...(settings.stream ? { stream: settings.stream } : {}),
           redact: { paths: REDACTED_PATHS, censor: "[REDACTED]" },
+          serializers: { req: serializeRequest },
         }
       : false,
     logController: new LogController({ requestIdLogLabel: "requestId" }),

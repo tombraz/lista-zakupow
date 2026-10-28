@@ -27,6 +27,12 @@ export interface ListView extends ShoppingList {
   role: ListRole;
 }
 
+/** Lista widziana z linku zaproszenia (SC-08): tylko nazwa i imię właściciela (MC-02). */
+export interface InvitationTarget {
+  listName: string;
+  ownerName: string;
+}
+
 /** Repozytorium list, którego potrzebuje domena; implementacja w `infra`. */
 export interface ListsRepository {
   /** Rola domownika na liście albo `null`, gdy lista nie istnieje lub nie ma do niej dostępu. */
@@ -38,6 +44,26 @@ export interface ListsRepository {
   delete(listId: string): Promise<void>;
   /** Listy z dostępem domownika (własne i udostępnione), od ostatnio zmienionej. */
   listsOf(userId: string, listId?: string): Promise<ShoppingList[]>;
+  invitationTarget(listId: string): Promise<InvitationTarget | null>;
+  participantCount(listId: string): Promise<number>;
+}
+
+/** Wynik dopisania uczestnika do listy (F-12). */
+export type JoinOutcome = "joined" | "own_list" | "already_member" | "limit_reached";
+
+/**
+ * F-12: tylko „joined” dopisuje uczestnika. Domownik z dostępem dostaje identyfikator listy
+ * (SC-08 „Otwórz listę”); przy limicie 20 lista nie jest ujawniana.
+ */
+export function requireJoined(outcome: JoinOutcome, listId: string, userId: string): void {
+  if (outcome === "joined") return;
+  if (outcome === "limit_reached") {
+    throw new DomainError("limit_reached", {
+      limit: "participants",
+      security: { event: "limit_reached", ids: { userId, listId } },
+    });
+  }
+  throw new DomainError(outcome, { listId });
 }
 
 /**

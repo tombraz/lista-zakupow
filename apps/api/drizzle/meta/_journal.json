@@ -43,6 +43,13 @@
       "when": 1793215491078,
       "tag": "0005_statystyki",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793219299181,
+      "tag": "0006_zaproszenia",
+      "breakpoints": true
     }
   ]
 }

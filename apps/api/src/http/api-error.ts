@@ -24,11 +24,18 @@ const DOMAIN_STATUS: Record<DomainErrorCode, number> = {
   owner_only: 403,
   limit_reached: 409,
   duplicate_item: 409,
+  own_list: 409,
+  already_member: 409,
+  invitation_invalid: 410,
+  rate_limited: 429,
 };
 
-function domainErrorBody(error: DomainError): ApiErrorBody {
-  const { limit } = error.details;
-  return { error: { code: error.code, ...(limit ? { limit } : {}) } };
+/** Treść odpowiedzi dla błędu domeny (także w treści rejestracji z zaproszeniem). */
+export function domainErrorBody(error: DomainError): ApiErrorBody {
+  const { limit, listId } = error.details;
+  return {
+    error: { code: error.code, ...(limit ? { limit } : {}), ...(listId ? { listId } : {}) },
+  };
 }
 
 function logSecurityEvent(request: FastifyRequest, error: DomainError): void {

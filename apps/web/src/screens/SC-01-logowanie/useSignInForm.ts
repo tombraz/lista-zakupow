@@ -8,8 +8,9 @@ import { useSetSession } from "../../session/useSession";
 
 type Field = "email" | "password";
 
-export function useSignInForm() {
-  const [values, setValues] = useState({ email: "", password: "" });
+/** `initialEmail`: wpisany już na SC-02 (3.3.7). */
+export function useSignInForm(initialEmail = "") {
+  const [values, setValues] = useState({ email: initialEmail, password: "" });
   const [missing, setMissing] = useState<Partial<Record<Field, true>>>({});
   const [formError, setFormError] = useState<RequestErrorCode | null>(null);
   const [focus, requestFocus] = useFocusRequest<Field | "alert">();

@@ -1,11 +1,12 @@
 import type { ListDetails } from "@lista/shared";
 import { useRef, useState } from "react";
-import { Link, useParams } from "react-router";
-import { AppBar } from "../../components/AppBar/AppBar";
+import { Link, useLocation, useParams } from "react-router";
+import { AppBar, AppBarLink } from "../../components/AppBar/AppBar";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { LoadError } from "../../components/LoadError/LoadError";
 import { MoreMenu } from "../../components/MoreMenu/MoreMenu";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
+import { joinedListOf } from "../../invitations/invitationContext";
 import { useList } from "../../lists/useList";
 import { AddItemBar } from "./AddItemBar";
 import { DeleteListDialog } from "./DeleteListDialog";
@@ -38,7 +39,18 @@ function ListBar({ list }: { list: ListDetails | undefined }) {
     <AppBar
       title={list?.name ?? ""}
       back={BACK}
-      actions={list?.role === "owner" && <OwnerMenu list={list} />}
+      actions={
+        list?.role === "owner" && (
+          <>
+            <AppBarLink
+              to={`/listy/${list.id}/uczestnicy`}
+              label={messages.participants}
+              icon="👥"
+            />
+            <OwnerMenu list={list} />
+          </>
+        )
+      }
     />
   );
 }
@@ -52,6 +64,7 @@ function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof us
   return (
     <>
       <main className={styles.page} aria-busy={list.isPending || undefined}>
+        <JoinedNotice />
         {list.isPending && <Skeleton rows={5} variant="row" />}
         {list.isError && (
           <LoadError
@@ -105,6 +118,14 @@ function StatusLine({ items }: { items: ListDetails["items"] }) {
     <p className={styles.status} role="status">
       {text}
     </p>
+  );
+}
+
+/** Po dołączeniu z SC-08: „Dołączyłeś(-aś) do listy „<nazwa>”.” (F-12). */
+function JoinedNotice() {
+  const joined = joinedListOf(useLocation().state);
+  return joined === null ? null : (
+    <InlineAlert tone="success">{messages.joined(joined)}</InlineAlert>
   );
 }
 

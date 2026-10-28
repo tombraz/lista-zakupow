@@ -1,4 +1,4 @@
-import type { ApiErrorBody, ErrorCode, FieldErrorCode } from "@lista/shared";
+import type { ApiErrorBody, ErrorCode, FieldErrorCode, LimitName } from "@lista/shared";
 
 export type RequestErrorCode = ErrorCode | "network";
 
@@ -8,6 +8,8 @@ export class ApiRequestError extends Error {
     readonly status: number,
     readonly code: RequestErrorCode,
     readonly fields: Partial<Record<string, FieldErrorCode>> = {},
+    /** `limit` przy `limit_reached`; `listId` przy `own_list` / `already_member` (SC-08). */
+    readonly details: { limit?: LimitName; listId?: string } = {},
   ) {
     super(code);
   }
@@ -42,9 +44,16 @@ export async function apiRequest<T>(
     throw new ApiRequestError(0, "network");
   }
   const json: unknown = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = (json as Partial<ApiErrorBody>).error;
-    throw new ApiRequestError(response.status, error?.code ?? "internal", error?.fields);
-  }
+  if (!response.ok) throw requestErrorOf(response.status, json);
   return json as T;
+}
+
+function requestErrorOf(status: number, json: unknown): ApiRequestError {
+  const error = (json as Partial<ApiErrorBody>).error;
+  if (!error) return new ApiRequestError(status, "internal");
+  const { code, fields, limit, listId } = error;
+  return new ApiRequestError(status, code, fields, {
+    ...(limit ? { limit } : {}),
+    ...(listId ? { listId } : {}),
+  });
 }

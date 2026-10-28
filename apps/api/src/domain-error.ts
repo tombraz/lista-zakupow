@@ -13,7 +13,7 @@ export interface SecurityEvent {
 export class DomainError extends Error {
   constructor(
     readonly code: DomainErrorCode,
-    readonly details: { limit?: LimitName; security?: SecurityEvent } = {},
+    readonly details: { limit?: LimitName; listId?: string; security?: SecurityEvent } = {},
   ) {
     super(code);
   }

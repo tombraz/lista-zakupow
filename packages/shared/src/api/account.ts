@@ -37,6 +37,8 @@ export const signUpRequestSchema = z.object({
   password: newPassword,
   termsAccepted: consent,
   ageConfirmed: consent,
+  // F-12: zły token nie blokuje rejestracji (api.md), więc tu tylko typ; ważność sprawdza API.
+  invitationToken: z.string().optional(),
 });
 
 export type SignUpRequest = z.input<typeof signUpRequestSchema>;

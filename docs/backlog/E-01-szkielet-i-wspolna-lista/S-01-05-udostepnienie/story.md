@@ -2,7 +2,7 @@
 id: S-01-05
 epic: E-01
 title: Udostępnienie listy linkiem (web)
-status: todo           # todo | in-progress | done
+status: in-progress         # todo | in-progress | done
 requirements: [F-11, F-12, F-01]
 screens: [SC-07, SC-08, SC-01, SC-02]
 ---

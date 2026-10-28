@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzl
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { alias } from "drizzle-orm/pg-core";
 import { item, shoppingList, user } from "../../../db/schema";
+import { lockList } from "../../listy";
 import { recordCheck } from "../../statystyki";
 import type {
   InsertResult,
@@ -41,11 +42,7 @@ export class DrizzleItemsRepository implements ItemsRepository {
   async insert(values: NewItem, limit: number): Promise<InsertResult> {
     return this.db.transaction(async (tx) => {
       // data-model.md: blokada wiersza listy szereguje równoległe dodawanie jej pozycji.
-      await tx
-        .select({ id: shoppingList.id })
-        .from(shoppingList)
-        .where(eq(shoppingList.id, values.listId))
-        .for("update");
+      await lockList(tx, values.listId);
       if (values.id !== undefined) {
         const repeated = await this.repeatedInsert(tx, values.id, values.listId);
         if (repeated) return repeated;

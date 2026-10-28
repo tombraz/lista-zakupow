@@ -1,7 +1,54 @@
 import { and, asc, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { listMember, shoppingList, user } from "../../../db/schema";
-import type { ListItems, ListRole, ListsRepository, Person, ShoppingList } from "../domain/lists";
+import type {
+  InvitationTarget,
+  JoinOutcome,
+  ListItems,
+  ListRole,
+  ListsRepository,
+  Person,
+  ShoppingList,
+} from "../domain/lists";
+
+/** Transakcja wołającego (inny moduł): zmiana razem z jego zapisem albo wcale. */
+export type Transaction = Pick<NodePgDatabase, "select" | "insert">;
+
+/**
+ * Blokuje wiersz listy do końca transakcji wołającego: szereguje równoległe zmiany pod
+ * limitami liczonymi na liście (layers/db.md, „Konwencje”). Zwraca właściciela albo `null`.
+ */
+export async function lockList(
+  tx: Pick<NodePgDatabase, "select">,
+  listId: string,
+): Promise<{ ownerId: string } | null> {
+  const [list] = await tx
+    .select({ ownerId: shoppingList.ownerId })
+    .from(shoppingList)
+    .where(eq(shoppingList.id, listId))
+    .for("update");
+  return list ?? null;
+}
+
+/** F-12: limit liczony pod blokadą listy, więc bez wyścigu (data-model.md). */
+export async function insertParticipant(
+  tx: Transaction,
+  listId: string,
+  userId: string,
+  limit: number,
+): Promise<JoinOutcome> {
+  const list = await lockList(tx, listId);
+  // data-model.md: właściciel nie jest wierszem `list_member`.
+  if (list?.ownerId === userId) return "own_list";
+  const members = await tx
+    .select({ userId: listMember.userId })
+    .from(listMember)
+    .where(eq(listMember.listId, listId));
+  if (members.some((member) => member.userId === userId)) return "already_member";
+  if (members.length >= limit) return "limit_reached";
+  await tx.insert(listMember).values({ listId, userId });
+  return "joined";
+}
 
 export class DrizzleListsRepository implements ListsRepository {
   constructor(
@@ -96,6 +143,23 @@ export class DrizzleListsRepository implements ListsRepository {
       toBuyCount: toBuy.get(row.id) ?? 0,
       updatedAt: row.updatedAt,
     }));
+  }
+
+  async participantCount(listId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(listMember)
+      .where(eq(listMember.listId, listId));
+    return row?.count ?? 0;
+  }
+
+  async invitationTarget(listId: string): Promise<InvitationTarget | null> {
+    const [row] = await this.db
+      .select({ listName: shoppingList.name, ownerName: user.name })
+      .from(shoppingList)
+      .innerJoin(user, eq(user.id, shoppingList.ownerId))
+      .where(eq(shoppingList.id, listId));
+    return row ?? null;
   }
 
   private async membersOf(listIds: string[]): Promise<Map<string, Person[]>> {

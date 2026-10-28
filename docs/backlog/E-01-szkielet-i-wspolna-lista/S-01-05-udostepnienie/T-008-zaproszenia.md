@@ -3,7 +3,7 @@ id: T-008
 title: Link zaproszenia i jego przyjęcie (web)
 epic: E-01
 story: S-01-05
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa               # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -37,21 +37,21 @@ Właściciel tworzy na SC-07 jednorazowy link zaproszenia ważny 7 dni, kopiuje 
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given właściciel listy, when `POST /api/v1/lists/:listId/invitations`, then 201 `{ id, url, expiresAt }` z `expiresAt` = teraz + 7 dni; `GET …/invitations` zwraca tylko nieużyte, nieunieważnione, niewygasłe; SC-07 pokazuje nowy InviteLinkBox na górze z fokusem na „Kopiuj”. — verified by: test integracyjny `invitations.create.test` (zegar) + test komponentu SC-07
-- [ ] AC2: Given aktywny link, when właściciel go unieważni (`DELETE …/invitations/:invitationId`), then 204, link znika z SC-07 (komunikat `polite` „Link unieważniony”, fokus na „Utwórz link zaproszenia”), a `GET /api/v1/invitations/:token` zwraca 410. — verified by: test integracyjny + test komponentu
-- [ ] AC3: Given ważny token, when ktokolwiek (także anonim) wywoła `GET /api/v1/invitations/:token`, then dostaje tylko `{ listName, ownerName }`; SC-08 pokazuje „{imię} zaprasza Cię do listy „{nazwa}”.” z fokusem na `h1` i przyciskami zależnymi od zalogowania. — verified by: test integracyjny + test komponentu SC-08
-- [ ] AC4: Given zalogowany domownik i ważny token, when `POST /api/v1/invitations/:token/accept`, then 200 `{ listId }`, powstaje członkostwo, link jest oznaczony jako użyty; lista jest w jego `GET /api/v1/lists` z `role: "participant"`; SC-08 przechodzi na SC-06 z komunikatem „Dołączyłeś(-aś)…”, adres zaproszenia zastąpiony w historii (`replace`). — verified by: test integracyjny `invitations.accept.test` + test komponentu SC-08
-- [ ] AC5: Given osoba bez konta z ważnym tokenem, when zarejestruje się z `invitationToken`, then konto powstaje i jest od razu uczestnikiem listy; given nieważny token przy rejestracji, then konto i tak powstaje, a klient pokazuje stan „Ten link nie działa”. Given „Mam konto — zaloguj się”, then po zalogowaniu SC-08 dołącza automatycznie; SC-01 / SC-02 pokazują „Info — zaproszenie” z nazwą listy, e-mail z SC-01 jest wstępnie wypełniony w SC-02. — verified by: testy integracyjne `sign-up-invitation.test` + testy komponentów + E2E J-04
-- [ ] AC6: Given lista ma 20 uczestników, when ktoś przyjmuje zaproszenie, then 409 `limit_reached` (`participants`), członkostwo nie powstaje, link pozostaje nieużyty; SC-08 pokazuje komunikat o limicie; SC-07 przy 20 uczestnikach pokazuje ostrzeżenie i nieaktywny „Utwórz link zaproszenia” (`POST …/invitations` → 409). — verified by: testy integracyjne + testy komponentów
-- [ ] AC7: Given właściciel na własnym linku albo uczestnik na liście, na której już jest, when przyjmuje, then 409 `own_list` / `already_member`, nic się nie zmienia (link nieużyty); SC-08 pokazuje „To Twoja lista…” / „Już jesteś na tej liście.” + „Otwórz listę”. — verified by: testy integracyjne + test komponentu SC-08
-- [ ] AC8: Given schowek niedostępny, when właściciel kliknie „Kopiuj”, then link jest zaznaczony w polu i widać „Skopiuj link ręcznie.” — verified by: test komponentu (schowek podstawiony)
-- [ ] AC9: Given SC-07 (pusty, z linkami, limit, błąd kopiowania) i SC-08 (każdy stan), when E2E je odwiedza, then axe bez naruszeń; Toast i komunikaty z `role="status"`. — verified by: E2E Playwright + axe
-- [ ] SEC1 (TH-05): Given link użyty, unieważniony albo starszy niż 7 dni (zegar), when ktoś go przyjmuje lub podgląda, then 410 `invitation_invalid` bez nazwy listy i imienia właściciela; given dwa równoległe przyjęcia jednego linku przez dwie osoby, then dokładnie jedno się udaje, drugie dostaje 410. — verified by: testy integracyjne `invitations.mc02.test`
-- [ ] SEC2 (TH-01): Given lista A i domownik B bez dostępu, when B wywoła `GET`, `POST` lub `DELETE` na `/api/v1/lists/<A>/invitations*`, then 404 i nic się nie zmienia; anonim 401; przyjęcie zaproszenia bez sesji → 401. — verified by: testy integracyjne `invitations.authz.test`
-- [ ] SEC3 (TH-02): Given uczestnik listy A, when wywoła `GET`, `POST` lub `DELETE` na zaproszeniach A, then 403 `owner_only`; SC-06 uczestnika nie pokazuje ikony „Uczestnicy”. — verified by: test integracyjny + test komponentu
-- [ ] SEC4 (TH-06): Given nowy link, when sprawdzę token, then ma 32 bajty z `crypto.randomBytes` zakodowane base64url (43 znaki), a dwa tokeny są różne; given zbyt wiele zapytań `GET /api/v1/invitations/:token` lub `POST …/accept` z jednego IP, then 429. — verified by: test unit generatora + test integracyjny limitu
-- [ ] SEC5 (TH-08): Given żądanie podglądu lub przyjęcia, when API je zaloguje, then ścieżka ma token zredagowany (np. `/api/v1/invitations/[redacted]`); SC-08 nie ładuje zasobów z zewnętrznych domen, a odpowiedź ma `Referrer-Policy: no-referrer`. — verified by: test integracyjny logów + E2E (lista żądań sieciowych strony)
-- [ ] SEC6 (TH-13): Given limit tworzenia linków, when właściciel (albo skrypt) tworzy linki ponad próg, then 429. — verified by: test integracyjny
+- [x] AC1: Given właściciel listy, when `POST /api/v1/lists/:listId/invitations`, then 201 `{ id, url, expiresAt }` z `expiresAt` = teraz + 7 dni; `GET …/invitations` zwraca tylko nieużyte, nieunieważnione, niewygasłe; SC-07 pokazuje nowy InviteLinkBox na górze z fokusem na „Kopiuj”. — verified by: test integracyjny `invitations.create.test` (zegar) + test komponentu SC-07
+- [x] AC2: Given aktywny link, when właściciel go unieważni (`DELETE …/invitations/:invitationId`), then 204, link znika z SC-07 (komunikat `polite` „Link unieważniony”, fokus na „Utwórz link zaproszenia”), a `GET /api/v1/invitations/:token` zwraca 410. — verified by: test integracyjny + test komponentu
+- [x] AC3: Given ważny token, when ktokolwiek (także anonim) wywoła `GET /api/v1/invitations/:token`, then dostaje tylko `{ listName, ownerName }`; SC-08 pokazuje „{imię} zaprasza Cię do listy „{nazwa}”.” z fokusem na `h1` i przyciskami zależnymi od zalogowania. — verified by: test integracyjny + test komponentu SC-08
+- [x] AC4: Given zalogowany domownik i ważny token, when `POST /api/v1/invitations/:token/accept`, then 200 `{ listId }`, powstaje członkostwo, link jest oznaczony jako użyty; lista jest w jego `GET /api/v1/lists` z `role: "participant"`; SC-08 przechodzi na SC-06 z komunikatem „Dołączyłeś(-aś)…”, adres zaproszenia zastąpiony w historii (`replace`). — verified by: test integracyjny `invitations.accept.test` + test komponentu SC-08
+- [x] AC5: Given osoba bez konta z ważnym tokenem, when zarejestruje się z `invitationToken`, then konto powstaje i jest od razu uczestnikiem listy; given nieważny token przy rejestracji, then konto i tak powstaje, a klient pokazuje stan „Ten link nie działa”. Given „Mam konto — zaloguj się”, then po zalogowaniu SC-08 dołącza automatycznie; SC-01 / SC-02 pokazują „Info — zaproszenie” z nazwą listy, e-mail z SC-01 jest wstępnie wypełniony w SC-02. — verified by: testy integracyjne `sign-up-invitation.test` + testy komponentów + E2E J-04
+- [x] AC6: Given lista ma 20 uczestników, when ktoś przyjmuje zaproszenie, then 409 `limit_reached` (`participants`), członkostwo nie powstaje, link pozostaje nieużyty; SC-08 pokazuje komunikat o limicie; SC-07 przy 20 uczestnikach pokazuje ostrzeżenie i nieaktywny „Utwórz link zaproszenia” (`POST …/invitations` → 409). — verified by: testy integracyjne + testy komponentów
+- [x] AC7: Given właściciel na własnym linku albo uczestnik na liście, na której już jest, when przyjmuje, then 409 `own_list` / `already_member`, nic się nie zmienia (link nieużyty); SC-08 pokazuje „To Twoja lista…” / „Już jesteś na tej liście.” + „Otwórz listę”. — verified by: testy integracyjne + test komponentu SC-08
+- [x] AC8: Given schowek niedostępny, when właściciel kliknie „Kopiuj”, then link jest zaznaczony w polu i widać „Skopiuj link ręcznie.” — verified by: test komponentu (schowek podstawiony)
+- [x] AC9: Given SC-07 (pusty, z linkami, limit, błąd kopiowania) i SC-08 (każdy stan), when E2E je odwiedza, then axe bez naruszeń; Toast i komunikaty z `role="status"`. — verified by: E2E Playwright + axe
+- [x] SEC1 (TH-05): Given link użyty, unieważniony albo starszy niż 7 dni (zegar), when ktoś go przyjmuje lub podgląda, then 410 `invitation_invalid` bez nazwy listy i imienia właściciela; given dwa równoległe przyjęcia jednego linku przez dwie osoby, then dokładnie jedno się udaje, drugie dostaje 410. — verified by: testy integracyjne `invitations.mc02.test`
+- [x] SEC2 (TH-01): Given lista A i domownik B bez dostępu, when B wywoła `GET`, `POST` lub `DELETE` na `/api/v1/lists/<A>/invitations*`, then 404 i nic się nie zmienia; anonim 401; przyjęcie zaproszenia bez sesji → 401. — verified by: testy integracyjne `invitations.authz.test`
+- [x] SEC3 (TH-02): Given uczestnik listy A, when wywoła `GET`, `POST` lub `DELETE` na zaproszeniach A, then 403 `owner_only`; SC-06 uczestnika nie pokazuje ikony „Uczestnicy”. — verified by: test integracyjny + test komponentu
+- [x] SEC4 (TH-06): Given nowy link, when sprawdzę token, then ma 32 bajty z `crypto.randomBytes` zakodowane base64url (43 znaki), a dwa tokeny są różne; given zbyt wiele zapytań `GET /api/v1/invitations/:token` lub `POST …/accept` z jednego IP, then 429. — verified by: test unit generatora + test integracyjny limitu
+- [x] SEC5 (TH-08): Given żądanie podglądu lub przyjęcia, when API je zaloguje, then ścieżka ma token zredagowany (np. `/api/v1/invitations/[redacted]`); SC-08 nie ładuje zasobów z zewnętrznych domen, a odpowiedź ma `Referrer-Policy: no-referrer`. — verified by: test integracyjny logów + E2E (lista żądań sieciowych strony)
+- [x] SEC6 (TH-13): Given limit tworzenia linków, when właściciel (albo skrypt) tworzy linki ponad próg, then 429. — verified by: test integracyjny
 
 ## TDD plan
 
@@ -110,17 +110,74 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
 - [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+### TDD (red → green)
+
+| # | Test | Red (pierwszy przebieg, przed kodem) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `apps/api/test/invitations.token.test.ts` (2) | `Error: not implemented` (stub `invitationToken`) | pass |
+| 2 | `invitations.create.test.ts` (2, zegar) | `expected 404 to be 201`, `expected 404 to be 200` (moduł niezarejestrowany) | pass |
+| 3 | `invitations.revoke.test.ts` (2) | `expected 404 to be 200` (brak podglądu / unieważnienia); test „404 dla nieznanego / unieważnionego / nie-UUID” przeszedł od razu (fallback 404) | pass |
+| 4 | `invitations.preview.test.ts` (2) | `TypeError: createInvitation is not a function` (brak fabryki; podgląd powstał w teście 3, który wymaga 200 przed unieważnieniem). Sprawdzenie, że gryzie: dodatkowe pole w odpowiedzi → `expected { leaked: true, listName: 'Dom', …(1) } to deeply equal { listName: 'Dom', ownerName: 'Ania' }`, kod przywrócony | pass |
+| 5 | `invitations.accept.test.ts` (1) | `expected 404 to be 200` | pass |
+| 6 | `invitations.mc02.test.ts` (4: użyty, unieważniony, wygasły z zegarem, 2 równoległe) | przeszedł od razu (warunkowy `UPDATE` z testu 5). Sprawdzenie: `UPDATE` bez warunku ważności → 4 × fail, kod przywrócony | pass |
+| 7 | `invitations.limit.test.ts` (3) | `expected 200 to be 409` (przyjęcie przy 20), `expected 201 to be 409` (tworzenie przy 20); 20. uczestnik przeszedł | pass |
+| 8 | `invitations.own-member.test.ts` (2) | `expected 200 to be 409` (właściciel dopisany jako uczestnik!), `expected 500 to be 409` (naruszenie PK) | pass |
+| 9 | `sign-up-invitation.test.ts` (3) | `expected undefined to deeply equal { listId }`, `expected undefined to deeply equal { error }`; bez tokenu przeszedł | pass |
+| 10 | `invitations.authz.test.ts` (3) | przeszedł od razu (`requireListAccess(…, "owner")` od testu 2). Sprawdzenie: rola `member` → `GET …/invitations: expected 200 to be 403`, kod przywrócony | pass |
+| 11 | `invitations.rate-limit.test.ts` (3) | `expected 410 to be 429` (podgląd, przyjęcie), `expected 201 to be 429` (tworzenie) | pass |
+| 12 | `invitations.logs.test.ts` (1) | `expected '{"level":30,…' not to contain '88tRrjCY…'` (token w `req.url`) | pass |
+| 13 | `apps/web/src/screens/SC-07-uczestnicy/ParticipantsScreen.test.tsx` (12, w tym ikona SC-06) | 12 × `Unable to find … heading "Uczestnicy"` / `link "Uczestnicy"` (stub) | pass |
+| 14 | `SC-08-zaproszenie/InvitationScreen.test.tsx` (11) | 11 × fail na stubie (brak `h1`, tekstów i przycisków) | pass |
+| 15 | `SC-08-zaproszenie/InvitationScreen.entry.test.tsx` (4: SC-01 → auto-dołączenie, SC-01 → SC-02 z e-mailem, rejestracja z tokenem, rejestracja z nieważnym tokenem) | `Unable to find … „Zaloguj się, żeby dołączyć do listy „Dom”.”`, `… „Po założeniu konta dołączysz…”`, `Unable to find role="heading" … "Ten link nie działa"` | pass |
+| 16 | `apps/web/e2e/j04-zaproszenie.spec.ts` (3 × telefon/komputer) | napisany po zachowaniu na szybszych seamach; pierwszy przebieg: błąd w samym teście (sprawdzanie originu przy `about:blank`), poprawiony | pass |
+
+Dodane do planu w trakcie: 20. uczestnik dołącza (granica limitu); limit tworzenia linków — okno godzinowe przesuwa się z zegarem i dotyczy jednej listy; SC-07 — zerwana odpowiedź przy tworzeniu i unieważnieniu pokazuje stan z serwera; 409 `limit_reached` przy tworzeniu odświeża listę; SC-08 — 410 przy dołączaniu (link użyty w międzyczasie), brak sieci przy dołączaniu; SC-01 → SC-02 zachowuje kontekst i e-mail.
+
+Zmienione istniejące pliki testowe (bez zmiany asercji): `apps/web/test/render.tsx` — `renderApp` przyjmuje też historię (tablica wpisów); `apps/api/test/factories.ts` — fabryka `createInvitation`.
+
+### Kryteria akceptacji
+
+- [x] AC1: `invitations.create.test` — 201 `{ id, url, expiresAt }` (tylko te klucze), `url` = `<APP_ORIGIN>/zaproszenie/<43 znaki>`, `expiresAt` = zegar + 7 dni; `GET` pomija użyte, unieważnione i wygasłe (dokładnie po 7 dniach), od najnowszego. `ParticipantsScreen.test` — nowy InviteLinkBox na górze, fokus na „Kopiuj”, dwa kliknięcia w trakcie zapisu = jedno żądanie.
+- [x] AC2: `invitations.revoke.test` (204, pusta lista, podgląd 410) + `ParticipantsScreen.test` (link znika, „Link unieważniony” w `role="status"`, fokus na „Utwórz link zaproszenia”) + E2E („SC-08 own link and a revoked link”).
+- [x] AC3: `invitations.preview.test` — anonim, inny domownik i właściciel dostają tylko `{ listName, ownerName }`; `InvitationScreen.test` — „Ania zaprasza Cię do listy „Dom”.”, fokus na `h1`, przyciski zależne od sesji.
+- [x] AC4: `invitations.accept.test` (200 `{ listId }`, członkostwo, `used_by`, lista z `role: "participant"`, właściciel widzi uczestnika, link znika z aktywnych) + `InvitationScreen.test` (SC-06 z „Dołączyłeś(-aś)…”, `historyAction = REPLACE`, wstecz → wpis sprzed SC-08) + E2E (po `goBack` adres bez `/zaproszenie/`).
+- [x] AC5: `sign-up-invitation.test` (ważny token → uczestnik od razu, nieważny / zły format → konto powstaje, `invitation: { error: { code: "invitation_invalid" } }`) + `InvitationScreen.entry.test` (info na SC-01 i SC-02, e-mail z SC-01 w SC-02, po logowaniu auto-dołączenie, rejestracja wysyła `invitationToken` i bez drugiego żądania trafia na SC-06, nieważny link → „Ten link nie działa”) + E2E J-04.
+- [x] AC6: `invitations.limit.test` (409 `limit_reached` `participants`, brak członkostwa, link nadal aktywny; tworzenie linku przy 20 → 409) + `InvitationScreen.test` (komunikat o limicie) + `ParticipantsScreen.test` (ostrzeżenie, przycisk nieaktywny; także po 409 z API).
+- [x] AC7: `invitations.own-member.test` (409 `own_list` / `already_member` z `listId`, członkostwa bez zmian, `used_at` null) + `InvitationScreen.test` („To Twoja lista…” / „Już jesteś na tej liście.” + „Otwórz listę” → `/listy/<listId>`) + E2E (właściciel na własnym linku).
+- [x] AC8: `ParticipantsScreen.test` — schowek odrzuca → pole z fokusem, zaznaczenie 0…długość linku, „Skopiuj link ręcznie.”, bez Toastu; E2E (schowek podstawiony w `addInitScript`).
+- [x] AC9: E2E axe bez naruszeń: SC-07 pusty, z linkiem, Toast „Link skopiowany”, limit + błąd kopiowania; SC-08 zaproszenie, SC-02 z info, SC-06 po dołączeniu, nieważny link, własna lista, limit, już na liście, brak sieci (telefon 390 × 844 i komputer 1280 × 800). Toast i komunikaty w `role="status"` (test komponentu).
+- [x] SEC1 (TH-05): `invitations.mc02.test` — użyty, unieważniony, wygasły (zegar: 1 s przed 7 dniami działa, po — nie) → 410 `invitation_invalid` bez „Dom” i „Ania” w treści; 2 równoległe przyjęcia → `[200, 410]`, jedno członkostwo.
+- [x] SEC2 (TH-01): `invitations.authz.test` — inny domownik: `GET` / `POST` / `DELETE` → 404 `not_found`, nic się nie zmienia; anonim → 401 (także przyjęcie, link nieużyty).
+- [x] SEC3 (TH-02): `invitations.authz.test` — uczestnik → 403 `owner_only`; `ParticipantsScreen.test` — ikona „Uczestnicy” tylko u właściciela.
+- [x] SEC4 (TH-06): `invitations.token.test` — 32 bajty ze źródła losowości, base64url (43 znaki), produkcja = `crypto.randomBytes`, dwa tokeny różne; `invitations.rate-limit.test` — 31. zapytanie z IP w minucie → 429 `rate_limited` (osobno podgląd i przyjęcie), inne IP działa.
+- [x] SEC5 (TH-08): `invitations.logs.test` — w logach brak tokenu, `req.url` = `/api/v1/invitations/[redacted]…`; E2E — `Referrer-Policy: no-referrer` na odpowiedzi SC-08, zero żądań do innych originów z karty odbiorcy.
+- [x] SEC6 (TH-13): `invitations.rate-limit.test` — 21. link listy w godzinie → 429; inna lista i link po upływie godziny działają.
+
+### Przebiegi (ten przebieg)
+
+- `pnpm test` — 72 pliki, 340 testów, pass; `pnpm test:mobile` — 10 pass.
+- `pnpm test:e2e` — 32 pass (w tym 6 nowych), 5,8 min, Windows 1 worker.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd 0 klonów — trzecie powtórzenie blokady wiersza listy wydzielone do `listy.lockList`; dependency-cruiser bez naruszeń), `pnpm design-check`, `pnpm build` — OK.
+
+### Decyzje i odstępstwa (do przeniesienia do `docs/architecture/` przez właściciela — implementer ich nie edytuje)
+
+- **`api.md`, „Zaproszenia”:** 409 `own_list` / `already_member` mają w błędzie `listId` (SC-08 „Otwórz listę”; domownik i tak ma dostęp do tej listy). Odpowiedź rejestracji z `invitationToken` ma pole `invitation`: `{ listId }` albo `{ error: { code, limit? } }` (typ `SignUpResponse` w `packages/shared`). `DELETE` linku użytego, wygasłego lub już unieważnionego → 404 `not_found`.
+- **Progi (jedno miejsce: `RATE_LIMITS` w `packages/shared/src/limits.ts`):** podgląd i przyjęcie — po 30 / min per IP (osobne liczniki tras, `@fastify/rate-limit` w pamięci, ADR 0003); tworzenie — **20 linków / h na listę** (liczone w bazie pod blokadą listy, więc steruje nim zegar domeny). Propozycja z taska mówiła „na właściciela”; per lista nie wymaga dotykania tabel innych list ani sesji w `keyGenerator`, a właściciel ma najwyżej 50 list.
+- **Tabela `invitation`:** dodatkowy indeks `used_by` (kaskada `SET NULL` przy usunięciu konta). Sprzątanie linków 30 dni po wygaśnięciu (inwentarz danych) — nie w tym tasku (brak zadania dziennego).
+- **Granice modułów:** członkostwo dopisuje `listy` (`Lists.join` w transakcji `zaproszenia`; błąd wycofuje oznaczenie linku). Blokada wiersza `shopping_list` dla `pozycje` i `zaproszenia` idzie przez `listy.lockList`. Rejestracja (`konta`) przyjmuje zaproszenie przez `Accounts.acceptInvitationsOnSignUp` (podawane przez `zaproszenia` po utworzeniu — bez cyklu zależności).
+- **Web:** kontekst zaproszenia (token, nazwa listy) w stanie nawigacji, nie w `localStorage`; SC-08 → SC-01 / SC-02 przez `replace`, więc adres z tokenem nie zostaje w historii. Po zalogowaniu `PublicOnly` wraca na SC-08 z `join` (auto-dołączenie); po rejestracji z udanym dołączeniem — od razu SC-06.
+- **Teksty spoza tabel „Copy”** (do potwierdzenia w designie): SC-07 „Utworzono zbyt wiele linków. Spróbuj ponownie za godzinę.”, „Nie udało się utworzyć linku. Spróbuj ponownie.”, „Nie udało się unieważnić linku. Spróbuj ponownie.”; SC-08 „Zbyt wiele prób. Spróbuj ponownie za minutę.”, „Coś poszło nie tak. Spróbuj ponownie.”; wiersz właściciela „właściciel · Ty”; data w InviteLinkBox „9 listopada” (`Intl.DateTimeFormat("pl-PL", { day, month: "long" })`). Nagłówek „Na liście (N z 20)” liczy uczestników bez właściciela; pełna lista uczestników — E-02.
+- **Layer guides (fakty):** `db.md`, `backend.md`, `web.md` — „Gdzie jest kod” i „Historia zmian” uzupełnione o T-008.
 
 <!-- QA rounds are appended below by /qa-task -->
