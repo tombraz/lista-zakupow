@@ -193,3 +193,102 @@ describe("SC-06 AddBar warnings", () => {
     expect(screen.queryByRole("button", { name: "Edytuj Mleko" })).toBeNull();
   });
 });
+
+describe("SC-06 AddBar while saving and after a failed save", () => {
+  beforeEach(() => {
+    sessionIs(ANIA);
+  });
+
+  it("keeps text typed while the previous item is saving and adds it next (QA round 1 #1)", async () => {
+    const { user, list, name } = await openList();
+    const requests = addingSucceeds(list, 200);
+
+    await user.type(name, "Mleko{Enter}");
+    await user.clear(name);
+    await user.type(name, "Chleb");
+
+    expect(await screen.findByRole("button", { name: "Edytuj Mleko" })).toBeVisible();
+    expect(name).toHaveValue("Chleb");
+
+    await user.type(name, "{Enter}");
+
+    expect(await screen.findByRole("button", { name: "Edytuj Chleb" })).toBeVisible();
+    expect(requests.map(({ name: sent }) => sent)).toEqual(["Mleko", "Chleb"]);
+    expect(requests[1]?.["id"]).not.toBe(requests[0]?.["id"]);
+  });
+
+  it("sends a new id when the text changed after a lost response (QA round 1 #2)", async () => {
+    const { user, list, name } = await openList();
+    const saved = new Map<string, Item>();
+    const ids: string[] = [];
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/items`, async ({ request }) => {
+        const body = (await request.json()) as { id: string; name: string };
+        ids.push(body.id);
+        const known = saved.get(body.id);
+        if (known) return HttpResponse.json(known);
+        saved.set(body.id, anItem({ id: body.id, name: body.name }));
+        // Serwer zapisał, ale odpowiedź przepadła.
+        return ids.length === 1
+          ? HttpResponse.error()
+          : HttpResponse.json(saved.get(body.id), { status: 201 });
+      }),
+    );
+
+    await user.type(name, "Ser{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent(/połączenia/i);
+    await user.clear(name);
+    await user.type(name, "Jajka{Enter}");
+
+    expect(await screen.findByRole("button", { name: "Edytuj Jajka" })).toBeVisible();
+    expect(screen.getByText("Dodano Jajka")).toBeVisible();
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).not.toBe(ids[0]);
+  });
+
+  it("repeats the same id when the unchanged text is sent again (AC6)", async () => {
+    const { user, list, name } = await openList();
+    const ids: string[] = [];
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/items`, async ({ request }) => {
+        const body = (await request.json()) as { id: string; name: string };
+        ids.push(body.id);
+        return ids.length === 1
+          ? HttpResponse.error()
+          : HttpResponse.json(anItem({ id: body.id, name: body.name }), { status: 201 });
+      }),
+    );
+
+    await user.type(name, "Ser{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent(/połączenia/i);
+    await user.type(name, "{Enter}");
+
+    expect(await screen.findByRole("button", { name: "Edytuj Ser" })).toBeVisible();
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).toBe(ids[0]);
+  });
+
+  it("enables the AddBar again when an item is deleted after the API's limit (QA round 1 #3)", async () => {
+    const { user, list, name } = await openList([anItem({ name: "Chleb" })]);
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/items`, () =>
+        apiError(409, { code: "limit_reached", limit: "items" }),
+      ),
+      http.delete(
+        `*/api/v1/lists/${list.id}/items/:itemId`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const limit = "Lista ma 500 pozycji — to limit. Usuń kupione albo niepotrzebne pozycje.";
+
+    await user.type(name, "Mleko{Enter}");
+    expect(await screen.findByText(limit)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Edytuj Chleb" }));
+    await user.click(screen.getByRole("button", { name: "Usuń pozycję" }));
+
+    await expect.poll(() => screen.queryByRole("button", { name: "Edytuj Chleb" })).toBeNull();
+    expect(screen.queryByText(limit)).toBeNull();
+    expect(name).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Dodaj pozycję" })).toBeEnabled();
+  });
+});

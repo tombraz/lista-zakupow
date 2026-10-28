@@ -3,7 +3,7 @@ id: T-006
 title: "Pozycje: dodawanie, edycja, usuwanie i blokada duplikatu (web)"
 epic: E-01
 story: S-01-04
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -184,6 +184,26 @@ Zmiany istniejących testów: `apps/web/test/lists.ts` — `detailsOf(list, item
 ### Przewodniki warstw (Step 8b)
 
 Zaktualizowane fakty w „Gdzie jest kod” / „Pułapki”: `layers/db.md` (tabela `item`, migracja `0004_pozycje`, limit i duplikat w repozytorium), `layers/backend.md` (moduł `pozycje`, `ListItems`, `ids.ts`, `createItem`, pliki `shared`), `layers/web.md` (pliki SC-06, nowe komponenty i warianty, `anItem`, dwie pułapki E2E). Poza tym `api.md` („Stan po T-006”) i `data-model.md` (indeks `item (list_id)` pokryty unikalnym `(list_id, name_key)`). Propozycji zmian „Conventions” brak.
+
+### Runda poprawek po QA round 1 (2026-10-28)
+
+Zakres: usterki major #1–#3. Zmiana tylko w `apps/web/src/screens/SC-06-lista/useAddItem.ts` (+ testy w `ListScreen.add.test.tsx`, seam „ekran SC-06 z MSW”).
+
+| QA # | Test (`ListScreen.add.test.tsx`, „SC-06 AddBar while saving and after a failed save”) | Red | Poprawka | Teraz |
+| --- | --- | --- | --- | --- |
+| 1 | „keeps text typed while the previous item is saving and adds it next” — `POST` opóźniony 200 ms, „Mleko” + Enter, w trakcie zapisu „Chleb”; po odpowiedzi pole ma „Chleb”, Enter dodaje „Chleb” z nowym `id` | `Expected the element to have value: Chleb` / `Received:` (puste) | `useItemDraft.clear(sent)` czyści pola tylko, gdy nadal zawierają wysłaną treść (aktualizacja funkcyjna stanu, bez nieaktualnego domknięcia) | ✔ |
+| 2 | „sends a new id when the text changed after a lost response” — serwer zapisuje „Ser”, odpowiedź zerwana (`HttpResponse.error()`), zmiana na „Jajka” + Enter → „Jajka” na liście, „Dodano Jajka”, dwa różne `id` | `Unable to find role="button" and name "Edytuj Jajka"` (powtórzone `id` zwróciło „Ser”) | `id` związane z wysłaną treścią: `idFor(sent)` używa poprzedniego `id` tylko dla tej samej nazwy i notatki, inaczej nowe; po dodaniu próba się zeruje | ✔ |
+| 2 (strażnik) | „repeats the same id when the unchanged text is sent again (AC6)” — po zerwanej odpowiedzi ponowienie bez zmian ma to samo `id` | przeszedł od razu: przypina istniejące zachowanie AC6, żeby poprawka #2 go nie zepsuła | — | ✔ |
+| 3 | „enables the AddBar again when an item is deleted after the API's limit” — 409 `limit_reached` → komunikat limitu; usunięcie „Chleb” w arkuszu → brak komunikatu, pole i „Dodaj pozycję” aktywne | `expected <div></div> to be null` (komunikat limitu nadal widoczny) | ostrzeżenie limitu z API pamięta liczbę pozycji (`atCount`), przy której przyszło; obowiązuje, dopóki pozycji nie ubędzie | ✔ |
+
+Komendy (ten przebieg): `pnpm check` — Prettier, ESLint, `tsc`, jscpd 0 klonów, dependency-cruiser 0 naruszeń, design-check 0 błędów, backlog-check OK, Vitest **49 plików / 244 testy zielone**; `pnpm build` OK; `pnpm test:e2e` **22/22**. W pierwszym przebiegu `pnpm check` jeden timeout (5 s) w `SC-02 … links each summary entry to its field …` — plik nietknięty, pod pełnym obciążeniem trwał 17 s; osobno 7/7, w powtórzonym `pnpm check` zielony. Niestabilność pod obciążeniem, nie regresja.
+
+Decyzje do obejrzenia przez QA:
+
+- **#1:** wybrany wariant „czyścić tylko to, co zostało wysłane”. Pole zostaje edytowalne w trakcie zapisu (zablokowanie chowałoby klawiaturę ekranową na telefonie). Enter w trakcie zapisu nadal nic nie wysyła, ale tekst zostaje widoczny, więc nie ginie po cichu.
+- **#3:** limit z API wygasa przy spadku liczby pozycji poniżej tej z chwili odpowiedzi; przy pozycjach dodanych w międzyczasie przez kogoś innego (bez T-009) API i tak odpowie ponownie 409.
+- **Poza rundą (minor / note, nie ruszane):** #4 (fokus na pustej liście — do decyzji: poprawić osobno albo zapisać odstępstwo), #6–#8.
+- **Propozycja do „Pułapek” `layers/web.md` (nie edytowana):** każdy hook mutacji ma test z opóźnioną i zerwaną odpowiedzią oraz zmianą danych w międzyczasie (QA, krok 10).
 
 <!-- QA rounds are appended below by /qa-task -->
 

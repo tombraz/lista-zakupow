@@ -15,12 +15,15 @@ import { messages } from "./messages";
 
 type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
 
-/** Ostrzeżenie nad polami AddBar: duplikat (F-09) albo limit 500 pozycji (F-07). */
-export type AddWarning = { kind: "duplicate"; name: string } | { kind: "limit" };
+/**
+ * Ostrzeżenie nad polami AddBar: duplikat (F-09) albo limit 500 pozycji (F-07). Limit z API
+ * pamięta liczbę pozycji, przy której przyszedł: obowiązuje, dopóki ich nie ubędzie.
+ */
+export type AddWarning = { kind: "duplicate"; name: string } | { kind: "limit"; atCount: number };
 
 /**
  * AddBar (SC-06, F-07, F-09): walidacja i sprawdzenie duplikatu tymi samymi regułami co API,
- * pozycja na liście dopiero po odpowiedzi API (F-15). Jedno `id` na wpisywaną pozycję, więc
+ * pozycja na liście dopiero po odpowiedzi API (F-15). Jedno `id` na wysłaną treść, więc
  * ponowione wysłanie po zerwanym połączeniu nie doda jej drugi raz (AC6).
  */
 export function useAddItem(listId: string, items: Item[] = []) {
@@ -31,18 +34,20 @@ export function useAddItem(listId: string, items: Item[] = []) {
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const mutation = useMutation({ mutationFn: addItem.bind(null, listId) });
-  const limitReached = items.length >= BUSINESS_LIMITS.itemsPerList || warning?.kind === "limit";
+  const limitReached =
+    items.length >= BUSINESS_LIMITS.itemsPerList ||
+    (warning?.kind === "limit" && items.length >= warning.atCount);
 
-  const added = (item: Item) => {
+  const added = (item: Item, sent: Draft) => {
     updateItems(client, listId, (current) => [item, ...current.filter(({ id }) => id !== item.id)]);
-    draft.reset();
+    draft.clear(sent);
     setAnnouncement(messages.add.added(item.name));
   };
 
   const failed = (error: unknown, typed: string) => {
     const { code, fields: invalid } = asRequestError(error);
     if (code === "duplicate_item") setWarning({ kind: "duplicate", name: typed });
-    else if (code === "limit_reached") setWarning({ kind: "limit" });
+    else if (code === "limit_reached") setWarning({ kind: "limit", atCount: items.length });
     else if (code === "validation_failed") setFields(invalid);
     else setFailure(code);
   };
@@ -50,7 +55,8 @@ export function useAddItem(listId: string, items: Item[] = []) {
   const submit = () => {
     setWarning(null);
     setFailure(null);
-    const parsed = createItemRequestSchema.safeParse({ name: draft.name, note: draft.note });
+    const sent: Draft = { name: draft.name, note: draft.note };
+    const parsed = createItemRequestSchema.safeParse(sent);
     setFields(parsed.success ? {} : fieldErrors(parsed.error));
     if (!parsed.success) return;
     const existing = sameNameAs(items, parsed.data.name);
@@ -59,9 +65,11 @@ export function useAddItem(listId: string, items: Item[] = []) {
       return;
     }
     mutation.mutate(
-      { id: draft.id, ...parsed.data },
+      { id: draft.idFor(sent), ...parsed.data },
       {
-        onSuccess: added,
+        onSuccess: (item) => {
+          added(item, sent);
+        },
         onError: (error) => {
           failed(error, parsed.data.name);
         },
@@ -83,17 +91,40 @@ export function useAddItem(listId: string, items: Item[] = []) {
 
 export type AddItemState = ReturnType<typeof useAddItem>;
 
-/** Wpisywana pozycja: pola i jej `id`, nowe po każdym dodaniu; fokus zostaje w polu nazwy. */
+interface Draft {
+  name: string;
+  note: string;
+}
+
+const EMPTY_DRAFT: Draft = { name: "", note: "" };
+
+const sameDraft = (a: Draft, b: Draft) => a.name === b.name && a.note === b.note;
+
+/**
+ * Wpisywana pozycja: pola i `id` ostatnio wysłanej treści. Ponowienie tej samej treści używa
+ * tego samego `id` (AC6), zmieniona treść albo dodanie dostaje nowe; fokus zostaje w polu nazwy.
+ */
 function useItemDraft() {
   const nameRef = useRef<HTMLInputElement>(null);
-  const [id, setId] = useState(() => crypto.randomUUID());
-  const [name, setName] = useState("");
-  const [note, setNote] = useState("");
-  const reset = () => {
-    setId(crypto.randomUUID());
-    setName("");
-    setNote("");
+  const attempt = useRef<{ id: string; sent: Draft } | null>(null);
+  const [fields, setFields] = useState<Draft>(EMPTY_DRAFT);
+  const idFor = (sent: Draft) => {
+    const last = attempt.current;
+    const id = last && sameDraft(last.sent, sent) ? last.id : crypto.randomUUID();
+    attempt.current = { id, sent };
+    return id;
+  };
+  /** Po dodaniu `sent` czyści pola, chyba że w trakcie zapisu wpisano już coś nowego (F-15). */
+  const clear = (sent: Draft) => {
+    attempt.current = null;
+    setFields((current) => (sameDraft(current, sent) ? EMPTY_DRAFT : current));
     nameRef.current?.focus();
   };
-  return { nameRef, id, name, setName, note, setNote, reset };
+  const setName = (name: string) => {
+    setFields((current) => ({ ...current, name }));
+  };
+  const setNote = (note: string) => {
+    setFields((current) => ({ ...current, note }));
+  };
+  return { nameRef, ...fields, setName, setNote, idFor, clear };
 }
