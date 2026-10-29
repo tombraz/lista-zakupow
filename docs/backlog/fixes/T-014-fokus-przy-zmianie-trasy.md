@@ -67,7 +67,12 @@ Ten sam wzorzec gdzie indziej: wszystkie ekrany z AppBar (SC-05, SC-06, SC-07, S
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+**Co by zapobiegło?** Test na granicy „nawigacja między ekranami”, a nie tylko „ekran otwarty pod adresem”: wszystkie testy ekranów startowały z `renderApp(adres)`, więc fokus po zmianie trasy nie był nigdzie sprawdzany. Obsługa jest teraz w jednym miejscu (`AppBar`), więc każdy nowy ekran z AppBar dostaje ją automatycznie, a `routeFocus.test.tsx` jej broni.
+
+Propozycje (decyduje użytkownik):
+1. (automatyczna kontrola) — już jest: `routeFocus.test.tsx` + E2E obwódki w J-02.
+2. (Pułapki w `web.md`) — wpis z przeglądu E-01 już istnieje; doprecyzować: „Robi to `AppBar` (`useRouteFocus`); ekran bez AppBar ustawia fokus sam. Fokusowalny element na pasku marki ma obwódkę `focus.ring-on-brand`.”
+3. Zadanie uzupełniające: SC-04 (regulamin, bez AppBar) po wejściu linkiem z SC-02 zostawia fokus na `body` — ten sam problem poza zakresem T-014.
 
 ## Incident note
 
