@@ -75,11 +75,16 @@ Pomiary lokalnie, Windows 11, 8 rdzeni, Docker Desktop; gałąź `epic/E-01-szki
 
 **Po:**
 - AC1: dwa równoległe przebiegi web, dwie rundy: 4 × 183/183 (66–70 s każdy przy obciążeniu). Jeden przebieg: 40,5 s i 43,3 s, suma testów 77–89 s, najwolniejszy 1,9 s, limit 500: ~0,75 s. Domyślny `asyncUtilTimeout` (1 s), domyślny limit testu (5 s).
-- AC2: pełny przebieg API 85 s (65 plików, 0 czerwonych, 0 „Connection terminated”). Przy jednym workerze > 5 s tylko 4 pliki — wyjątki w `testing-strategy.md` (sign-in-rate-limit ~13 s, sign-up ~8 s, items.limit ~7 s, lists.limit ~7 s).
+- AC2: pełny przebieg API 85 s (65 plików, 0 czerwonych, 0 „Connection terminated”). Przy jednym workerze > 5 s tylko 4 pliki (sign-in-rate-limit ~13 s, sign-up ~8 s, items.limit ~7 s, lists.limit ~7 s) — pomiar zawyżony przez 78 osieroconych kontenerów w Dockerze. Po ich usunięciu (QA round 1 #1, ponowny pomiar): przebieg przy jednym workerze 64,5 s, > 5 s tylko `sign-in-rate-limit` (6,7 s) — jedyny wyjątek w `testing-strategy.md`.
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+Co by zapobiegło: automatyczny pomiar celów szybkości z `testing-strategy.md` (dziś niczym niesprawdzanych) i zakaz okien czasowych `delay(ms)` w testach komponentów web. Wpis w `CODING_STANDARDS.md` §2 („niestabilny test to błąd do zdiagnozowania”) istniał od przeglądu E-01; konwencje testów web (`heldResponse`, `fillIn`, `warmUp`) zapisane w `layers/web.md` w tym zadaniu.
+
+Propozycje (do decyzji użytkownika):
+1. Reguła lint w `apps/web/src/**/*.test.tsx`: `no-restricted-syntax` na `delay(<liczba>)` z `msw` — zamiast tego `heldResponse()`; wyjątki (`ListScreen.live.test.tsx`, SC-07 T-020) z `eslint-disable-next-line` i uzasadnieniem.
+2. Krok CI: skrypt czytający raport JSON Vitest i odrzucający przebieg ponad cel (`web` > 60 s, `api` > 120 s, plik `api` > 5 s poza wyjątkami z `testing-strategy.md`) — większe, jako zadanie przez `/plan-backlog`.
+3. (QA #2) `heldResponse()` rejestruje wstrzymane odpowiedzi, a `afterEach` w `test/setup.ts` je zwalnia.
 
 ## Incident note
 

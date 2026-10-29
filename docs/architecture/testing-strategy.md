@@ -18,14 +18,11 @@ approved: 2026-10-26
 
 Pomiar celów (T-021): „całość” to pełny przebieg projektu (`pnpm vitest run --project <projekt>`) z domyślną liczbą workerów; „plik < 5 s” w integracji — czas pliku przy jednym workerze (`--maxWorkers=1`), bo w przebiegu równoległym pliki czekają na wspólny kontener PostgreSQL. Testy komponentów web przechodzą także przy dwóch przebiegach naraz, bez podnoszenia limitów Vitest i Testing Library.
 
-Wyjątki od „plik < 5 s” (integracja; sprawdzają limity, więc z założenia wysyłają dziesiątki żądań lub haszują hasło przy każdej próbie):
+Wyjątki od „plik < 5 s” (integracja; plik sprawdza limit, więc z założenia wysyła dziesiątki żądań):
 
 | Plik | Czas (1 worker, 2026-10-29) | Dlaczego |
 | --- | --- | --- |
-| `apps/api/test/sign-in-rate-limit.test.ts` | ~13 s | każda próba logowania haszuje hasło (scrypt, także dla nieistniejącego konta) |
-| `apps/api/test/sign-up.test.ts` | ~8 s | 12 testów rejestracji, każdy haszuje hasło |
-| `apps/api/test/items.limit.test.ts` | ~7 s | 20 równoległych żądań przy 500 pozycjach |
-| `apps/api/test/lists.limit.test.ts` | ~7 s | bot: 52 kolejne żądania utworzenia listy |
+| `apps/api/test/sign-in-rate-limit.test.ts` | ~7–8 s | każda próba logowania haszuje hasło (scrypt, także dla nieistniejącego konta) |
 
 Mobile używa Jest zamiast Vitest, bo preset Expo i React Native Testing Library działają na Jest; reszta monorepo na Vitest.
 
