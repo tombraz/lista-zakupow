@@ -6,7 +6,9 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    # TYMCZASOWE (T-010, decyzja właściciela 2026-10-29): deploy-test/** wdraża na staging przed pierwszym
+    # merge do main (na main nie ma jeszcze tego workflow). Przed zamknięciem epiku E-01 wraca do [main].
+    branches: [main, "deploy-test/**"]
   workflow_dispatch:
 
 permissions:
