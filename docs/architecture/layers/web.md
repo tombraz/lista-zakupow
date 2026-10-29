@@ -79,7 +79,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - Po `page.reload()` AddBar jest nieaktywny, dopóki lista się nie wczyta: przed `focus()` / `fill()` czekać na `toBeEnabled()` (T-006).
 - Każdy hook zapisu (`useMutation`) ma testy komponentu (MSW) z: **opóźnioną odpowiedzią** — użytkownik pisze, klika lub naciska Enter w trakcie zapisu i nic nie ginie po cichu; **zerwaną odpowiedzią** (`HttpResponse.error()` po zapisie na serwerze) — ponowienie tej samej treści nie dubluje, zmieniona treść nie zwraca starej, a stan na ekranie zgadza się z serwerem; **zmianą danych w międzyczasie** — ostrzeżenie z odpowiedzi API (limit, duplikat) wygasa, gdy jego przyczyna zniknie. Bez tych testów T-006 wróciło z QA dwa razy (runda 1 #1–#3, runda 2 #2).
 - Blokada podwójnego wysłania musi być synchroniczna (np. `useRef` ustawiany przed `mutate`). `isPending` → `disabled` działa dopiero po przerysowaniu, więc drugie kliknięcie albo Enter wysłane przed nim tworzy drugi zapis. Test: dwa `fireEvent.click` bez `await` między nimi → jedno żądanie (przegląd E-01, C2).
-- Po zmianie trasy fokus trafia na `h1` ekranu (`tabIndex={-1}`), chyba że ekran sam ustawia fokus (np. pusty SC-06 → „Co kupić?”). Inaczej fokus zostaje na `body` i czytnik ekranu nie ogłasza nowego ekranu (WCAG 2.4.3; przegląd E-01, S2).
+- Po zmianie trasy fokus trafia na `h1` ekranu (`tabIndex={-1}`), chyba że ekran sam ustawia fokus (np. pusty SC-06 → „Co kupić?”). Inaczej fokus zostaje na `body` i czytnik ekranu nie ogłasza nowego ekranu (WCAG 2.4.3; przegląd E-01, S2). Robi to `AppBar` (`useRouteFocus`: fokus, gdy tytuł ma tekst); ekran bez AppBar ustawia fokus sam. Fokusowalny element na pasku marki ma obwódkę `focus.ring-on-brand` — globalna `focus.ring` ma kolor tła paska i jest niewidoczna (WCAG 2.4.7; T-014). Test: przejście linkiem między ekranami (`routeFocus.test.tsx`), nie tylko `renderApp(adres)`.
 - Przycisk w stanie zapisu dostaje `aria-disabled="true"` i ignoruje kliknięcia, ale nie dostaje `disabled`. Atrybut `disabled` zabiera fokus (spada na `body`, także poza pułapkę dialogu) (WCAG 2.4.3; przegląd E-01, S3).
 
 ## Skille i źródła
@@ -92,6 +92,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-29 | T-014: „Pułapki” — fokus po zmianie trasy robi `AppBar`; obwódka `focus.ring-on-brand` na pasku marki; test przejścia między ekranami. |
 | 2026-10-29 | Przegląd E-01 (`docs/reviews/E-01-2026-10-29-1.md`): „Pułapki” — synchroniczna blokada podwójnego wysłania, fokus po zmianie trasy, `aria-disabled` zamiast `disabled` w stanie zapisu. |
 | 2026-10-28 | T-008: „Gdzie jest kod” (SC-07, SC-08, `invitations/`, Toast, InviteLinkBox, `api/invitations.ts`, `renderApp` z historią). |
 | 2026-10-28 | T-007: „Gdzie jest kod” (odhaczanie, „Kupione”, usuń kupione; ItemRow z checkboxem; `e2e/lists.ts`). |
