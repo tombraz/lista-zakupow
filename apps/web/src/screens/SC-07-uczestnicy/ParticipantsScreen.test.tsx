@@ -209,6 +209,7 @@ describe("SC-07 invitations of the owner", () => {
     server.use(
       http.delete(`*/api/v1/lists/${list.id}/invitations/:id`, async ({ params }) => {
         deletes.push(String(params["id"]));
+        // eslint-disable-next-line no-restricted-syntax -- kliknięcia synchroniczne (fireEvent), delay nie jest oknem na kroki testu (T-021)
         await delay(50);
         links.current = links.current.filter(({ id }) => id !== params["id"]);
         return new HttpResponse(null, { status: 204 });

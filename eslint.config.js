@@ -34,6 +34,17 @@ const E2E_CLIENT_SYNTAX = [
   },
 ];
 
+// T-021: stan „w trakcie” w testach komponentów trzyma heldResponse(), nie okno czasowe delay(ms),
+// które pod obciążeniem mija przed kolejnym krokiem testu. Dozwolone: delay() i delay("infinite").
+const WEB_TEST_SYNTAX = [
+  {
+    selector:
+      "CallExpression[callee.name='delay'][arguments.length=1]:not([arguments.0.value='infinite'])",
+    message:
+      "Zamiast delay(ms) wstrzymaj odpowiedź heldResponse() (test/held.ts) i zwolnij ją po asercjach (T-021, layers/web.md).",
+  },
+];
+
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
 // Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
 const SESSION_KEY = "/sess|token|auth|cookie|jwt/i";
@@ -171,6 +182,11 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
+    files: ["apps/web/src/**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...WEB_TEST_SYNTAX] },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.

@@ -55,7 +55,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - **Dane testowe:** odpowiedzi MSW budowane z typów `packages/shared`; w E2E prawdziwe api na czystej bazie.
 - **Mocki dozwolone dla:** API (tylko w testach komponentów), schowka, zegara.
 - Elementy wyszukiwane po roli i nazwie dostępnej (`getByRole`); test ID tylko, gdy rola nie istnieje.
-- Stan „w trakcie” (ładowanie, zapis, kliknięcia w czasie zapisu): odpowiedź MSW wstrzymana przez `heldResponse()` (`test/held.ts`) i zwalniana po asercjach, nie `delay(ms)` — pod obciążeniem odpowiedź z `delay` przychodzi przed drugim kliknięciem. Pola wejścia (imię, e-mail, hasło) wypełnia `fillIn` (`test/user.ts`, wklejenie, jedno przerysowanie); `user.type` tam, gdzie test sprawdza pisanie. Zimny start workera płaci `warmUp()` w `test/setup.ts`, nie pierwszy test pliku (T-021).
+- Stan „w trakcie” (ładowanie, zapis, kliknięcia w czasie zapisu): odpowiedź MSW wstrzymana przez `heldResponse()` (`test/held.ts`) i zwalniana po asercjach, nie `delay(ms)` — pod obciążeniem odpowiedź z `delay` przychodzi przed drugim kliknięciem (lint: `no-restricted-syntax` na `delay(ms)` w testach `apps/web/src`). Pola wejścia (imię, e-mail, hasło) wypełnia `fillIn` (`test/user.ts`, wklejenie, jedno przerysowanie); `user.type` tam, gdzie test sprawdza pisanie. Zimny start workera płaci `warmUp()` w `test/setup.ts`, nie pierwszy test pliku (T-021).
 
 ## Zasady bezpieczeństwa
 
@@ -94,7 +94,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
-| 2026-10-29 | T-021: „Testy w tej warstwie” — `heldResponse()` zamiast `delay(ms)`, `fillIn` dla pól wejścia, `warmUp()` w setupie; domyślny `asyncUtilTimeout`. |
+| 2026-10-29 | T-021: „Testy w tej warstwie” — `heldResponse()` zamiast `delay(ms)`, `fillIn` dla pól wejścia, `warmUp()` w setupie; domyślny `asyncUtilTimeout`; lint na `delay(ms)`. |
 | 2026-10-29 | T-020: „Pułapki” i „Gdzie jest kod” — `useGuardedMutation` jako wspólna blokada podwójnego wysłania (wymusza lint `no-restricted-imports`); wyjątki; test, który przechodzi bez blokady. |
 | 2026-10-29 | T-015: „Pułapki” — `aria-disabled` robi `Button`; jsdom nie zdejmuje fokusu z `disabled`, fokus w stanie zapisu sprawdza E2E. |
 | 2026-10-29 | T-014: „Pułapki” — fokus po zmianie trasy robi `AppBar`; obwódka `focus.ring-on-brand` na pasku marki; test przejścia między ekranami. |

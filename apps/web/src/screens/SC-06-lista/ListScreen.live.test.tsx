@@ -164,6 +164,7 @@ describe("SC-06 live changes of other people", () => {
       http.delete(`*/api/v1/lists/${list.id}`, async () => {
         live.send({ type: "list.deleted", listId: list.id });
         live.send({ type: "access.revoked", listId: list.id });
+        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
         await delay(100);
         return new HttpResponse(null, { status: 204 });
       }),
@@ -208,6 +209,7 @@ describe("SC-06 live changes of other people", () => {
     server.use(
       http.patch(`*/api/v1/lists/${list.id}/items/:id`, async () => {
         live.send({ type: "item.upserted", listId: list.id, item: checkedBread });
+        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
         await delay(100);
         return HttpResponse.json(checkedBread);
       }),

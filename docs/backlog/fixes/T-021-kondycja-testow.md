@@ -86,6 +86,8 @@ Propozycje (do decyzji użytkownika):
 2. Krok CI: skrypt czytający raport JSON Vitest i odrzucający przebieg ponad cel (`web` > 60 s, `api` > 120 s, plik `api` > 5 s poza wyjątkami z `testing-strategy.md`) — większe, jako zadanie przez `/plan-backlog`.
 3. (QA #2) `heldResponse()` rejestruje wstrzymane odpowiedzi, a `afterEach` w `test/setup.ts` je zwalnia.
 
+Przyjęte przez użytkownika (2026-10-29): propozycja 1 — `no-restricted-syntax` (`WEB_TEST_SYNTAX` w `eslint.config.js`) w `apps/web/src/**/*.test.{ts,tsx}` na `delay(<argument>)` poza `delay("infinite")`; wyjątki z `eslint-disable-next-line … --` i uzasadnieniem: `ListScreen.live.test.tsx` ×2 (porządek WS przed HTTP), SC-07 T-020 (kliknięcia `fireEvent`). Sprawdzone: bez wyjątków `pnpm lint` pada na tych 3 wywołaniach, z nimi czysty. Propozycje 2 i 3 odrzucone.
+
 ## Incident note
 
 <Nie dotyczy.>
