@@ -3,7 +3,7 @@ id: T-009
 title: Zmiany na żywo przez WebSocket (web)
 epic: E-01
 story: S-01-06
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-007, T-008]
 size: M                # S | M (L must be split)
@@ -189,3 +189,42 @@ Uczciwie: w krokach 3, 5, 9 i 10 kod produkcyjny powstał przed testem (razem z 
 - Pełny `pnpm test` jest wolniejszy (~230 s) — testy WS startują prawdziwy serwer; raz pod obciążeniem przekroczenia czasu w testach formularzy web.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+Niezależna weryfikacja (świeża sesja QA, tryb autonomiczny). Commit implementacji: `35e0400`.
+
+**Przebiegi (uruchomione przez QA):** `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `format:check`, `lint`, `typecheck`, `quality`, `design-check`, `backlog-check` — OK. `pnpm test`: przebieg 1 — 399/400 (1 niestabilny test SC-08, patrz #2), przebieg 2 — 396/396 ✔. `pnpm test:mobile` 10 ✔. `pnpm test:e2e` 34 ✔ + 2 własne scenariusze QA ✔ (oba viewporty).
+
+**Spot-checki (zepsucie → czerwony test → przywrócenie, `git status` czysty):** `LiveHub.revoke` jako no-op → `live.revoke.test` czerwony; usunięty warunek `Origin` → `live.upgrade.test` (CSWSH) czerwony; `upsertNewer` bez porównania `updatedAt` → `useLiveList.test` czerwony; podświetlenie bez `prefers-reduced-motion` → `ListScreen.live.test` czerwony.
+
+**Próby nadużyć (lokalnie, prawdziwy serwer + `ws`, konta z fabryk testowych; plik roboczy usunięty):** `Origin` podobny (`http://localhost:5173.evil.com`, inny port, `null`, z ukośnikiem) → 403; token sesji w `Authorization: Bearer` bez ciasteczka → 401; obce konto: `subscribe`/`unsubscribe`/`subscribe` cudzej listy → tylko `error not_found`, brak zdarzeń; uczestnik listy A subskrybujący listę B tego samego właściciela → `not_found`, zmiany i zmiana nazwy B nie docierają; po `unsubscribe` brak zdarzeń listy (zostaje tylko `lists.changed` kanału użytkownika); nazwy pozycji nie trafiają do logów. W E2E: adresy WS w przeglądarce bez tokenu (`ws://…/api/v1/live`).
+
+**Własne E2E (dwa konteksty, Ania + Tomek):** przyjęcie linku → na SC-07 Ani link znika i licznik uczestników rośnie ≤ 5 s; na SC-05 Tomka karta „Dom” pojawia się bez odświeżania z ogłoszeniem `status` „Nowa lista: Dom”; zmiana nazwy → nowa nazwa na SC-05 Tomka ≤ 5 s; Ania usuwa pozycję edytowaną przez Tomka → w arkuszu „Ta pozycja została usunięta przez inną osobę.”; Ania usuwa listę przy otwartym SC-05 Tomka → karta znika ≤ 5 s; ponowne otwarcie adresu usuniętej listy → stan „brak dostępu” z „Wróć do moich list”. Skany axe (SC-07, SC-05, arkusz) bez naruszeń.
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `live.items.test` przeczytany i uruchomiony; E2E J-05 |
+| AC2 | pass | `live.lists.test`; własne E2E (SC-07, SC-05) |
+| AC3 | pass | `live.rollback.test` |
+| AC4 | pass | `ListScreen.live.test`, `useLiveList.test` (spot-check), E2E J-05 |
+| AC5 | pass | `ListScreen.live.test`, `ParticipantsScreen.live.test`, E2E J-05 |
+| AC6 | pass | `ListsScreen.live.test` + własne E2E QA (brak E2E w repo, #3) |
+| AC7 | pass | `ParticipantsScreen.live.test` + własne E2E QA |
+| AC8 | pass | `live.heartbeat.test`, `useLiveList.test` |
+| AC9 | pass | E2E J-05 z axe (oba viewporty) |
+| SEC1–SEC6 | pass | testy integracyjne + próby nadużyć powyżej |
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security / na-zywo | Wyścig `subscribe` ↔ `revoke`: `requireListAccess` jest asynchroniczne, `revoke` w trakcie sprawdzenia zostawia subskrypcję. Bez skutków dla usuniętej listy, ale przy usuwaniu uczestnika (E-02, S-02-02) uczestnik dostawałby dalej zdarzenia. | `na-zywo/http/routes.ts` `handle` (sam autor zgłasza w „Uwagi dla QA”) | Przed `hub.subscribe` ponowne sprawdzenie / znacznik „revoked” w hubie; zaplanować w S-02-02 |
+| 2 | minor | tests (flaky) | `InvitationScreen.entry.test.tsx` „sign up: … lands on the list” raz padł w pełnym `pnpm test` (`expected 1 to be +0` dla `accepts.count`) — asercja, nie przekroczenie czasu; 5× osobno i w drugim pełnym przebiegu zielony. Kod SC-08 / strażników wejścia z T-008; możliwy wyścig przekierowania po rejestracji, które woła dodatkowo `accept`. | `scratchpad/test.log` przebiegu 1 | Zbadać wyścig (strażnik gościa vs. nawigacja po rejestracji), test stabilny |
+| 3 | minor | tests | AC6 i AC7 deklarują „E2E”, w repo nie ma E2E odświeżania SC-05 / SC-07 na żywo (J-05 sprawdza tylko powrót na SC-05 po usunięciu). QA potwierdził zachowanie własnym E2E. | `apps/web/e2e/` | Dopisać scenariusz do J-05 |
+| 4 | minor | docs | Odstępstwa od `api.md` / `tech-stack.md` (JSON `ping`/`pong`, `error validation_failed`, `invitations.changed` kanałem `user:<id>`, `LIVE_LIMITS`, `@fastify/websocket`) tylko w Evidence; punkt DoD niezaznaczony. | sekcja „Odstępstwa i propozycje” | Wpisać do `api.md` i `tech-stack.md` (decyzja użytkownika) |
+| 5 | note | backend | Publikacja po zatwierdzeniu czeka na `peopleWithAccess` (zapytanie do bazy); błąd tego zapytania da 500 mimo zapisanej zmiany. `DELETE` listy czyta uczestników przed usunięciem poza transakcją (dołączający w tej chwili nie dostanie `lists.changed`). | `pozycje/http/item-events.ts`, `listy/http/routes.ts` | Rozważyć odporne rozsyłanie (błąd zdarzenia nie zmienia odpowiedzi) |
+| 6 | note | security | Otwarte połączenie WS żyje po wygaśnięciu sesji (zamyka je tylko wylogowanie); klient po 401 ponawia co ≤ 10 s do przeładowania. | `liveSocket.ts`, `routes.ts` | Okresowe sprawdzenie sesji / zatrzymanie ponowień po 401 |
+| 7 | note | a11y | Ręczne sprawdzenia (czytnik ekranu, tylko klawiatura, powiększenie, Safari/telefon, pomiar ≤ 5 s na staging) niewykonalne w trybie autonomicznym; automatyczne axe zielone. | — | Sprawdzić w UAT epiku |
+
+**Story S-01-06:** wszystkie zadania `done`; kryteria biznesowe sprawdzone end to end (J-05 i własne E2E QA: zmiany ≤ 5 s, usunięcie wygrywa z edycją z komunikatem, zmiana nazwy / usunięcie listy u uczestnika, brak zdarzeń dla osoby bez dostępu; „ostatni zapis wygrywa” — serwer nadpisuje, klient stosuje zdarzenie z nowszym `updatedAt`, `useLiveList.test`). Story → `done`.

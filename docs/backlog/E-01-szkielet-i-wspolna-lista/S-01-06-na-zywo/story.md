@@ -2,7 +2,7 @@
 id: S-01-06
 epic: E-01
 title: Wspólne zakupy na żywo (web)
-status: in-progress    # todo | in-progress | done
+status: done           # todo | in-progress | done
 requirements: [F-14, N-06]
 screens: [SC-05, SC-06, SC-07]
 ---
@@ -13,11 +13,11 @@ screens: [SC-05, SC-06, SC-07]
 
 ## Acceptance criteria (business)
 
-- [ ] Given dwie osoby mają otwartą tę samą listę, when jedna doda, edytuje, odhaczy lub usunie pozycję, then druga widzi zmianę w ≤ 5 s bez odświeżania.
-- [ ] Given dwie osoby zmieniają tę samą pozycję naraz, when obie zapiszą, then zostaje ostatnia zapisana zmiana.
-- [ ] Given jedna osoba usuwa pozycję, a druga ją edytuje, when obie zapiszą, then pozycja pozostaje usunięta, a druga osoba widzi komunikat.
-- [ ] Given właściciel zmienia nazwę lub usuwa listę, when uczestnik ma ją otwartą, then widzi nową nazwę albo informację, że lista została usunięta.
-- [ ] Given domownik bez dostępu, when próbuje słuchać zmian cudzej listy, then nic nie dostaje (MC-01).
+- [x] Given dwie osoby mają otwartą tę samą listę, when jedna doda, edytuje, odhaczy lub usunie pozycję, then druga widzi zmianę w ≤ 5 s bez odświeżania.
+- [x] Given dwie osoby zmieniają tę samą pozycję naraz, when obie zapiszą, then zostaje ostatnia zapisana zmiana.
+- [x] Given jedna osoba usuwa pozycję, a druga ją edytuje, when obie zapiszą, then pozycja pozostaje usunięta, a druga osoba widzi komunikat.
+- [x] Given właściciel zmienia nazwę lub usuwa listę, when uczestnik ma ją otwartą, then widzi nową nazwę albo informację, że lista została usunięta.
+- [x] Given domownik bez dostępu, when próbuje słuchać zmian cudzej listy, then nic nie dostaje (MC-01).
 
 ## Tasks
 
