@@ -4,7 +4,7 @@ title: "Spóźniona odpowiedź HTTP nie nadpisuje nowszej zmiany z WebSocket; je
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa               # todo | in-progress | in-qa | done | blocked
+status: done               # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web, backend]
 requirements: [F-14]
@@ -80,3 +80,25 @@ Mocki MSW zapisu w `ListScreen.check`, `.edit`, `.dup-bought` zwracają teraz no
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | web, spójność reguły api.md | `useAddItem.added` (`apps/web/src/screens/SC-06-lista/useAddItem.ts:61`) nadal bezwarunkowo wstawia odpowiedź `POST` do cache. Gdy inna osoba zdąży na żywo edytować albo usunąć nową pozycję przed spóźnioną odpowiedzią na dodanie, odpowiedź nadpisze nowszą wersję albo przywróci usuniętą. Ta sama klasa błędu co T-017, wąskie okno wyścigu, poza AC. | odczyt kodu; `replaceItem`/`upsertNewer` używają `isNewer`, `added` nie | Odpowiedź na dodanie przechodzi przez `isNewer` (i nie przywraca pozycji usuniętej na żywo), osobne zadanie |
+| 2 | note | testy | Nowe testy 1 i 2 czekają na `delay(100)` z wyłączeniem reguły T-021 (uzasadnione: kolejność WS przed HTTP). Deterministyczny wariant: zwolnić odpowiedź po potwierdzeniu, że zdarzenie WS trafiło do cache. | `ListScreen.live.test.tsx` | opcjonalnie |
+| 3 | note | api | `touchList` i zmiana nazwy listy nadal stemplują `updated_at` listy `now()` bazy; opisane w „Root cause”, klient nie porównuje nim wersji. | `items-repository.ts:158` | ewentualnie osobne zadanie |
+
+**Reprodukcja:** `pnpm install --frozen-lockfile`; `pnpm test` 89 plików / 423 testy pass; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (0 naruszeń zależności) bez błędów; `pnpm test:e2e` 36/36 pass (w tym J-05 na żywo, J-03 pozycje i kupione). `git status` czysty po instalacji.
+
+**Kryteria:**
+
+- AC1 pass: testy 1 i 2 (`ListScreen.live.test.tsx`) wysyłają nowszą wersję Tomka przez podstawiony klient WS przed odpowiedzią Ani i sprawdzają widoczny stan (notatka „2 l”, „2 do kupienia”, Mleko w „Do kupienia”). Test 2 pokrywa też przypadek brzegowy „własne zdarzenie WS z tym samym `updatedAt` co odpowiedź” (ogłoszenie „Odhaczono Mleko” działa).
+- AC2 pass: testy 3 i 4 (`items.update.test.ts`, prawdziwy Postgres) sterują `testClock` i sprawdzają literalne znaczniki dla edycji, odhaczenia i dodania.
+- AC3 pass: pełny zestaw testów i e2e zielone; istniejące mocki MSW zapisu poprawione na nowsze `updatedAt` (`savedItem`), bez osłabienia asercji.
+
+**Spot-check (fix):** usunięcie `isNewer` z `replaceItem` → testy 1 i 2 czerwone; `updatedAt: sql\`now()\`` w `update` oraz pominięcie `createdAt`/`updatedAt` w `insert` → testy 3 i 4 czerwone (czas zegara bazy zamiast `testClock`). Przywrócone, `git status` czysty. Czerwone dowody w „Evidence” obecne dla wszystkich 4 testów. „Root cause” wyjaśnia, dlaczego testy nie złapały błędu (mocki z niezmienionym `updatedAt`, brak sterowania zegarem).
+
+**Przegląd kodu:** jedna reguła `isNewer` współdzielona przez HTTP (`replaceItem`) i WS (`upsertNewer`) — bez duplikacji wiedzy. Porównanie leksykalne ISO jest poprawne, bo API zawsze zwraca `toISOString()`. Remis (`=`) zachowuje posiadaną wersję. `replaceItem` mapuje tylko istniejące wiersze, więc nie przywraca pozycji usuniętej na żywo. Odhaczenie już odhaczonej (F-10) zwraca starszy `updatedAt` i jest słusznie ignorowane. `changeItem` z edycją i odhaczeniem w jednym `PATCH` używa dwóch odczytów tego samego zegara (rosnących), wynik ma znacznik odhaczenia. Brak zmian UI/stylów (design-check nie dotyczy), `threats: []` — brak prób exploitów do wykonania; autoryzacja tras bez zmian.
