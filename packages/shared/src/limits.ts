@@ -25,3 +25,16 @@ export const BUSINESS_LIMITS = {
 
 /** F-11: link zaproszenia działa 7 dni od utworzenia. */
 export const INVITATION_VALIDITY_DAYS = 7;
+
+/** TH-25, architecture.md „Zmiany na żywo”: limity połączeń WebSocket i bicie serca. */
+export const LIVE_LIMITS = {
+  connectionsPerSession: 5,
+  messagesPerSecond: 20,
+  messageBytes: 4096,
+  pingIntervalSeconds: 25,
+  /**
+   * Serwer: bez `pong` w tym czasie po `ping` połączenie jest zerwane. Klient: bez `ping` przez
+   * `pingIntervalSeconds + pongTimeoutSeconds` łączy się ponownie.
+   */
+  pongTimeoutSeconds: 10,
+} as const;

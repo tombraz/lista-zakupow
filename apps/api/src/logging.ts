@@ -29,12 +29,18 @@ const REDACTED_PATHS = [
 // Dwie ścieżki niosą token: API (podgląd, przyjęcie) i strona SC-08 serwowana przez API (ADR 0006).
 const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/|\/zaproszenie\/)[^/?#]+/;
 
+// TH-16: token sesji nigdy nie jest czytany z adresu, ale klient może go tam dopisać
+// (np. `/api/v1/live?token=…`); wartość parametru z „token” w nazwie nie trafia do logu.
+const TOKEN_QUERY_PARAMETER = /([?&][^=&#]*token[^=&#]*=)[^&#]*/gi;
+
 /**
  * Ścieżka żądania bez tokenu zaproszenia (`/api/v1/invitations/[redacted]/accept`,
- * `/zaproszenie/[redacted]`).
+ * `/zaproszenie/[redacted]`) i bez wartości parametrów z tokenem (`?token=[redacted]`).
  */
 export function redactedUrl(url: string): string {
-  return url.replace(INVITATION_TOKEN_PATH, "$1[redacted]");
+  return url
+    .replace(INVITATION_TOKEN_PATH, "$1[redacted]")
+    .replace(TOKEN_QUERY_PARAMETER, "$1[redacted]");
 }
 
 interface LoggedRequest {

@@ -3,7 +3,7 @@ id: T-009
 title: Zmiany na żywo przez WebSocket (web)
 epic: E-01
 story: S-01-06
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-007, T-008]
 size: M                # S | M (L must be split)
@@ -37,21 +37,21 @@ Przy otwartej liście zmiany innych osób (pozycje, nazwa listy, usunięcie list
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given dwóch zalogowanych klientów WS zasubskrybowanych do listy, when jeden doda, edytuje, odhaczy lub usunie pozycję albo usunie kupione przez HTTP, then drugi dostaje odpowiednio `item.upserted` (z `Item` w kształcie odpowiedzi API), `item.deleted` lub `items.cleared` w < 5 s (w teście: < 1 s). — verified by: test integracyjny `live.items.test` (dwa klienty `ws`)
-- [ ] AC2: Given zmiana nazwy listy, usunięcie listy, przyjęcie zaproszenia i unieważnienie linku, when operacja się zatwierdzi, then subskrybenci listy dostają `list.updated` / `list.deleted` / `members.changed`, właściciel `invitations.changed`, a kanały `user:<id>` wszystkich osób z dostępem (i nowego uczestnika) dostają `lists.changed`. — verified by: test integracyjny `live.lists.test`
-- [ ] AC3: Given operacja, która się nie powiedzie (np. 409 duplikat, 404), when transakcja się wycofa, then żadne zdarzenie nie jest wysłane. — verified by: test integracyjny
-- [ ] AC4: Given SC-06 otwarty u dwóch osób, when druga osoba zmieni pozycję, then u pierwszej zmiana pojawia się bez odświeżania, wiersz jest krótko podświetlony (bez animacji przy „ogranicz ruch”), fokus się nie zmienia, aktualizuje się region „N do kupienia”; zdarzenie z `updatedAt` nie nowszym niż stan klienta jest ignorowane. — verified by: test komponentu (podstawiony klient WS) + E2E J-05
-- [ ] AC5: Given SC-06 lub SC-07 otwarty u uczestnika, when właściciel usunie listę, then uczestnik od razu trafia na SC-05 z komunikatem „Lista „<nazwa>” została usunięta albo nie masz już do niej dostępu.”; when właściciel zmieni nazwę, then AppBar i `h1` pokazują nową nazwę. — verified by: test komponentu + E2E J-05
-- [ ] AC6: Given SC-05 otwarty, when ktoś udostępni domownikowi listę, zmieni nazwę lub stan pozycji na jego liście albo ją usunie, then karty odświeżają się bez przeładowania strony, a nowa lista jest ogłaszana `polite` „Nowa lista: <nazwa>”. — verified by: test komponentu + E2E
-- [ ] AC7: Given SC-07 właściciela, when ktoś przyjmie link, then link znika z sekcji „Zaproszenia” bez odświeżania. — verified by: test komponentu (podstawiony klient WS)
-- [ ] AC8: Given zerwane połączenie (serwer przestaje odpowiadać na ping przez 10 s albo zamyka połączenie), when połączenie wróci, then klient ponownie subskrybuje listę i pobiera jej aktualny stan; serwer wysyła ping co 25 s. — verified by: test integracyjny (ping, zegar) + test hooka `useLiveList` (podstawiony WS)
-- [ ] AC9: Given E2E z dwoma kontekstami przeglądarki (Ania, Tomek), when Tomek odhacza pozycję, then u Ani zmiana jest widoczna w ≤ 5 s; skan axe na SC-06 po aktualizacji na żywo bez naruszeń. — verified by: E2E Playwright J-05 + axe
-- [ ] SEC1 (TH-03): Given domownik B bez dostępu do listy A, when wyśle `subscribe { listId: A }`, then dostaje `error { code: "not_found", listId }`, a kolejne zmiany listy A do niego nie docierają; odmowa jest w logu `security`. — verified by: test integracyjny `live.authz.test`
-- [ ] SEC2 (TH-04): Given uczestnik zasubskrybowany do listy A, when właściciel ją usunie, then uczestnik dostaje `list.deleted` i `access.revoked`, jego subskrypcja jest usunięta, zanim zostanie rozesłane jakiekolwiek kolejne zdarzenie, a ponowny `subscribe` daje `not_found`; zapis na tej liście zwraca 404. — verified by: test integracyjny
-- [ ] SEC3 (TH-14): Given upgrade do `/api/v1/live` z nagłówkiem `Origin` spoza zaufanych (z ważnym ciasteczkiem), when serwer go odbierze, then połączenie jest odrzucone. — verified by: test integracyjny
-- [ ] SEC4 (TH-16): Given upgrade bez ciasteczka, z tokenem sesji w parametrze adresu (`?token=…`), when serwer go odbierze, then połączenie jest odrzucone jak bez sesji (401), a token nie trafia do logów. — verified by: test integracyjny
-- [ ] SEC5 (TH-17): Given otwarte połączenie WS sesji, when domownik się wyloguje, then serwer zamyka połączenia tej sesji (`closeSession`), a próba ponownego połączenia ze starym ciasteczkiem jest odrzucona. — verified by: test integracyjny
-- [ ] SEC6 (TH-25): Given ważna sesja, when klient otworzy więcej połączeń niż limit na sesję, wyśle więcej wiadomości na sekundę niż limit albo wiadomość ponad limit rozmiaru lub niezgodną ze schematem zod, then nadmiarowe połączenie / połączenie naruszające limit jest zamykane (wiadomość niezgodna ze schematem → `error`, bez skutków). — verified by: test integracyjny `live.limits.test`
+- [x] AC1: Given dwóch zalogowanych klientów WS zasubskrybowanych do listy, when jeden doda, edytuje, odhaczy lub usunie pozycję albo usunie kupione przez HTTP, then drugi dostaje odpowiednio `item.upserted` (z `Item` w kształcie odpowiedzi API), `item.deleted` lub `items.cleared` w < 5 s (w teście: < 1 s). — verified by: test integracyjny `live.items.test` (dwa klienty `ws`)
+- [x] AC2: Given zmiana nazwy listy, usunięcie listy, przyjęcie zaproszenia i unieważnienie linku, when operacja się zatwierdzi, then subskrybenci listy dostają `list.updated` / `list.deleted` / `members.changed`, właściciel `invitations.changed`, a kanały `user:<id>` wszystkich osób z dostępem (i nowego uczestnika) dostają `lists.changed`. — verified by: test integracyjny `live.lists.test`
+- [x] AC3: Given operacja, która się nie powiedzie (np. 409 duplikat, 404), when transakcja się wycofa, then żadne zdarzenie nie jest wysłane. — verified by: test integracyjny
+- [x] AC4: Given SC-06 otwarty u dwóch osób, when druga osoba zmieni pozycję, then u pierwszej zmiana pojawia się bez odświeżania, wiersz jest krótko podświetlony (bez animacji przy „ogranicz ruch”), fokus się nie zmienia, aktualizuje się region „N do kupienia”; zdarzenie z `updatedAt` nie nowszym niż stan klienta jest ignorowane. — verified by: test komponentu (podstawiony klient WS) + E2E J-05
+- [x] AC5: Given SC-06 lub SC-07 otwarty u uczestnika, when właściciel usunie listę, then uczestnik od razu trafia na SC-05 z komunikatem „Lista „<nazwa>” została usunięta albo nie masz już do niej dostępu.”; when właściciel zmieni nazwę, then AppBar i `h1` pokazują nową nazwę. — verified by: test komponentu + E2E J-05
+- [x] AC6: Given SC-05 otwarty, when ktoś udostępni domownikowi listę, zmieni nazwę lub stan pozycji na jego liście albo ją usunie, then karty odświeżają się bez przeładowania strony, a nowa lista jest ogłaszana `polite` „Nowa lista: <nazwa>”. — verified by: test komponentu + E2E
+- [x] AC7: Given SC-07 właściciela, when ktoś przyjmie link, then link znika z sekcji „Zaproszenia” bez odświeżania. — verified by: test komponentu (podstawiony klient WS)
+- [x] AC8: Given zerwane połączenie (serwer przestaje odpowiadać na ping przez 10 s albo zamyka połączenie), when połączenie wróci, then klient ponownie subskrybuje listę i pobiera jej aktualny stan; serwer wysyła ping co 25 s. — verified by: test integracyjny (ping, zegar) + test hooka `useLiveList` (podstawiony WS)
+- [x] AC9: Given E2E z dwoma kontekstami przeglądarki (Ania, Tomek), when Tomek odhacza pozycję, then u Ani zmiana jest widoczna w ≤ 5 s; skan axe na SC-06 po aktualizacji na żywo bez naruszeń. — verified by: E2E Playwright J-05 + axe
+- [x] SEC1 (TH-03): Given domownik B bez dostępu do listy A, when wyśle `subscribe { listId: A }`, then dostaje `error { code: "not_found", listId }`, a kolejne zmiany listy A do niego nie docierają; odmowa jest w logu `security`. — verified by: test integracyjny `live.authz.test`
+- [x] SEC2 (TH-04): Given uczestnik zasubskrybowany do listy A, when właściciel ją usunie, then uczestnik dostaje `list.deleted` i `access.revoked`, jego subskrypcja jest usunięta, zanim zostanie rozesłane jakiekolwiek kolejne zdarzenie, a ponowny `subscribe` daje `not_found`; zapis na tej liście zwraca 404. — verified by: test integracyjny
+- [x] SEC3 (TH-14): Given upgrade do `/api/v1/live` z nagłówkiem `Origin` spoza zaufanych (z ważnym ciasteczkiem), when serwer go odbierze, then połączenie jest odrzucone. — verified by: test integracyjny
+- [x] SEC4 (TH-16): Given upgrade bez ciasteczka, z tokenem sesji w parametrze adresu (`?token=…`), when serwer go odbierze, then połączenie jest odrzucone jak bez sesji (401), a token nie trafia do logów. — verified by: test integracyjny
+- [x] SEC5 (TH-17): Given otwarte połączenie WS sesji, when domownik się wyloguje, then serwer zamyka połączenia tej sesji (`closeSession`), a próba ponownego połączenia ze starym ciasteczkiem jest odrzucona. — verified by: test integracyjny
+- [x] SEC6 (TH-25): Given ważna sesja, when klient otworzy więcej połączeń niż limit na sesję, wyśle więcej wiadomości na sekundę niż limit albo wiadomość ponad limit rozmiaru lub niezgodną ze schematem zod, then nadmiarowe połączenie / połączenie naruszające limit jest zamykane (wiadomość niezgodna ze schematem → `error`, bez skutków). — verified by: test integracyjny `live.limits.test`
 
 ## TDD plan
 
@@ -108,17 +108,84 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence — częściowo: przewodniki warstw („Gdzie jest kod”) tak; `api.md` i `tech-stack.md` implementer w trybie autonomicznym nie może edytować, propozycje w Evidence („Odstępstwa i propozycje”)
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+Implementacja 2026-10-29 (`/implement-task`, tryb autonomiczny). Zależności: `@fastify/websocket` 11.3.4 (ADR 0003, `layers/backend.md` „Technologia”), `ws` 8.22.0 + `@types/ws` 8.18.2 tylko w testach api (seam „klient `ws`” z TDD planu i `testing-strategy.md`).
+
+### Testy z planu (red → green)
+
+| # | Test | Red (pierwsze uruchomienie) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `packages/shared/test/live.test.ts` | `expected null to deeply equal { type: 'subscribe', …}`; `expected {} to deeply equal { connectionsPerSession: 5, …}` | ✔ 6 |
+| 2 | `apps/api/test/live.upgrade.test.ts` | `expected 404 to be 101 / 401 / 403`; po trasie: log zawierał token z `?token=` | ✔ 4 |
+| 3 | `apps/api/test/live.authz.test.ts` | obsługa `subscribe` powstała razem z trasą (krok 2), więc red sprawdzony wyłączeniem `requireListAccess`: `no "error" within 1000 ms; got [{"type":"subscribed",…}]` | ✔ 3 |
+| 4 | `apps/api/test/live.items.test.ts` | `no "item.upserted" / "item.deleted" within 1000 ms` | ✔ 4 |
+| 5 | `apps/api/test/live.rollback.test.ts` | publikacja po commit z kroku 4, red sprawdzony usunięciem `if (created)`: `unexpected messages: [item.upserted, lists.changed]` | ✔ 1 |
+| 6 | `apps/api/test/live.lists.test.ts` | `no "list.updated" / "list.deleted" / "members.changed" / "invitations.changed" within 1000 ms` | ✔ 5 |
+| 7 | `apps/api/test/live.revoke.test.ts` | bez `revoke`: `no "access.revoked" within 1000 ms` | ✔ 1 |
+| 8 | `apps/api/test/live.sign-out.test.ts` | `connection still open` | ✔ 1 |
+| 9 | `apps/api/test/live.limits.test.ts` | limity wpisane w hubie przed testem; red sprawdzony wyłączeniem limitów (połączenia, wiadomości/s, `maxPayload`, `error`): 4 z 6 testów czerwone | ✔ 6 |
+| 10 | `apps/api/test/live.heartbeat.test.ts` (`vi.useFakeTimers` dla `setInterval` / `setTimeout`) | red sprawdzony interwałem 30 s i bez `terminate`: oba czerwone | ✔ 2 |
+| 11 | `apps/web/src/live/useLiveList.test.tsx` (MSW `ws.link`) | `expected [] to have a length of 1`; `expected [ …3 ] to deeply equal [ …2 ]` (stub hooka) | ✔ 6 |
+| 12 | `apps/web/src/screens/SC-06-lista/ListScreen.live.test.tsx` | 8 × `expected [] to deep equally contain { type: 'subscribe' }`; później dodany test fokusu przy własnym zdarzeniu: `expect(element).toHaveFocus()` i brak podświetlenia własnej zmiany: `.not.toHaveAttribute("data-highlighted")` | ✔ 9 |
+| 13 | `apps/web/src/screens/SC-05-moje-listy/ListsScreen.live.test.tsx` | `Unable to find role "status"` (ogłoszenie); odświeżenie kart sprawdzone wyłączeniem obsługi `lists.changed`: 2 czerwone | ✔ 4 |
+| 14 | `apps/web/src/screens/SC-07-uczestnicy/ParticipantsScreen.live.test.tsx` | 3 × `expected [] to deep equally contain { type: 'subscribe' }` | ✔ 3 |
+| 15 | `apps/web/e2e/j05-na-zywo.spec.ts` (telefon + komputer) | z wyłączonym `live.start()`: `getByText('1 do kupienia')` not found | ✔ 2 |
+
+Uczciwie: w krokach 3, 5, 9 i 10 kod produkcyjny powstał przed testem (razem z trasą z kroku 2); każdy z tych testów sprawdzony „na ugryzienie” przez czasowe zepsucie zachowania i przywrócenie kodu.
+
+### Kryteria akceptacji
+
+- AC1 — `live.items.test`: `item.upserted` z `Item` równym treści odpowiedzi HTTP (dodanie, edycja, odhaczenie z `checkedBy` Tomka), `item.deleted`, `items.cleared` (`itemIds` = `deletedIds`), dostarczenie < 1 s; zdarzenie także do autora.
+- AC2 — `live.lists.test`: `list.updated` + `lists.changed` (właściciel i uczestnik), `list.deleted` + `lists.changed` do byłego uczestnika, przyjęcie linku (trasą i przy rejestracji z linku): `members.changed`, `invitations.changed` tylko do właściciela, `lists.changed` do wszystkich i nowego uczestnika; unieważnienie: `invitations.changed` do właściciela, uczestnik nic.
+- AC3 — `live.rollback.test`: 409 duplikat, 404 pozycja / cudza lista, 400, 403 i powtórzone dodanie (200) — brak wiadomości.
+- AC4 — `ListScreen.live.test`: odhaczenie Tomka → „1 do kupienia”, wiersz w „Kupione” z „kupił(a) Tomek” i `data-highlighted`, fokus bez zmian; dodanie innej osoby zmienia tylko licznik (bez „Dodano …”); przy `prefers-reduced-motion: reduce` bez podświetlenia; `useLiveList.test` — zdarzenie z nie nowszym `updatedAt` ignorowane. E2E J-05: zmiana u Ani ≤ 5 s + axe.
+- AC5 — `ListScreen.live.test` / `ParticipantsScreen.live.test`: `list.deleted` lub `access.revoked` → SC-05 z komunikatem; nowa nazwa w `h1` AppBar; właściciel usuwający listę nie dostaje komunikatu. E2E J-05: zmiana nazwy u Tomka, usunięcie → SC-05 z komunikatem, axe.
+- AC6 — `ListsScreen.live.test`: `lists.changed` odświeża karty (nazwa, licznik, zniknięcie listy); nowa udostępniona lista ogłaszana „Nowa lista: Działka” w `role="status"` bez zmiany fokusu; pierwsze wczytanie bez ogłoszenia.
+- AC7 — `ParticipantsScreen.live.test`: `invitations.changed` → link znika; `members.changed` → „Na liście (1 z 20)”.
+- AC8 — `live.heartbeat.test`: ping co 25 s, pong utrzymuje połączenie, bez ponga 10 s → zamknięcie (1006); `useLiveList.test`: po zerwaniu ponowne połączenie, `subscribe` i drugie `GET` listy; bez pingu 35 s → ponowne połączenie.
+- AC9 — `j05-na-zywo.spec.ts` (oba viewporty) z `expectNoAxeViolations` na SC-06 Ani po zmianie na żywo i SC-05 Tomka.
+- SEC1 — `live.authz.test`: `error not_found` dla cudzej, nieistniejącej i nie-UUID listy; wpis `list_access_denied` w logu `security`; zmiana listy nie dociera.
+- SEC2 — `live.revoke.test`: kolejność `list.deleted`, `access.revoked`, `lists.changed`; ponowny `subscribe` → `not_found`; `POST` pozycji → 404; subskrypcja innej listy działa dalej. Hub synchroniczny: `revoke` kończy się przed kolejnym `publish`.
+- SEC3 — `live.upgrade.test`: obcy `Origin` i brak `Origin` przy ważnym ciasteczku → 403.
+- SEC4 — `live.upgrade.test`: `?token=…` i `?session_token=…` bez ciasteczka → 401; wartość tokenu nie występuje w logu (`redactedUrl` redaguje parametry z „token” w nazwie).
+- SEC5 — `live.sign-out.test`: obie karty sesji zamknięte (1008), druga sesja tego konta zostaje, stare ciasteczko → 401.
+- SEC6 — `live.limits.test`: 6. połączenie sesji zamknięte (1008), zwolnione miejsce działa; 21 wiadomości/s → 1008, 20 przechodzi; wiadomość > 4 kB → 1009; nie-JSON / dodatkowe pole / nieznany typ → `error validation_failed`, bez subskrypcji.
+
+### Przebiegi (2026-10-29)
+
+- `pnpm vitest run --project api --project shared`: 64 pliki, 233 testy ✔.
+- `pnpm test` (cały monorepo): 86 plików, 395 testów ✔ (dwa kolejne przebiegi; jeden wcześniejszy przebieg pod pełnym obciążeniem miał 7 przekroczeń czasu w testach formularzy SC-01 / SC-02 / SC-08 — patrz uwagi dla QA).
+- `pnpm test:mobile`: 10 ✔. `pnpm test:e2e`: 34 ✔ (6,8 min, Windows, 1 worker).
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` (0 klonów, 0 naruszeń dependency-cruiser), `pnpm design-check`, `node scripts/backlog-check.mjs` — OK.
+
+### Zmiany poza nowymi plikami (regresje wyłapane w E2E)
+
+- `useCheckItem`: cel fokusu po odhaczeniu liczony w chwili kliknięcia — zdarzenie własnej zmiany przychodzi przed odpowiedzią API i przenosiło fokus na złą pozycję (J-03); test w `ListScreen.live.test`.
+- Podświetlenie pomijane, gdy trwa własny zapis (`isMutating`), i nazwa odhaczonej w podświetlonym wierszu w `text.secondary` — `text.muted` na `bg.subtle` ma 4,34:1 (axe w J-03).
+- `useEditItem`: arkusz pokazuje „Ta pozycja została usunięta przez inną osobę.”, gdy pozycja zniknie na żywo (Demo 2); E2E `j03-pozycje` „deleted by someone else” oczekuje teraz komunikatu bez zapisu (ścieżkę zapisu → 404 dalej sprawdza test komponentu).
+- E2E `j03-kupione` i J-05 czekają między dodaniami na ogłoszenie „Dodano …” zamiast na wiersz (wiersz może przyjść na żywo przed odpowiedzią API, a AddBar ignoruje Enter w czasie zapisu — zachowanie sprzed T-009).
+- `.visuallyHidden` przeniesione do `styles/page.module.css` (trzecie użycie, SC-05).
+
+### Odstępstwa i propozycje do dokumentów architektury (bez edycji — tryb autonomiczny)
+
+- `api.md` „Zmiany na żywo”: (1) `error` ma też `code: "validation_failed"` (bez `listId`) dla wiadomości niezgodnej ze schematem; (2) ping / pong to wiadomości JSON `{ "type": "ping" }` / `{ "type": "pong" }` (przeglądarka nie widzi ramek ping WebSocket), klient bez pingu przez 25 + 10 s łączy się ponownie; (3) `invitations.changed` idzie kanałem `user:<id>` właściciela (nie kanałem listy); (4) upgrade bez `Origin` = 403 (web); mobile dostanie wyjątek z nagłówkiem tokenu w E-04 (S-04-03); (5) progi `LIVE_LIMITS` w `packages/shared/src/limits.ts`: 5 połączeń na sesję, 20 wiadomości/s, 4096 B.
+- `tech-stack.md` „Narzędzia uruchomieniowe”: proponowany wiersz `@fastify/websocket` 11.3.4 + `ws` (testy).
+- Przewodniki warstw: zaktualizowane tylko „Gdzie jest kod” (backend: moduł `na-zywo`, `requireSession`, `peopleWithAccess`, `test/live.ts`, `LIVE_LIMITS`; web: `src/live/`, helpery testów, J-05, `visuallyHidden`). Propozycja do „Pułapek” web: zdarzenie własnej zmiany przychodzi przed odpowiedzią API — cel fokusu i podświetlenie nie mogą zależeć od kolejności zdarzenie / odpowiedź.
+
+### Uwagi dla QA
+
+- Wyścig `subscribe` ↔ `revoke`: sprawdzenie dostępu jest asynchroniczne; `revoke` w trakcie sprawdzenia zostawi subskrypcję. Dla usuniętej listy bez skutków (nic już nie publikuje), ale przy usuwaniu uczestnika (E-02, S-02-02) trzeba to domknąć.
+- Po wygaśnięciu sesji klient łączy się ponownie co ≤ 10 s (upgrade 401) do przeładowania strony.
+- Pełny `pnpm test` jest wolniejszy (~230 s) — testy WS startują prawdziwy serwer; raz pod obciążeniem przekroczenia czasu w testach formularzy web.
 
 <!-- QA rounds are appended below by /qa-task -->

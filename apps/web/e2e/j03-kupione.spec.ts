@@ -6,7 +6,8 @@ async function shoppingList(page: Page) {
   await openNewList(page, "Dom");
   for (const name of ["Mleko", "Chleb", "Jajka"]) {
     await add(page, name);
-    await expect(page.getByRole("button", { name: `Edytuj ${name}` })).toBeVisible();
+    // Zapis zakończony (ogłoszenie po odpowiedzi API); sam wiersz może przyjść wcześniej na żywo.
+    await expect(page.getByRole("status").filter({ hasText: `Dodano ${name}` })).toBeAttached();
   }
 }
 

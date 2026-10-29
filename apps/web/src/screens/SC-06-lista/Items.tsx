@@ -16,6 +16,8 @@ interface ItemsProps {
   checking: CheckItemState;
   checkboxFocus: CheckboxFocus;
   bought: { open: boolean; setOpen: (open: boolean) => void };
+  /** Pozycje właśnie zmienione przez inne osoby (`useLiveList`). */
+  highlighted: ReadonlySet<string>;
 }
 
 /**
@@ -23,7 +25,8 @@ interface ItemsProps {
  * otwiera arkusz edycji, checkbox odhacza. Pusty stan jest tu, nie wyżej: po usunięciu ostatniej
  * pozycji fokus trafia do AddBar.
  */
-export function Items({ list, addNameRef, checking, checkboxFocus, bought }: ItemsProps) {
+export function Items(props: ItemsProps) {
+  const { list, addNameRef, checking, checkboxFocus, bought, highlighted } = props;
   const people: Person[] = [list.owner, ...list.members];
   const [editing, setEditing] = useState<Item | null>(null);
   const focus = useFocusAfterRemoval(list.items, addNameRef);
@@ -41,6 +44,7 @@ export function Items({ list, addNameRef, checking, checkboxFocus, bought }: Ite
       key={item.id}
       item={item}
       people={people}
+      highlighted={highlighted.has(item.id)}
       checking={checking}
       checkboxRef={checkboxFocus.register(item.id)}
       editRef={focus.register(item.id)}
@@ -101,6 +105,7 @@ interface RowProps {
   item: Item;
   /** Właściciel i uczestnicy w kolejności dołączenia (kolor awatara). */
   people: Person[];
+  highlighted: boolean;
   checking: CheckItemState;
   checkboxRef: Ref<HTMLButtonElement>;
   editRef: Ref<HTMLButtonElement>;
@@ -108,7 +113,7 @@ interface RowProps {
 }
 
 /** Wiersz pozycji; odhaczona ma awatar i podpis osoby, która kupiła (F-10). */
-function Row({ item, people, checking, checkboxRef, editRef, onEdit }: RowProps) {
+function Row({ item, people, highlighted, checking, checkboxRef, editRef, onEdit }: RowProps) {
   const person = item.checked ? item.checkedBy : item.addedBy;
   const signature = item.checked ? boughtByText(item.checkedBy) : addedByText(item.addedBy);
   return (
@@ -129,6 +134,7 @@ function Row({ item, people, checking, checkboxRef, editRef, onEdit }: RowProps)
         },
       }}
       checkboxRef={checkboxRef}
+      highlighted={highlighted}
     />
   );
 }

@@ -4,6 +4,7 @@ import { listMember, shoppingList, user } from "../../../db/schema";
 import type {
   InvitationTarget,
   JoinOutcome,
+  ListPeople,
   ListItems,
   ListRole,
   ListsRepository,
@@ -151,6 +152,20 @@ export class DrizzleListsRepository implements ListsRepository {
       .from(listMember)
       .where(eq(listMember.listId, listId));
     return row?.count ?? 0;
+  }
+
+  async peopleWithAccess(listId: string): Promise<ListPeople | null> {
+    const [[list], members] = await Promise.all([
+      this.db
+        .select({ ownerId: shoppingList.ownerId })
+        .from(shoppingList)
+        .where(eq(shoppingList.id, listId)),
+      this.db
+        .select({ id: listMember.userId })
+        .from(listMember)
+        .where(eq(listMember.listId, listId)),
+    ]);
+    return list ? { ownerId: list.ownerId, participantIds: members.map(({ id }) => id) } : null;
   }
 
   async invitationTarget(listId: string): Promise<InvitationTarget | null> {

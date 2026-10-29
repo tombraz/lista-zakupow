@@ -1,14 +1,29 @@
 import type { Invitation } from "@lista/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { createInvitation, fetchInvitations, revokeInvitation } from "../../api/invitations";
 import { listKey } from "../../lists/useList";
+import { useLive } from "../../live/LiveProvider";
 
 export const invitationsKey = (listId: string) => [...listKey(listId), "invitations"] as const;
 
-/** Aktywne linki listy (tylko właściciel: `enabled`). */
+/**
+ * Aktywne linki listy (tylko właściciel: `enabled`); link użyty lub unieważniony gdzie indziej
+ * znika na żywo (`invitations.changed`, F-11, F-14).
+ */
 export function useInvitations(listId: string, enabled: boolean) {
+  const live = useLive();
+  const client = useQueryClient();
+  useEffect(
+    () =>
+      live?.onMessage((message) => {
+        if (message.type === "invitations.changed" && message.listId === listId) {
+          void client.invalidateQueries({ queryKey: invitationsKey(listId) });
+        }
+      }),
+    [live, client, listId],
+  );
   return useQuery({
     queryKey: invitationsKey(listId),
     queryFn: () => fetchInvitations(listId),

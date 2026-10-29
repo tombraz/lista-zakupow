@@ -84,7 +84,9 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
     form: { name, setName, note, setNote, fields },
     duplicate,
     failure: failure ?? removal.failure,
-    deletedElsewhere,
+    // F-14: usunięcie wygrywa z edycją, także gdy przyszło na żywo przed zapisem.
+    deletedElsewhere:
+      deletedElsewhere || (!removal.removing && !items.some(({ id }) => id === item.id)),
     save,
     remove: () => {
       setFailure(null);

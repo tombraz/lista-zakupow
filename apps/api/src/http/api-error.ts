@@ -38,7 +38,7 @@ export function domainErrorBody(error: DomainError): ApiErrorBody {
   };
 }
 
-function logSecurityEvent(request: FastifyRequest, error: DomainError): void {
+export function logSecurityEvent(request: FastifyRequest, error: DomainError): void {
   const { security, limit } = error.details;
   if (!security) return;
   securityLog(request.log).warn(

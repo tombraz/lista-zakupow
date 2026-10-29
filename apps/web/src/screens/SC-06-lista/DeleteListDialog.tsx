@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import { deleteList } from "../../api/lists";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { confirmMutation } from "./confirmMutation";
+import { deleteListKey } from "../../lists/deleteListKey";
 import { listKey } from "../../lists/useList";
 import { LISTS_KEY } from "../../lists/useLists";
 import { deleteConsequence, messages } from "./messages";
@@ -20,6 +21,7 @@ export function DeleteListDialog({ list, onClose, returnFocus }: DeleteListDialo
   const client = useQueryClient();
   const navigate = useNavigate();
   const mutation = useMutation({
+    mutationKey: deleteListKey(list.id),
     mutationFn: () => deleteList(list.id),
     onSuccess: () => {
       client.removeQueries({ queryKey: listKey(list.id) });

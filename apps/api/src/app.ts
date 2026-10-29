@@ -9,6 +9,7 @@ import { apiErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
 import { accountRoutes, type AuthSettings } from "./modules/konta";
 import { listsModule } from "./modules/listy";
+import { createLiveHub, liveModule } from "./modules/na-zywo";
 import { createItems, itemsModule } from "./modules/pozycje";
 import { invitationsModule } from "./modules/zaproszenia";
 
@@ -37,16 +38,32 @@ export function buildApp(options: AppOptions): FastifyInstance {
   securityHeaders(app);
   trustedOrigin(app, options.auth.origin);
   healthRoutes(app, options.pool);
-  const accounts = accountRoutes(app, options.pool, options.auth);
+  const live = createLiveHub();
+  const accounts = accountRoutes(app, options.pool, options.auth, live);
   // Pozycje zależą od dostępu do listy, a szczegóły listy pokazują pozycje (ListItems).
-  const lists = listsModule(app, options.pool, accounts, createItems(options.pool));
+  const lists = listsModule(app, options.pool, accounts, {
+    items: createItems(options.pool),
+    live,
+  });
   const clock = options.clock ?? systemClock;
-  itemsModule(app, options.pool, { accounts, lists, clock });
+  itemsModule(app, options.pool, { accounts, lists, clock, live });
   invitationsModule(app, options.pool, {
     accounts,
     lists,
     clock,
     webOrigin: options.auth.origin,
+    live,
+  });
+  liveModule(app, {
+    hub: live,
+    origin: options.auth.origin,
+    sessionOf: async (request, reply) => {
+      const { user, sessionId } = await accounts.requireSession(request, reply);
+      return { userId: user.id, sessionId };
+    },
+    requireListAccess: async (userId, listId) => {
+      await lists.requireListAccess(userId, listId, "member");
+    },
   });
   webApp(app, options.webDistDir);
   return app;

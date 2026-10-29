@@ -15,6 +15,7 @@
     "@fastify/helmet": "13.2.0",
     "@fastify/rate-limit": "11.2.1",
     "@fastify/static": "10.1.7",
+    "@fastify/websocket": "11.3.4",
     "@lista/shared": "workspace:*",
     "better-auth": "1.7.13",
     "drizzle-orm": "0.45.4",
@@ -26,9 +27,11 @@
   "devDependencies": {
     "@testcontainers/postgresql": "12.2.1",
     "@types/pg": "8.23.1",
+    "@types/ws": "8.18.2",
     "drizzle-kit": "0.31.11",
     "esbuild": "0.28.2",
     "testcontainers": "12.2.1",
-    "tsx": "4.23.15"
+    "tsx": "4.23.15",
+    "ws": "8.22.0"
   }
 }

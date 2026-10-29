@@ -29,6 +29,8 @@ interface ItemRowProps {
   checkbox: ItemCheckbox;
   /** Fokus po odhaczeniu przenosi się na checkbox innej pozycji. */
   checkboxRef?: Ref<HTMLButtonElement>;
+  /** Właśnie zmieniona przez inną osobę: krótkie podświetlenie (SC-06 „Live update”). */
+  highlighted?: boolean;
 }
 
 /**
@@ -37,9 +39,13 @@ interface ItemRowProps {
  */
 export function ItemRow(props: ItemRowProps) {
   const { name, details, person, personIndex, editLabel, onEdit, editRef } = props;
-  const { checkbox, checkboxRef } = props;
+  const { checkbox, checkboxRef, highlighted } = props;
   return (
-    <li className={styles.row} data-checked={checkbox.checked}>
+    <li
+      className={styles.row}
+      data-checked={checkbox.checked}
+      data-highlighted={highlighted || undefined}
+    >
       <Avatar person={person} index={personIndex} />
       <div className={styles.text}>
         <button

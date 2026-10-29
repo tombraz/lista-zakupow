@@ -2,7 +2,7 @@
 id: S-01-06
 epic: E-01
 title: Wspólne zakupy na żywo (web)
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [F-14, N-06]
 screens: [SC-05, SC-06, SC-07]
 ---

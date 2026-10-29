@@ -10,6 +10,13 @@ import { messages } from "./messages";
 /** Gdzie przenieść fokus po zapisie: checkbox pozycji albo przycisk sekcji „Kupione”. */
 export type CheckFocus = { itemId: string } | "bought";
 
+interface Toggle {
+  itemId: string;
+  checked: boolean;
+  /** Fokus po zapisie (SC-06, „Accessibility”). */
+  next: CheckFocus;
+}
+
 interface CheckOptions {
   /** Pozycje z cache w kolejności z API. */
   items: Item[];
@@ -31,13 +38,9 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
     setSaving((current) => new Set([...current].filter((id) => id !== itemId)));
   };
 
-  const saved = (item: Item, checked: boolean) => {
-    if (checked) {
-      setAnnouncement(messages.checked(item.name));
-      onFocus(neighbourOf(items, item.id), item);
-    } else {
-      onFocus({ itemId: item.id }, item);
-    }
+  const saved = (item: Item, { checked, next }: Toggle) => {
+    if (checked) setAnnouncement(messages.checked(item.name));
+    onFocus(next, item);
     replaceItem(client, listId, item);
   };
 
@@ -51,10 +54,9 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
   // Wywołania zwrotne hooka, nie `mutate`: te drugie dostaje tylko ostatnie z równoległych
   // odhaczeń różnych pozycji (TanStack Query).
   const mutation = useMutation({
-    mutationFn: ({ itemId, checked }: { itemId: string; checked: boolean }) =>
-      checkItem(listId, itemId, checked),
-    onSuccess: (updated, { checked }) => {
-      saved(updated, checked);
+    mutationFn: ({ itemId, checked }: Toggle) => checkItem(listId, itemId, checked),
+    onSuccess: (updated, toggled) => {
+      saved(updated, toggled);
     },
     onError: failed,
     onSettled: (_data, _error, { itemId }) => {
@@ -66,7 +68,11 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
     if (saving.has(item.id)) return;
     setFailure(null);
     setSaving((current) => new Set(current).add(item.id));
-    mutation.mutate({ itemId: item.id, checked: !item.checked });
+    const checked = !item.checked;
+    // Cel fokusu z kolejności w chwili kliknięcia: zdarzenie na żywo tej samej zmiany może
+    // przenieść pozycję do „Kupione” przed odpowiedzią API (F-14).
+    const next = checked ? neighbourOf(items, item.id) : { itemId: item.id };
+    mutation.mutate({ itemId: item.id, checked, next });
   };
 
   return { toggle, isSaving: (itemId: string) => saving.has(itemId), failure, announcement };

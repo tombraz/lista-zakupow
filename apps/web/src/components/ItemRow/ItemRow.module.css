@@ -81,3 +81,15 @@
   composes: spinner from "../Button/Button.module.css";
   color: var(--color-text-secondary);
 }
+
+/* Właśnie zmieniona przez inną osobę (design-system.md, ItemRow); bez tego przy „ogranicz ruch”
+   (hook nie podaje wtedy `highlighted`). */
+.row[data-highlighted="true"] {
+  background: var(--color-bg-subtle);
+  transition: background var(--motion-normal);
+}
+
+/* Wyciszona nazwa odhaczonej ma na bg.subtle za mały kontrast (4,3:1 < 4,5:1, WCAG 1.4.3). */
+.row[data-highlighted="true"][data-checked="true"] .name {
+  color: var(--color-text-secondary);
+}

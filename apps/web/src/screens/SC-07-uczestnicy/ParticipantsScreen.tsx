@@ -10,6 +10,7 @@ import { LoadError } from "../../components/LoadError/LoadError";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { Toast, useToast } from "../../components/Toast/Toast";
 import { useList } from "../../lists/useList";
+import { useLiveList } from "../../live/useLiveList";
 import { createErrorText, messages, revokeErrorText } from "./messages";
 import styles from "./ParticipantsScreen.module.css";
 import { useInvitationChanges, useInvitations } from "./useInvitations";
@@ -48,6 +49,7 @@ type ParticipantsPage =
 /** Lista i (właściciel) jej aktywne linki; uczestnik linków nie pobiera (403, TH-02). */
 function useParticipantsPage(listId: string): ParticipantsPage {
   const list = useList(listId);
+  useLiveList(listId);
   const isOwner = list.data?.role === "owner";
   const invitations = useInvitations(listId, isOwner);
   // MC-01: cudza lista jak na SC-06 — bez nazwy i treści.

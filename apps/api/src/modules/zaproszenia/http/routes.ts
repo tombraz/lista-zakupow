@@ -9,8 +9,8 @@ import type { FastifyInstance } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import type { Accounts } from "../../konta";
 import type { Lists } from "../../listy";
+import type { Live } from "../../na-zywo";
 import {
-  acceptInvitation,
   activeInvitations,
   createInvitation,
   previewInvitation,
@@ -18,6 +18,7 @@ import {
   type InvitationsContext,
   type StoredInvitation,
 } from "../domain/invitations";
+import { acceptAndAnnounce } from "./invitation-events";
 
 interface ListParams {
   Params: { listId: string };
@@ -37,6 +38,7 @@ export interface InvitationRoutesDeps {
   invitations: InvitationsContext;
   /** Adres web, pod którym działa SC-08 (`APP_ORIGIN`). */
   webOrigin: string;
+  live: Live;
 }
 
 // Trasa: walidacja → requireListAccess → domena → mapowanie (layers/backend.md).
@@ -46,7 +48,7 @@ export function invitationRoutes(app: FastifyInstance, deps: InvitationRoutesDep
 }
 
 function ownerRoutes(app: FastifyInstance, deps: InvitationRoutesDeps): void {
-  const { accounts, lists, invitations, webOrigin } = deps;
+  const { accounts, lists, invitations, webOrigin, live } = deps;
   const response = (stored: StoredInvitation): Invitation => ({
     id: stored.id,
     url: `${webOrigin}/zaproszenie/${stored.token}`,
@@ -71,6 +73,8 @@ function ownerRoutes(app: FastifyInstance, deps: InvitationRoutesDeps): void {
       const user = await accounts.requireUser(request, reply);
       const access = await lists.requireListAccess(user.id, request.params.listId, "owner");
       await revokeInvitation(invitations, access.listId, request.params.invitationId);
+      // F-11: unieważniony link znika też z innych otwartych SC-07 właściciela.
+      live.notify([user.id], { type: "invitations.changed", listId: access.listId });
       return reply.code(204).send();
     },
   );
@@ -85,6 +89,7 @@ const LOOKUP_LIMIT = { config: { rateLimit: { max, timeWindow: windowSeconds * 1
  */
 async function tokenRoutes(scope: FastifyInstance, deps: InvitationRoutesDeps): Promise<void> {
   const { accounts, invitations } = deps;
+  const events = { live: deps.live, lists: deps.lists };
   await scope.register(rateLimit, {
     global: false,
     errorResponseBuilder: () => new ApiError(429, "rate_limited"),
@@ -101,7 +106,8 @@ async function tokenRoutes(scope: FastifyInstance, deps: InvitationRoutesDeps): 
     LOOKUP_LIMIT,
     async (request, reply) => {
       const user = await accounts.requireUser(request, reply);
-      const listId = await acceptInvitation(invitations, request.params.token, user.id);
+      const { token } = request.params;
+      const listId = await acceptAndAnnounce(invitations, events, token, user.id);
       return { listId } satisfies AcceptInvitationResponse;
     },
   );

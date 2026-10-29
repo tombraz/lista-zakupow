@@ -1,8 +1,12 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { afterEntry } from "../invitations/invitationContext";
+import { LiveProvider } from "../live/LiveProvider";
 import { useSession } from "./useSession";
 
-/** Trasy dla zalogowanych; anonim trafia na SC-01 i po zalogowaniu wraca (ia.md, „Nawigacja”). */
+/**
+ * Trasy dla zalogowanych; anonim trafia na SC-01 i po zalogowaniu wraca (ia.md, „Nawigacja”).
+ * Zalogowany ma jedno połączenie na żywo; wylogowanie je zamyka (architecture.md).
+ */
 export function RequireSession() {
   const session = useSession();
   const location = useLocation();
@@ -10,7 +14,11 @@ export function RequireSession() {
   if (!session.data) {
     return <Navigate to="/logowanie" replace state={{ from: location.pathname }} />;
   }
-  return <Outlet />;
+  return (
+    <LiveProvider>
+      <Outlet />
+    </LiveProvider>
+  );
 }
 
 /** Adres, z którego przekierowano na logowanie; domyślnie „Moje listy”. */

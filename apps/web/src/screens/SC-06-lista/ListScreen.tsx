@@ -8,6 +8,7 @@ import { MoreMenu } from "../../components/MoreMenu/MoreMenu";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { joinedListOf } from "../../invitations/invitationContext";
 import { useList } from "../../lists/useList";
+import { useLiveList } from "../../live/useLiveList";
 import { AddItemBar } from "./AddItemBar";
 import { DeleteListDialog } from "./DeleteListDialog";
 import { Items } from "./Items";
@@ -60,6 +61,7 @@ function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof us
   const adding = useAddItem(listId, items);
   const checkboxFocus = useCheckboxFocus(items);
   const checking = useCheckItem(listId, { items, onFocus: checkboxFocus.focus });
+  const live = useLiveList(listId);
   const [boughtOpen, setBoughtOpen] = useState(false);
   return (
     <>
@@ -85,6 +87,7 @@ function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof us
             checking={checking}
             checkboxFocus={checkboxFocus}
             bought={{ open: boughtOpen, setOpen: setBoughtOpen }}
+            highlighted={live.highlighted}
           />
         )}
         <p className={styles.visuallyHidden} role="status">

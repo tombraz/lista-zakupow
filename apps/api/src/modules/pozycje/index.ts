@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 import type { Clock } from "../../clock";
 import type { Accounts } from "../konta";
 import type { Lists } from "../listy";
+import type { Live } from "../na-zywo";
 import { itemResponse } from "./http/item-response";
 import { itemRoutes } from "./http/routes";
 import { DrizzleItemsRepository } from "./infra/items-repository";
@@ -28,7 +29,7 @@ export function createItems(pool: Pool): Items {
 export function itemsModule(
   app: FastifyInstance,
   pool: Pool,
-  dependencies: { accounts: Accounts; lists: Lists; clock: Clock },
+  dependencies: { accounts: Accounts; lists: Lists; clock: Clock; live: Live },
 ) {
   itemRoutes(app, { ...dependencies, repository: new DrizzleItemsRepository(drizzle(pool)) });
 }

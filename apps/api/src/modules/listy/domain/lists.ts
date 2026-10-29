@@ -27,6 +27,17 @@ export interface ListView extends ShoppingList {
   role: ListRole;
 }
 
+/** Kto ma dostęp do listy (identyfikatory domowników). */
+export interface ListPeople {
+  ownerId: string;
+  participantIds: string[];
+}
+
+/** Wszyscy z dostępem: właściciel i uczestnicy. */
+export function everyone(people: ListPeople | null): string[] {
+  return people ? [people.ownerId, ...people.participantIds] : [];
+}
+
 /** Lista widziana z linku zaproszenia (SC-08): tylko nazwa i imię właściciela (MC-02). */
 export interface InvitationTarget {
   listName: string;
@@ -45,6 +56,8 @@ export interface ListsRepository {
   /** Listy z dostępem domownika (własne i udostępnione), od ostatnio zmienionej. */
   listsOf(userId: string, listId?: string): Promise<ShoppingList[]>;
   invitationTarget(listId: string): Promise<InvitationTarget | null>;
+  /** Właściciel i uczestnicy listy; `null`, gdy lista nie istnieje. */
+  peopleWithAccess(listId: string): Promise<ListPeople | null>;
   participantCount(listId: string): Promise<number>;
 }
 

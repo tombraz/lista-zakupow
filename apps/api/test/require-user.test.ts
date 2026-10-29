@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
 import { apiErrors } from "../src/http/api-error";
 import { accountRoutes } from "../src/modules/konta";
+import { createLiveHub } from "../src/modules/na-zywo";
 import { TEST_ORIGIN, TEST_SECRET } from "./app";
 import { useTestDatabase } from "./database";
 import { createUser } from "./factories";
@@ -13,7 +14,8 @@ describe("Accounts.requireUser for routes of other modules", () => {
   function appWithProtectedRoute() {
     const app = Fastify();
     apiErrors(app);
-    const accounts = accountRoutes(app, db.pool, { secret: TEST_SECRET, origin: TEST_ORIGIN });
+    const auth = { secret: TEST_SECRET, origin: TEST_ORIGIN };
+    const accounts = accountRoutes(app, db.pool, auth, createLiveHub());
     app.get("/api/v1/chronione", async (request, reply) => {
       const user = await accounts.requireUser(request, reply);
       return { id: user.id, name: user.name, email: user.email };

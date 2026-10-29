@@ -4,6 +4,7 @@ import {
   type ErrorCode,
   type SignUpInvitation,
 } from "@lista/shared";
+import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { validate } from "../../../http/validate";
@@ -17,6 +18,8 @@ interface AuthDeps {
   failures: SignInFailures;
   /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
   invitationOnSignUp: () => InvitationOnSignUp | undefined;
+  /** TH-17: po wylogowaniu zamyka połączenia na żywo tej sesji (`na-zywo.closeSession`). */
+  onSignedOut: (sessionId: string) => void;
 }
 
 /** Przyjmuje zaproszenie dla nowego konta; błąd zaproszenia wraca w treści, nie jako status. */
@@ -75,7 +78,9 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
   });
 
   app.post("/api/auth/sign-out", async (request, reply) => {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
     const response = await forward(auth, origin, request, {});
+    if (response.ok && session) deps.onSignedOut(session.session.id);
     return relay(response, reply);
   });
 }

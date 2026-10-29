@@ -20,6 +20,8 @@ export const messages = {
   cancel: "Anuluj",
   limit: "Masz już 50 list — to limit. Usuń listę, której nie używasz, żeby utworzyć nową.",
   loadError: "Nie udało się wczytać list.",
+  removed: (name: string) => `Lista „${name}” została usunięta albo nie masz już do niej dostępu.`,
+  newList: (name: string) => `Nowa lista: ${name}`,
   empty: { text: "Nie masz jeszcze żadnej listy.", cta: "Utwórz pierwszą listę" },
 };
 

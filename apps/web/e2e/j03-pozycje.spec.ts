@@ -78,9 +78,8 @@ test("SC-06 shows that an item was deleted by someone else", async ({ page }) =>
   const removed = await api(page).delete(`/api/v1/lists/${list.id}/items/${bread?.id ?? ""}`);
   expect(removed.status()).toBe(204);
 
-  await sheet.getByLabel(NOTE).fill("razowy");
-  await sheet.getByRole("button", { name: "Zapisz" }).click();
-
+  // T-009: usunięcie dociera na żywo, zanim ktokolwiek zapisze edycję (zapis po nim = 404,
+  // test komponentu „Edycja usuniętej pozycji”).
   await expect(sheet.getByText("Ta pozycja została usunięta przez inną osobę.")).toBeVisible();
   await expectNoAxeViolations(page);
   await sheet.getByRole("button", { name: "Zamknij" }).click();
