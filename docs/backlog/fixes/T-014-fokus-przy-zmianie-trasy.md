@@ -4,7 +4,7 @@ title: "Fokus na nagłówku ekranu po zmianie trasy (web)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-progress     # todo | in-progress | in-qa | done | blocked
+status: in-qa     # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [N-04]
@@ -43,6 +43,8 @@ related_tasks: [T-004, T-005, T-006, T-008, T-011]
 | 4 | `focuses the heading of SC-09 opened from SC-05 (AC2)` | komponent | Vitest + RTL + MSW | AC2 |
 | 5 | `focuses the heading of SC-05 after the browser back button (AC3)` | komponent | Vitest + RTL + MSW | AC3 |
 | 6 | J-02: po „Wstecz” z SC-06 `h1` „Moje listy” ma fokus | E2E | Playwright | AC2 |
+| 7 | `waits for the list name before focusing the SC-06 heading` (QA r1 #2) | komponent | Vitest + RTL + MSW | strażnik `named` |
+| 8 | `T-014 focuses the AppBar heading after a keyboard route change, with a visible ring` (QA r1 #1) | E2E | Playwright | 2.4.7: obwódka `focus.ring-on-brand` |
 
 **Run:** `pnpm vitest run apps/web/src/routeFocus.test.tsx`; E2E `pnpm test:e2e` (J-02)
 
@@ -94,3 +96,10 @@ Verdict: fail
 | 4 | note | testy (poza zakresem) | Znany niestabilny test `InvitationScreen.entry.test.tsx` padł w pełnym przebiegu. | `pnpm test` 1 failed / 401 passed; osobno 3 × zielony | T-019. |
 
 **Do zmiany:** #1 — widoczna obwódka `focus.ring-on-brand` dla `h1` w AppBar z testem, który ją sprawdza.
+
+### Poprawki po rundzie 1 (/fix)
+
+- #1: `AppBar.module.css` — `.title:focus-visible` dostaje `outline-color: var(--color-focus-ring-on-brand)` (jak `.control`). Najpierw test E2E 8 — czerwony: oczekiwano `rgb(255, 210, 63)`, było `rgb(11, 79, 191)`; po poprawce zielony (oba viewporty).
+- #2: test 7 — czerwony po usunięciu warunku `named`, zielony z nim.
+- #3, #4: bez zmian (środowisko; T-019).
+- Web: 169 testów zielone; typecheck, lint, design-check OK; Prettier OK (poza CRLF kopii roboczej); E2E `-g "T-014|J-02"` 4 passed.
