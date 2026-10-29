@@ -4,7 +4,7 @@ title: "Synchroniczna blokada podwójnego wysłania formularzy i akcji"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa               # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05, F-11]
@@ -34,31 +34,44 @@ related_tasks: [T-004, T-005, T-007, T-008]
 
 ## TDD plan
 
-**Seam:** hooki zapisu web (wspólny mechanizm, np. blokada w `useRef` przed `mutate`)
+**Seam:** ekran z MSW (cała aplikacja, `renderApp`); wspólny mechanizm `useGuardedMutation` (`apps/web/src/api/useGuardedMutation.ts`) — zamiennik `useMutation` z blokadą w `useRef` ustawianą przed `mutate`, zwalnianą w `onSettled` hooka.
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | <odtwarza błąd — uzupełnia /fix> | | | AC1 |
+| 1 | `SC-07 invitations of the owner > creates a link once when clicked twice before the button re-renders (T-020)` (odtwarza błąd) | komponent | Vitest + RTL + MSW | AC1 |
+| 2 | `SC-07 … > revokes a link once when clicked twice, and another link meanwhile (T-020)` | komponent | Vitest + RTL + MSW | AC2 (ta sama przyczyna; `lockOf` — różne linki naraz) |
+| 3 | `SC-05 … new list form > creates the list once when submitted twice before the button re-renders (T-020)` | komponent | Vitest + RTL + MSW | AC2 |
+| 4 | `SC-02 Rejestracja > signs up once when submitted twice before the button re-renders (T-020)` | komponent | Vitest + RTL + MSW | AC2 |
+| 5 | `SC-06 „Usuń wszystkie kupione” > sends one request when confirmed twice before the button re-renders (T-020)` | komponent | Vitest + RTL + MSW | AC2 |
+| 6 | `SC-08 Zaproszenie > joins once when „Dołącz do listy” is clicked twice before it re-renders (T-020)` | komponent | Vitest + RTL + MSW | AC2 |
+| 7 | `SC-06 … delete > deletes once when confirmed twice before the button re-renders (T-020)` | komponent | Vitest + RTL + MSW | AC2 (ta sama przyczyna) |
+| 8 | `SC-09 Konto: signing out > signs out once when clicked twice before the button re-renders (T-020)` | komponent | Vitest + RTL + MSW | AC2 (ta sama przyczyna) |
 
-**Run:** `pnpm --filter @lista/web test`
+**Run:** `pnpm vitest run apps/web/src/screens -t "T-020"`; całość `pnpm vitest run --project web --project tokens`
 
 ## QA plan
 
 - **Regression:** dodawanie pozycji (idempotentne `id`, T-006) bez zmian; T-015 (aria-disabled)
-- **Edge cases:** <uzupełnia /fix>
+- **Edge cases:** dwa `fireEvent.click` bez `await` (przed przerysowaniem); unieważnianie dwóch różnych linków naraz — oba wysłane, ten sam link raz (`lockOf`); po błędzie zapisu blokada zwolniona, ponowienie działa (istniejące testy „spróbuj ponownie”: SC-08 brak sieci, SC-06 błąd usunięcia, SC-05 błąd tworzenia); po odmontowaniu (np. przejście po sukcesie) blokadę zwalnia `onSettled` z opcji hooka, nie z `mutate`; świadomie bez blokady: dodawanie pozycji (idempotentne `id`; wpisywanie i Enter w trakcie zapisu, T-006) i checkbox (`useCheckItem` blokuje na pozycję przez stan `saving`, który zawsze przerysowuje); `mutateAsync` nie jest blokowany (nieużywany w `apps/web`).
 - **Platforms:** web (komputer i telefon), CI Linux
 
 ## Root cause
 
-<Uzupełnia /fix.>
+Od T-004 (`Button` z `disabled` przy `loading`) i dalej (T-005, T-007, T-008) jedyną ochroną przed podwójnym wysłaniem był przycisk w stanie zapisu, a ten blokuje dopiero po przerysowaniu z `isPending`; TanStack Query powiadamia komponent asynchronicznie, więc drugie kliknięcie albo Enter przed przerysowaniem wywołuje `mutate` drugi raz. Istniejące testy klikały przez `userEvent` z `await` między kliknięciami, co daje czas na przerysowanie; w formularzach (SC-01, SC-02, SC-05) dodatkowo `submit()` ustawia stan przed `mutate`, więc `act` przerysowuje przycisk synchronicznie i ochrona działa przypadkiem — testy 3 i 4 przechodzą także bez poprawki.
+
+Inne wystąpienia (ta sama przyczyna, ta sama warstwa, poprawione tutaj): logowanie (SC-01), usunięcie listy (SC-06), zapis i usunięcie pozycji w „Edytuj pozycję” (SC-06), unieważnienie linku (SC-07), wylogowanie (SC-09). Bez zmian: dodawanie pozycji (idempotentne `id`, T-006) i checkbox (blokada na pozycję w `useCheckItem`).
 
 ## Evidence
 
-<Uzupełnia /fix.>
+- Czerwone przed poprawką: #1 `expected 2 to be 1` (`ParticipantsScreen.test.tsx:127`, liczba `POST`); #2 `expected [ 'a', 'a', 'b' ] to deeply equal [ 'a', 'b' ]`; #5 `expected [ 'POST', 'POST' ] to deeply equal [ 'POST' ]`; #6, #7, #8 `expected 2 to be 1`. #3 i #4 zielone także przed poprawką (zob. Root cause) — zostają jako testy regresji; w jednym przebiegu przed poprawką #4 przekroczył limit 5 s pod obciążeniem (T-021).
+- Po poprawce: 8/8 testów T-020 zielone; web + tokens 24 pliki / 184 testy; `pnpm test` 89 plików / 418 testów (w pierwszym przebiegu 1 czerwony: `InvitationScreen.entry.test.tsx > sign up: the request carries the token…`, w izolacji 3/3 zielony i zielony bez poprawki 2/2 — znany wyścig przekierowania C1, T-019; drugi pełny przebieg 418/418); `pnpm typecheck`, `pnpm lint`, Prettier, `pnpm design-check`, `pnpm quality` czyste; build web OK. E2E nie uruchamiane (zmiana w hookach, pokryta testami komponentów).
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+Co by zapobiegło: jeden wspólny hook zapisu od początku i test podwójnego kliknięcia bez `await` przy każdym przycisku zapisu. Wpis w „Pułapkach” `layers/web.md` istniał od przeglądu E-01, ale nie wskazywał mechanizmu.
+
+- Zrobione w tym zadaniu (AC3): „Pułapki” i „Gdzie jest kod” w `layers/web.md` wskazują `useGuardedMutation`, wyjątki i to, że test może przejść bez blokady.
+- Propozycja (do decyzji użytkownika): reguła lint `no-restricted-imports` zabraniająca `useMutation` z `@tanstack/react-query` w `apps/web/src` poza `api/useGuardedMutation.ts`, z jawnym wyjątkiem (`eslint-disable` z uzasadnieniem) dla `useAddItem` i `useCheckItem`.
 
 ## Incident note
 
