@@ -1,2 +1,2 @@
 # Wdrożenie obrazu ghcr.io/tombraz/lista-zakupow:0123abc na staging (apps/api/fly.staging.toml; migracje jako release_command)
-flyctl deploy --config apps/api/fly.staging.toml --image ghcr.io/tombraz/lista-zakupow:0123abc --wait-timeout 10m0s
+flyctl deploy --config apps/api/fly.staging.toml --image ghcr.io/tombraz/lista-zakupow:0123abc --wait-timeout 10m0s --ha=false

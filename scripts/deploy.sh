@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Wdrożenie obrazu z GHCR na Fly (T-010; pipeline.md, etapy 4–6). Migracje wykonuje release_command
 # z apps/api/fly.<środowisko>.toml przed startem nowej wersji: nieudana migracja przerywa wdrożenie,
-# poprzednia wersja działa dalej.
+# poprzednia wersja działa dalej. --ha=false: jedna maszyna (ADR 0003: jedna instancja API — hub
+# zmian na żywo jest w pamięci procesu; deployment.md: 1 maszyna).
 #   scripts/deploy.sh --dry-run <środowisko> <sha>   wypisuje komendy bez wykonania
 #   scripts/deploy.sh <środowisko> <sha>             wykonuje; wymaga flyctl i FLY_API_TOKEN w środowisku
 set -euo pipefail
@@ -40,4 +41,4 @@ step() { echo "# $1"; }
 run() { if ((dry_run)); then echo "$*"; else "$@"; fi; }
 
 step "Wdrożenie obrazu $image na $environment ($config; migracje jako release_command)"
-run flyctl deploy --config "$config" --image "$image" --wait-timeout 10m0s
+run flyctl deploy --config "$config" --image "$image" --wait-timeout 10m0s --ha=false

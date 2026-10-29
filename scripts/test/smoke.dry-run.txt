@@ -5,5 +5,5 @@ curl --silent --show-error --max-time 30 --retry 10 --retry-delay 3 --retry-all-
 # sprawdź: 200 (API połączone z bazą)
 curl --silent --show-error --max-time 30 --retry 10 --retry-delay 3 --retry-all-errors --fail --dump-header - https://lista-staging.fly.dev/
 # sprawdź: 200, strona web (<div id="root">), nagłówki content-security-policy, strict-transport-security, referrer-policy: no-referrer
-curl --silent --show-error --max-time 30 --dump-header - http://lista-staging.fly.dev/health
+curl --silent --show-error --max-time 30 --retry 10 --retry-delay 3 --retry-all-errors --dump-header - http://lista-staging.fly.dev/health
 # sprawdź: przekierowanie na https://lista-staging.fly.dev/health

@@ -14,6 +14,9 @@ primary_region = "fra"
   HOST = "0.0.0.0"
   PORT = "8080"
   LOG_LEVEL = "info"
+  # Proxy Fly łączy się z maszyną z adresów 172.16.x.x (remoteAddress w logach staging, 2026-10-29)
+  # i ustawia X-Forwarded-For; bez tego limity per IP liczyłyby adres proxy dla wszystkich.
+  TRUSTED_PROXIES = "172.16.0.0/16"
 
 [http_service]
   internal_port = 8080

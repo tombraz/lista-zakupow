@@ -44,6 +44,7 @@ check "fly.staging: migracje jako release_command" '"node apps/api/dist/db/migra
   "$(toml_value release_command "$config")"
 check "fly.staging: APP_ORIGIN = adres staging" '"https://lista-staging.fly.dev"' \
   "$(toml_value APP_ORIGIN "$config")"
+check "fly.staging: TRUSTED_PROXIES = adresy proxy Fly" '"172.16.0.0/16"'   "$(toml_value TRUSTED_PROXIES "$config")"
 idle_ms=$(sed -nE 's/^const IDLE_TIMEOUT_MS = ([0-9_]+);.*/\1/p' apps/api/src/db/pool.ts | tr -d _)
 if ((${idle_ms:-999999} <= 60000)); then idle_ok=tak; else idle_ok="nie (${idle_ms:-brak})"; fi
 check "pula zamyka bezczynne połączenia ≤ 60 s" "tak" "$idle_ok"

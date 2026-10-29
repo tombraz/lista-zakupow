@@ -91,7 +91,7 @@ check "200, strona web (<div id=\"root\">), nagłówki $SECURITY_HEADERS" expect
 
 if [[ "$base_url" == https://* ]]; then
   http_url="http://${base_url#https://}/health"
-  redirect=("${CURL[@]}" --dump-header - "$http_url")
+  redirect=("${CURL[@]}" "${RETRY[@]}" --dump-header - "$http_url")
   if ((dry_run)); then
     echo "${redirect[*]}"
   elif ! "${redirect[@]}" | grep -Eiq "^location: ${base_url//./\\.}/health[[:space:]]*$"; then
