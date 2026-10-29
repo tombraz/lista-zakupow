@@ -45,9 +45,9 @@ for name in $jobs; do
       "$(job "$name" | grep -- 'secrets\.' | count -v -e 'secrets.GITHUB_TOKEN')"
   fi
 done
-# Tymczasowo (T-010, decyzja właściciela 2026-10-29): wdrożenia także z gałęzi deploy-test/**, bo na main
-# nie ma jeszcze workflow. Przed zamknięciem epiku E-01 wyzwalacz wraca do samego main.
-check "wyzwalacz push: main i tymczasowo deploy-test/**" '    branches: [main, "deploy-test/**"]'   "$(awk '/^on:/ { in_on = 1; next } in_on && /^[^ ]/ { exit } in_on && /branches:/ { print }' "$workflow")"
+# Staging tylko z commitu main (T-013) i ręcznie przez workflow_dispatch.
+on_block=$(awk '/^on:/ { in_on = 1; next } in_on && /^[^ ]/ { exit } in_on && NF && $0 !~ /^[[:space:]]*#/ { print }' "$workflow")
+check "wyzwalacze: push tylko na main, workflow_dispatch" "$(printf '%s\n' '  push:' '    branches: [main]' '  workflow_dispatch:')" "$on_block"
 check "job staging w środowisku staging" "1" "$(job staging | count '      name: staging')"
 check "concurrency staging bez anulowania w toku" "1" "$(job staging | count 'cancel-in-progress: false')"
 check "concurrency staging: grupa per środowisko" "1" "$(job staging | count 'group: deploy-staging')"

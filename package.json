@@ -27,7 +27,8 @@
     "quality:deps": "depcruise apps packages",
     "design-check": "node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated",
     "backlog-check": "node scripts/backlog-check.mjs",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm quality && pnpm design-check && pnpm backlog-check && pnpm test && pnpm test:mobile",
+    "workflow-check": "node scripts/workflow-check.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm quality && pnpm design-check && pnpm backlog-check && pnpm workflow-check && pnpm test && pnpm test:mobile",
     "test:mobile": "pnpm --filter @lista/mobile test"
   },
   "devDependencies": {

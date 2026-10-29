@@ -4,9 +4,9 @@ Przygotował: QA (po T-010), 2026-10-29. Wykonuje: właściciel. Miejsce: stagin
 
 ## Przed UAT (warunki z tego epiku)
 
-- [ ] Gałąź epiku wypchnięta, staging zawiera jej ostatni commit (obecnie wdrożony `:813ad14…`; po kolejnych commitach — nowe wdrożenie).
+- [ ] PR epiku zmergowany do `main`, `deploy.yml` z commitu merge przeszedł, staging zawiera ten commit (od T-013 staging wdraża tylko `main`; bez środowisk podglądowych UAT jest po merge — `tech-stack.md`, „Git workflow”). To też pierwszy przebieg ścieżki „merge do `main` → staging” (T-010 AC2).
 - [ ] `ci-ok` na PR #1 zielony. Stan na 2026-10-29: czerwony z powodu niestabilnego testu `apps/web/src/screens/SC-08-zaproszenie/InvitationScreen.entry.test.tsx` (patrz „Znane ograniczenia”), a informacyjny check „CodeQL” z powodu alertu `js/missing-rate-limiting` w `apps/api/test/unexpected-error.test.ts`.
-- [ ] Warunek z `docs/architecture/deployment.md`: wyzwalacz `push` w `.github/workflows/deploy.yml` wraca do samego `[main]` (razem z testem `scripts/test/deploy-workflow.test.sh`), gałęzie `deploy-test/T-010` i `deploy-test/T-010-zla-migracja` usunięte, obraz `ghcr.io/tombraz/lista-zakupow:91c62fd…` (celowo błędna migracja) usunięty z GHCR.
+- [ ] Warunek z `docs/architecture/deployment.md`: wyzwalacz `push` w `.github/workflows/deploy.yml` wraca do samego `[main]` — zrobione w T-013; zostaje: gałęzie `deploy-test/T-010` i `deploy-test/T-010-zla-migracja` usunięte, obraz `ghcr.io/tombraz/lista-zakupow:91c62fd…` (celowo błędna migracja) usunięty z GHCR.
 
 ## Kroki
 

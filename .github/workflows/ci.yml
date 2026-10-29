@@ -87,6 +87,8 @@ jobs:
         run: pnpm format:check
       - name: Backlog check
         run: node scripts/backlog-check.mjs
+      - name: Workflow check (bez tymczasowych obejść, T-013)
+        run: node scripts/workflow-check.mjs
       - name: Design check (kontrasty, kolory na sztywno)
         run: node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated
       - name: Skan zależności (TH-22, próg high)
@@ -265,6 +267,7 @@ jobs:
           bash scripts/test/mobile.test.sh
           bash scripts/test/deploy.test.sh
           bash scripts/test/deploy-workflow.test.sh
+          bash scripts/test/workflow-check.test.sh
           bash scripts/test/image.test.sh
           bash scripts/test/smoke.test.sh
           bash scripts/test/zap.test.sh

@@ -61,7 +61,7 @@ Pierwsze wdrożenia staging (T-010, 2026-10-29): [przebieg 40882296349](https://
 - **Uśpiona baza przy wdrożeniu:** pierwsze połączenie z uśpioną bazą Neon przekraczało 3 s puli API i `release_command` padał; migracje mają własny limit połączenia 30 s (`MIGRATION_CONNECTION_TIMEOUT_MS`).
 - **Szyfrowanie w spoczynku (TH-07):** Neon szyfruje dane na dyskach NVMe (XTS-AES-256, sprzętowo) — [neon.com/docs/security/security-overview](https://neon.com/docs/security/security-overview), otwarte 2026-10-29; region projektu `lista-staging`: AWS Europe Central 1 (Frankfurt) — zrzut panelu Neon od właściciela 2026-10-29.
 
-**Warunek przed zamknięciem epiku E-01:** `deploy.yml` ma tymczasowy wyzwalacz `push` dla gałęzi `deploy-test/**` (decyzja właściciela 2026-10-29: pierwsze wdrożenia przed merge do `main`, na którym nie ma jeszcze workflow). Przed zamknięciem epiku wyzwalacz wraca do samego `main` (razem z testem w `scripts/test/deploy-workflow.test.sh`), a gałęzie `deploy-test/*` zostają usunięte. Link zaproszenia i resetu hasła prowadzą do tego samego adresu (SC-08, SC-03).
+**Wyzwalacz wdrożenia staging:** push do `main` i ręczny `workflow_dispatch` (T-013; sprawdza `scripts/test/deploy-workflow.test.sh`). Tymczasowy wyzwalacz `deploy-test/**` z T-010 usunięty; znacznik `TYMCZASOWE` w `.github/workflows/` odrzuca `scripts/workflow-check.mjs` (`pnpm check`, CI). Do zrobienia przez właściciela przed zamknięciem E-01: usunięcie gałęzi `deploy-test/*` i obrazu `:91c62fd…` z GHCR. Link zaproszenia i resetu hasła prowadzą do tego samego adresu (SC-08, SC-03).
 
 Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 

@@ -32,6 +32,8 @@ Istnieje (T-003): joby `mobile`, `mobile-android` (emulator z KVM, Maestro przyp
 
 Istnieje (T-010): `Dockerfile` i `.dockerignore` (obraz `ghcr.io/tombraz/lista-zakupow:<sha>`: API z `apps/api/dist/server.js` i migracjami `apps/api/dist/db/migrate.js`, web z `apps/web/dist`, użytkownik `node`, port 8080), `apps/api/fly.staging.toml`, `.github/workflows/deploy.yml` (joby `image` → `staging` → `zap`), job `image` w `ci.yml` (build, uruchomienie i Trivy na PR), skrypty `scripts/image.sh` (build / scan / push), `scripts/deploy.sh`, `scripts/smoke.sh`, `scripts/zap.sh` z `scripts/zap-high-alerts.mjs` i progami `.zap/rules.tsv`, `scripts/staging-setup.sh` (jednorazowo, właściciel) oraz testy `scripts/test/{deploy,deploy-workflow,image,image-run,smoke,zap,staging-setup}.test.sh` (oczekiwane wyjścia `--dry-run` w `scripts/test/*.dry-run.txt`, atrapy w `scripts/test/fixtures/`).
 
+Istnieje (T-013): `scripts/workflow-check.mjs` (znacznik `TYMCZASOWE` w `.github/workflows/` zatrzymuje `pnpm check` i job `always` w CI) z testem `scripts/test/workflow-check.test.sh`; `deploy.yml` wdraża staging tylko z `main` i przez `workflow_dispatch`.
+
 Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`.
 
 ## Komendy
@@ -45,7 +47,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | actionlint (rung 1) | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` (Git Bash na Windows: poprzedź `MSYS_NO_PATHCONV=1`) | korzeń repo |
 | testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh`; `bash scripts/test/mobile.test.sh` | korzeń repo |
 | skan zależności | `pnpm audit --audit-level high` | korzeń repo |
-| testy skryptów wdrożenia (rung 2) | `bash scripts/test/deploy.test.sh`; `deploy-workflow`, `image`, `smoke`, `zap`, `staging-setup` analogicznie | korzeń repo |
+| testy skryptów wdrożenia (rung 2) | `bash scripts/test/deploy.test.sh`; `deploy-workflow`, `workflow-check`, `image`, `smoke`, `zap`, `staging-setup` analogicznie | korzeń repo |
 | obraz lokalnie (build, migracje, smoke) | `bash scripts/test/image-run.test.sh` (Docker; baza z `pnpm services:up`) | korzeń repo |
 | skan obrazu (Trivy) | `bash scripts/image.sh scan <sha>` (po `bash scripts/image.sh build <sha>`) | korzeń repo |
 | smoke test / ZAP | `bash scripts/smoke.sh staging` lub `bash scripts/smoke.sh http://localhost:<port>`; `bash scripts/zap.sh staging` (raport w `zap-report/`) | korzeń repo |
@@ -99,3 +101,4 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | 2026-10-26 | `/ci-cd`: hosting, środowiska, weryfikacja tasków infra, konwencje workflow. Bez własnej domeny: web serwowany przez API na Fly (ADR 0006). |
 | 2026-10-27 | T-002: CI i bezpieczeństwo — „Gdzie jest kod”, „Komendy”, „Pułapki” (uwagi z QA T-001). |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
+| 2026-10-29 | T-013: staging tylko z `main`; `workflow-check` odrzuca `TYMCZASOWE` w workflow. |
