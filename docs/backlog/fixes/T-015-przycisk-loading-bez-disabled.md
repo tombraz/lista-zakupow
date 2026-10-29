@@ -4,7 +4,7 @@ title: "Przycisk w stanie zapisu zachowuje fokus (aria-disabled zamiast disabled
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [N-04]
@@ -37,23 +37,34 @@ related_tasks: [T-005, T-007, T-008]
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | <odtwarza błąd — uzupełnia /fix> | | | AC1 |
+| 1 | `Button loading > keeps focus and announces busy and unavailable instead of becoming disabled` (odtwarza błąd) | komponent | Vitest + RTL | AC1, AC2 |
+| 2 | `Button loading > ignores clicks, Enter and Space while loading` | komponent | Vitest + RTL | AC3, T-020 |
+| 3 | `Button loading > does not submit its form while loading, also by Enter in a field` | komponent | Vitest + RTL | AC3 (niejawne wysłanie formularza) |
+| 4 | `Button loading > stays really disabled when disabled is passed` | komponent | Vitest + RTL | AC3 (limit, wczytywanie) |
+| 5 | `SC-06 … delete dialog > keeps focus on „Usuń listę” inside the dialog while deleting` | komponent (cała aplikacja) | Vitest + RTL + MSW | AC1 |
+| 6 | `SC-07 … > keeps focus on „Utwórz link zaproszenia” while saving` | komponent | Vitest + RTL + MSW | AC2 |
+| 7 | `SC-09 Konto: signing out > keeps focus on „Wyloguj się” while signing out` | komponent | Vitest + RTL + MSW | AC2 |
+| 8 | J-02: Enter na „Usuń listę” przy wstrzymanym `DELETE` → przycisk ma fokus i `aria-disabled` | E2E | Playwright | AC1 w prawdziwej przeglądarce |
 
-**Run:** `pnpm --filter @lista/web test`
+**Run:** `pnpm vitest run apps/web/src/components/Button apps/web/src/screens/SC-06-lista/ListScreen.test.tsx apps/web/src/screens/SC-07-uczestnicy/ParticipantsScreen.test.tsx apps/web/src/screens/SC-09-konto/AccountScreen.test.tsx`; E2E `pnpm test:e2e` (J-02)
 
 ## QA plan
 
 - **Regression:** wszystkie przyciski z `loading`; styl nieaktywnego przycisku (kontrast `color.action.disabled`); współgra z T-020 (blokada podwójnego wysłania)
-- **Edge cases:** <uzupełnia /fix>
+- **Edge cases:** `type="submit"` w stanie ładowania: kliknięcie i Enter w polu formularza (niejawne wysłanie przechodzi przez kliknięcie przycisku) nie wysyłają formularza — `onClick` Buttona robi `preventDefault`; jawne `disabled` (limit 20 uczestników / 500 pozycji, AddBar przed wczytaniem listy, drugi przycisk `EditItemSheet`) zostaje prawdziwym `disabled`; styl `[aria-disabled="true"]` = styl `:disabled` (`color.action.disabled`, kursor domyślny); jsdom nie zdejmuje fokusu z elementu `disabled`, więc fokus w prawdziwej przeglądarce sprawdza tylko E2E J-02 (#8).
 - **Platforms:** web (komputer i telefon), CI Linux
 
 ## Root cause
 
-<Uzupełnia /fix.>
+`Button` od T-004 (`dbca17a`) w stanie `loading` ustawiał `disabled`; przeglądarka zdejmuje wtedy fokus z przycisku (na `body`, poza pułapkę `Modal`). Testy go nie złapały, bo żaden nie sprawdzał fokusu w czasie zapisu, a jsdom — w przeciwieństwie do przeglądarki — zostawia fokus na elemencie `disabled` (brak seamu w testach komponentów; łapie to dopiero E2E).
+
+Inne wystąpienia: pozostałe `disabled` w `apps/web/src` to trwała niedostępność (limit, wczytywanie), nie stan zapisu — bez zmian. Pokrewne, inna przyczyna: gdy własne dodanie osiągnie limit 500, `AddItemBar` dostaje `disabled` i fokus z pola „Co kupić?” spada na `body` — do oceny w osobnym zadaniu.
 
 ## Evidence
 
-<Uzupełnia /fix.>
+- Czerwone przed poprawką: `Button loading > keeps focus …` — `expect(element).not.toBeDisabled()` / „Received element is disabled: <button aria-busy="true" … disabled="">”; testy SC-06, SC-07, SC-09 — `expect(element).toHaveAttribute("aria-disabled", "true")` nie spełnione; E2E J-02 (telefon i komputer) — `expect(locator).toBeFocused() failed`, „Received: inactive” (`j02-listy.spec.ts:93`).
+- Po poprawce: web + tokens 24 pliki / 176 testów zielone; `pnpm typecheck`, `pnpm lint`, `pnpm design-check` czyste; build OK; E2E 35/36.
+- E2E „SC-06 at 500 items shows the limit” (`j03-pozycje.spec.ts:102`) niestabilny niezależnie od T-015: w nieudanym przebiegu ekran pokazuje „491 do kupienia” — `addViaApi` nie sprawdza statusów, a API zwróciło 10× 500 (`pg-pool` timeout połączenia przy 50 równoległych `POST`, `apps/web/test-results/api.log`). Ta sama przyczyna co T-021 (pula z `connectionTimeoutMillis` 3 s).
 
 ## Prevention
 
