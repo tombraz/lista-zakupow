@@ -8,3 +8,4 @@
 2026-10-28 21:22 | T-007 | qa | PASS | 0/0/4 minor; S-01-04 done; brak wpisów w data-model.md/api.md, pusta lista SC-05 = Wszystko kupione
 2026-10-28 22:48 | T-008 | implementer | IN_QA | linki zaproszeń (7 dni, jednorazowe) i przyjęcie SC-08; 340 vitest + 32 E2E zielone
 2026-10-29 07:26 | T-008 | qa | FAIL | TH-08: tokeny zaproszeń w logach API (/zaproszenie/<token> poza redactedUrl)
+2026-10-29 07:46 | T-008 | implementer | IN_QA | fix QA #1: redakcja tokenu w /zaproszenie/ w logach API; 341 + 32 E2E zielone
