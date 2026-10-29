@@ -4,7 +4,7 @@ title: "Fokus na nagłówku ekranu po zmianie trasy (web)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa     # todo | in-progress | in-qa | done | blocked
+status: done     # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [N-04]
@@ -103,3 +103,20 @@ Verdict: fail
 - #2: test 7 — czerwony po usunięciu warunku `named`, zielony z nim.
 - #3, #4: bez zmian (środowisko; T-019).
 - Web: 169 testów zielone; typecheck, lint, design-check OK; Prettier OK (poza CRLF kopii roboczej); E2E `-g "T-014|J-02"` 4 passed.
+
+## QA round 2 (2026-10-29)
+
+Verdict: pass
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `pnpm vitest run apps/web/src/routeFocus.test.tsx` 6/6; `pnpm lint`, `pnpm typecheck`, `pnpm design-check` (0 kolorów na sztywno) OK; `pnpm test` 88 plików, 403/403 zielone; `pnpm test:e2e` 36 passed (w tym nowy test 8 na obu viewportach i J-02).
+
+**Spot-check:**
+- usunięcie `.title:focus-visible` z `AppBar.module.css` + przebudowa web → test E2E 8 czerwony na obu viewportach (oczekiwano `rgb(255, 210, 63)`, otrzymano `rgb(11, 79, 191)`); przywrócone `git checkout`. Uwaga: bez przebudowy (`playwright test` bez `pnpm build`) test przechodzi na starym `dist` — `pnpm test:e2e` buduje, więc CI nie jest zagrożone.
+- usunięcie warunku `named` w `AppBar.tsx` → test 7 czerwony, pozostałe 5 zielone; przywrócone.
+
+**Kryteria:** AC1, AC2, AC3 — pass (bez zmian w logice fokusu względem rundy 1; regresje zweryfikowane pełnym E2E). Poprawka #1 z rundy 1: obwódka `h1` w pasku to `color.focus.ring-on-brand` (żółta na niebieskim tle), `:focus-visible` po wejściu klawiaturą — zgodnie z design-system „AppBar” i WCAG 2.4.7. Testy z rundy 1 nie zostały osłabione (diff testów wyłącznie dodaje testy 7 i 8).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | testy / środowisko | Lokalne uruchomienie samego `playwright test` korzysta z istniejącego `dist`, więc zmiana CSS bez przebudowy daje fałszywie zielony wynik. | spot-check powyżej | Ewentualnie `webServer` w Playwright budujący web, albo wpis w README testów. |
+| 2 | note | testy (poza zakresem) | Runda 1 #3 (CRLF w kopii roboczej) i #4 (niestabilny test T-019) — bez zmian; w tym przebiegu pełny `pnpm test` zielony. | — | T-019. |
