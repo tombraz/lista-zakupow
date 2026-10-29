@@ -11,3 +11,4 @@
 2026-10-29 07:46 | T-008 | implementer | IN_QA | fix QA #1: redakcja tokenu w /zaproszenie/ w logach API; 341 + 32 E2E zielone
 2026-10-29 08:07 | T-008 | qa | PASS | runda 2: bloker naprawiony; S-01-05 done; minor: redakcja pomija /Zaproszenie/ i //zaproszenie/
 2026-10-29 10:18 | T-009 | implementer | IN_QA | WebSocket /api/v1/live + klient web na żywo (SC-05/06/07); testy + 34 E2E zielone
+2026-10-29 10:40 | T-009 | qa | PASS | 0/0/4 minor; S-01-06 done; wyścig subscribe/revoke do zamknięcia przed S-02-02, flaky InvitationScreen.entry
