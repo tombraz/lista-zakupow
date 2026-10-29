@@ -48,7 +48,11 @@ Ceny w USD, tak jak publikują dostawcy; przeliczenie na € niezweryfikowane. S
 | staging | security review, DAST i UAT epika przed produkcją | `https://lista-staging.fly.dev` (aplikacja Fly `lista-staging`), Neon projekt `lista-staging` (Free) | po każdym merge do `main` | tylko dane testowe |
 | produkcja | domownicy | `https://lista-prod.fly.dev` (aplikacja Fly `lista-prod`), Neon projekt `lista-prod` (Launch) | po akceptacji właściciela (środowisko GitHub `production`) | prawdziwe dane |
 
-Nazwy aplikacji Fly są globalne; jeśli `lista-staging` / `lista-prod` są zajęte, task staging wybiera wolne i aktualizuje ten plik. Link zaproszenia i resetu hasła prowadzą do tego samego adresu (SC-08, SC-03).
+Nazwy aplikacji Fly są globalne; jeśli `lista-staging` / `lista-prod` są zajęte, task staging wybiera wolne i aktualizuje ten plik.
+
+Staging (T-010, potwierdzone przez właściciela 2026-10-29): aplikacja Fly `lista-staging` (org `personal`) utworzona przez `scripts/staging-setup.sh`; Neon `lista-staging`, plan Free, AWS Europe Central 1 (Frankfurt), gałąź `production`, połączenie bezpośrednie (bez `-pooler`), `sslmode=require`; ograniczenie dostępu po IP: brak (niedostępne na Free — ochroną jest hasło + TLS).
+
+**Warunek przed zamknięciem epiku E-01:** `deploy.yml` ma tymczasowy wyzwalacz `push` dla gałęzi `deploy-test/**` (decyzja właściciela 2026-10-29: pierwsze wdrożenia przed merge do `main`, na którym nie ma jeszcze workflow). Przed zamknięciem epiku wyzwalacz wraca do samego `main` (razem z testem w `scripts/test/deploy-workflow.test.sh`), a gałęzie `deploy-test/*` zostają usunięte. Link zaproszenia i resetu hasła prowadzą do tego samego adresu (SC-08, SC-03).
 
 Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 

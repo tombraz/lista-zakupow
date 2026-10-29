@@ -121,7 +121,7 @@ Stan: rungi 1–2 (i lokalny odpowiednik rungu 3 dla obrazu, Trivy i ZAP) zrobio
 | 4 | `scripts/test/image-run.test.sh` (build, migracje z obrazu, `id -u` = 1000, smoke na `localhost:8090`) | bez Dockerfile build nie przechodzi | 3 × ok. Pierwszy build wykazał w Trivy 10 × HIGH w npm z obrazu bazowego i deweloperskie zależności w `node_modules/.pnpm` (`pnpm deploy --legacy`): poprawione (npm/corepack usunięte z obrazu, `pnpm deploy` bez `--legacy`) → `image.sh scan` exit 0, wszystkie cele „0” |
 | 4a | `scripts/test/zap.test.sh` | stuby: 9 × FAIL | 9 × ok; prawdziwy `zap.sh http://host.docker.internal:8091` na lokalnym obrazie: `FAIL-NEW: 0 … WARN-NEW: 4 … PASS: 64`, „ZAP: brak alertów wysokich” |
 | 4b | `scripts/test/staging-setup.test.sh` | stub: 4 × FAIL | 5 × ok |
-| 5 | wdrożenie z `main` + smoke + ZAP | — | **nie uruchomione**: wymaga kont, sekretów i zgody właściciela |
+| 5 | wdrożenie z `main` + smoke + ZAP | 2b: wyzwalacz `[main]` → FAIL „wyzwalacz push: main i tymczasowo deploy-test/**” | 2b zielony (12 × ok), actionlint exit 0. Przebieg 1 z `deploy-test/T-010` (`1bfaad4`): [run 40872833932](https://github.com/tombraz/lista-zakupow/actions/runs/40872833932) — `image` ✓ (build, Trivy, push do GHCR), `staging` ✗ „Error: no access token available” (`FLY_API_TOKEN` pusty: środowisko `staging` ma 0 sekretów wg `gh api …/environments/staging/secrets`), `zap` pominięty |
 | 6 | celowo błędna migracja przerywa wdrożenie | — | **nie uruchomione** (jw.) |
 
 **Weryfikacja (2026-10-29):** `pnpm check` exit 0 (format, lint, typy, jscpd, dependency-cruiser, design i backlog check; Vitest 86 plików / 396 testów, mobile 10 testów); wszystkie `scripts/test/*.test.sh` (protect-main, mobile, deploy, deploy-workflow, image, smoke, zap, staging-setup) exit 0; actionlint exit 0; `image-run.test.sh` 3 × ok; `image.sh scan` na obrazie aplikacji exit 0.
@@ -148,11 +148,17 @@ Stan: rungi 1–2 (i lokalny odpowiednik rungu 3 dla obrazu, Trivy i ZAP) zrobio
 - Trivy, ZAP, flyctl przypięte: `aquasec/trivy:0.76.1@sha256:790f…`, `ghcr.io/zaproxy/zaproxy:2.17.0@sha256:030d…`, `superfly/flyctl-actions/setup-flyctl@ed8efb3…` (v1.6) z flyctl 0.4.123.
 - `TRUSTED_PROXIES` nie ustawione w `fly.staging.toml` (wartość do potwierdzenia przy pierwszym wdrożeniu, `deployment.md`).
 
+**Po odpowiedzi właściciela (2026-10-29, przebieg 2 implementera):**
+
+- `deploy.yml`: tymczasowy wyzwalacz `push` dla `deploy-test/**` (test 2b sprawdza `[main, "deploy-test/**"]`). **Warunek przed zamknięciem epiku E-01:** wyzwalacz wraca do `[main]` (wraz z testem 2b), gałęzie `deploy-test/*` usunięte — zapisane też w `deployment.md` („Środowiska”).
+- `deployment.md`: dopisane potwierdzone fakty staging (aplikacja Fly `lista-staging`, Neon Frankfurt Free, `sslmode=require`, brak ograniczeń IP na Free) i warunek wyzwalacza. AC6 (limit bezczynności WebSocket, `TRUSTED_PROXIES`) — po pierwszym udanym wdrożeniu.
+- Gałąź `deploy-test/T-010` wypchnięta za zgodą właściciela (bez gałęzi lokalnej: `git push origin HEAD:refs/heads/deploy-test/T-010`).
+
 **Przewodnik warstwy (Step 8b):** `layers/infra.md` — „Gdzie jest kod” (T-010) i „Komendy” (testy skryptów, obraz, Trivy, smoke / ZAP, przygotowanie staging) uzupełnione faktami.
 
 <!-- QA rounds are appended below by /qa-task -->
 
-## Open question
+## Pytanie 1 (rozstrzygnięte 2026-10-29)
 
 Lokalna część taska jest gotowa i zielona (rungi 1–2, obraz, Trivy i ZAP uruchomione lokalnie). Dalej (rung 4: testy 5 i 6, AC2–AC4, SEC2–SEC3, AC6) potrzebne są konta, sekrety i zgoda właściciela, a AC6 wymaga zmiany `docs/architecture/deployment.md`, której implementer nie może zrobić. **Czy właściciel wykona poniższe kroki i pozwala na przebiegi rungu 4 oraz zmianę `deployment.md`?**
 
@@ -170,3 +176,18 @@ Kroki właściciela (w tej kolejności):
 **Alternatywa:** podzielić task — T-010 kończy się na rungach 1–3 (stan obecny, do QA), a rung 4 i AC6 (wdrożenie, błędna migracja, ZAP na staging, zapis w `deployment.md`) przechodzą do nowego taska zależnego od T-010, wykonywanego razem z właścicielem.
 
 Answer: Właściciel (2026-10-29): kroki 1–2 wykonane — konto Fly (org personal, flyctl zalogowany), aplikacja Fly lista-staging utworzona przez scripts/staging-setup.sh (bez --dry-run, przeszedł), sekrety Fly i FLY_API_TOKEN w środowisku GitHub staging ustawione; Neon lista-staging, plan Free, AWS Europe Central 1 (Frankfurt), gałąź production, połączenie bezpośrednie (bez -pooler), sslmode=require; IP restrictions: None set (Free). Pierwszy przebieg deploy.yml: NIE merge do main i NIE workflow_dispatch (na main nie ma workflow, więc dispatch nie zadziała) — zamiast tego tymczasowy wyzwalacz push w deploy.yml dla gałęzi epiku albo dedykowanej gałęzi deploy-test/T-010; przed zamknięciem epiku wyzwalacz ma wrócić do samego main (zapisz to jako warunek). Zgoda na gałąź testową z celowo błędną migracją (AC3) i na push gałęzi. Zgoda na edycję docs/architecture/deployment.md (AC6). Po pierwszym przebiegu właściciel ustawi pakiet GHCR jako publiczny i dostarczy zrzuty SEC3 — poproś o to przez Open question, podając link do przebiegu.
+
+## Open question
+
+Pierwszy przebieg `deploy.yml` z gałęzi `deploy-test/T-010`: https://github.com/tombraz/lista-zakupow/actions/runs/40872833932 — job `image` przeszedł (build, Trivy, obraz `ghcr.io/tombraz/lista-zakupow:1bfaad41658c7c6c598094e528a9b14166954439` w GHCR), job `staging` zatrzymał się na „Error: no access token available”: **środowisko GitHub `staging` nie ma sekretu `FLY_API_TOKEN`** (`gh api repos/tombraz/lista-zakupow/environments/staging/secrets` → `total_count: 0`; sekretów repozytorium też brak). Ostatni krok `staging-setup.sh` (`flyctl tokens create deploy … | gh secret set FLY_API_TOKEN --env staging`) najwyraźniej nie zapisał sekretu. **Czy właściciel ustawi sekret, upubliczni pakiet i dostarczy zrzuty SEC3?**
+
+Kroki właściciela:
+
+1. `flyctl tokens create deploy --app lista-staging --expiry 8760h | gh secret set FLY_API_TOKEN --env staging --repo tombraz/lista-zakupow`, potem sprawdzić `gh secret list --env staging` (ma pokazać `FLY_API_TOKEN`).
+2. Pakiet `ghcr.io/tombraz/lista-zakupow` (już istnieje) → Package settings → Change visibility → Public.
+3. Ponowić przebieg: `gh run rerun 40872833932 --failed` (albo „Re-run failed jobs” w GitHub).
+4. Zrzuty SEC3: Neon — region i szyfrowanie danych w spoczynku (źródło, data); `fly secrets list --app lista-staging` (same nazwy).
+
+**Rekomendacja:** właściciel wykonuje kroki 1–4 i wpisuje pod `Answer:` link do ponowionego przebiegu (albo „ponowione”) i zrzuty; implementer w kolejnym przebiegu sprawdza wynik, uruchamia `smoke.sh staging`, test błędnej migracji (AC3, gałąź `deploy-test/T-010-zla-migracja`) i uzupełnia AC6 w `deployment.md`.
+
+**Alternatywa:** właściciel pozwala implementerowi samemu utworzyć token wdrożeń i ustawić sekret (`flyctl tokens create deploy` + `gh secret set`, komendy z reguły ask) oraz ponowić przebieg; upublicznienie pakietu i zrzuty SEC3 i tak zostają po stronie właściciela.
