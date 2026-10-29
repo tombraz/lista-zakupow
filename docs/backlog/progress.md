@@ -9,3 +9,4 @@
 2026-10-28 22:48 | T-008 | implementer | IN_QA | linki zaproszeń (7 dni, jednorazowe) i przyjęcie SC-08; 340 vitest + 32 E2E zielone
 2026-10-29 07:26 | T-008 | qa | FAIL | TH-08: tokeny zaproszeń w logach API (/zaproszenie/<token> poza redactedUrl)
 2026-10-29 07:46 | T-008 | implementer | IN_QA | fix QA #1: redakcja tokenu w /zaproszenie/ w logach API; 341 + 32 E2E zielone
+2026-10-29 08:07 | T-008 | qa | PASS | runda 2: bloker naprawiony; S-01-05 done; minor: redakcja pomija /Zaproszenie/ i //zaproszenie/
