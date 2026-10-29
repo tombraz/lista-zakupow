@@ -17,3 +17,4 @@
 2026-10-29 13:27 | T-010 | implementer | NEEDS_USER | wyzwalacz deploy-test/**, obraz w GHCR OK; job staging padł: brak FLY_API_TOKEN w środowisku staging
 2026-10-29 13:44 | T-010 | user | ANSWER | token Fly + karta + GHCR publiczny; run 40872833932 próba 3: image/staging/zap zielone
 2026-10-29 14:40 | T-010 | implementer | IN_QA | deploy na lista-staging.fly.dev z migracjami/smoke/ZAP zielony; błędna migracja zatrzymuje wdrożenie; AC6 w deployment.md
+2026-10-29 15:14 | T-010 | qa | PASS | 0/0/2 minor; S-01-01 done; EPIC_UAT_READY; flaky InvitationScreen.entry trzyma ci-ok na czerwono
