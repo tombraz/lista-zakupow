@@ -58,7 +58,7 @@ related_tasks: [T-005, T-007, T-008]
 
 `Button` od T-004 (`dbca17a`) w stanie `loading` ustawiał `disabled`; przeglądarka zdejmuje wtedy fokus z przycisku (na `body`, poza pułapkę `Modal`). Testy go nie złapały, bo żaden nie sprawdzał fokusu w czasie zapisu, a jsdom — w przeciwieństwie do przeglądarki — zostawia fokus na elemencie `disabled` (brak seamu w testach komponentów; łapie to dopiero E2E).
 
-Inne wystąpienia: pozostałe `disabled` w `apps/web/src` to trwała niedostępność (limit, wczytywanie), nie stan zapisu — bez zmian. Pokrewne, inna przyczyna: gdy własne dodanie osiągnie limit 500, `AddItemBar` dostaje `disabled` i fokus z pola „Co kupić?” spada na `body` — do oceny w osobnym zadaniu.
+Inne wystąpienia: pozostałe `disabled` w `apps/web/src` to trwała niedostępność (limit, wczytywanie), nie stan zapisu — bez zmian. Pokrewne, inna przyczyna: gdy własne dodanie osiągnie limit 500, `AddItemBar` dostaje `disabled` i fokus z pola „Co kupić?” spada na `body` — osobne zadanie T-023.
 
 ## Evidence
 
@@ -68,7 +68,10 @@ Inne wystąpienia: pozostałe `disabled` w `apps/web/src` to trwała niedostępn
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+Co by zapobiegło: test fokusu w stanie zapisu w prawdziwej przeglądarce — jsdom nie zdejmuje fokusu z `disabled`, więc testy komponentów nie mogły tego złapać.
+
+- Automatyczne sprawdzenie (jest): `Button.test.tsx` pada, gdy stan `loading` znów ustawi `disabled`; E2E J-02 sprawdza fokus przy wstrzymanym `DELETE`. Reguła lint na `disabled={…pending}` odrzucona — fałszywe alarmy (np. drugi przycisk `EditItemSheet`).
+- Przyjęte przez użytkownika: wpis w `layers/web.md` „Pułapki” (jsdom a fokus na `disabled`, sprawdzenie w E2E) oraz zadanie T-023 (fokus pola „Co kupić?” po osiągnięciu limitu 500).
 
 ## Incident note
 
