@@ -3,7 +3,7 @@ id: T-008
 title: Link zaproszenia i jego przyjęcie (web)
 epic: E-01
 story: S-01-05
-status: in-qa               # todo | in-progress | in-qa | done | blocked
+status: in-progress         # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -181,3 +181,31 @@ Zmienione istniejące pliki testowe (bez zmiany asercji): `apps/web/test/render.
 - **Layer guides (fakty):** `db.md`, `backend.md`, `web.md` — „Gdzie jest kod” i „Historia zmian” uzupełnione o T-008.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: fail
+
+Środowisko: lokalnie (Windows, Docker/Testcontainers). `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych · `typecheck`, `lint` (0 ostrzeżeń), `format:check`, `quality` (jscpd, dependency-cruiser), `design-check`, `build` ✔ · `pnpm test` — 72 pliki / 340 testów ✔ · `pnpm test:mobile` ✔ · `pnpm test:e2e` — 28 passed; 4 testy `j04-zaproszenie.spec.ts` czerwone w pierwszym przebiegu z powodu **mojego** spot-checku (build E2E skompilował zmutowane `invitations-repository.ts`); po przywróceniu kodu i ponownym buildzie `j04-zaproszenie.spec.ts` — 6 passed (telefon + komputer).
+
+Kryteria akceptacji: AC1 pass · AC2 pass · AC3 pass · AC4 pass · AC5 pass · AC6 pass (integracja; tworzenie przy 20 → 409) · AC7 pass (ręcznie: `own_list` / `already_member` z `listId`) · AC8 pass (komponent + E2E) · AC9 pass (axe w E2E) · SEC1 pass (ręcznie: użyty link → 410 bez nazwy i imienia; 2 równoległe przyjęcia → `[200, 410]`) · SEC2 pass (ręcznie: obcy GET/POST/DELETE → 404, także DELETE linku Ani przez ścieżkę własnej listy; anonim 401, przyjęcie bez sesji 401) · SEC3 pass (ręcznie: uczestnik → 403 `owner_only`) · SEC4 pass (token 43 znaki; 32 × podgląd z jednego IP → 30 × 410, potem 429) · **SEC5 fail w zakresie TH-08** — patrz #1 (trasy `/api/v1/invitations/…` są redagowane poprawnie, 42 wpisy `[redacted]`; `Referrer-Policy: no-referrer` na SC-08 i API potwierdzone) · SEC6 pass (21. link listy w godzinie → 429).
+
+Spot-checki (przywrócone `git checkout`, `git status` czysty):
+- `invitations-repository.ts`: warunek `isActive(now)` usunięty z `accept` (i `activeListOf`) → `invitations.mc02.test` 4 × czerwony.
+- `lists-repository.ts` `insertParticipant`: usunięte sprawdzenie `own_list` → `invitations.own-member.test` „the owner: 409 own_list…” czerwony.
+
+Exploity (zbudowane API `dist/server.js` + własny kontener PostgreSQL, konta przez `POST /api/auth/sign-up/email`): wyniki jak wyżej; obcy `Origin` przy przyjęciu → 403 `invalid_origin`; tokeny wrogie (`x`, 43 × `A`, `' OR 1=1--`, 5000 znaków) → 410 / 404; rejestracja z tokenem nieprawidłowym i 15 000-znakowym → konto powstaje, `invitation.error.code = invitation_invalid`; z ważnym → od razu `role: "participant"`.
+
+Ręczne sprawdzenia dostępności i urządzeń (VoiceOver / TalkBack, iPhone Safari, Android Chrome, przeglądarka wbudowana komunikatora, 320 px / 200 %): nie wykonane (brak narzędzi w trybie autonomicznym); częściowo pokryte E2E telefon/komputer z axe i asercjami fokusu. Do UAT.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | bezpieczeństwo (TH-08) | Token zaproszenia trafia do logów API w pełnej postaci. API serwuje też SPA (ADR 0006), więc otwarcie linku `GET /zaproszenie/<token>` loguje się jako `"req":{"method":"GET","url":"/zaproszenie/<token>"}` — redakcja `redactedUrl` obejmuje tylko `/api/v1/invitations/…`. Każdy otwarty link w produkcji zostawia ważny (do 7 dni, jeśli jeszcze nieużyty — np. „Nie teraz”) token w logach Fly. | Własny serwer: 1 wpis z pełnym tokenem `wuTdve…rbT8` przy `GET /zaproszenie/…`; E2E `apps/web/test-results/api.log` — 14 wpisów `"url":"/zaproszenie/<43 znaki>"`. `apps/api/src/logging.ts` `INVITATION_TOKEN_PATH`. | Redakcja także ścieżki `/zaproszenie/:token` (np. `/zaproszenie/[redacted]`) w serializerze żądań; test w `invitations.logs.test` dla żądania strony SC-08 (z `webDistDir` albo samym serializerem). |
+| 2 | minor | dokumentacja | DoD „Architecture docs updated” nieodhaczony: odstępstwa z „Decyzji” nie są w `api.md` (409 `own_list` / `already_member` z `listId`, pole `invitation` w odpowiedzi rejestracji, `DELETE` nieaktywnego linku → 404, limit tworzenia 20 / h **na listę** zamiast „na właściciela”), a `backend.md` / `threat-model.md` opisują redakcję tylko `/invitations/:token`. | `docs/architecture/api.md:63-73`; Evidence, „Decyzje i odstępstwa”. | Dopisać do `api.md` i (z #1) do `backend.md` „Security rules”. |
+| 3 | minor | backend | Błąd inny niż `DomainError` przy przyjęciu zaproszenia w rejestracji (np. baza) daje 500 po utworzeniu konta i ustawieniu ciasteczek — klient widzi błąd rejestracji, choć konto istnieje. | `zaproszenia/http/sign-up.ts` (`throw error`), `konta/http/auth-routes.ts` `relay(…, extra)`. | Zwrócić konto z `invitation: { error: { code: "internal" } }` albo udokumentować. |
+| 4 | minor | walidacja | `invitationToken` w `signUpRequestSchema` bez limitu długości (15 000 znaków przyjęte; ogranicza tylko `bodyLimit` 16 kB). | `packages/shared/src/api/account.ts`. | `z.string().max(64)` albo regex formatu — błąd nadal nie blokuje rejestracji, jeśli tak zdecydowano. |
+| 5 | note | design | Teksty spoza tabel „Copy” (limit tworzenia, błędy tworzenia / unieważnienia, 429 na SC-08, „właściciel · Ty”) i nagłówek „Na liście (N z 20)” liczący bez właściciela — do potwierdzenia w designie (zgłoszone przez implementera). | Evidence, „Teksty spoza tabel”. | Decyzja projektowa. |
+| 6 | note | dane | Sprzątanie linków 30 dni po wygaśnięciu (inwentarz danych) nie zrealizowane — brak zadania w backlogu. | Evidence, „Tabela `invitation`”. | Zadanie w backlogu (np. z zadaniem dziennym). |
+| 7 | note | testy | TDD: czerwone przebiegi udokumentowane dla testów 1–15; testy 6 i 10 przeszły od razu, z udokumentowanym sprawdzeniem, że gryzą (potwierdzone moim spot-checkiem dla 6). Testy na seamach, bez mocków własnych modułów. | Evidence, tabela TDD. | — |
+
+Do zmiany przed kolejną rundą: #1 (redakcja `/zaproszenie/:token` w logu żądań + test).
