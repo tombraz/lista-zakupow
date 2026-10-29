@@ -24,6 +24,9 @@ export interface NewItem {
   nameKey: string;
   note: string | null;
   addedBy: string;
+  /** Z zegara aplikacji, jak każda późniejsza zmiana pozycji (api.md: porównanie `updatedAt`). */
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type InsertResult =
@@ -50,6 +53,7 @@ export interface ItemsRepository {
     listId: string,
     itemId: string,
     changes: ItemChanges,
+    at: Date,
   ): Promise<ListItem | null | "duplicate">;
   /** `false`, gdy na liście nie ma tej pozycji. */
   delete(listId: string, itemId: string): Promise<boolean>;
@@ -95,10 +99,10 @@ export interface ItemInput {
 /** F-07: dodaje domownik z dostępem do listy (sprawdzonym wcześniej). */
 export async function addItem(
   repository: ItemsRepository,
-  access: ListAccess,
-  userId: string,
+  { access, userId, clock }: Actor,
   input: ItemInput & { id?: string | undefined },
 ): Promise<{ item: ListItem; created: boolean }> {
+  const at = clock.now();
   const result = await repository.insert(
     {
       id: input.id,
@@ -107,6 +111,8 @@ export async function addItem(
       nameKey: normalizeItemName(input.name),
       note: input.note,
       addedBy: userId,
+      createdAt: at,
+      updatedAt: at,
     },
     BUSINESS_LIMITS.itemsPerList,
   );
@@ -128,7 +134,7 @@ export async function addItem(
  */
 export async function updateItem(
   repository: ItemsRepository,
-  access: ListAccess,
+  actor: Actor,
   itemId: string,
   input: ItemEdit,
 ): Promise<ListItem> {
@@ -138,7 +144,8 @@ export async function updateItem(
     ...(name === undefined ? {} : { name, nameKey: normalizeItemName(name) }),
     ...(note === undefined ? {} : { note }),
   };
-  const result = await repository.update(access.listId, itemId, changes);
+  // api.md: `updatedAt` z zegara aplikacji, jak przy odhaczeniu (klient porównuje wersje).
+  const result = await repository.update(actor.access.listId, itemId, changes, actor.clock.now());
   if (result === "duplicate") throw new DomainError("duplicate_item");
   if (!result) throw new DomainError("not_found");
   return result;
@@ -167,9 +174,9 @@ export async function changeItem(
   input: ItemEdit & { checked?: boolean | undefined },
 ): Promise<ListItem> {
   const { checked, ...edit } = input;
-  if (checked === undefined) return updateItem(repository, actor.access, itemId, edit);
+  if (checked === undefined) return updateItem(repository, actor, itemId, edit);
   if (edit.name !== undefined || edit.note !== undefined) {
-    await updateItem(repository, actor.access, itemId, edit);
+    await updateItem(repository, actor, itemId, edit);
   }
   return checkItem(repository, actor, itemId, checked);
 }

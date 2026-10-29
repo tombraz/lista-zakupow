@@ -45,6 +45,14 @@ export function anItem(overrides: Partial<Item> = {}): Item {
   };
 }
 
+/**
+ * Odpowiedź API na zapis pozycji: zmienione pola i nowsze `updatedAt`, jak z serwera — cache
+ * przyjmuje tylko nowszą wersję (api.md, T-017).
+ */
+export function savedItem(item: Item, changes: Partial<Item> = {}): Item {
+  return { ...item, ...changes, updatedAt: "2026-10-28T12:00:00.000Z" };
+}
+
 /** `GET /api/v1/lists` odpowiada podanymi listami. */
 export function listsAre(lists: ListSummary[]) {
   server.use(http.get("*/api/v1/lists", () => HttpResponse.json(lists)));

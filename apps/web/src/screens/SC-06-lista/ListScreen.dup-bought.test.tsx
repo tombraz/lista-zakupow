@@ -3,7 +3,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { aList, anItem, ANIA, detailsOf, TOMEK } from "../../../test/lists";
+import { aList, anItem, ANIA, detailsOf, savedItem, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
 
@@ -72,7 +72,7 @@ describe("SC-06 duplicate of a bought item", () => {
     const { user } = await showList([item]);
     server.use(
       http.patch("*/api/v1/lists/:listId/items/:itemId", () =>
-        HttpResponse.json({ ...item, checked: false, checkedBy: null, checkedAt: null }),
+        HttpResponse.json(savedItem(item, { checked: false, checkedBy: null, checkedAt: null })),
       ),
     );
     await user.type(screen.getByRole("textbox", { name: "Co kupić?" }), "chleb{Enter}");

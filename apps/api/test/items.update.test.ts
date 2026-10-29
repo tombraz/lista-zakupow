@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTestApp } from "./app";
+import { testClock } from "./clock";
 import { useTestDatabase } from "./database";
 import { addMember, createItem, createList, createUser } from "./factories";
 import { requestsAs } from "./requests";
@@ -71,6 +72,44 @@ describe("PATCH /api/v1/lists/:listId/items/:itemId", () => {
 
     expect(response.statusCode).toBe(200);
     expect(await stored(milk.id)).toEqual({ name: "Mleko 3,2 %", note: null });
+    await app.close();
+  });
+
+  // T-017 (api.md, „Konwencje” db.md): jeden zegar `updatedAt` dla edycji i odhaczenia.
+  it("stamps updatedAt of an edit with the app clock, as a check does", async () => {
+    const clock = testClock("2026-10-28T10:00:00Z");
+    const app = buildTestApp(db.pool, { clock });
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+    const milk = await createItem(db.pool, list, ania, "Mleko");
+    const patch = (body: object) =>
+      requestsAs(app, ania)("PATCH", `/api/v1/lists/${list.id}/items/${milk.id}`, body);
+
+    clock.set("2026-10-28T10:05:00Z");
+    const edited = await patch({ note: "2 l" });
+    clock.set("2026-10-28T10:06:00Z");
+    const checked = await patch({ checked: true });
+
+    expect(edited.json()).toMatchObject({ updatedAt: "2026-10-28T10:05:00.000Z" });
+    expect(checked.json()).toMatchObject({ updatedAt: "2026-10-28T10:06:00.000Z" });
+    await app.close();
+  });
+
+  it("stamps createdAt and updatedAt of a new item with the app clock", async () => {
+    const clock = testClock("2026-10-28T10:00:00Z");
+    const app = buildTestApp(db.pool, { clock });
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+
+    clock.set("2026-10-28T09:00:00Z");
+    const added = await requestsAs(app, ania)("POST", `/api/v1/lists/${list.id}/items`, {
+      name: "Mleko",
+    });
+
+    expect(added.json()).toMatchObject({
+      createdAt: "2026-10-28T09:00:00.000Z",
+      updatedAt: "2026-10-28T09:00:00.000Z",
+    });
     await app.close();
   });
 });

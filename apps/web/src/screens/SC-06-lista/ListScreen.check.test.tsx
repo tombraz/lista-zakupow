@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { aList, anItem, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
+import { aList, anItem, ANIA, apiError, detailsOf, savedItem, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
 import { heldResponse, type HeldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
@@ -41,13 +41,14 @@ function withFullItems(list: ListSummary, items: Item[], response?: HeldResponse
       const { checked } = (await request.json()) as { checked: boolean };
       requests.push({ itemId: params.itemId, checked });
       await response?.released;
-      const item = items.find(({ id }) => id === params.itemId);
-      return HttpResponse.json({
-        ...item,
-        checked,
-        checkedBy: checked ? { id: ANIA.id, name: ANIA.name } : null,
-        checkedAt: checked ? CHECKED_AT : null,
-      });
+      const item = items.find(({ id }) => id === params.itemId) as Item;
+      return HttpResponse.json(
+        savedItem(item, {
+          checked,
+          checkedBy: checked ? { id: ANIA.id, name: ANIA.name } : null,
+          checkedAt: checked ? CHECKED_AT : null,
+        }),
+      );
     }),
   );
   return requests;

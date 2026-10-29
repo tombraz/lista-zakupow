@@ -3,7 +3,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { aList, anItem, ANIA, apiError, detailsOf } from "../../../test/lists";
+import { aList, anItem, ANIA, apiError, detailsOf, savedItem } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
 
@@ -29,7 +29,7 @@ function savingSucceeds(list: ListSummary, item: Item) {
     http.patch(`*/api/v1/lists/${list.id}/items/${item.id}`, async ({ request }) => {
       const changes = (await request.json()) as Partial<Item>;
       requests.push(changes);
-      return HttpResponse.json({ ...item, ...changes });
+      return HttpResponse.json(savedItem(item, changes));
     }),
   );
   return requests;

@@ -76,13 +76,14 @@ export class DrizzleItemsRepository implements ItemsRepository {
     listId: string,
     itemId: string,
     changes: ItemChanges,
+    at: Date,
   ): Promise<ListItem | null | "duplicate"> {
     try {
       return await this.db.transaction(async (tx) => {
         // data-model.md: zawsze z `list_id` sprawdzonej listy; 0 wierszy = usunięta (F-14).
         const [row] = await tx
           .update(item)
-          .set({ ...changes, updatedAt: sql`now()` })
+          .set({ ...changes, updatedAt: at })
           .where(and(eq(item.id, itemId), eq(item.listId, listId)))
           .returning({ id: item.id });
         if (!row) return null;

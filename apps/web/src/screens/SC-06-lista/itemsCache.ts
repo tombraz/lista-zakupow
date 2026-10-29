@@ -29,9 +29,22 @@ export function inListOrder(items: Item[]): Item[] {
   );
 }
 
-/** Pozycja potwierdzona przez API zastępuje swoją poprzednią wersję. */
+/**
+ * api.md: wersja pozycji zastępuje posiadaną tylko, gdy ma nowsze `updatedAt` — tak samo dla
+ * odpowiedzi API i zdarzeń na żywo (F-14).
+ */
+export function isNewer(item: Item, current: Item | undefined): boolean {
+  return !current || current.updatedAt < item.updatedAt;
+}
+
+/**
+ * Pozycja potwierdzona przez API zastępuje swoją poprzednią wersję, chyba że na żywo przyszła
+ * już nowsza (zmiana innej osoby przed spóźnioną odpowiedzią). Usuniętej nie przywraca.
+ */
 export function replaceItem(client: QueryClient, listId: string, item: Item) {
   updateItems(client, listId, (items) =>
-    inListOrder(items.map((current) => (current.id === item.id ? item : current))),
+    inListOrder(
+      items.map((current) => (current.id === item.id && isNewer(item, current) ? item : current)),
+    ),
   );
 }

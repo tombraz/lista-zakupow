@@ -45,7 +45,8 @@ export function itemRoutes(
     const user = await accounts.requireUser(request, reply);
     const input = validate(createItemRequestSchema, request.body);
     const access = await lists.requireListAccess(user.id, request.params.listId, "member");
-    const { item, created } = await addItem(repository, access, user.id, input);
+    const actor = { access, userId: user.id, clock };
+    const { item, created } = await addItem(repository, actor, input);
     const body = itemResponse(item);
     // Ponowione żądanie z tym samym `id` niczego nie zmienia (F-15).
     if (created) await publish({ type: "item.upserted", listId: access.listId, item: body });

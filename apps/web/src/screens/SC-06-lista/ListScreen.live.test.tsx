@@ -225,4 +225,59 @@ describe("SC-06 live changes of other people", () => {
     await user.click(screen.getByRole("button", { name: "Kupione (1)" }));
     expect(rowOf("Chleb")).not.toHaveAttribute("data-highlighted");
   });
+
+  // T-017 (F-14, api.md): nowsza zmiana Tomka przyszła na żywo przed spóźnioną odpowiedzią Ani.
+  it("keeps Tomek's newer edit when the response to Ania's own edit comes later", async () => {
+    const { user, live, list } = await openList();
+    const tomeks = { ...MILK, note: "2 l", updatedAt: "2026-10-29T10:06:00.000Z" };
+    server.use(
+      http.patch(`*/api/v1/lists/${list.id}/items/:id`, async () => {
+        live.send({ type: "item.upserted", listId: list.id, item: tomeks });
+        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
+        await delay(100);
+        return HttpResponse.json({ ...MILK, note: "1 l", updatedAt: "2026-10-29T10:05:00.000Z" });
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edytuj Mleko" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edytuj pozycję" });
+    await user.type(within(sheet).getByRole("textbox", { name: /notatka/ }), "1 l");
+    await user.click(within(sheet).getByRole("button", { name: "Zapisz" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Edytuj pozycję" })).toBeNull();
+    });
+    expect(toBuy().getByText(/2 l/)).toBeInTheDocument();
+    expect(toBuy().queryByText(/1 l/)).toBeNull();
+  });
+
+  it("keeps Tomek's newer uncheck when the response to Ania's own check comes later", async () => {
+    const { user, live, list } = await openList();
+    const checkedMilk = {
+      ...MILK,
+      checked: true,
+      checkedBy: { id: ANIA.id, name: ANIA.name },
+      checkedAt: "2026-10-29T10:05:00.000Z",
+      updatedAt: "2026-10-29T10:05:00.000Z",
+    };
+    server.use(
+      http.patch(`*/api/v1/lists/${list.id}/items/:id`, async () => {
+        live.send({ type: "item.upserted", listId: list.id, item: checkedMilk });
+        live.send({
+          type: "item.upserted",
+          listId: list.id,
+          item: { ...MILK, updatedAt: "2026-10-29T10:06:00.000Z" },
+        });
+        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
+        await delay(100);
+        return HttpResponse.json(checkedMilk);
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Odhacz Mleko" }));
+
+    expect(await screen.findByText("Odhaczono Mleko")).toBeInTheDocument();
+    expect(screen.getByText("2 do kupienia")).toBeInTheDocument();
+    expect(toBuy().getByRole("button", { name: "Edytuj Mleko" })).toBeInTheDocument();
+  });
 });

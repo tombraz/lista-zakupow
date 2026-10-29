@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { deleteListKey } from "../lists/deleteListKey";
 import { listKey } from "../lists/useList";
 import { LISTS_KEY } from "../lists/useLists";
-import { inListOrder, updateItems } from "../screens/SC-06-lista/itemsCache";
+import { inListOrder, isNewer, updateItems } from "../screens/SC-06-lista/itemsCache";
 import { useLive } from "./LiveProvider";
 
 // SC-06 „Live update”: zmieniony wiersz krótko podświetlony.
@@ -129,7 +129,7 @@ function upsertNewer(client: QueryClient, listId: string, item: Item): boolean {
   let applied = false;
   updateItems(client, listId, (items) => {
     const current = items.find(({ id }) => id === item.id);
-    if (current && current.updatedAt >= item.updatedAt) return items;
+    if (!isNewer(item, current)) return items;
     applied = true;
     return inListOrder([item, ...items.filter(({ id }) => id !== item.id)]);
   });
