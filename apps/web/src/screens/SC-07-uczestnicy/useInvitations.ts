@@ -1,10 +1,11 @@
 import type { Invitation } from "@lista/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { createInvitation, fetchInvitations, revokeInvitation } from "../../api/invitations";
 import { listKey } from "../../lists/useList";
 import { useLive } from "../../live/LiveProvider";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 export const invitationsKey = (listId: string) => [...listKey(listId), "invitations"] as const;
 
@@ -51,7 +52,7 @@ export function useInvitationChanges(
     void client.invalidateQueries({ queryKey: listKey(listId) });
   };
 
-  const create = useMutation({
+  const create = useGuardedMutation({
     mutationFn: () => createInvitation(listId),
     onMutate: () => {
       setFailure(undefined);
@@ -62,16 +63,20 @@ export function useInvitationChanges(
     },
     onError: fail("create"),
   });
-  const revoke = useMutation({
-    mutationFn: (invitationId: string) => revokeInvitation(listId, invitationId),
-    onMutate: () => {
-      setFailure(undefined);
+  const revoke = useGuardedMutation(
+    {
+      mutationFn: (invitationId: string) => revokeInvitation(listId, invitationId),
+      onMutate: () => {
+        setFailure(undefined);
+      },
+      onSuccess: (_, invitationId) => {
+        setLinks((links) => links.filter(({ id }) => id !== invitationId));
+        onRevoked();
+      },
+      onError: fail("revoke"),
     },
-    onSuccess: (_, invitationId) => {
-      setLinks((links) => links.filter(({ id }) => id !== invitationId));
-      onRevoked();
-    },
-    onError: fail("revoke"),
-  });
+    // Różne linki można unieważniać naraz; ten sam tylko raz.
+    (invitationId) => invitationId,
+  );
   return { create, revoke, failure };
 }

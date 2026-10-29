@@ -1,5 +1,5 @@
 import type { ListDetails } from "@lista/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import type { RefObject } from "react";
 import { useNavigate } from "react-router";
 import { deleteList } from "../../api/lists";
@@ -9,6 +9,7 @@ import { deleteListKey } from "../../lists/deleteListKey";
 import { listKey } from "../../lists/useList";
 import { LISTS_KEY } from "../../lists/useLists";
 import { deleteConsequence, messages } from "./messages";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 interface DeleteListDialogProps {
   list: ListDetails;
@@ -20,7 +21,7 @@ interface DeleteListDialogProps {
 export function DeleteListDialog({ list, onClose, returnFocus }: DeleteListDialogProps) {
   const client = useQueryClient();
   const navigate = useNavigate();
-  const mutation = useMutation({
+  const mutation = useGuardedMutation({
     mutationKey: deleteListKey(list.id),
     mutationFn: () => deleteList(list.id),
     onSuccess: () => {

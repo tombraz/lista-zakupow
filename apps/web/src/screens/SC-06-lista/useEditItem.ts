@@ -5,12 +5,13 @@ import {
   type Item,
   type UpdateItemRequest,
 } from "@lista/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { deleteItem, updateItem } from "../../api/items";
 import { replaceItem, updateItems } from "./itemsCache";
 import { sameNameAs } from "./sameName";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
 
@@ -42,7 +43,7 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   // F-14: usunięcie wygrywa z edycją; API odpowiada wtedy 404.
   const [deletedElsewhere, setDeletedElsewhere] = useState(false);
-  const saving = useMutation({
+  const saving = useGuardedMutation({
     mutationFn: (changes: UpdateItemRequest) => updateItem(listId, item.id, changes),
   });
   const removal = useRemoveItem(listId, item, callbacks.onRemoved);
@@ -104,7 +105,7 @@ export type EditItemState = ReturnType<typeof useEditItem>;
 function useRemoveItem(listId: string, item: Item, onRemoved: () => void) {
   const client = useQueryClient();
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
-  const mutation = useMutation({ mutationFn: () => deleteItem(listId, item.id) });
+  const mutation = useGuardedMutation({ mutationFn: () => deleteItem(listId, item.id) });
 
   const removed = () => {
     updateItems(client, listId, (all) => all.filter((it) => it.id !== item.id));

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
@@ -94,6 +94,26 @@ describe("SC-08 Zaproszenie", () => {
     expect(router.state.historyAction).toBe("REPLACE");
     await router.navigate(-1);
     expect(router.state.location.pathname).toBe("/listy");
+  });
+
+  // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+  it("joins once when „Dołącz do listy” is clicked twice before it re-renders (T-020)", async () => {
+    sessionIs(TOMEK_ME);
+    validPreview();
+    const list = aList({ name: "Dom", role: "participant" });
+    server.use(
+      http.get(`*/api/v1/lists/${list.id}`, () => HttpResponse.json(detailsOf(list))),
+      http.get("*/api/v1/lists", () => HttpResponse.json([list])),
+    );
+    const accepts = acceptIs(() => HttpResponse.json({ listId: list.id }));
+    renderApp(["/listy", PAGE]);
+    const join = await screen.findByRole("button", { name: "Dołącz do listy" });
+
+    fireEvent.click(join);
+    fireEvent.click(join);
+
+    expect(await screen.findByText("Dołączyłeś(-aś) do listy „Dom”.")).toBeVisible();
+    expect(accepts.count).toBe(1);
   });
 
   it("an invalid link: „Ten link nie działa” without list details (MC-02)", async () => {

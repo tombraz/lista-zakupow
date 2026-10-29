@@ -1,5 +1,5 @@
 import type { ListSummary } from "@lista/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -241,6 +241,26 @@ describe("SC-06 Lista", () => {
 
       expect(await screen.findByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
       expect(router.state.location.pathname).toBe("/listy");
+      expect(deleted).toBe(1);
+    });
+
+    // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+    it("deletes once when confirmed twice before the button re-renders (T-020)", async () => {
+      const { list, dialog } = await openDelete();
+      let deleted = 0;
+      server.use(
+        http.delete(`*/api/v1/lists/${list.id}`, () => {
+          deleted += 1;
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.get("*/api/v1/lists", () => HttpResponse.json([])),
+      );
+      const remove = within(dialog).getByRole("button", { name: "Usuń listę" });
+
+      fireEvent.click(remove);
+      fireEvent.click(remove);
+
+      expect(await screen.findByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
       expect(deleted).toBe(1);
     });
 

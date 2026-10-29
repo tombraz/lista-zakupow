@@ -1,10 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import type { RefObject } from "react";
 import { clearChecked } from "../../api/items";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { confirmMutation } from "./confirmMutation";
 import { updateItems } from "./itemsCache";
 import { messages } from "./messages";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 interface ClearBoughtDialogProps {
   listId: string;
@@ -19,7 +20,7 @@ interface ClearBoughtDialogProps {
 export function ClearBoughtDialog(props: ClearBoughtDialogProps) {
   const { listId, count, onClose, onCleared, returnFocus } = props;
   const client = useQueryClient();
-  const mutation = useMutation({
+  const mutation = useGuardedMutation({
     mutationFn: () => clearChecked(listId),
     onSuccess: ({ deletedIds }) => {
       const deleted = new Set(deletedIds);

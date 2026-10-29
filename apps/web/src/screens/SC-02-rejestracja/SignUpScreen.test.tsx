@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -116,6 +116,25 @@ describe("SC-02 Rejestracja", () => {
         ageConfirmed: true,
       },
     ]);
+  });
+
+  // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+  it("signs up once when submitted twice before the button re-renders (T-020)", async () => {
+    const requests = signUpAnswers(200, { user: ANIA });
+    const user = userEvent.setup();
+    const { router } = renderApp("/rejestracja");
+    await screen.findByLabelText("Imię");
+    await fillValidForm(user);
+    sessionIs(ANIA);
+    const submit = screen.getByRole("button", { name: "Załóż konto" });
+
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/listy");
+    });
+    expect(requests).toHaveLength(1);
   });
 
   it("explains under the e-mail field that the address is taken, with sign-in and reset links (AC2)", async () => {

@@ -1,4 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { signOut } from "../../api/account";
 import { asRequestError } from "../../api/client";
@@ -8,13 +7,14 @@ import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { useSession, useSetSession } from "../../session/useSession";
 import styles from "./AccountScreen.module.css";
 import { logoutErrorText, messages } from "./messages";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 /** SC-09 w zakresie T-004; zmiana imienia i usunięcie konta w E-02. */
 export function AccountScreen() {
   const { data: me } = useSession();
   const setSession = useSetSession();
   const navigate = useNavigate();
-  const logout = useMutation({
+  const logout = useGuardedMutation({
     mutationFn: signOut,
     onSuccess: () => {
       setSession(null);

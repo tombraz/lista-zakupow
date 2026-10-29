@@ -1,5 +1,5 @@
 import type { Item } from "@lista/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -102,6 +102,23 @@ describe("SC-06 „Usuń wszystkie kupione”", () => {
     ).toBeVisible();
     expect(screen.getByText("1 do kupienia")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Co kupić?" })).toHaveFocus();
+    expect(requests).toEqual(["POST"]);
+  });
+
+  // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+  it("sends one request when confirmed twice before the button re-renders (T-020)", async () => {
+    const items = [anItem({ name: "Mleko" }), bought("Chleb"), bought("Jajka")];
+    const { user, list } = await showList(items);
+    const requests = clearingSucceeds(list.id, items.slice(1));
+    const { dialog } = await openClearDialog(user);
+    const confirm = within(dialog).getByRole("button", { name: "Usuń kupione" });
+
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+    });
     expect(requests).toEqual(["POST"]);
   });
 

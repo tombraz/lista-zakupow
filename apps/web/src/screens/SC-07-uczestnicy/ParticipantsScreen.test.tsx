@@ -1,5 +1,5 @@
 import type { Invitation, ListSummary } from "@lista/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -106,6 +106,27 @@ describe("SC-07 invitations of the owner", () => {
     });
   });
 
+  // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+  it("creates a link once when clicked twice before the button re-renders (T-020)", async () => {
+    const { list } = await showParticipants();
+    let posts = 0;
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/invitations`, () => {
+        posts += 1;
+        return HttpResponse.json(anInvitation("new"), { status: 201 });
+      }),
+    );
+    const create = invitationsSection().getByRole("button", { name: "Utwórz link zaproszenia" });
+
+    fireEvent.click(create);
+    fireEvent.click(create);
+
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(1);
+    });
+    expect(posts).toBe(1);
+  });
+
   // T-015: w czasie zapisu przycisk zostaje fokusowalny (aria-disabled zamiast disabled).
   it("keeps focus on „Utwórz link zaproszenia” while saving", async () => {
     const { user, list } = await showParticipants();
@@ -175,6 +196,34 @@ describe("SC-07 invitations of the owner", () => {
     expect(
       invitationsSection().getByRole("button", { name: "Utwórz link zaproszenia" }),
     ).toHaveFocus();
+  });
+
+  // T-020: jedno żądanie na link, ale różne linki unieważniane niezależnie.
+  it("revokes a link once when clicked twice, and another link meanwhile (T-020)", async () => {
+    const [a, b] = [anInvitation("a"), anInvitation("b")];
+    const { list, links } = await showParticipants({ links: [a, b] });
+    const deletes: string[] = [];
+    server.use(
+      http.delete(`*/api/v1/lists/${list.id}/invitations/:id`, async ({ params }) => {
+        deletes.push(String(params["id"]));
+        await delay(50);
+        links.current = links.current.filter(({ id }) => id !== params["id"]);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(2);
+    });
+    const [first, second] = invitationsSection().getAllByRole("button", { name: "Unieważnij" });
+
+    fireEvent.click(first as HTMLElement);
+    fireEvent.click(first as HTMLElement);
+    fireEvent.click(second as HTMLElement);
+
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(0);
+    });
+    expect(deletes.sort()).toEqual(["a", "b"]);
   });
 
   it("after a lost revoke response shows the server state and an error", async () => {

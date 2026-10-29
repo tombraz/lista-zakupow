@@ -4,7 +4,6 @@ import {
   type FieldErrorCode,
   type SignUpResponse,
 } from "@lista/shared";
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { signUp } from "../../api/account";
@@ -13,6 +12,7 @@ import { useFocusRequest } from "../../components/useFocus";
 import { emailOf, invitationOf, type EntryState } from "../../invitations/invitationContext";
 import { useSetSession } from "../../session/useSession";
 import type { SignUpField } from "./messages";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 export interface SignUpValues {
   name: string;
@@ -60,7 +60,7 @@ export function useSignUpForm() {
   // SC-02, „Accessibility”: po błędach fokus na podsumowaniu, polu e-mail albo komunikacie.
   const [focus, requestFocus] = useFocusRequest<"summary" | "email" | "alert">();
   const signedUp = useSignedUp();
-  const mutation = useMutation({ mutationFn: signUp });
+  const mutation = useGuardedMutation({ mutationFn: signUp });
 
   const showFieldErrors = (fields: FieldErrors) => {
     setErrors(fields);

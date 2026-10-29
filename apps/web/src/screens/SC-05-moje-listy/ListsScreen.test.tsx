@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
@@ -119,6 +119,31 @@ describe("SC-05 Moje listy", () => {
       expect(await screen.findByRole("heading", { level: 1, name: "Zakupy" })).toBeVisible();
       expect(router.state.location.pathname).toBe(`/listy/${created.id}`);
       expect(requests).toEqual([{ name: "Zakupy" }]);
+    });
+
+    // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+    it("creates the list once when submitted twice before the button re-renders (T-020)", async () => {
+      const user = userEvent.setup();
+      const created = aList({ name: "Zakupy" });
+      let posts = 0;
+      listsAre([]);
+      server.use(
+        http.post("*/api/v1/lists", () => {
+          posts += 1;
+          return HttpResponse.json(created, { status: 201 });
+        }),
+        http.get(`*/api/v1/lists/${created.id}`, () => HttpResponse.json(detailsOf(created))),
+      );
+      renderApp("/listy");
+      await user.click(await screen.findByRole("button", { name: "Utwórz pierwszą listę" }));
+      await user.type(screen.getByRole("textbox", { name: "Nazwa listy" }), "Zakupy");
+      const submit = screen.getByRole("button", { name: "Utwórz" });
+
+      fireEvent.click(submit);
+      fireEvent.click(submit);
+
+      expect(await screen.findByRole("heading", { level: 1, name: "Zakupy" })).toBeVisible();
+      expect(posts).toBe(1);
     });
 
     it("closes on „Anuluj” or Esc and returns focus to the button (AC8)", async () => {

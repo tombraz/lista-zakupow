@@ -1,10 +1,10 @@
 import { fieldErrors, signInRequestSchema } from "@lista/shared";
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { signIn } from "../../api/account";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { useFocusRequest } from "../../components/useFocus";
 import { useSetSession } from "../../session/useSession";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 type Field = "email" | "password";
 
@@ -15,7 +15,7 @@ export function useSignInForm(initialEmail = "") {
   const [formError, setFormError] = useState<RequestErrorCode | null>(null);
   const [focus, requestFocus] = useFocusRequest<Field | "alert">();
   const setSession = useSetSession();
-  const mutation = useMutation({ mutationFn: signIn });
+  const mutation = useGuardedMutation({ mutationFn: signIn });
 
   const handleFailure = (error: unknown) => {
     const { code } = asRequestError(error);

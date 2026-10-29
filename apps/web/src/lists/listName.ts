@@ -1,7 +1,7 @@
 import { listNameRequestSchema, LIST_NAME_MAX_LENGTH, type FieldErrorCode } from "@lista/shared";
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../api/client";
+import { useGuardedMutation } from "../api/useGuardedMutation";
 
 export { LIST_NAME_MAX_LENGTH };
 
@@ -28,7 +28,7 @@ export function useListNameForm<T>(options: ListNameFormOptions<T>) {
   const { initial = "", save, onSaved, onFailure } = options;
   const [name, setName] = useState(initial);
   const [fieldError, setFieldError] = useState<FieldErrorCode | null>(null);
-  const mutation = useMutation({ mutationFn: save });
+  const mutation = useGuardedMutation({ mutationFn: save });
 
   const submit = () => {
     const parsed = listNameRequestSchema.safeParse({ name });

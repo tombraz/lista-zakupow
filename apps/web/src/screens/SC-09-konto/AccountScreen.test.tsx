@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -47,6 +47,27 @@ describe("SC-09 Konto: failed sign-out", () => {
 describe("SC-09 Konto: signing out", () => {
   beforeEach(() => {
     sessionIs(ANIA);
+  });
+
+  // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.
+  it("signs out once when clicked twice before the button re-renders (T-020)", async () => {
+    let posts = 0;
+    server.use(
+      http.post("*/api/auth/sign-out", () => {
+        posts += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const { router } = renderApp("/konto");
+    const logout = await screen.findByRole("button", { name: "Wyloguj się" });
+
+    fireEvent.click(logout);
+    fireEvent.click(logout);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/logowanie");
+    });
+    expect(posts).toBe(1);
   });
 
   it("keeps focus on „Wyloguj się” while signing out", async () => {

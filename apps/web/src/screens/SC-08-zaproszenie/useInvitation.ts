@@ -1,10 +1,11 @@
 import type { InvitationPreview } from "@lista/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { asRequestError, type ApiRequestError } from "../../api/client";
 import { acceptInvitation, previewInvitation } from "../../api/invitations";
 import type { JoinedState } from "../../invitations/invitationContext";
 import { LISTS_KEY } from "../../lists/useLists";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 
 /** Co pokazuje SC-08 (sekcja „States”). */
 export type InvitationView =
@@ -21,7 +22,7 @@ export function useInvitation(token: string) {
     queryKey: ["invitation", token],
     queryFn: () => previewInvitation(token),
   });
-  const join = useMutation({
+  const join = useGuardedMutation({
     mutationFn: () => acceptInvitation(token),
     onSuccess: async ({ listId }) => {
       void client.invalidateQueries({ queryKey: LISTS_KEY });
