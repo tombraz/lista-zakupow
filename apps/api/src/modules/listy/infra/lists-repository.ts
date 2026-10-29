@@ -98,6 +98,7 @@ export class DrizzleListsRepository implements ListsRepository {
   async rename(listId: string, name: string): Promise<void> {
     await this.db
       .update(shoppingList)
+      // eslint-disable-next-line no-restricted-syntax -- `updated_at` listy tylko porządkuje SC-05; klient nie porównuje nim wersji (T-017)
       .set({ name, updatedAt: sql`now()` })
       .where(eq(shoppingList.id, listId));
   }

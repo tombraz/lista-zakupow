@@ -45,6 +45,15 @@ const WEB_TEST_SYNTAX = [
   },
 ];
 
+// T-017: znaczniki czasu z wstrzykiwanego `Clock` (layers/db.md „Konwencje”), nie z zegara bazy —
+// klient porównuje wersje pozycji po `updatedAt` (api.md).
+const API_CLOCK_SYNTAX = [
+  {
+    selector: "TaggedTemplateExpression[tag.name='sql'] TemplateElement[value.raw=/now\\(\\)/i]",
+    message: "Czas z Clock w domenie (actor.clock.now()), nie now() bazy (T-017, layers/db.md).",
+  },
+];
+
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
 // Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
 const SESSION_KEY = "/sess|token|auth|cookie|jwt/i";
@@ -182,6 +191,11 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
+    files: ["apps/api/src/**/*.ts"],
+    rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...API_CLOCK_SYNTAX] },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.

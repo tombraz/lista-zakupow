@@ -155,6 +155,7 @@ function violates(error: unknown, constraint: string): boolean {
 async function touchList(db: Pick<NodePgDatabase, "update">, listId: string) {
   await db
     .update(shoppingList)
+    // eslint-disable-next-line no-restricted-syntax -- `updated_at` listy tylko porządkuje SC-05; klient nie porównuje nim wersji (T-017)
     .set({ updatedAt: sql`now()` })
     .where(eq(shoppingList.id, listId));
 }

@@ -73,7 +73,13 @@ Mocki MSW zapisu w `ListScreen.check`, `.edit`, `.dup-bought` zwracają teraz no
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+**Co by zapobiegło:** jeden zegar wymuszony automatycznie w API i jedna droga zapisu pozycji do cache w kliencie (porównanie `updatedAt`) oraz mocki MSW zachowujące się jak serwer.
+
+**Przyjęte przez użytkownika (2026-10-29):** reguła ESLint `no-restricted-syntax` (`API_CLOCK_SYNTAX` w `eslint.config.js`, pliki `apps/api/src/**`) — zakaz `sql\`now()\``; czas z `Clock` w domenie. Dwa wyjątki z uzasadnieniem: `updated_at` listy (`touchList`, zmiana nazwy) tylko porządkuje SC-05. Reguła zgłosiła oba te miejsca przed dodaniem wyjątków.
+
+**Odrzucone:** wpisy „Pułapki” w `layers/web.md` i `layers/backend.md`.
+
+**Follow-up:** T-024 — odpowiedź na dodanie pozycji (`useAddItem.added`) też bez porównania `updatedAt` (znalezisko minor z QA round 1).
 
 ## Incident note
 
