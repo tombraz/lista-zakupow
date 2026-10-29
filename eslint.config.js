@@ -147,7 +147,8 @@ export default tseslint.config(
   },
   {
     // T-020: zapis przez `useGuardedMutation` (synchroniczna blokada podwójnego wysłania).
-    files: ["apps/web/src/**/*.{ts,tsx}"],
+    // T-019: `RouterProvider` z `react-router/dom` — inaczej `flushSync` po cichu nie działa.
+    files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/test/**/*.{ts,tsx}"],
     ignores: ["apps/web/src/api/useGuardedMutation.ts"],
     rules: {
       "no-restricted-imports": [
@@ -159,6 +160,12 @@ export default tseslint.config(
               importNames: ["useMutation"],
               message:
                 "Użyj useGuardedMutation (api/useGuardedMutation.ts): useMutation nie blokuje drugiego wysłania przed przerysowaniem (T-020, layers/web.md „Pułapki”).",
+            },
+            {
+              name: "react-router",
+              importNames: ["RouterProvider"],
+              message:
+                "Importuj RouterProvider z react-router/dom: tylko on obsługuje navigate(…, { flushSync: true }) (T-019).",
             },
           ],
         },

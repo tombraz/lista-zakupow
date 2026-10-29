@@ -65,7 +65,13 @@ Inne wystąpienia: wylogowanie w SC-09 (`AccountScreen.tsx:20-21`: `setSession(n
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+Co by zapobiegło: świadomość, że `await navigate(…)` nie oznacza zatwierdzonego stanu trasy (`startTransition`), i test, który wymusza kolejność „sesja przed routerem” zamiast liczyć na wygrany wyścig. Niestabilny test był sygnałem tego błędu, a nie problemem czasu.
+
+Propozycje:
+
+1. Przyjęte przez użytkownika (2026-10-29), zrobione: reguła lint `no-restricted-imports` w `eslint.config.js`: `RouterProvider` w `apps/web` tylko z `react-router/dom` — bez niej `flushSync` po cichu wraca do `startTransition`; `main.tsx` nie ma testu (propozycja QA).
+   Reguła dopisana do bloku T-020 (`apps/web/src` i `apps/web/test`); sprawdzone: z importem z `react-router` w `test/render.tsx` `eslint` zgłasza błąd, z `react-router/dom` czysto.
+2. Odrzucone przez użytkownika: wpis w „Pułapkach” `layers/web.md`: `navigate` aktualizuje stan w `startTransition` — fakt potrzebny strażnikowi razem z sesją zapisywać z `flushSync: true` przed `setSession`; test wymusza kolejność przez `notifyManager.setScheduler`.
 
 ## Incident note
 
