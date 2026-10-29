@@ -4,7 +4,7 @@ title: "Jedno przekierowanie po logowaniu/rejestracji (bez dodatkowego accept za
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-12]
@@ -72,3 +72,30 @@ Inne wystąpienia: wylogowanie w SC-09 (`AccountScreen.tsx:20-21`: `setSession(n
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+Zakres: commit `48f5e78` (4 pliki: `useSignUpForm.ts`, `main.tsx`, `test/render.tsx`, `InvitationScreen.entry.test.tsx`).
+
+**Kryteria:**
+
+- AC1 — pass. Test 1 (T-019) zielony; testy 1 i 2 z `{ repeats: 49 }` (tymczasowa zmiana, cofnięta): 5/5, 50 powtórzeń każdy, 121 s. Test asertuje `accepts.count === 0`, tekst „Dołączyłeś(-aś)…” i ścieżkę `/listy/:id`.
+- AC2 — pass. „sign in: SC-01 says why…” asertuje `accepts.count === 1` i usunięcie linku z historii.
+- AC3 — pass. `routes.test.tsx` (powrót na chroniony adres, zalogowany na SC-01/SC-02 → `/listy`), `SignInScreen.test.tsx` AC4 zielone; E2E `j01 j03 j04` (Windows, port 3197): 21/22, jedna czerwień niezwiązana (#1); po powtórce 3×2 zielone.
+
+**Reprodukcja:** `pnpm format:check`, `lint`, `typecheck`, `quality`, `design-check`, `workflow-check` czyste; `pnpm test` 89 plików / 419 testów zielone.
+
+**Spot-checki (cofnięte, `git status` czysty):**
+
+- bez `flushSync: true` w `useSignUpForm.ts` → test 1 czerwony `AssertionError: expected 1 to be +0` (odtwarza błąd z raportu),
+- `RouterProvider` z `react-router` zamiast `react-router/dom` w `test/render.tsx` → test 1 czerwony tak samo (potwierdza uwagę z QA planu).
+
+**Fix-specific:** sekcja „Root cause” wyjaśnia, czemu testy nie łapały błędu (wyścig `setTimeout(0)` planisty Query z planistą React); test odtwarzający jest czerwony bez poprawki. Evidence pokazuje czerwień przed poprawką. O celu po wejściu nadal decyduje tylko `PublicOnly` / `afterEntry`. Zmiana minimalna, bez scope creep; nadpisanie planisty Query przywracane w `finally`.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | E2E / stabilność | `j03-pozycje.spec.ts:6` [telefon] raz czerwony: po `Tab` fokus poza arkuszem „Edytuj pozycję” (linia 41). Niezwiązane ze ścieżką wejścia; inny test niż ten w Evidence (`:102`). | pełny przebieg 21/22; `--repeat-each 3` 6/6 zielone | test stabilny — do T-021 albo osobnego zadania |
+| 2 | minor | Zapobieganie | Poprawka zależy od importu `RouterProvider` z `react-router/dom` w `main.tsx`; test komponentu chroni tylko `test/render.tsx`. Powrót do `react-router` w `main.tsx` nie zostanie wykryty (RR tylko ostrzega). | spot-check 2; brak testu dla `main.tsx` | reguła ESLint `no-restricted-imports`: `RouterProvider` tylko z `react-router/dom` |
+| 3 | note | Dokument | Sekcja „Prevention” zawiera nadal placeholder szablonu. | plik zadania | uzupełnić (np. reguła z #2) |
