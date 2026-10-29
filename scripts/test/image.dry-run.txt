@@ -1,0 +1,6 @@
+# Build obrazu ghcr.io/tombraz/lista-zakupow:0123abc (API + apps/web/dist)
+docker build --pull --tag ghcr.io/tombraz/lista-zakupow:0123abc --label org.opencontainers.image.revision=0123abc --label org.opencontainers.image.source=https://github.com/tombraz/lista-zakupow .
+# Trivy: high/critical z dostępną poprawką zatrzymują wdrożenie (TH-22)
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress ghcr.io/tombraz/lista-zakupow:0123abc
+# Publikacja ghcr.io/tombraz/lista-zakupow:0123abc w GHCR
+docker push ghcr.io/tombraz/lista-zakupow:0123abc

@@ -7,8 +7,10 @@ const { dependencies } = JSON.parse(
 );
 
 await build({
-  entryPoints: ["src/server.ts"],
-  outfile: "dist/server.js",
+  // dist/db/migrate.js leży na tej samej głębokości co src/db/, więc ścieżka do drizzle/ działa
+  // także po buildzie (release_command Fly w obrazie, T-010).
+  entryPoints: { server: "src/server.ts", "db/migrate": "src/db/migrate-cli.ts" },
+  outdir: "dist",
   bundle: true,
   platform: "node",
   format: "esm",

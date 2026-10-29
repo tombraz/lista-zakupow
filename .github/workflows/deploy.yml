@@ -1,0 +1,75 @@
+# Wdrożenie (T-010; pipeline.md, etapy 3–6): jeden obraz na commit (API + apps/web/dist), skan Trivy,
+# publikacja w GHCR, staging na Fly (migracje jako release_command), smoke test i ZAP baseline.
+# Logika dostawców w scripts/ (uruchamialna lokalnie z --dry-run); YAML tylko ją wywołuje.
+# workflow_dispatch: ręczne wdrożenie wybranej gałęzi na staging, tylko za zgodą właściciela.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Jedyny job z prawem zapisu pakietów (SEC4).
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build obrazu
+        run: bash scripts/image.sh build "$GITHUB_SHA"
+      - name: Trivy (high/critical z poprawką zatrzymują wdrożenie, TH-22)
+        run: bash scripts/image.sh scan "$GITHUB_SHA"
+      - name: Logowanie do GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USER" --password-stdin
+      - name: Publikacja w GHCR
+        run: bash scripts/image.sh push "$GITHUB_SHA"
+
+  staging:
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Sekrety tylko ze środowiska staging (SEC4).
+    environment:
+      name: staging
+      url: https://lista-staging.fly.dev
+    # Jedno wdrożenie staging naraz; wdrożenie w toku nigdy nie jest anulowane.
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+        with:
+          version: 0.4.123
+      - name: Wdrożenie (migracje jako release_command)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: bash scripts/deploy.sh staging "$GITHUB_SHA"
+      - name: Smoke test
+        run: bash scripts/smoke.sh staging
+
+  zap:
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: ZAP baseline na staging
+        run: bash scripts/zap.sh staging
+      - name: Raport ZAP
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zap-report
+          path: zap-report/
+          retention-days: 30

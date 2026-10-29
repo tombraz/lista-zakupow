@@ -1,0 +1,7 @@
+# Progi ZAP baseline (T-010, AC4; pipeline.md, etap 3). Format zap-baseline.py: id<TAB>IGNORE|WARN|FAIL<TAB>opis.
+# Reguły spoza listy: WARN (bez porażki, -I). Alerty wysokie dowolnej reguły: porażka (scripts/zap-high-alerts.mjs).
+# Referrer-Policy nie ma reguły w ZAP: jej brak zatrzymuje scripts/smoke.sh.
+10020	FAIL	(Missing Anti-clickjacking Header: frame-ancestors / X-Frame-Options)
+10021	FAIL	(X-Content-Type-Options Header Missing)
+10035	FAIL	(Strict-Transport-Security Header Not Set: HSTS, TH-24)
+10038	FAIL	(Content Security Policy (CSP) Header Not Set: TH-15)

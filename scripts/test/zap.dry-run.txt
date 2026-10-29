@@ -1,0 +1,7 @@
+# ZAP baseline (pasywny) https://lista-staging.fly.dev, reguły .zap/rules.tsv, raport w zap-report/
+mkdir -p zap-report
+cp .zap/rules.tsv zap-report/rules.tsv
+chmod a+rwx zap-report
+docker run --rm -v <repo>/zap-report:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:2.17.0@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238 zap-baseline.py -t https://lista-staging.fly.dev -c rules.tsv -J report.json -r report.html -I
+# Alerty wysokie (riskcode 3) w raporcie = porażka
+node scripts/zap-high-alerts.mjs zap-report/report.json

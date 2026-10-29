@@ -1,0 +1,20 @@
+# Kontekst buildu obrazu (Dockerfile): tylko źródła api, web i pakietów workspace.
+**/node_modules
+**/dist
+**/generated
+**/coverage
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+.git
+.github
+.claude
+.env
+.env.*
+docs/backlog
+docs/product
+docs/architecture
+docs/adr
+apps/mobile/*
+!apps/mobile/package.json
+apps/web/e2e

@@ -72,7 +72,9 @@ jobs:
               - 'scripts/**'
               - 'docker-compose.yml'
               - 'Dockerfile'
+              - '.dockerignore'
               - '**/fly*.toml'
+              - '.zap/**'
 
   # Zawsze, także dla zmian tylko w docs/.
   always:
@@ -261,6 +263,28 @@ jobs:
         run: |
           bash scripts/test/protect-main.test.sh
           bash scripts/test/mobile.test.sh
+          bash scripts/test/deploy.test.sh
+          bash scripts/test/deploy-workflow.test.sh
+          bash scripts/test/image.test.sh
+          bash scripts/test/smoke.test.sh
+          bash scripts/test/zap.test.sh
+          bash scripts/test/staging-setup.test.sh
+
+  # Obraz z deploy.yml (T-010) budowany i sprawdzany na PR, bez publikacji: migracje z obrazu, api i web
+  # pod jednym portem przechodzą smoke test, Trivy blokuje high/critical z poprawką (TH-22).
+  image:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build obrazu
+        run: bash scripts/image.sh build "$GITHUB_SHA"
+      - name: Obraz uruchomiony lokalnie (migracje, smoke test)
+        run: bash scripts/test/image-run.test.sh "$GITHUB_SHA"
+      - name: Trivy
+        run: bash scripts/image.sh scan "$GITHUB_SHA"
 
   # Jedyny wymagany check tego workflow: zielony, gdy każdy uruchomiony job przeszedł (pominięty = OK).
   ci-ok:
@@ -277,6 +301,7 @@ jobs:
       - mobile-android
       - mobile-ios
       - infra
+      - image
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

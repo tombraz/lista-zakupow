@@ -1,5 +1,5 @@
 # Analiza statyczna (pipeline.md, etap 3). Wymagany check: codeql (bez filtra ścieżek, żeby zawsze raportował).
-# Skan zależności (pnpm audit) jest w ci.yml; Trivy na obrazie API dochodzi w T-010.
+# Skan zależności (pnpm audit) jest w ci.yml; Trivy na obrazie: job image w ci.yml i deploy.yml (T-010).
 name: Security
 
 on:
