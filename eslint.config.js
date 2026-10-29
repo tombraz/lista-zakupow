@@ -146,6 +146,26 @@ export default tseslint.config(
     },
   },
   {
+    // T-020: zapis przez `useGuardedMutation` (synchroniczna blokada podwójnego wysłania).
+    files: ["apps/web/src/**/*.{ts,tsx}"],
+    ignores: ["apps/web/src/api/useGuardedMutation.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@tanstack/react-query",
+              importNames: ["useMutation"],
+              message:
+                "Użyj useGuardedMutation (api/useGuardedMutation.ts): useMutation nie blokuje drugiego wysłania przed przerysowaniem (T-020, layers/web.md „Pułapki”).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/web/e2e/**/*.ts"],
     ignores: ["apps/web/e2e/fixtures.ts"],

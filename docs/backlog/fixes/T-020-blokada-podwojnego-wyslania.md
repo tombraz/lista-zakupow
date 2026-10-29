@@ -71,7 +71,7 @@ Inne wystąpienia (ta sama przyczyna, ta sama warstwa, poprawione tutaj): logowa
 Co by zapobiegło: jeden wspólny hook zapisu od początku i test podwójnego kliknięcia bez `await` przy każdym przycisku zapisu. Wpis w „Pułapkach” `layers/web.md` istniał od przeglądu E-01, ale nie wskazywał mechanizmu.
 
 - Zrobione w tym zadaniu (AC3): „Pułapki” i „Gdzie jest kod” w `layers/web.md` wskazują `useGuardedMutation`, wyjątki i to, że test może przejść bez blokady.
-- Propozycja (do decyzji użytkownika): reguła lint `no-restricted-imports` zabraniająca `useMutation` z `@tanstack/react-query` w `apps/web/src` poza `api/useGuardedMutation.ts`, z jawnym wyjątkiem (`eslint-disable` z uzasadnieniem) dla `useAddItem` i `useCheckItem`.
+- Przyjęte przez użytkownika (2026-10-29): reguła lint `no-restricted-imports` w `eslint.config.js` zabrania `useMutation` z `@tanstack/react-query` w `apps/web/src` poza `api/useGuardedMutation.ts`; wyjątki `useAddItem` i `useCheckItem` z `eslint-disable-next-line … --` i uzasadnieniem. Sprawdzone: bez wyjątków `pnpm lint` pada na obu plikach (2 błędy), z nimi czysty.
 
 ## Incident note
 

@@ -1,4 +1,5 @@
 import type { Item } from "@lista/shared";
+// eslint-disable-next-line no-restricted-imports -- T-020: blokada na pozycję (`saving`); różne pozycje odhaczane naraz.
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";

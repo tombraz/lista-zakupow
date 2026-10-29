@@ -5,6 +5,7 @@ import {
   type FieldErrorCode,
   type Item,
 } from "@lista/shared";
+// eslint-disable-next-line no-restricted-imports -- T-020: idempotentne `id` (T-006); wpisanie i Enter w trakcie zapisu wysyła nową treść.
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
