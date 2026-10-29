@@ -3,7 +3,7 @@ id: T-010
 title: Wdrożenie na staging
 epic: E-01
 story: S-01-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-002]
 size: M                # S | M (L must be split)
@@ -201,3 +201,49 @@ Kroki właściciela:
 **Alternatywa:** właściciel pozwala implementerowi samemu utworzyć token wdrożeń i ustawić sekret (`flyctl tokens create deploy` + `gh secret set`, komendy z reguły ask) oraz ponowić przebieg; upublicznienie pakietu i zrzuty SEC3 i tak zostają po stronie właściciela.
 
 Answer: Właściciel (2026-10-29): FLY_API_TOKEN był pusty (pierwszy przebieg skryptu nie utworzył aplikacji); skrypt staging-setup.sh uruchomiony ponownie — aplikacja Fly lista-staging istnieje (org personal), sekrety Fly BETTER_AUTH_SECRET i DATABASE_URL ustawione (flyctl secrets list: same nazwy), FLY_API_TOKEN w środowisku staging ustawiony 2026-10-29T12:32Z. Do konta Fly dodano kartę (trial blokował release: 422). Pakiet GHCR ustawiony jako publiczny. Przebieg https://github.com/tombraz/lista-zakupow/actions/runs/40872833932 próba 3: image success, staging success, zap success. SEC3: zrzut panelu Neon pokazany orkiestratorowi — projekt lista-staging, region AWS Europe Central 1 (Frankfurt), Free plan, IP restrictions: None set; szyfrowanie w spoczynku — domyślne w Neon (wskaż dokumentację bezpieczeństwa Neon w Evidence). Kontynuuj rung 4: smoke na staging, gałąź z celowo błędną migracją (zgoda jest), AC6.
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+Niezależna weryfikacja (świeża sesja QA). Wszystko poniżej uruchomione samodzielnie, nie przepisane z Evidence.
+
+**Reprodukcja (Step 3):**
+
+- `pnpm install --frozen-lockfile` exit 0, drzewo czyste. `pnpm check`: format, lint, typy, jscpd, depcruise, design i backlog check zielone; Vitest 1 failed / 396 passed — `InvitationScreen.entry.test.tsx` („sign up: the request carries the token…”, `accepts.count` 1 zamiast 0). W izolacji ten plik padł 2 razy na 7 uruchomień. Plik ostatnio zmieniany w T-008 (`0f997f6`), T-010 nie dotyka `apps/web` — niestabilność istniejąca, nie regresja tego taska (finding #4).
+- Testy skryptów: `protect-main` 2 ok, `mobile` 6, `deploy` 16, `deploy-workflow` 12, `image` 4, `smoke` 5, `zap` 9, `staging-setup` 5 — wszystkie exit 0. actionlint 1.7.12 exit 0.
+- `image-run.test.sh` (build obrazu z bieżącego drzewa, migracje z obrazu, `id -u` = 1000, smoke na `localhost:8090`) 3 × ok; `image.sh scan` na tym obrazie exit 0 („Clean”).
+- `apps/api/test/migrate-slow-database.test.ts` zielony.
+
+**Kryteria akceptacji (Step 4):**
+
+| AC | Wynik | Co zrobiłem |
+| --- | --- | --- |
+| AC1 | pass | actionlint exit 0; `--dry-run` skryptów porównywane z `scripts/test/*.dry-run.txt` (testy zielone) |
+| AC2 | pass | `gh run view 40882296349`: push `deploy-test/T-010` @ `813ad14`, joby image/staging/zap success; log: „Running lista-staging release_command: node apps/api/dist/db/migrate.js … completed successfully”, „Smoke test: OK”. `flyctl status`: obraz `:813ad14…`, 1 maszyna `fra`. Kod produktu `813ad14..HEAD` bez zmian (tylko docs). Wyzwalacz `main` nie był jeszcze użyty (decyzja właściciela, wdrożenie z gałęzi testowej) |
+| AC3 | pass | `gh run view 40882953706` (@ `91c62fd`): „release_command failed … exit code 1”, `relation "tabela_ktora_nie_istnieje" does not exist`, zap pominięty; obecnie na staging nadal `:813ad14…`, mój `bash scripts/smoke.sh staging` → „Smoke test: OK” |
+| AC4 | pass | log przebiegu 40882296349: „FAIL-NEW: 0”, „ZAP: brak alertów wysokich”; `.zap/rules.tsv`: 10038 i 10035 = FAIL (test zap) |
+| AC5 | pass | przegląd `apps/api/fly.staging.toml` (fra, `auto_stop_machines = "stop"`, `min_machines_running = 0`, check `/health`, `force_https`, `release_command`) + test 2a; `IDLE_TIMEOUT_MS = 30_000` |
+| AC6 | pass | `deployment.md` „Środowiska” i „Otwarte pytania”: limit 60 s z źródłem i datą, nazwa `lista-staging`, `TRUSTED_PROXIES` |
+| SEC1 | pass | odtworzone: `node:18.0.0-slim` otagowany jako `…:badbad0` → `image.sh scan badbad0` exit 1 (HIGH 72, CRITICAL 11); w `deploy.yml` Trivy przed `push` |
+| SEC2 | pass | `curl` na staging: CSP bez `unsafe-inline`, `strict-transport-security: max-age=31536000; includeSubDomains`, `referrer-policy: no-referrer`, `x-frame-options: DENY`; `http://lista-staging.fly.dev/` → `301`, `location: https://lista-staging.fly.dev/` |
+| SEC3 | pass | `flyctl status`: region `fra`; `flyctl secrets list`: tylko nazwy `BETTER_AUTH_SECRET`, `DATABASE_URL`; `staging-setup.sh` odrzuca URL bez `sslmode=require` / spoza `eu-central-1` (test 4b). Region Neon i szyfrowanie — wg zrzutu właściciela i dokumentacji Neon (nie do sprawdzenia przez QA bez dostępu do panelu) |
+| SEC4 | pass | przegląd `deploy.yml`: domyślnie `contents: read`, `packages: write` tylko w `image`, `FLY_API_TOKEN` tylko w jobie ze środowiskiem `staging`, `concurrency: deploy-staging`, `cancel-in-progress: false`; test 2b + actionlint |
+
+**Testy (Step 5):** spot-checki — `force_https = false` → „FAIL fly.staging: force_https”; `cancel-in-progress: true` → FAIL w 2b; usunięte `--ignore-unfixed` → FAIL dry-run image; `MIGRATION_CONNECTION_TIMEOUT_MS = 3_000` → test 4c pada „Connection terminated due to connection timeout”. Wyjątek: usunięcie sprawdzenia `referrer-policy` w `smoke.sh` nie wywraca żadnego testu (finding #1). Red evidence jest dla każdego planowanego testu. Po spot-checkach `git status` czysty.
+
+**Eksploracja i bezpieczeństwo (Steps 6–7):**
+
+- Wybudzanie: maszyna `stopped` (auto-stop) → pierwsze `GET /health/ready` 200 po 6,7 s, następne 0,9 s; bez błędu po stronie API.
+- TH-24 / TRUSTED_PROXIES (prośba implementera): 32 × `GET /health/ready` po IPv4, każde z innym podrobionym `X-Forwarded-For` → 200 × 30, potem 429 (podrobiony nagłówek nie omija limitu); w tym samym czasie żądanie z IPv6 → 200 (limit liczony per rzeczywisty adres klienta, nie per adres proxy).
+- TH-22: obraz bez sekretów (`docker history` bez trafień), bez `.env*`, bez npm/npx, w `node_modules` tylko zależności produkcyjne; Trivy i ZAP przypięte digestem.
+- TH-15: CSP `script-src 'self'`, bez `unsafe-inline`.
+- TH-07: patrz SEC3.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test quality | `smoke.test.sh` sprawdza nagłówki „wszystkie albo żaden”: usunięcie sprawdzenia `referrer-policy` z `smoke.sh` nie wywraca testu, a ZAP nie ma reguły na Referrer-Policy — jedyna kontrola tego nagłówka nie ma testu, który by ją trzymał | spot-check: linia `expect_header … referrer-policy` usunięta → `smoke.test.sh` 5 × ok | atrapa w trybie „bez Referrer-Policy” (i osobno bez CSP / HSTS) → smoke exit 1 |
+| 2 | minor | infra | `concurrency` obejmuje tylko job `staging`: przy dwóch szybkich merge'ach obraz późniejszego może być gotowy wcześniej i wdrożyć się przed starszym (staging kończy na starszej wersji); job `zap` jest poza grupą i może skanować w trakcie kolejnego wdrożenia | `.github/workflows/deploy.yml` | grupa `concurrency` na poziomie workflow (bez anulowania) albo `zap` w tej samej grupie |
+| 3 | note | proces | tymczasowy wyzwalacz `deploy-test/**`, zdalne gałęzie `deploy-test/T-010*` i obraz `:91c62fd…` z błędną migracją w publicznym GHCR — warunek „przed zamknięciem E-01” zapisany w `deployment.md`, ale bez taska | `deploy.yml`, `git ls-remote`, `deployment.md` | task / krok UAT: wyzwalacz `[main]` + test 2b, usunięcie gałęzi i obrazu `:91c62fd` |
+| 4 | note | poza zakresem (T-008) | niestabilny test `InvitationScreen.entry.test.tsx`: w „sign up …” klient czasem wysyła dodatkowo `POST /invitations/<token>/accept` (`accepts.count` 1 zamiast 0), w CI epiku inny test tego pliku (`toHaveFocus`) — `ci-ok` PR #1 czerwony na `483814e` i `cccee82`. Zgłoszone już w QA T-009 | `pnpm check` 1 failed; izolacja: 2 porażki na 7 uruchomień; `gh run view 40861883285 --log-failed` | task naprawczy: wyścig auto-dołączenia po rejestracji (może to być realny podwójny accept) i stabilny test |
+| 5 | note | poza zakresem (T-005) | CodeQL na PR #1: otwarty alert `js/missing-rate-limiting` (high) w `apps/api/test/unexpected-error.test.ts:19` — check „CodeQL” czerwony | `gh api …/code-scanning/alerts?ref=refs/pull/1/merge` | odrzucić alert jako test-only (z uzasadnieniem) albo wyłączyć `apps/api/test` z analizy |

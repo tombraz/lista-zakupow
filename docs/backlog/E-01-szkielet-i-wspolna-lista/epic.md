@@ -1,7 +1,7 @@
 ---
 id: E-01
 title: Szkielet i pierwsza wspólna lista
-status: in-progress    # todo | in-progress | in-uat | done
+status: in-uat         # todo | in-progress | in-uat | done
 approved: 2026-10-26    # date the user approved this epic's tasks (set by /plan-backlog)
 change:                # brownfield only: the change ID this epic implements (C-NN)
 branch: epic/E-01-szkielet-i-wspolna-lista # set by /build-epic: epic/E-xx-<slug> (epic-branch workflow)
@@ -55,7 +55,7 @@ As in docs/architecture/tech-stack.md, confirmed 2026-10-26.
 
 ## UAT
 
-<Written by /qa-task in UAT.md when all stories are done; the epic is done after the user confirms it.>
+Checklista w [UAT.md](UAT.md) (QA, 2026-10-29). Epik jest `done` dopiero po potwierdzeniu UAT przez właściciela.
 
 ## Out of scope for this epic
 
