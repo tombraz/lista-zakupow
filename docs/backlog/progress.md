@@ -16,3 +16,4 @@
 2026-10-29 13:18 | T-010 | user | ANSWER | kroki Fly/Neon wykonane; deploy przez tymczasowy wyzwalacz push na gałęzi, zgoda na deployment.md i błędną migrację
 2026-10-29 13:27 | T-010 | implementer | NEEDS_USER | wyzwalacz deploy-test/**, obraz w GHCR OK; job staging padł: brak FLY_API_TOKEN w środowisku staging
 2026-10-29 13:44 | T-010 | user | ANSWER | token Fly + karta + GHCR publiczny; run 40872833932 próba 3: image/staging/zap zielone
+2026-10-29 14:40 | T-010 | implementer | IN_QA | deploy na lista-staging.fly.dev z migracjami/smoke/ZAP zielony; błędna migracja zatrzymuje wdrożenie; AC6 w deployment.md
