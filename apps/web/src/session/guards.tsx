@@ -1,15 +1,17 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { afterEntry } from "../invitations/invitationContext";
 import { LiveProvider } from "../live/LiveProvider";
-import { useSession } from "./useSession";
+import { useEndSessionOnUnauthenticated, useSession } from "./useSession";
 
 /**
  * Trasy dla zalogowanych; anonim trafia na SC-01 i po zalogowaniu wraca (ia.md, „Nawigacja”).
  * Zalogowany ma jedno połączenie na żywo; wylogowanie je zamyka (architecture.md).
+ * 401 z API w trakcie pracy kończy sesję i też prowadzi na SC-01 (T-018).
  */
 export function RequireSession() {
   const session = useSession();
   const location = useLocation();
+  useEndSessionOnUnauthenticated();
   if (session.isPending) return <main aria-busy="true" />;
   if (!session.data) {
     return <Navigate to="/logowanie" replace state={{ from: location.pathname }} />;

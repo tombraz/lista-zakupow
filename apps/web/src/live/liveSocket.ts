@@ -22,6 +22,7 @@ export class LiveSocket {
   private readonly lists = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private readonly reconnectListeners = new Set<() => void>();
+  private readonly dropListeners = new Set<() => void>();
   private retries = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private silenceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -65,6 +66,17 @@ export class LiveSocket {
     this.reconnectListeners.add(listener);
     return () => {
       this.reconnectListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Po zerwaniu połączenia (także nieudanej próbie): API zamyka je np. po wylogowaniu w innej
+   * karcie (TH-17), a bez sesji odrzuca ponowne (T-018).
+   */
+  onDrop(listener: () => void): () => void {
+    this.dropListeners.add(listener);
+    return () => {
+      this.dropListeners.delete(listener);
     };
   }
 
@@ -124,6 +136,7 @@ export class LiveSocket {
     clearTimeout(this.silenceTimer);
     this.socket = null;
     if (!this.running) return;
+    for (const listener of this.dropListeners) listener();
     clearTimeout(this.retryTimer);
     const delay = Math.min(1000 * 2 ** this.retries, MAX_RETRY_MS);
     this.retries += 1;
