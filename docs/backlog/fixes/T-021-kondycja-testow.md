@@ -4,7 +4,7 @@ title: "Stabilne i szybsze testy: limity czasu web i pula testowa API"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change   # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: [T-019, T-020]
 layers: [web, backend]
 requirements: []
@@ -86,3 +86,30 @@ Pomiary lokalnie, Windows 11, 8 rdzeni, Docker Desktop; gałąź `epic/E-01-szki
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+Niezależna weryfikacja (Windows 11, Docker Desktop, gałąź `epic/E-01-szkielet-i-wspolna-lista`, commit `4e0a660`).
+
+**Kryteria akceptacji**
+
+- **AC1 — pass.** Jeden przebieg `pnpm vitest run --project web`: 183/183, 46,8 s (< 60 s). Dwa przebiegi równolegle: 183/183 + 183/183 (77,8 s i 76,8 s). Obciążenie większe niż w AC: dwa przebiegi web + przebieg API naraz — 183/183, 183/183, API 204/204, 0 „Connection terminated”. `setup.ts` bez `configure({ asyncUtilTimeout })`, `vitest.config.ts` web bez `testTimeout` — limity domyślne.
+- **AC2 — pass.** `pnpm vitest run --project api --project shared`: 65 plików, 234/234, 63,6 s (< 2 min), 0 „Connection terminated”. `--project api --maxWorkers=1` (reporter JSON): jedyny plik > 5 s to `sign-in-rate-limit.test.ts` (8,3 s), wpisany jako wyjątek w `testing-strategy.md`.
+- **AC3 — pass (lokalnie); CI Linux nieweryfikowalne.** `pnpm check` na Windows: exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, 89 plików / 419 testów Vitest, mobile 10/10). Dla commitu `77e800e` nie ma jeszcze przebiegu CI (gałąź niewypchnięta; QA nie wypycha) — CI pull requesta to sprawdzi.
+
+**Spot-checki (przywrócone, `git status` czysty)**
+
+- Wyłączona blokada w `useGuardedMutation.ts` (`if (locked.current.has(lock)) return;`): testy SC-07 T-020 czerwone (`expected 2 to be 1`, `expected [ 'a', 'a', 'b' ]`) — przepisane testy nadal gryzą.
+- `heldResponse()` zwalniane od razu (`resolve()` w konstruktorze): 6 czerwonych testów stanu „w trakcie” (routeFocus, SC-06 dodawanie / odhaczanie / „Usuń kupione”, SC-07 AC1, SC-08 „Sprawdzamy zaproszenie…”) — wstrzymanie odpowiedzi jest tym, co te testy sprawdzają, a nie przypadkiem czasu.
+
+**Przegląd kodu:** zmiany tylko w testach, konfiguracji testów i dokumentacji; kod produkcyjny nietknięty. `DELETE` z `session_replication_role = replica` w transakcji (`SET LOCAL`) — schemat bez sekwencji (wszystkie snapshoty drizzle: `"sequences": {}`), więc brak `RESTART IDENTITY` nic nie zmienia. `isolate: false` w api: fałszywe zegary zawsze z `useRealTimers` w `afterEach`, brak modułowego stanu mutowalnego w `apps/api/src`. Limit 500 w SC-06 nadal sprawdzany (499 kupionych + 1, limit liczy wszystkie pozycje). Sekcja „Root cause” wyjaśnia, dlaczego testy tego nie łapały (cele szybkości niemierzone, brak przebiegu pod obciążeniem).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | dokumentacja | Tabela wyjątków „plik < 5 s” w `testing-strategy.md` jest nieaktualna: przy jednym workerze `sign-up` 2,2 s, `lists.limit` 2,5 s, `items.limit` 1,5 s, `sign-in-rate-limit` 8,3 s (w tabeli ~8, ~7, ~7, ~13 s). | JSON reporter `--project api --maxWorkers=1` | W tabeli tylko pliki faktycznie > 5 s, czasy z pomiaru. |
+| 2 | minor | testy web | Gdy test padnie przed `response.release()`, handler MSW wisi do końca przebiegu (obietnica nigdy nie rozwiązana). Nie psuje kolejnych testów (`cleanup`, `resetHandlers`), ale `afterEach` mógłby zwalniać wszystkie wstrzymane odpowiedzi. | `apps/web/test/held.ts` | Opcjonalnie: rejestr wstrzymanych odpowiedzi zwalniany w `afterEach`. |
+| 3 | note | proces | Sekcja „Prevention” to wciąż szablon („Uzupełnia /fix…”). Cele szybkości dalej nie są mierzone automatycznie. | task file | Uzupełnić; np. krok CI z limitem czasu przebiegu (`timeout-minutes`) albo raport JSON z progiem. |
+| 4 | note | środowisko | Lokalnie nadal 82 kontenery `postgres:17.11-alpine` z przerwanych przebiegów (poza repozytorium, opisane w Root cause). | `docker ps` | Posprzątać ręcznie; ewentualnie zadanie na zamykanie serwera E2E. |
+| 5 | note | CI | AC3 „CI (Linux, równolegle)” nieweryfikowalne lokalnie — brak przebiegu CI dla `77e800e`. | `gh run list --commit 77e800e…` pusty | Sprawdzić zielony CI po wypchnięciu. |
