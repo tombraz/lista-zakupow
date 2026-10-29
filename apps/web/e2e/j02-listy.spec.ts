@@ -82,6 +82,35 @@ test("J-02 creates, renames and deletes a list", async ({ page }) => {
   await expect(page.getByText("Nie masz jeszcze żadnej listy.")).toBeVisible();
 });
 
+// T-014 (WCAG 2.4.3, 2.4.7): po wejściu klawiaturą fokus na `h1` paska, obwódka `focus.ring-on-brand`.
+test("T-014 focuses the AppBar heading after a keyboard route change, with a visible ring", async ({
+  page,
+}) => {
+  await signUp(page, newAccount());
+  await page.getByRole("link", { name: "Konto" }).focus();
+  await page.keyboard.press("Enter");
+
+  const title = page.getByRole("heading", { level: 1, name: "Konto" });
+  await expect(title).toBeFocused();
+  const ring = await title.evaluate((heading) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--color-focus-ring-on-brand)";
+    document.body.append(probe);
+    const onBrand = getComputedStyle(probe).color;
+    probe.remove();
+    const style = getComputedStyle(heading);
+    return {
+      focusVisible: heading.matches(":focus-visible"),
+      style: style.outlineStyle,
+      color: style.outlineColor,
+      onBrand,
+    };
+  });
+  expect(ring.focusVisible).toBe(true);
+  expect(ring.style).toBe("solid");
+  expect(ring.color).toBe(ring.onBrand);
+});
+
 // SEC3 (TH-01, MC-01): drugie konto pod adresem cudzej listy nie widzi jej treści.
 test("SEC3 another account sees no content of someone else's list", async ({ page, browser }) => {
   await signUp(page, newAccount());

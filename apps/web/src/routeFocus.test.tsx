@@ -1,7 +1,7 @@
 import type { Item, ListSummary } from "@lista/shared";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, anItem, ANIA, detailsOf, listsAre } from "../test/lists";
 import { server } from "../test/msw-server";
@@ -41,6 +41,26 @@ describe("focus after a route change (T-014)", () => {
 
     await openHomeListFromLists();
 
+    const title = await heading("Dom");
+    await waitFor(() => {
+      expect(title).toHaveFocus();
+    });
+  });
+
+  it("waits for the list name before focusing the SC-06 heading", async () => {
+    const list = homeListIs();
+    server.use(
+      http.get(`*/api/v1/lists/${list.id}`, async () => {
+        await delay(200);
+        return HttpResponse.json(detailsOf(list, [anItem({ name: "Chleb" })]));
+      }),
+    );
+
+    await openHomeListFromLists();
+
+    const pending = await screen.findByRole("heading", { level: 1 });
+    expect(pending).toHaveTextContent("");
+    expect(pending).not.toHaveFocus();
     const title = await heading("Dom");
     await waitFor(() => {
       expect(title).toHaveFocus();

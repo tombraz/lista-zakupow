@@ -38,6 +38,7 @@
   cursor: pointer;
 }
 
+.title:focus-visible,
 .control:focus-visible {
   outline-color: var(--color-focus-ring-on-brand);
 }
