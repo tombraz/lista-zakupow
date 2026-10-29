@@ -1,11 +1,5 @@
 import { readDatabaseUrl } from "../config";
-import { runMigrations } from "./migrate";
-import { createPool } from "./pool";
+import { migrateDatabase } from "./migrate";
 
-const pool = createPool(readDatabaseUrl(process.env));
-try {
-  await runMigrations(pool);
-  console.log("migrations applied");
-} finally {
-  await pool.end();
-}
+await migrateDatabase(readDatabaseUrl(process.env));
+console.log("migrations applied");
