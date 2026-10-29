@@ -4,7 +4,7 @@ title: "Synchroniczna blokada podwójnego wysłania formularzy i akcji"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa               # todo | in-progress | in-qa | done | blocked
+status: done                # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05, F-11]
@@ -78,3 +78,26 @@ Co by zapobiegło: jeden wspólny hook zapisu od początku i test podwójnego kl
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Testy | Testy #3 (SC-05 tworzenie listy) i #4 (SC-02 rejestracja) nie gryzą: przechodzą także bez blokady, bo `submit()` ustawia stan przed `mutate` i `act` przerysowuje przycisk. Dla tych dwóch ekranów AC2 dowodzi przegląd kodu (`useListNameForm`, `useSignUpForm` używają `useGuardedMutation`) i spot-check mechanizmu na pozostałych ekranach. Autor to opisał (Root cause, „Pułapki”). | Spot-check: wyłączona linia `if (locked.current.has(lock)) return;` → 6/8 testów T-020 czerwone (#1, #2, #5, #6, #7, #8), #3 i #4 zielone. | Test, który bez blokady jest czerwony (np. wywołanie `mutate` dwa razy bez zmiany stanu), albo jawne oznaczenie #3/#4 jako testów regresji. |
+| 2 | note | Testy | Pełny `pnpm test`: w 1. przebiegu 1 czerwony `InvitationScreen.entry.test.tsx:112` (pathname po rejestracji z zaproszeniem), 2. przebieg 418/418; plik osobno 3× → 1 czerwony. Znany wyścig C1 śledzony w T-019 (`todo`), niezwiązany z tą zmianą (autor: czerwony także bez poprawki). | `pnpm test`: 417/418, potem 418/418. | Naprawa w T-019. |
+| 3 | note | Kod | Importy `useGuardedMutation` dopisane na końcu bloku importów (po importach lokalnych tego samego poziomu) — lint i Prettier ich nie porządkują. | np. `useSignInForm.ts`, `ClearBoughtDialog.tsx`. | Kosmetyka; ewentualnie reguła `import/order`. |
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` bez zmian w plikach; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd, depcruise: 0 naruszeń), `pnpm design-check` (0 błędów) czyste. `pnpm vitest run apps/web/src/screens -t "T-020"`: 8/8 zielone.
+
+**Kryteria akceptacji:**
+
+- AC1 — pass: test #1 (`ParticipantsScreen.test.tsx`) liczy `POST` po dwóch synchronicznych `fireEvent.click`; czerwony bez blokady.
+- AC2 — pass: „Usuń kupione” (#5), przyjęcie zaproszenia (#6), usunięcie listy (#7), wylogowanie (#8), unieważnienie linku z `lockOf` (#2: ten sam link raz, inny link wysłany) — wszystkie czerwone bez blokady. Tworzenie listy i rejestracja — zob. #1 (minor).
+- AC3 — pass: `layers/web.md` „Pułapki” i „Gdzie jest kod” opisują `useGuardedMutation`, `lockOf`, wyjątki i test, który przechodzi bez blokady.
+- AC4 — pass: `useAddItem` i `useCheckItem` nie zmienione (jedyne pozostałe `useMutation` w `apps/web/src` poza hookiem); testy T-006 i T-015 (aria-disabled) zielone w pełnym przebiegu.
+
+**Przegląd kodu:** `onSettled` zwalnia blokadę z opcji hooka (TanStack Query 5.105: indeks 2 = `variables`; wywołania z opcji hooka przychodzą też po odmontowaniu), błąd zapisu zwalnia blokadę (istniejące testy ponowienia zielone). Nowa tożsamość `mutate` w każdym renderze: jedyny `useEffect` z `join` (`useAutoJoin`) ma własny `started` ref — bez podwójnego `accept`. Fix: Root cause wyjaśnia, dlaczego testy przepuściły błąd (`userEvent` z `await`); test odtwarzający (#1) czerwony bez poprawki (spot-check). Spot-check cofnięty, `git status` czysty.
+
+**Bezpieczeństwo:** zmiana tylko po stronie klienta, brak `threats:`; bez sekretów i danych osobowych w logach. Przeglądarka i E2E nie uruchamiane (zmiana w hookach, pokryta testami komponentów).
