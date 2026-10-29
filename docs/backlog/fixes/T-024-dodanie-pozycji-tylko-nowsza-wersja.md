@@ -4,7 +4,7 @@ title: "Spóźniona odpowiedź na dodanie pozycji nie nadpisuje nowszej wersji a
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07, F-14]
@@ -76,3 +76,33 @@ Green: `pnpm test` 89 plików, 425 testów pass; `pnpm typecheck`, `pnpm lint`, 
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Proces | Sekcja `## Prevention` nadal ma placeholder `<Uzupełnia /fix.>`. | plik zadania | Uzupełnić (np. odesłanie do jednej ścieżki `upsertNewer`/`removeItems`) albo „nie dotyczy”. |
+| 2 | note | Kod (spójność) | Własne usunięcia (`useEditItem.ts:111`, `ClearBoughtDialog.tsx:27`) nadal filtrują cache przez `updateItems`, a nie `removeItems`, więc nie trafiają do zbioru usuniętych. Ochronę daje dopiero zdarzenie WS `item.deleted`/`items.cleared` o własnej zmianie. | grep `updateItems` | Rozważyć `removeItems` we wszystkich ścieżkach usuwania (jedna reguła F-14). |
+| 3 | note | Kod | `deletedItems` (WeakMap per `QueryClient`) jest stanem modułu, rośnie przez całą sesję i nigdy nie jest czyszczony (np. po pełnym pobraniu listy po ponownym połączeniu). Przy UUID bez wpływu na poprawność. | `itemsCache.ts:53-61` | Akceptowalne; ewentualnie czyścić przy zamknięciu listy. |
+| 4 | note | Eksploracja | Ponowienie dodania z tym samym `id` po usunięciu pozycji na żywo: ogłoszenie „Dodano Masło”, ale pozycji nie ma (usunięcie wygrywa). Zgodne z F-14, komunikat może mylić. | analiza kodu | Decyzja produktowa, bez zmian teraz. |
+
+**Reprodukcja:** `pnpm install --frozen-lockfile`; `pnpm test` 89 plików / 425 testów pass; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm quality` (0 naruszeń), `pnpm build` bez błędów.
+
+**Kryteria:**
+
+- AC1 pass — test 1 (`keeps Tomek's newer edit…`) zwalnia odpowiedź `POST` po zdarzeniach WS i sprawdza nowszą notatkę „kostka” oraz ogłoszenie.
+- AC2 pass — test 2 (`does not bring back a new item deleted live…`) sprawdza brak „Edytuj Masło” i licznik „3 do kupienia”.
+- AC3 pass — testy dodania T-006 (`ListScreen.add.test.tsx`, w tym ponowienie z tym samym `id`) i testy na żywo (J-05) zielone.
+
+**Spot-checki (cofnięte, `git status` czysty):**
+
+1. `useAddItem.added` przywrócone do bezwarunkowego `updateItems([item, ...])` → oba testy T-024 czerwone.
+2. Usunięty warunek `deletedItems…has(item.id)` w `upsertNewer` → czerwony test 2 (AC2), test 1 zielony; oba testy bronią swojej części poprawki.
+
+**Eksploracja (tymczasowe testy, cofnięte):** `items.cleared` przed odpowiedzią → pozycja nie wraca, ogłoszenie i czyszczenie pola działają; odpowiedź z tym samym `updatedAt` co własne zdarzenie WS → jeden wiersz, ogłoszenie, pole wyczyszczone. Oba pass.
+
+**Testy:** red evidence obecne dla obu planowanych testów; testy asertują zachowanie widoczne dla użytkownika (tekst, role), bez mocków własnych modułów; wartości oczekiwane to literały. Root cause wyjaśnia, dlaczego wcześniejsze testy nie złapały błędu.
+
+**Bezpieczeństwo:** zmiana tylko w cache klienta; brak nowych danych wejściowych, logów ani uprawnień; `threats: []`.
