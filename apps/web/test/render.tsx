@@ -2,7 +2,8 @@ import type { Me } from "@lista/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { createMemoryRouter, RouterProvider, type InitialEntry } from "react-router";
+import { createMemoryRouter, type InitialEntry } from "react-router";
+import { RouterProvider } from "react-router/dom";
 import { routes } from "../src/routes";
 import { server } from "./msw-server";
 

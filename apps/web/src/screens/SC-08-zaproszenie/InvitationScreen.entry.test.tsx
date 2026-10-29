@@ -1,6 +1,7 @@
 import type { Me } from "@lista/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { defaultScheduler, notifyManager } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { aList, apiError, detailsOf, TOMEK } from "../../../test/lists";
@@ -112,6 +113,35 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
     expect(router.state.location.pathname).toBe(`/listy/${list.id}`);
     await router.navigate(-1);
     expect(router.state.location.pathname).toBe("/regulamin");
+  });
+
+  // T-019: sesja może się przerysować przed przejściem routera (`startTransition`); tu tak jest
+  // zawsze — Query powiadamia synchronicznie. Strażnik nie może wtedy wysłać drugiego `accept`.
+  it("sign up: no second accept when the session renders before the navigation (T-019)", async () => {
+    const user = userEvent.setup();
+    anonymousUntilSignedIn();
+    const { list, accepts } = inviteToDom();
+    server.use(
+      http.post("*/api/auth/sign-up/email", () =>
+        HttpResponse.json({ user: TOMEK_ME, invitation: { listId: list.id } }),
+      ),
+    );
+    const { router } = renderApp(PAGE);
+
+    await user.click(await screen.findByRole("button", { name: "Załóż konto i dołącz" }));
+    await user.type(await screen.findByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
+    await fillSignUp(user);
+    notifyManager.setScheduler((callback) => {
+      callback();
+    });
+    try {
+      await user.click(screen.getByRole("button", { name: "Załóż konto" }));
+      expect(await screen.findByText("Dołączyłeś(-aś) do listy „Dom”.")).toBeVisible();
+    } finally {
+      notifyManager.setScheduler(defaultScheduler);
+    }
+    expect(accepts.count).toBe(0);
+    expect(router.state.location.pathname).toBe(`/listy/${list.id}`);
   });
 
   it("sign up with a link that stopped working: the account exists, SC-08 says the link is dead", async () => {

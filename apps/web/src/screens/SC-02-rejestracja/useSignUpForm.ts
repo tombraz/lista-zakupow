@@ -34,7 +34,8 @@ const EMPTY: SignUpValues = {
 
 /**
  * F-01, F-12: rejestracja z linku już dołączyła — `PublicOnly` przejdzie od razu na listę;
- * inaczej na SC-08, który pokaże, czemu się nie udało.
+ * inaczej na SC-08, który pokaże, czemu się nie udało. `flushSync`: `joinedListId` musi być w
+ * stanie trasy, zanim strażnik zobaczy sesję — inaczej wyśle drugi `accept` (T-019).
  */
 function useSignedUp() {
   const location = useLocation();
@@ -44,7 +45,7 @@ function useSignedUp() {
     if (joined && "listId" in joined) {
       const previous = (location.state ?? {}) as EntryState;
       const state: EntryState = { ...previous, joinedListId: joined.listId };
-      await navigate(location.pathname, { replace: true, state });
+      await navigate(location.pathname, { replace: true, state, flushSync: true });
     }
     setSession(user);
   };
