@@ -4,7 +4,7 @@ title: "Wdrożenie na staging tylko z main (usunięcie deploy-test/**)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change   # bug | small-change
 severity: high       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: [T-010]
 layers: [infra]
 requirements: [N-03]
@@ -72,3 +72,26 @@ Co by zapobiegło: automatyczna kontrola tymczasowych obejść w workflow. Wdro�
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+Sprawdzone niezależnie (świeży kontekst): commit `a8742fd`.
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `bash scripts/test/deploy-workflow.test.sh` → 12 × ok, exit 0; `bash scripts/test/workflow-check.test.sh` → 3 × ok, exit 0; `node scripts/workflow-check.mjs` → OK; actionlint 1.7.12 (Docker) exit 0; pozostałe testy skryptów (`protect-main`, `mobile`, `deploy`, `image`, `smoke`, `zap`, `staging-setup`) exit 0; `pnpm build` exit 0; `pnpm test:mobile` 10/10. `pnpm check`: format, lint, typecheck, quality, design-check, backlog-check, workflow-check zielone; vitest 396/397 — 1 porażka w `InvitationScreen.entry.test.tsx` (znany niestabilny test, task T-019, `todo`; w izolacji 3 × 4/4 zielone; T-013 nie dotyka `apps/web`) — patrz #3.
+
+**Kryteria akceptacji:**
+
+- AC1 — **pass.** `on:` w `deploy.yml` = `push: branches: [main]` + `workflow_dispatch`. Test porównuje cały blok `on:` bez komentarzy. Spot-check (kopie w scratchpadzie, repo nietknięte): przywrócony `[main, "deploy-test/**"]` → FAIL; gałąź dopisana jako lista w osobnych liniach → FAIL; usunięty `workflow_dispatch` → FAIL; dodany `pull_request` → FAIL; dodany `tags:` → FAIL.
+- AC2 — **pass.** `scripts/workflow-check.mjs` w `pnpm check` i w jobie `always` CI (bez filtra ścieżek); test skryptu w jobie `infra` (filtr `.github/**`, `scripts/**`). Spot-check: znacznik w innym pliku `*.yaml` → exit 1 z plikiem i linią.
+- AC3 — **pass (statycznie)**; prawdziwy przebieg „merge do `main` → staging” niemożliwy przed merge PR epiku (zapisany w `UAT.md`, „Przed UAT”). `workflow_dispatch` obecny, joby `image`/`staging`/`zap` i testy SEC4 bez zmian.
+
+**Fix task:** „Root cause” wyjaśnia, czemu testy nie złapały błędu (test utrwalał stan tymczasowy). Red evidence dla obu testów obecny; test odtwarzający czerwienieje bez poprawki (spot-check 1). Zakres: zmiany tylko w workflow, skryptach, testach i dokumentacji — zgodne z taskiem. `git status` czysty po spot-checkach.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | infra / workflow-check | Znacznik sprawdzany z rozróżnianiem wielkości liter: `# tymczasowe hack` przechodzi (exit 0). | `node scripts/workflow-check.mjs <kopia z małymi literami>` → `workflow-check: OK` | Dopasowanie bez rozróżniania wielkości liter (ew. także `TEMPORARY`/`TODO remove`), albo konwencja w `infra.md` mówi wprost „wielkimi literami”. |
+| 2 | note | test | `workflow-check.test.sh` używa `\n` w zamianie `sed` (rozszerzenie GNU); działa w Git Bash i CI Linux, nie w BSD/macOS sed. | `scripts/test/workflow-check.test.sh:28` | Przenośny zapis (np. `awk`) jeśli testy mają działać na macOS. |
+| 3 | note | suite | `pnpm check` czerwony przez niestabilny `InvitationScreen.entry.test.tsx` (`expected 1 to be +0`, linia 111); niezwiązany z T-013, śledzony w T-019. Evidence taska podaje 397/397 — przy tym przebiegu 396/397. | log `pnpm check`; 3 × izolowany przebieg zielony | Naprawa w T-019. |
+| 4 | note | docs | Propozycja wpisu w `layers/infra.md` „Pułapki” (oznaczanie `TYMCZASOWE`, task na usunięcie) czeka na decyzję właściciela. | sekcja „Prevention” | Decyzja właściciela. |
