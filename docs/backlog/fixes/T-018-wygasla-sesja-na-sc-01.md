@@ -4,7 +4,7 @@ title: "Wygasła sesja w trakcie pracy przenosi na SC-01"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-02]
@@ -73,3 +73,23 @@ Koniec sesji klient rozpoznawał tylko w `fetchMe` (401 z `/api/v1/me` → `null
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: pass
+
+Reproduced: `pnpm install --frozen-lockfile` (no tracked changes), `pnpm test` 428/428 (web 190/190), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (0 clones, 0 dependency violations), `pnpm design-check` OK. Task tests `src/session/sessionEnded.test.tsx` 3/3.
+
+Acceptance criteria:
+
+- AC1 pass: tests 1 and 2 drive the whole app (`renderApp`) with MSW 401 on `GET` and `POST /api/v1/lists`; they assert SC-01 heading, `/logowanie`, and after sign-in a return to `/listy` with fresh data. Spot-check: without `useEndSessionOnUnauthenticated()` in `RequireSession` both go red.
+- AC2 pass: test 3 drops the live connection with `/me` = 401 and asserts SC-01 and no new connection after 15 s (`connections()` counts all connections ever opened, so a retry would be caught). Spot-check: without `live.onDrop(checkSession)` it goes red.
+- AC3 pass: SC-01 wrong password (`SignInScreen.test.tsx`, `RequireSession` not mounted there), SC-08 and SC-09 sign-out suites green.
+
+Exploratory (temporary test, removed): WS drop with valid session (`/me` 200) and with `/me` network error both stay on SC-05 and reconnect; a 403 from `/api/v1/lists` does not end the session. Root cause explains why earlier tests missed it; red evidence recorded. Threats: none listed; no server change.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Tests | QA-plan edge cases "drop without network" and "drop with valid session" are not covered by committed tests (only checked by QA with a temporary test). | `sessionEnded.test.tsx` has 3 tests, all 401 paths | A regression test for `useCheckSession` ignoring network errors and keeping the session on `/me` 200. |
+| 2 | note | Verification | AC2 is proven against MSW `ws.link`, not against the real API refusing the upgrade without a session; the E2E J-01 alternative in the AC was not added. | TDD plan rows 1-3 are component level | Optional E2E: sign out in a second context, check the first lands on SC-01. |
+| 3 | note | Backlog | `## Prevention` is still the placeholder. | task file | Filled by `/fix` follow-up, as with T-024. |
