@@ -1,6 +1,6 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
@@ -40,5 +40,34 @@ describe("SC-09 Konto: failed sign-out", () => {
 
     expect(await screen.findByText("Nie udało się wylogować. Spróbuj ponownie.")).toBeVisible();
     expect(screen.queryByText(/Brak połączenia/)).toBeNull();
+  });
+});
+
+// T-015: w czasie wylogowania przycisk zostaje fokusowalny (aria-disabled zamiast disabled).
+describe("SC-09 Konto: signing out", () => {
+  beforeEach(() => {
+    sessionIs(ANIA);
+  });
+
+  it("keeps focus on „Wyloguj się” while signing out", async () => {
+    server.use(
+      http.post("*/api/auth/sign-out", async () => {
+        await delay("infinite");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp("/konto");
+    const logout = await screen.findByRole("button", { name: "Wyloguj się" });
+
+    logout.focus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(logout).toHaveAttribute("aria-busy", "true");
+    });
+    expect(logout).toHaveAttribute("aria-disabled", "true");
+    expect(logout).not.toBeDisabled();
+    expect(logout).toHaveFocus();
   });
 });

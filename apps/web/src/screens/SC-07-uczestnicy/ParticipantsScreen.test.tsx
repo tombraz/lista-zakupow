@@ -106,6 +106,28 @@ describe("SC-07 invitations of the owner", () => {
     });
   });
 
+  // T-015: w czasie zapisu przycisk zostaje fokusowalny (aria-disabled zamiast disabled).
+  it("keeps focus on „Utwórz link zaproszenia” while saving", async () => {
+    const { user, list } = await showParticipants();
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/invitations`, async () => {
+        await delay("infinite");
+        return HttpResponse.json(anInvitation("new"), { status: 201 });
+      }),
+    );
+    const create = invitationsSection().getByRole("button", { name: "Utwórz link zaproszenia" });
+
+    create.focus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(create).toHaveAttribute("aria-busy", "true");
+    });
+    expect(create).toHaveAttribute("aria-disabled", "true");
+    expect(create).not.toBeDisabled();
+    expect(create).toHaveFocus();
+  });
+
   it("copies the link and confirms with a status toast", async () => {
     const link = anInvitation("a");
     const { user } = await showParticipants({ links: [link] });

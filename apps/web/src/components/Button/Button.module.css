@@ -46,7 +46,8 @@
   border: 0;
 }
 
-.button:disabled {
+.button:disabled,
+.button[aria-disabled="true"] {
   color: var(--color-text-secondary);
   background: var(--color-action-disabled);
   border-color: var(--color-action-disabled);

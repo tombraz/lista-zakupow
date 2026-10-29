@@ -1,5 +1,5 @@
 import type { ListSummary } from "@lista/shared";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -242,6 +242,28 @@ describe("SC-06 Lista", () => {
       expect(await screen.findByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
       expect(router.state.location.pathname).toBe("/listy");
       expect(deleted).toBe(1);
+    });
+
+    // T-015: `disabled` zabrałby fokus z przycisku i z pułapki dialogu (WCAG 2.4.3).
+    it("keeps focus on „Usuń listę” inside the dialog while deleting", async () => {
+      const { user, list, dialog } = await openDelete();
+      server.use(
+        http.delete(`*/api/v1/lists/${list.id}`, async () => {
+          await delay("infinite");
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      const remove = within(dialog).getByRole("button", { name: "Usuń listę" });
+
+      await user.tab();
+      await user.keyboard("{Enter}");
+
+      await waitFor(() => {
+        expect(remove).toHaveAttribute("aria-busy", "true");
+      });
+      expect(remove).toHaveAttribute("aria-disabled", "true");
+      expect(remove).not.toBeDisabled();
+      expect(remove).toHaveFocus();
     });
 
     it("says the deletion failed and keeps the dialog open", async () => {

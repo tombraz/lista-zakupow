@@ -75,9 +75,24 @@ test("J-02 creates, renames and deletes a list", async ({ page }) => {
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("button", { name: "Więcej opcji" })).toBeFocused();
 
+  // T-015: w czasie zapisu fokus zostaje na przycisku w dialogu (`disabled` zrzuciłby go na `body`).
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/lists/*", async (route) => {
+    if (route.request().method() === "DELETE") await held;
+    await route.fallback();
+  });
   await page.getByRole("button", { name: "Więcej opcji" }).click();
   await page.getByRole("button", { name: "Usuń listę" }).click();
-  await dialog.getByRole("button", { name: "Usuń listę" }).click();
+  const remove = dialog.getByRole("button", { name: "Usuń listę" });
+  await remove.focus();
+  await page.keyboard.press("Enter");
+  await expect(remove).toHaveAttribute("aria-busy", "true");
+  await expect(remove).toBeFocused();
+  await expect(remove).toHaveAttribute("aria-disabled", "true");
+  release();
   await expect(page.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
   await expect(page.getByText("Nie masz jeszcze żadnej listy.")).toBeVisible();
 });
