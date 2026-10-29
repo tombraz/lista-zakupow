@@ -4,7 +4,7 @@ title: "Stabilne i szybsze testy: limity czasu web i pula testowa API"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change   # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-019, T-020]
 layers: [web, backend]
 requirements: []
