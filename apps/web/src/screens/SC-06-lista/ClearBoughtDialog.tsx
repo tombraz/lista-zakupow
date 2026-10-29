@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import { clearChecked } from "../../api/items";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { confirmMutation } from "./confirmMutation";
-import { updateItems } from "./itemsCache";
+import { removeItems } from "./itemsCache";
 import { messages } from "./messages";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
 
@@ -23,8 +23,7 @@ export function ClearBoughtDialog(props: ClearBoughtDialogProps) {
   const mutation = useGuardedMutation({
     mutationFn: () => clearChecked(listId),
     onSuccess: ({ deletedIds }) => {
-      const deleted = new Set(deletedIds);
-      updateItems(client, listId, (items) => items.filter(({ id }) => !deleted.has(id)));
+      removeItems(client, listId, deletedIds);
       onClose();
       onCleared();
     },

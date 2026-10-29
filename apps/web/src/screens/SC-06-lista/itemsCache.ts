@@ -2,12 +2,12 @@ import type { Item, ListDetails } from "@lista/shared";
 import type { QueryClient } from "@tanstack/react-query";
 import { listKey } from "../../lists/useList";
 
-/** Pozycje listy w cache po potwierdzonej przez API zmianie (bez optymistycznych zmian, F-15). */
-export function updateItems(
-  client: QueryClient,
-  listId: string,
-  change: (items: Item[]) => Item[],
-) {
+/**
+ * Pozycje listy w cache po potwierdzonej przez API zmianie (bez optymistycznych zmian, F-15).
+ * Nieeksportowane (T-024): zapis z zewnątrz tylko przez `upsertNewer`, `replaceItem`,
+ * `removeItems`, które pilnują reguły api.md „tylko nowsza wersja, usunięcie wygrywa”.
+ */
+function updateItems(client: QueryClient, listId: string, change: (items: Item[]) => Item[]) {
   client.setQueryData<ListDetails>(
     listKey(listId),
     (current) => current && { ...current, items: change(current.items) },

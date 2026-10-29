@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { deleteItem, updateItem } from "../../api/items";
-import { replaceItem, updateItems } from "./itemsCache";
+import { removeItems, replaceItem } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
 
@@ -108,7 +108,7 @@ function useRemoveItem(listId: string, item: Item, onRemoved: () => void) {
   const mutation = useGuardedMutation({ mutationFn: () => deleteItem(listId, item.id) });
 
   const removed = () => {
-    updateItems(client, listId, (all) => all.filter((it) => it.id !== item.id));
+    removeItems(client, listId, [item.id]);
     onRemoved();
   };
 

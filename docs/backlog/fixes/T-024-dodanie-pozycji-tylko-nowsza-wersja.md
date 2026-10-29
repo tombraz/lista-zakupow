@@ -69,7 +69,11 @@ Green: `pnpm test` 89 plików, 425 testów pass; `pnpm typecheck`, `pnpm lint`, 
 
 ## Prevention
 
-<Uzupełnia /fix.>
+**Co by zapobiegło:** jedna droga zapisu pozycji do cache SC-06, której nie da się ominąć. T-017 dodał regułę `isNewer`, ale eksportowane `updateItems` pozwalało każdemu hookowi pisać do cache po swojemu (tak zrobił `useAddItem.added`).
+
+**Przyjęte przez użytkownika (2026-10-29):** `updateItems` nieeksportowane z `itemsCache.ts` — zapis pozycji spoza modułu tylko przez `upsertNewer`, `replaceItem`, `removeItems`; obejście to błąd kompilacji (`pnpm typecheck`). Własne usunięcia (`useEditItem`, `ClearBoughtDialog`) przeszły na `removeItems`, więc też są zapamiętywane (uwaga z QA round 1).
+
+**Odrzucone:** wpis „Pułapki” w `layers/web.md` (słabszy niż błąd kompilacji).
 
 ## Incident note
 
