@@ -26,9 +26,13 @@ const REDACTED_PATHS = [
 ];
 
 // TH-08: token zaproszenia w ścieżce to uprawnienie do listy; do logu tylko jego miejsce.
-const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/)[^/?#]+/;
+// Dwie ścieżki niosą token: API (podgląd, przyjęcie) i strona SC-08 serwowana przez API (ADR 0006).
+const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/|\/zaproszenie\/)[^/?#]+/;
 
-/** Ścieżka żądania bez tokenu zaproszenia (`/api/v1/invitations/[redacted]/accept`). */
+/**
+ * Ścieżka żądania bez tokenu zaproszenia (`/api/v1/invitations/[redacted]/accept`,
+ * `/zaproszenie/[redacted]`).
+ */
 export function redactedUrl(url: string): string {
   return url.replace(INVITATION_TOKEN_PATH, "$1[redacted]");
 }

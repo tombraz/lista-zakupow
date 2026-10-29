@@ -3,7 +3,7 @@ id: T-008
 title: Link zaproszenia i jego przyjęcie (web)
 epic: E-01
 story: S-01-05
-status: in-progress         # todo | in-progress | in-qa | done | blocked
+status: in-qa               # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -209,3 +209,15 @@ Ręczne sprawdzenia dostępności i urządzeń (VoiceOver / TalkBack, iPhone Saf
 | 7 | note | testy | TDD: czerwone przebiegi udokumentowane dla testów 1–15; testy 6 i 10 przeszły od razu, z udokumentowanym sprawdzeniem, że gryzą (potwierdzone moim spot-checkiem dla 6). Testy na seamach, bez mocków własnych modułów. | Evidence, tabela TDD. | — |
 
 Do zmiany przed kolejną rundą: #1 (redakcja `/zaproszenie/:token` w logu żądań + test).
+
+## Fix round 1 (2026-10-29)
+
+Zakres: tylko #1 (blocker). Minory #2–#4 i noty #5–#7 bez zmian (poza zakresem rundy; #2 dotyczy `docs/architecture/`, którego implementer nie edytuje — odstępstwa nadal w „Decyzje i odstępstwa” do przeniesienia przez właściciela; dotyczy to też reguły w `backend.md` „Security rules” / `threat-model.md`: redakcja obejmuje teraz `/api/v1/invitations/:token*` **i** `/zaproszenie/:token`).
+
+| # | Test | Red | Teraz |
+| --- | --- | --- | --- |
+| QA1-#1 | `apps/api/test/invitations.logs.test.ts` › „redacts the token in the logged path of the SC-08 page” (`GET /zaproszenie/<token>?x=1` z `webDistDir` = fixture SPA) | `AssertionError: expected '{"level":30,…' not to contain 'JFYyWZ1lyL9Yd-pw_VgAnuh9t036E-ZRhJOs3…'` | pass — `req.url` = `/zaproszenie/[redacted]?x=1` |
+
+Poprawka: `apps/api/src/logging.ts` — `INVITATION_TOKEN_PATH` obejmuje też `/zaproszenie/`; jedno miejsce redakcji (serializer `req`). Inne logi ścieżek sprawdzone: `api-error.ts` loguje wzorzec trasy (`routeOptions.url`), `auth-routes.ts` tylko trasy `/api/auth/*`.
+
+Przebiegi: `pnpm typecheck`, `lint`, `format:check`, `quality` (0 klonów, bez naruszeń zależności), `build` — OK. `pnpm test` — 72 pliki / 341 testów pass (pierwszy przebieg: 1 × timing flake `InvitationScreen.entry.test.tsx` „sign up: the request carries the token…”, 2133 ms pod obciążeniem; ponowny pełny przebieg i plik osobno — pass; plik niezmieniany w tej rundzie). `pnpm test:e2e` — 32 pass; `apps/web/test-results/api.log`: 14 × `/zaproszenie/[redacted]`, 0 wpisów z 43-znakowym tokenem.
