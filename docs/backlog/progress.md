@@ -14,3 +14,4 @@
 2026-10-29 10:40 | T-009 | qa | PASS | 0/0/4 minor; S-01-06 done; wyścig subscribe/revoke do zamknięcia przed S-02-02, flaky InvitationScreen.entry
 2026-10-29 11:58 | T-010 | implementer | NEEDS_USER | lokalnie obraz+smoke+Trivy+ZAP OK; realny deploy wymaga Fly/Neon staging od właściciela + zgoda na edycję deployment.md
 2026-10-29 13:18 | T-010 | user | ANSWER | kroki Fly/Neon wykonane; deploy przez tymczasowy wyzwalacz push na gałęzi, zgoda na deployment.md i błędną migrację
+2026-10-29 13:27 | T-010 | implementer | NEEDS_USER | wyzwalacz deploy-test/**, obraz w GHCR OK; job staging padł: brak FLY_API_TOKEN w środowisku staging
