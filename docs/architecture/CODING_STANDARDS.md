@@ -41,4 +41,6 @@ Zmiany: 2026-10-27 (T-001, zatwierdził właściciel) — zakres Prettiera z „
 
 **Bez nadmiaru (YAGNI).** Zakazane bez drugiego realnego przypadku: interfejs z jedną implementacją poza granicami systemu, fabryki, konfiguracja wartości, których nikt nie zmienia, warstwa „na później”, wspólna funkcja z flagami dla każdego wywołującego. Nie dodajemy kolejek, cache, i18n, feature flag ani wielu instancji API (ADR 0003).
 
+**Niestabilny test to błąd do zdiagnozowania.** Test, który raz przechodzi, a raz nie (zwłaszcza pod obciążeniem), najpierw sprawdzamy jako możliwy wyścig w kodzie, a nie problem czasu. Nie podnosimy limitów czasu (`testTimeout`, `asyncUtilTimeout`, timeouty asercji) ani nie dodajemy ponowień, dopóki przyczyna nie jest znana i zapisana w tasku. Przykład z przeglądu E-01 (C1): niestabilny `InvitationScreen.entry.test.tsx` ujawniał prawdziwy podwójny `accept`.
+
 **Komentarze.** Tylko „dlaczego”, nigdy „co”. Odniesienie do wymagania (`// F-09`) przy regule biznesowej, która bez niego wygląda dziwnie.
