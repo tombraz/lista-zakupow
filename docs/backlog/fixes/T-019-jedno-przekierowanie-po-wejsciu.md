@@ -4,7 +4,7 @@ title: "Jedno przekierowanie po logowaniu/rejestracji (bez dodatkowego accept za
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-12]
@@ -33,27 +33,35 @@ related_tasks: [T-004, T-008, T-010]
 
 ## TDD plan
 
-**Seam:** router + formularze SC-01 / SC-02
+**Seam:** cała aplikacja (`renderApp`, router + formularze SC-01 / SC-02 + strażnik `PublicOnly`) z MSW. Kolejność „sesja przed przejściem routera” wymusza test: `notifyManager.setScheduler` (publiczne API TanStack Query) powiadamia synchronicznie, więc przerysowanie sesji wyprzedza przejście routera (`startTransition`) — kolejność możliwa w przeglądarce pod obciążeniem.
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | <odtwarza błąd — uzupełnia /fix> | | | AC1 |
+| 1 | `SC-08 → SC-01 / SC-02 → the shared list > sign up: no second accept when the session renders before the navigation (T-019)` (odtwarza błąd) | komponent | Vitest + RTL + MSW | AC1 |
+| 2 | `… > sign up: the request carries the token and the new account lands on the list` (istniejący, niestabilny) | komponent | Vitest + RTL + MSW | AC1 (50 powtórzeń) |
+| 3 | `… > sign in: SC-01 says why, then joins automatically and the link leaves history` (istniejący) | komponent | Vitest + RTL + MSW | AC2 (`accepts.count` = 1) |
 
-**Run:** `pnpm --filter @lista/web exec vitest run src/screens/SC-08-zaproszenie`
+**Run:** `pnpm vitest run apps/web/src/screens/SC-08-zaproszenie`; 50 powtórzeń: tymczasowa kopia pliku z `{ repeats: 49 }` przy testach 1 i 2
 
 ## QA plan
 
 - **Regression:** powrót na chroniony ekran po logowaniu, zalogowany na SC-01 → SC-05, E2E J-03
-- **Edge cases:** <uzupełnia /fix>
+- **Edge cases:** sesja przerysowana przed przejściem routera (test 1); rejestracja z martwym linkiem — bez `joinedListId`, strażnik → SC-08 z błędem (istniejący test „link that stopped working”); `flushSync` działa tylko z `RouterProvider` z `react-router/dom` (w `main.tsx` i `test/render.tsx`); z `RouterProvider` z `react-router` RR tylko ostrzega i wraca do `startTransition` — test 1 wtedy czerwony.
 - **Platforms:** web (komputer i telefon), CI Linux
 
 ## Root cause
 
-<Uzupełnia /fix.>
+Od T-008 (`0f997f6`) `useSignedUp` zapisuje `joinedListId` w stanie trasy (`await navigate(…)`), a potem ustawia sesję; o celu decyduje `PublicOnly` z `afterEntry(location.state)`. `RouterProvider` aktualizuje stan w `React.startTransition` (react-router 8.5, `lib/components.js:153`), więc `await navigate` kończy się przed zatwierdzeniem nowego stanu, a ustawienie sesji (`useSyncExternalStore`, pas synchroniczny) może się przerysować wcześniej. Strażnik widzi wtedy sesję ze starym stanem bez `joinedListId` i kieruje na SC-08 z `join` → drugi `accept` (`already_member` w prawdziwym API). Testy tego nie łapały, bo kolejność zależała od wyścigu `setTimeout(0)` (planista Query) z zadaniem planisty React: zwykle wygrywał router, pod obciążeniem — nie; niestabilność uznano za problem czasu (C3).
+
+Poprawka: `navigate(…, { flushSync: true })` — stan trasy zatwierdzony synchronicznie przed sesją; `RouterProvider` z `react-router/dom` (dostarcza `ReactDOM.flushSync`) w `main.tsx` i `test/render.tsx`. O celu nadal decyduje tylko `PublicOnly` / `afterEntry`. Logowanie nie zmienia stanu trasy, więc nie miało wyścigu.
+
+Inne wystąpienia: wylogowanie w SC-09 (`AccountScreen.tsx:20-21`: `setSession(null)`, potem `navigate("/logowanie")`) ściga się z `RequireSession`; oba kończą na `/logowanie`, różnica tylko w `from` (po ponownym zalogowaniu `/konto` zamiast `/listy`) — bez szkody, bez zmian.
 
 ## Evidence
 
-<Uzupełnia /fix.>
+- Czerwone przed poprawką (3/3 przebiegi): test 1 `AssertionError: expected 1 to be +0` (`InvitationScreen.entry.test.tsx`, `accepts.count`) — hipoteza przeglądu potwierdzona.
+- Po poprawce: plik 5/5; testy 1 i 2 po 50 powtórzeń zielone (`repeat x49`, 132 s); `pnpm test` 89 plików / 419 testów; `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm quality`, `pnpm design-check`, `pnpm workflow-check` czyste; build web OK.
+- E2E `j01 j03 j04` (Windows): 20 zielonych, 2 czerwone — `j03-pozycje.spec.ts:102` „SC-06 at 500 items…” (komputer, telefon); w osobnym przebiegu zielony. Nie dotyczy ścieżki wejścia (zob. T-021).
 
 ## Prevention
 
