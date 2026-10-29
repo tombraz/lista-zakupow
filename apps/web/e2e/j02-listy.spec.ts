@@ -56,6 +56,8 @@ test("J-02 creates, renames and deletes a list", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Więcej opcji" })).toBeFocused();
 
   await page.getByRole("link", { name: /Wstecz/ }).click();
+  // T-014: po zmianie trasy fokus na `h1` nowego ekranu (WCAG 2.4.3).
+  await expect(page.getByRole("heading", { level: 1, name: "Moje listy" })).toBeFocused();
   await expect(page.getByRole("link", { name: "Dom, Wszystko kupione" })).toBeVisible();
   await expectNoAxeViolations(page);
 

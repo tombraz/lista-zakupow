@@ -1,5 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
-import { Link } from "react-router";
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
+import { Link, useLocation } from "react-router";
 import styles from "./AppBar.module.css";
 
 interface AppBarProps {
@@ -10,6 +10,7 @@ interface AppBarProps {
 }
 
 export function AppBar({ title, back, actions }: AppBarProps) {
+  const titleRef = useRouteFocus(title);
   return (
     <header className={styles.bar}>
       <title>{`${title} · Wspólna lista zakupów`}</title>
@@ -18,10 +19,27 @@ export function AppBar({ title, back, actions }: AppBarProps) {
           <span aria-hidden="true">←</span> {back.label}
         </Link>
       )}
-      <h1 className={styles.title}>{title}</h1>
+      <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
+        {title}
+      </h1>
       {actions && <div className={styles.actions}>{actions}</div>}
     </header>
   );
+}
+
+/**
+ * Po zmianie trasy fokus na `h1`, gdy ma już tekst, żeby czytnik ogłosił nowy ekran (WCAG 2.4.3).
+ * Ekran, który sam ustawia fokus (pusty SC-06 → „Co kupić?”), robi to w efekcie elementu dalej w
+ * drzewie, więc wygrywa.
+ */
+function useRouteFocus(title: string) {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const { key } = useLocation();
+  const named = title !== "";
+  useEffect(() => {
+    if (named) ref.current?.focus();
+  }, [named, key]);
+  return ref;
 }
 
 interface AppBarLinkProps {
