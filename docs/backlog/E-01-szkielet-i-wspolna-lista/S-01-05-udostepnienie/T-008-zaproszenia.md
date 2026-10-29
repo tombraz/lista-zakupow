@@ -3,7 +3,7 @@ id: T-008
 title: Link zaproszenia i jego przyjęcie (web)
 epic: E-01
 story: S-01-05
-status: in-qa               # todo | in-progress | in-qa | done | blocked
+status: done                # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-005]
 size: M                # S | M (L must be split)
@@ -221,3 +221,25 @@ Zakres: tylko #1 (blocker). Minory #2–#4 i noty #5–#7 bez zmian (poza zakres
 Poprawka: `apps/api/src/logging.ts` — `INVITATION_TOKEN_PATH` obejmuje też `/zaproszenie/`; jedno miejsce redakcji (serializer `req`). Inne logi ścieżek sprawdzone: `api-error.ts` loguje wzorzec trasy (`routeOptions.url`), `auth-routes.ts` tylko trasy `/api/auth/*`.
 
 Przebiegi: `pnpm typecheck`, `lint`, `format:check`, `quality` (0 klonów, bez naruszeń zależności), `build` — OK. `pnpm test` — 72 pliki / 341 testów pass (pierwszy przebieg: 1 × timing flake `InvitationScreen.entry.test.tsx` „sign up: the request carries the token…”, 2133 ms pod obciążeniem; ponowny pełny przebieg i plik osobno — pass; plik niezmieniany w tej rundzie). `pnpm test:e2e` — 32 pass; `apps/web/test-results/api.log`: 14 × `/zaproszenie/[redacted]`, 0 wpisów z 43-znakowym tokenem.
+
+## QA round 2 (2026-10-29)
+
+Verdict: pass
+
+Środowisko: lokalnie (Windows, Docker/Testcontainers). `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych · `typecheck`, `lint` (0 ostrzeżeń), `format:check`, `quality` (jscpd, dependency-cruiser bez naruszeń), `design-check` (0 hard-coded), `build` ✔ · `pnpm test` — 72 pliki / 341 testów ✔ · `pnpm test:mobile` — 10 ✔ · `pnpm test:e2e` — 32 passed (5,8 min).
+
+Zakres rundy: poprawka #1 z rundy 1 (commit `1c6563d`: `apps/api/src/logging.ts`, `apps/api/test/invitations.logs.test.ts`). Kryteria AC1–AC9, SEC1–SEC4, SEC6 bez zmian w kodzie od rundy 1 (pass tam, testy zielone teraz). **SEC5 pass**: `GET /zaproszenie/<token>?x=1` loguje `req.url` = `/zaproszenie/[redacted]?x=1`; E2E `apps/web/test-results/api.log` — 14 × `/zaproszenie/[redacted]`, 0 wpisów z 43-znakowym tokenem.
+
+Spot-check (przywrócony `git checkout`, `git status` czysty): usunięcie `|\/zaproszenie\/` z `INVITATION_TOKEN_PATH` → nowy test „redacts the token in the logged path of the SC-08 page” czerwony (`expected '{"level":30,…' not to contain 'CbV69K…'`). Test gryzie. Red evidence z fix round obecny.
+
+Eksploracja (tymczasowy test z `buildTestApp` + fixture SPA, usunięty): kanoniczne ścieżki `/zaproszenie/<T>`, `/zaproszenie/<T>/`, `/api/v1/invitations/<T>`, `…/accept` — bez tokenu w logu. Ścieżki niekanoniczne logują token: `/Zaproszenie/<T>` (200 SPA — React Router domyślnie bez rozróżniania wielkości liter, więc strona działa), `//zaproszenie/<T>` i `/zaproszenie//<T>` (403), `/API/v1/invitations/<T>` (200 SPA, nie API). Aplikacja nigdy nie generuje tych adresów, więc to minor (patrz #1).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | bezpieczeństwo (TH-08) | Redakcja jest wrażliwa na wielkość liter i podwójne ukośniki: `/Zaproszenie/<token>`, `//zaproszenie/<token>`, `/zaproszenie//<token>` trafiają do logu z pełnym tokenem. Działa tylko ręcznie zmieniony link (`/Zaproszenie/…` otwiera SC-08). | Tymczasowy test: `leaked=true` dla 4 wariantów niekanonicznych, `false` dla kanonicznych. `apps/api/src/logging.ts:30`. | Regex z flagą `i` i tolerancją powtórzonych `/` (np. `^(\/+api\/+v1\/+invitations\/+|\/+zaproszenie\/+)[^/?#]+` z `i`) albo `caseSensitive` w routerze web. |
+| 2 | minor | dokumentacja | Bez zmian od rundy 1 (#2): odstępstwa z „Decyzji” nie są w `api.md` / `backend.md` (teraz także redakcja `/zaproszenie/:token`). | Fix round 1, „Zakres”. | Właściciel przenosi do `docs/architecture/`. |
+| 3 | minor | backend | Bez zmian od rundy 1 (#3): błąd niedomenowy przy przyjęciu w rejestracji → 500 po utworzeniu konta. | `zaproszenia/http/sign-up.ts`. | Jak w rundzie 1. |
+| 4 | minor | walidacja | Bez zmian od rundy 1 (#4): `invitationToken` bez `max`. | `packages/shared/src/api/account.ts`. | Jak w rundzie 1. |
+| 5 | note | design / dane | Noty #5 (teksty spoza „Copy”) i #6 (sprzątanie wygasłych linków) z rundy 1 nadal otwarte. | Runda 1. | Decyzja użytkownika. |
+
+Ręczne sprawdzenia dostępności i urządzeń (VoiceOver / TalkBack, Safari iOS, Chrome Android, przeglądarka wbudowana, 320 px / 200 %): nie wykonane (tryb autonomiczny). Częściowo pokryte przez E2E telefon / komputer z axe. Do UAT.
