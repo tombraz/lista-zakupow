@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { addItem } from "../../api/items";
-import { updateItems } from "./itemsCache";
+import { upsertNewer } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 import { messages } from "./messages";
 
@@ -58,7 +58,7 @@ export function useAddItem(listId: string, items: Item[] = []) {
     (warning?.kind === "limit" && items.length >= warning.atCount);
 
   const added = (item: Item, sent: Draft) => {
-    updateItems(client, listId, (current) => [item, ...current.filter(({ id }) => id !== item.id)]);
+    upsertNewer(client, listId, item);
     draft.clear(sent);
     setAnnouncement(messages.add.added(item.name));
   };

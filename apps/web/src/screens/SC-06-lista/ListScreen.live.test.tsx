@@ -1,8 +1,9 @@
-import type { Item, ListRole } from "@lista/shared";
+import type { Item, ListRole, LiveServerMessage } from "@lista/shared";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { heldResponse } from "../../../test/held";
 import { aList, anItem, ANIA, detailsOf, listsAre, TOMEK } from "../../../test/lists";
 import { liveServer } from "../../../test/live";
 import { server } from "../../../test/msw-server";
@@ -279,5 +280,74 @@ describe("SC-06 live changes of other people", () => {
     expect(await screen.findByText("Odhaczono Mleko")).toBeInTheDocument();
     expect(screen.getByText("2 do kupienia")).toBeInTheDocument();
     expect(toBuy().getByRole("button", { name: "Edytuj Mleko" })).toBeInTheDocument();
+  });
+
+  // T-024 (F-14, api.md): odpowiedź na dodanie przyjmowana jak każda wersja pozycji. Serwer
+  // rozsyła zdarzenia przed odpowiedzią; test ją zwalnia, gdy zdarzenia są już na liście.
+  function addingAnswersLate(
+    live: ReturnType<typeof liveServer>,
+    list: { id: string },
+    events: (added: Item) => LiveServerMessage[],
+  ) {
+    const response = heldResponse();
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/items`, async ({ request }) => {
+        const body = (await request.json()) as { id: string; name: string };
+        const added = anItem({
+          id: body.id,
+          name: body.name,
+          updatedAt: "2026-10-29T10:05:00.000Z",
+        });
+        for (const event of events(added)) live.send(event);
+        await response.released;
+        return HttpResponse.json(added, { status: 201 });
+      }),
+    );
+    return response;
+  }
+
+  async function addMaslo(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByRole("textbox", { name: "Co kupić?" }), "Masło");
+    await user.click(screen.getByRole("button", { name: "Dodaj pozycję" }));
+  }
+
+  it("keeps Tomek's newer edit of a new item when the response to adding it comes later", async () => {
+    const { user, live, list } = await openList();
+    const response = addingAnswersLate(live, list, (added) => [
+      { type: "item.upserted", listId: list.id, item: added },
+      {
+        type: "item.upserted",
+        listId: list.id,
+        item: { ...added, note: "kostka", updatedAt: "2026-10-29T10:06:00.000Z" },
+      },
+    ]);
+
+    await addMaslo(user);
+    await toBuy().findByText(/kostka/);
+    response.release();
+
+    expect(await screen.findByText("Dodano Masło")).toBeInTheDocument();
+    expect(toBuy().getByText(/kostka/)).toBeInTheDocument();
+  });
+
+  it("does not bring back a new item deleted live before the response to adding it", async () => {
+    const { user, live, list } = await openList();
+    const response = addingAnswersLate(live, list, (added) => [
+      { type: "item.upserted", listId: list.id, item: added },
+      { type: "item.deleted", listId: list.id, itemId: added.id },
+      {
+        type: "item.upserted",
+        listId: list.id,
+        item: anItem({ name: "Jajka", addedBy: TOMEK, updatedAt: "2026-10-29T10:06:00.000Z" }),
+      },
+    ]);
+
+    await addMaslo(user);
+    await toBuy().findByRole("button", { name: "Edytuj Jajka" });
+    response.release();
+
+    expect(await screen.findByText("Dodano Masło")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edytuj Masło" })).toBeNull();
+    expect(screen.getByText("3 do kupienia")).toBeInTheDocument();
   });
 });

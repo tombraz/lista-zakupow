@@ -1,11 +1,11 @@
-import type { Item, ListDetails, ListEvent, LiveServerMessage } from "@lista/shared";
+import type { ListDetails, ListEvent, LiveServerMessage } from "@lista/shared";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { deleteListKey } from "../lists/deleteListKey";
 import { listKey } from "../lists/useList";
 import { LISTS_KEY } from "../lists/useLists";
-import { inListOrder, isNewer, updateItems } from "../screens/SC-06-lista/itemsCache";
+import { removeItems, upsertNewer } from "../screens/SC-06-lista/itemsCache";
 import { useLive } from "./LiveProvider";
 
 // SC-06 „Live update”: zmieniony wiersz krótko podświetlony.
@@ -100,13 +100,11 @@ function applyListEvent(client: QueryClient, event: ListEvent): string | null {
     case "item.upserted":
       return upsertNewer(client, listId, event.item) ? event.item.id : null;
     case "item.deleted":
-      updateItems(client, listId, (items) => items.filter(({ id }) => id !== event.itemId));
+      removeItems(client, listId, [event.itemId]);
       return null;
-    case "items.cleared": {
-      const cleared = new Set(event.itemIds);
-      updateItems(client, listId, (items) => items.filter(({ id }) => !cleared.has(id)));
+    case "items.cleared":
+      removeItems(client, listId, event.itemIds);
       return null;
-    }
     case "list.updated":
       // F-05: nowa nazwa w AppBar.
       client.setQueryData<ListDetails>(
@@ -119,19 +117,4 @@ function applyListEvent(client: QueryClient, event: ListEvent): string | null {
       void client.invalidateQueries({ queryKey: listKey(listId), exact: true });
       return null;
   }
-}
-
-/**
- * api.md: zdarzenie z `updatedAt` nie nowszym niż stan w cache (np. własna zmiana, której
- * odpowiedź już przyszła) jest ignorowane. `false`, gdy nic się nie zmieniło.
- */
-function upsertNewer(client: QueryClient, listId: string, item: Item): boolean {
-  let applied = false;
-  updateItems(client, listId, (items) => {
-    const current = items.find(({ id }) => id === item.id);
-    if (!isNewer(item, current)) return items;
-    applied = true;
-    return inListOrder([item, ...items.filter(({ id }) => id !== item.id)]);
-  });
-  return applied;
 }

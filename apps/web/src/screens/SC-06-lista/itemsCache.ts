@@ -48,3 +48,30 @@ export function replaceItem(client: QueryClient, listId: string, item: Item) {
     ),
   );
 }
+
+/** Pozycje usunięte na żywo — klient nie przywraca ich spóźnioną odpowiedzią API (F-14). */
+const deletedItems = new WeakMap<QueryClient, Set<string>>();
+
+/** Usunięcie pozycji z cache; zapamiętane, bo usunięcie wygrywa ze zmianą (F-14). */
+export function removeItems(client: QueryClient, listId: string, itemIds: readonly string[]) {
+  const deleted = deletedItems.get(client) ?? new Set<string>();
+  for (const id of itemIds) deleted.add(id);
+  deletedItems.set(client, deleted);
+  updateItems(client, listId, (items) => items.filter(({ id }) => !deleted.has(id)));
+}
+
+/**
+ * Nowa albo zmieniona pozycja (odpowiedź na dodanie, zdarzenie na żywo) wchodzi do cache tylko,
+ * gdy jest nowsza od posiadanej i nie została usunięta. `false`, gdy nic się nie zmieniło.
+ */
+export function upsertNewer(client: QueryClient, listId: string, item: Item): boolean {
+  if (deletedItems.get(client)?.has(item.id)) return false;
+  let applied = false;
+  updateItems(client, listId, (items) => {
+    const current = items.find(({ id }) => id === item.id);
+    if (!isNewer(item, current)) return items;
+    applied = true;
+    return inListOrder([item, ...items.filter(({ id }) => id !== item.id)]);
+  });
+  return applied;
+}

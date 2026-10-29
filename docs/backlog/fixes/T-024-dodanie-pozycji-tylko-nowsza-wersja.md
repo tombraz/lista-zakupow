@@ -4,7 +4,7 @@ title: "Spóźniona odpowiedź na dodanie pozycji nie nadpisuje nowszej wersji a
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07, F-14]
@@ -37,23 +37,35 @@ related_tasks: [T-006, T-009, T-017]
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | <odtwarza błąd — uzupełnia /fix> | | | AC1 |
+| 1 | `ListScreen.live.test.tsx` › keeps Tomek's newer edit of a new item when the response to adding it comes later | komponent | Vitest + RTL + MSW, podstawiony klient WS, `heldResponse` | AC1, AC3 (ogłoszenie „Dodano …”) |
+| 2 | `ListScreen.live.test.tsx` › does not bring back a new item deleted live before the response to adding it | komponent | Vitest + RTL + MSW, podstawiony klient WS, `heldResponse` | AC2, AC3 |
 
 **Run:** `pnpm --filter @lista/web test`
 
 ## QA plan
 
 - **Regression:** dodanie pozycji, ponowienie po zerwanym połączeniu, J-05 (zmiany na żywo)
-- **Edge cases:** <uzupełnia /fix>
+- **Edge cases:** odpowiedź z tym samym `updatedAt` co własne zdarzenie WS (cache bez zmian, ogłoszenie i czyszczenie pól działają); `items.cleared` przed odpowiedzią na dodanie (pozycja nie wraca); dodanie bez zdarzenia WS (zwykła ścieżka, pozycja na górze listy); ponowne połączenie (pełny stan listy z API)
 - **Platforms:** web (komputer i telefon), CI Linux
 
 ## Root cause
 
-<Uzupełnia /fix.>
+`useAddItem.added` (od T-006) wstawiał odpowiedź `POST` do cache własnym `updateItems`, z pominięciem reguły api.md „tylko nowsza wersja” (`isNewer`), którą T-017 wprowadził tylko dla `replaceItem` i zdarzeń WS (`upsertNewer` w `useLiveList`). Do tego cache nie pamiętał pozycji usuniętych na żywo, więc spóźniona odpowiedź na dodanie nie mogła odróżnić „jeszcze nie ma” od „już usunięta” i ją przywracała.
+
+**Dlaczego testy nie złapały:** testy dodania (`ListScreen.add.test.tsx`) nie używały klienta WS, a T-017 dodał testy „WS przed odpowiedzią” tylko dla edycji i odhaczenia; dodanie zostało poza jego AC (znalezisko minor QA round 1).
+
+**Inne wystąpienia:** `replaceItem` (edycja, odhaczenie) mapuje tylko istniejące wiersze — nie przywraca usuniętej, bez zmian. Wszystkie ścieżki wstawiania pozycji do cache (odpowiedź na dodanie, `item.upserted`) idą teraz przez jedno `upsertNewer` w `itemsCache.ts`; usunięcia na żywo (`item.deleted`, `items.cleared`) przez `removeItems`, które zapamiętuje usunięte `id` (per `QueryClient`).
 
 ## Evidence
 
-<Uzupełnia /fix.>
+Red (przed poprawką):
+
+- test 1: `TestingLibraryElementError: Unable to find an element with the text: /kostka/` (po odpowiedzi pokazana wersja z odpowiedzi zamiast nowszej Tomka)
+- test 2: `AssertionError: expected <button aria-label="Edytuj Masło"> to be null` (usunięta pozycja wróciła)
+
+Testy zwalniają odpowiedź `POST` przez `heldResponse` dopiero, gdy zdarzenia WS są widoczne na liście (bez `delay`, uwaga 2 z QA T-017).
+
+Green: `pnpm test` 89 plików, 425 testów pass; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (0 naruszeń zależności), `pnpm build` — bez błędów.
 
 ## Prevention
 
