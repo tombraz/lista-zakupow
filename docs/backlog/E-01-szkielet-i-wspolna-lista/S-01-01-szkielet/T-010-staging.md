@@ -3,7 +3,7 @@ id: T-010
 title: Wdrożenie na staging
 epic: E-01
 story: S-01-01
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-002]
 size: M                # S | M (L must be split)
@@ -37,16 +37,16 @@ Każdy merge do `main` buduje jeden obraz (API + `apps/web/dist`) w GHCR i wdra�
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given workflow `deploy.yml` i skrypty `scripts/deploy.sh`, `scripts/smoke.sh`, when uruchomię actionlint i skrypty w trybie `--dry-run`, then actionlint przechodzi, a skrypty wypisują komendy dla `staging` i `<sha>` bez ich wykonania. — verified by: rungi 1 i 2 (lokalnie)
-- [ ] AC2: Given merge do `main`, when `deploy.yml` się zakończy, then obraz `:<sha>` jest w GHCR, migracje wykonały się jako `release_command`, nowa wersja działa na staging, a `smoke.sh staging` sprawdził `/health`, `/health/ready` i stronę web. — verified by: rung 4, link do przebiegu
-- [ ] AC3: Given nieudana migracja (gałąź testowa z celowo błędną migracją, wdrożona ręcznie na staging przez `workflow_dispatch` za zgodą właściciela), when wdrożenie się uruchomi, then zostaje przerwane, a poprzednia wersja działa dalej. — verified by: rung 4, link do przebiegu i `smoke.sh staging`
-- [ ] AC4: Given staging po wdrożeniu, when uruchomi się ZAP baseline z `.zap/rules.tsv`, then brak alertów wysokich; brak nagłówków CSP / HSTS / Referrer-Policy jest regułą FAIL. — verified by: rung 4, raport ZAP jako artefakt
-- [ ] AC5: Given `fly.staging.toml`, when sprawdzę konfigurację, then: region `fra`, auto-stop włączony, healthcheck na `/health`, `force_https`, `release_command` z migracjami; pula połączeń zamyka bezczynne połączenia ≤ 60 s. — verified by: przegląd + test konfiguracji (porównanie kluczy) w `--dry-run`
-- [ ] AC6: Given `deployment.md`, when task się zakończy, then otwarte pytania o limit bezczynności WebSocket na Fly i rzeczywiste nazwy aplikacji są rozstrzygnięte i zapisane (z datą i źródłem). — verified by: przegląd dokumentu
-- [ ] SEC1 (TH-22): Given obraz z podatnością high lub critical z dostępną poprawką, when Trivy go skanuje, then wdrożenie się zatrzymuje. — verified by: rung 3/4 (obraz testowy ze starym obrazem bazowym na gałęzi testowej) albo przegląd konfiguracji z progiem, jeśli nie da się bezpiecznie odtworzyć — opisane w Evidence
-- [ ] SEC2 (TH-15, TH-24): Given wdrożony staging, when `smoke.sh` pobierze `/` i `/health`, then są nagłówki CSP, HSTS i `Referrer-Policy: no-referrer`, a żądanie `http://` przekierowuje na `https://`. — verified by: `smoke.sh staging` (rung 4)
-- [ ] SEC3 (TH-07): Given konfiguracja Neon i Fly, when sprawdzę ją, then baza i maszyna są w UE (Frankfurt), `DATABASE_URL` ma `sslmode=require` i jest tylko w sekretach Fly, a szyfrowanie danych w spoczynku u Neon jest potwierdzone (źródło i data w `deployment.md`). — verified by: przegląd konfiguracji (Evidence ze zrzutami od właściciela)
-- [ ] SEC4: Given workflow `deploy.yml`, when sprawdzę uprawnienia, then sekrety pochodzą wyłącznie ze środowiska GitHub `staging`, `permissions` są minimalne (`packages: write` tylko w jobie budowy), a `concurrency` per środowisko nie anuluje wdrożeń w toku. — verified by: przegląd + actionlint
+- [x] AC1: Given workflow `deploy.yml` i skrypty `scripts/deploy.sh`, `scripts/smoke.sh`, when uruchomię actionlint i skrypty w trybie `--dry-run`, then actionlint przechodzi, a skrypty wypisują komendy dla `staging` i `<sha>` bez ich wykonania. — verified by: rungi 1 i 2 (lokalnie)
+- [x] AC2: Given merge do `main`, when `deploy.yml` się zakończy, then obraz `:<sha>` jest w GHCR, migracje wykonały się jako `release_command`, nowa wersja działa na staging, a `smoke.sh staging` sprawdził `/health`, `/health/ready` i stronę web. — verified by: rung 4, link do przebiegu
+- [x] AC3: Given nieudana migracja (gałąź testowa z celowo błędną migracją, wdrożona ręcznie na staging przez `workflow_dispatch` za zgodą właściciela), when wdrożenie się uruchomi, then zostaje przerwane, a poprzednia wersja działa dalej. — verified by: rung 4, link do przebiegu i `smoke.sh staging`
+- [x] AC4: Given staging po wdrożeniu, when uruchomi się ZAP baseline z `.zap/rules.tsv`, then brak alertów wysokich; brak nagłówków CSP / HSTS / Referrer-Policy jest regułą FAIL. — verified by: rung 4, raport ZAP jako artefakt
+- [x] AC5: Given `fly.staging.toml`, when sprawdzę konfigurację, then: region `fra`, auto-stop włączony, healthcheck na `/health`, `force_https`, `release_command` z migracjami; pula połączeń zamyka bezczynne połączenia ≤ 60 s. — verified by: przegląd + test konfiguracji (porównanie kluczy) w `--dry-run`
+- [x] AC6: Given `deployment.md`, when task się zakończy, then otwarte pytania o limit bezczynności WebSocket na Fly i rzeczywiste nazwy aplikacji są rozstrzygnięte i zapisane (z datą i źródłem). — verified by: przegląd dokumentu
+- [x] SEC1 (TH-22): Given obraz z podatnością high lub critical z dostępną poprawką, when Trivy go skanuje, then wdrożenie się zatrzymuje. — verified by: rung 3/4 (obraz testowy ze starym obrazem bazowym na gałęzi testowej) albo przegląd konfiguracji z progiem, jeśli nie da się bezpiecznie odtworzyć — opisane w Evidence
+- [x] SEC2 (TH-15, TH-24): Given wdrożony staging, when `smoke.sh` pobierze `/` i `/health`, then są nagłówki CSP, HSTS i `Referrer-Policy: no-referrer`, a żądanie `http://` przekierowuje na `https://`. — verified by: `smoke.sh staging` (rung 4)
+- [x] SEC3 (TH-07): Given konfiguracja Neon i Fly, when sprawdzę ją, then baza i maszyna są w UE (Frankfurt), `DATABASE_URL` ma `sslmode=require` i jest tylko w sekretach Fly, a szyfrowanie danych w spoczynku u Neon jest potwierdzone (źródło i data w `deployment.md`). — verified by: przegląd konfiguracji (Evidence ze zrzutami od właściciela)
+- [x] SEC4: Given workflow `deploy.yml`, when sprawdzę uprawnienia, then sekrety pochodzą wyłącznie ze środowiska GitHub `staging`, `permissions` są minimalne (`packages: write` tylko w jobie budowy), a `concurrency` per środowisko nie anuluje wdrożeń w toku. — verified by: przegląd + actionlint
 
 ## TDD plan
 
@@ -62,12 +62,14 @@ Each criterion must fail before the work and pass after it.
 | 2 | `deploy.sh --dry-run staging <sha>` wypisuje oczekiwane komendy; brak argumentów = błąd | script | bash | AC1 |
 | 3 | `smoke.sh` przeciw lokalnemu api (build web) — przechodzi; przeciw api bez nagłówków — nie przechodzi | script | bash + lokalne api | SEC2 |
 | 4 | obraz budowany lokalnie uruchamia api i web pod jednym portem | script | Docker | AC2 |
-| 5 | wdrożenie z `main` + smoke + ZAP | real run | GitHub Actions + Fly | AC2, AC4 |
+| 5 | wdrożenie z `main` + smoke + ZAP | real run | GitHub Actions + Fly | AC2, AC4. Przebieg 1 próba 3 (właściciel ustawił `FLY_API_TOKEN`): [run 40872833932/attempts/3](https://github.com/tombraz/lista-zakupow/actions/runs/40872833932/attempts/3) — `image` ✓, `staging` ✓ (`release_command … completed successfully`, „Smoke test: OK”), `zap` ✓ (`FAIL-NEW: 0 … WARN-NEW: 6 … PASS: 62`, „ZAP: brak alertów wysokich”, artefakt `zap-report`); wykazał 2 maszyny (Fly HA) → test 2c. Przebieg 2 ([run 40877860081](https://github.com/tombraz/lista-zakupow/actions/runs/40877860081), `14a70ec`): `release_command` ✗ „Connection terminated due to connection timeout” (uśpiony Neon, pula 3 s) → test 4c. Przebieg 3 ([run 40882296349](https://github.com/tombraz/lista-zakupow/actions/runs/40882296349), `813ad14`): wszystkie joby ✓, 1 maszyna (`flyctl status`: wersja 3, obraz `:813ad14…`) |
 | 6 | celowo błędna migracja przerywa wdrożenie | real run | GitHub Actions + Fly | AC3 |
 | 2a | konfiguracja `fly.staging.toml` (porównanie kluczy) i pula ≤ 60 s — dodany w implementacji | script | bash | AC5 |
 | 2b | struktura `deploy.yml`: `packages: write` tylko w `image`, sekrety Fly tylko w `staging`, `concurrency` bez anulowania — dodany w implementacji | script | bash | SEC4 |
 | 3a | `image.sh --dry-run build/scan/push`; Trivy na celowo starym obrazie kończy się porażką — dodany w implementacji | script | bash + Docker | SEC1 |
 | 4a | `zap.sh --dry-run`, próg alertów wysokich, reguły FAIL w `.zap/rules.tsv`; prawdziwy ZAP na lokalnym obrazie — dodany w implementacji | script | bash + Docker | AC4 |
+| 2c | `deploy.sh` z `--ha=false` (jedna maszyna, ADR 0003), `TRUSTED_PROXIES` w `fly.staging.toml`, ponowienia przy sprawdzaniu przekierowania w `smoke.sh` — dodany po pierwszym wdrożeniu | script | bash | AC2, AC5, SEC2 |
+| 4c | migracje na budzącej się bazie (proxy TCP z opóźnieniem 4 s) nie przerywają wdrożenia — dodany po przebiegu 40877860081 | integration | Vitest + Testcontainers | AC2 |
 | 4b | `staging-setup.sh --dry-run` (kroki właściciela bez wartości sekretów; `DATABASE_URL` bez `sslmode=require` / spoza Frankfurtu odrzucony) — dodany w implementacji | script | bash | SEC3 |
 
 **Run:** actionlint (jak w T-002); `bash scripts/deploy.sh --dry-run staging <sha>`; `bash scripts/smoke.sh http://localhost:<port>`; przebiegi `deploy.yml` (push i `workflow_dispatch` wymagają zgody właściciela)
@@ -95,18 +97,18 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-Stan: rungi 1–2 (i lokalny odpowiednik rungu 3 dla obrazu, Trivy i ZAP) zrobione 2026-10-29; rung 4 (prawdziwe wdrożenie) czeka na właściciela — zob. „Open question” na końcu.
+Stan (2026-10-29, przebieg 3 implementera): rungi 1–2, lokalny rung 3 i rung 4 (wdrożenie, smoke, ZAP, błędna migracja) zrobione.
 
 **Testy (red → green):**
 
@@ -122,21 +124,24 @@ Stan: rungi 1–2 (i lokalny odpowiednik rungu 3 dla obrazu, Trivy i ZAP) zrobio
 | 4a | `scripts/test/zap.test.sh` | stuby: 9 × FAIL | 9 × ok; prawdziwy `zap.sh http://host.docker.internal:8091` na lokalnym obrazie: `FAIL-NEW: 0 … WARN-NEW: 4 … PASS: 64`, „ZAP: brak alertów wysokich” |
 | 4b | `scripts/test/staging-setup.test.sh` | stub: 4 × FAIL | 5 × ok |
 | 5 | wdrożenie z `main` + smoke + ZAP | 2b: wyzwalacz `[main]` → FAIL „wyzwalacz push: main i tymczasowo deploy-test/**” | 2b zielony (12 × ok), actionlint exit 0. Przebieg 1 z `deploy-test/T-010` (`1bfaad4`): [run 40872833932](https://github.com/tombraz/lista-zakupow/actions/runs/40872833932) — `image` ✓ (build, Trivy, push do GHCR), `staging` ✗ „Error: no access token available” (`FLY_API_TOKEN` pusty: środowisko `staging` ma 0 sekretów wg `gh api …/environments/staging/secrets`), `zap` pominięty |
-| 6 | celowo błędna migracja przerywa wdrożenie | — | **nie uruchomione** (jw.) |
+| 6 | celowo błędna migracja przerywa wdrożenie | — | commit `91c62fd` (migracja `0007_celowo_bledna.sql`: `SELECT * FROM "tabela_ktora_nie_istnieje"`) wypchnięty jako `deploy-test/T-010-zla-migracja` (bez gałęzi lokalnej, `git commit-tree`): [run 40882953706](https://github.com/tombraz/lista-zakupow/actions/runs/40882953706) — `staging` ✗ „release_command failed … exit code 1” (`DrizzleQueryError … tabela_ktora_nie_istnieje`), smoke i ZAP pominięte; potem `flyctl status`: nadal obraz `:813ad14…` wersja 3, `bash scripts/smoke.sh staging` → „Smoke test: OK” |
+| 2c | `deploy.test.sh`, `smoke.test.sh` | oczekiwane `deploy.dry-run.txt` z `--ha=false` → „FAIL deploy --dry-run staging <sha> wypisuje komendy”; `smoke.dry-run.txt` z `--retry` dla `http://` → FAIL (diff); „FAIL fly.staging: TRUSTED_PROXIES = adresy proxy Fly” | 16 × ok; 5 × ok |
+| 4c | `apps/api/test/migrate-slow-database.test.ts` | `migrateDatabase` z pulą 3 s: „Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle" — Caused by: Connection terminated due to connection timeout” (ten sam błąd co na staging) | ok (`MIGRATION_CONNECTION_TIMEOUT_MS = 30_000`) |
 
-**Weryfikacja (2026-10-29):** `pnpm check` exit 0 (format, lint, typy, jscpd, dependency-cruiser, design i backlog check; Vitest 86 plików / 396 testów, mobile 10 testów); wszystkie `scripts/test/*.test.sh` (protect-main, mobile, deploy, deploy-workflow, image, smoke, zap, staging-setup) exit 0; actionlint exit 0; `image-run.test.sh` 3 × ok; `image.sh scan` na obrazie aplikacji exit 0.
+**Weryfikacja (2026-10-29, przebieg 3):** `pnpm check` exit 0 (Vitest 87 plików / 397 testów); testy skryptów i actionlint exit 0. Uwaga dla QA: `apps/web/src/screens/SC-08-zaproszenie/InvitationScreen.entry.test.tsx` („sign up: the request carries the token…”) i raz `ListScreen.add.test.tsx` (limit 500) padały niedeterministycznie przy pełnym przebiegu pod obciążeniem (timeout 5 s), w izolacji i w kolejnych pełnych przebiegach zielone; zmiany tego przebiegu nie dotykają `apps/web`. Przebieg 1: `pnpm check` exit 0 (format, lint, typy, jscpd, dependency-cruiser, design i backlog check; Vitest 86 plików / 396 testów, mobile 10 testów); wszystkie `scripts/test/*.test.sh` (protect-main, mobile, deploy, deploy-workflow, image, smoke, zap, staging-setup) exit 0; actionlint exit 0; `image-run.test.sh` 3 × ok; `image.sh scan` na obrazie aplikacji exit 0.
 
 **Kryteria akceptacji:**
 
-- AC1 — spełnione lokalnie: actionlint exit 0; `deploy.sh` / `smoke.sh` / `image.sh` / `zap.sh` `--dry-run` wypisują komendy dla `staging` i `<sha>` (oczekiwane wyjścia w `scripts/test/*.dry-run.txt`).
-- AC2 — lokalnie: obraz z `Dockerfile` uruchamia migracje komendą z `release_command` i serwuje api + web pod jednym portem, `smoke.sh` przechodzi (test 4). Rung 4 (GHCR, Fly) — czeka.
-- AC3 — czeka (rung 4). Mechanizm: `release_command` Fly; `deploy.sh` kończy się błędem, gdy `flyctl deploy` zwróci błąd.
-- AC4 — lokalnie: `.zap/rules.tsv` z FAIL dla 10038 (CSP), 10035 (HSTS), 10020, 10021; każdy alert wysoki = porażka (`zap-high-alerts.mjs`); raport jako artefakt `zap-report` w `deploy.yml`. ZAP nie ma reguły dla Referrer-Policy — jej brak zatrzymuje `smoke.sh` (SEC2). Rung 4 — czeka.
-- AC5 — spełnione: test 2a (region `fra`, `auto_stop_machines = "stop"`, `min_machines_running = 0`, healthcheck `/health`, `force_https`, `release_command`, `APP_ORIGIN`) i `IDLE_TIMEOUT_MS = 30_000` ≤ 60 s.
-- AC6 — **nie spełnione**: wymaga zmiany `docs/architecture/deployment.md` (poza uprawnieniami implementera) i danych z pierwszego wdrożenia.
-- SEC1 — spełnione lokalnie (test 3a: stary obraz → exit 1; obraz aplikacji → exit 0); w `deploy.yml` skan przed `push`, więc obraz z podatnością nie trafia do GHCR ani na Fly.
-- SEC2 — test 3 (atrapa bez nagłówków nie przechodzi) i test 4 (prawdziwe api). Przekierowanie `http://` → `https://` sprawdzane tylko dla adresów https (rung 4 — czeka).
-- SEC3 — częściowo: `staging-setup.sh` odrzuca `DATABASE_URL` bez `sslmode=require` lub spoza `eu-central-1` i wysyła go tylko do `fly secrets` przez stdin; `fly.staging.toml` w `fra`. Szyfrowanie w spoczynku u Neon i zrzuty — właściciel.
+- AC1 — spełnione: actionlint exit 0; `deploy.sh` / `smoke.sh` / `image.sh` / `zap.sh` `--dry-run` wypisują komendy dla `staging` i `<sha>` (oczekiwane wyjścia w `scripts/test/*.dry-run.txt`).
+- AC2 — spełnione: [run 40882296349](https://github.com/tombraz/lista-zakupow/actions/runs/40882296349) — obraz `ghcr.io/tombraz/lista-zakupow:813ad14…` w GHCR (job `image`), `release_command node apps/api/dist/db/migrate.js` „completed successfully”, nowa wersja na staging, `smoke.sh staging` sprawdził `/health`, `/health/ready`, `/` („Smoke test: OK”). Lokalnie: testy 4 i 4c. Wdrożenie z gałęzi `deploy-test/T-010` zamiast merge do `main` (decyzja właściciela; warunek przywrócenia wyzwalacza w `deployment.md`).
+- AC3 — spełnione: [run 40882953706](https://github.com/tombraz/lista-zakupow/actions/runs/40882953706) przerwany na `release_command`; poprzednia wersja (`:813ad14…`) działa, `smoke.sh staging` OK (test 6).
+- AC4 — spełnione: job `zap` w zielonych przebiegach, „ZAP: brak alertów wysokich”, `FAIL-NEW: 0`, raport jako artefakt `zap-report`; reguły FAIL 10038 (CSP) i 10035 (HSTS) z `.zap/rules.tsv` z wynikiem PASS. Referrer-Policy pilnuje `smoke.sh` (ZAP nie ma reguły).
+- AC5 — spełnione: testy 2a i 2c (region `fra`, auto-stop, healthcheck `/health`, `force_https`, `release_command`, `TRUSTED_PROXIES`) i `IDLE_TIMEOUT_MS = 30_000` ≤ 60 s.
+- Demo 3 (auto-stop) — sprawdzone 2026-10-29: log proxy Fly 13:38:49Z „App lista-staging has excess capacity, autostopping machine 83d177ebde2ee8” (~8 min po ostatnim żądaniu), `flyctl status` → `stopped`; pierwsze `GET /health` obudziło maszynę: 200 po 5,6 s, następne 0,36 s, `/health/ready` 200.
+- AC6 — spełnione: `deployment.md` („Środowiska”, „Otwarte pytania”) — limit bezczynności proxy Fly 60 s (źródło: [community.fly.io/t/2373](https://community.fly.io/t/does-the-tls-handler-close-idle-tcp-connections-after-60s/2373), odpowiedź zespołu Fly, otwarte 2026-10-29) i pomiar na staging: WebSocket `wss://lista-staging.fly.dev/api/v1/live` 240 s bez zerwania, 9 × ping/pong (konto testowe `ws-idle-…@example.com` na staging); nazwy aplikacji (`lista-staging`), `TRUSTED_PROXIES`, jedna maszyna. Ceny w € i Brevo zostają otwarte (rachunek / E-02).
+- SEC1 — spełnione lokalnie (test 3a: stary obraz → exit 1); w `deploy.yml` skan Trivy przed `push` (w każdym przebiegu rungu 4 krok Trivy zielony dla obrazu aplikacji).
+- SEC2 — spełnione: `smoke.sh staging` w przebiegach i lokalnie 2026-10-29 (CSP, HSTS `max-age=31536000; includeSubDomains`, `referrer-policy: no-referrer`; `http://lista-staging.fly.dev/` → `301`, `location: https://lista-staging.fly.dev/`). Pierwsze lokalne uruchomienie padło na jednorazowym błędzie połączenia z portem 80 (curl exit 7) — przekierowanie sprawdzane teraz z ponowieniami (test 2c).
+- SEC3 — spełnione: maszyna w `fra` (`flyctl status`), Neon AWS Europe Central 1 (Frankfurt) — zrzut panelu pokazany przez właściciela 2026-10-29 (Answer wyżej); `DATABASE_URL` z `sslmode=require` tylko w sekretach Fly (`flyctl secrets list`: `BETTER_AUTH_SECRET`, `DATABASE_URL`, same nazwy — wg właściciela); szyfrowanie w spoczynku: XTS-AES-256 na NVMe, [neon.com/docs/security/security-overview](https://neon.com/docs/security/security-overview) (otwarte 2026-10-29), zapisane w `deployment.md`.
 - SEC4 — spełnione: test 2b + actionlint.
 
 **Decyzje do przejrzenia przez QA:**
@@ -146,7 +151,10 @@ Stan: rungi 1–2 (i lokalny odpowiednik rungu 3 dla obrazu, Trivy i ZAP) zrobio
 - Job `image` w `ci.yml` (build, uruchomienie, Trivy na PR) — wcześniejsze wykrycie niż dopiero po merge; dołączony do `ci-ok`.
 - `concurrency: deploy-staging` z `cancel-in-progress: false`: wdrożenie w toku nigdy nie jest anulowane; GitHub trzyma najwyżej jedno oczekujące, więc przy trzech szybkich merge'ach środkowy jest pomijany (wdraża się najnowszy).
 - Trivy, ZAP, flyctl przypięte: `aquasec/trivy:0.76.1@sha256:790f…`, `ghcr.io/zaproxy/zaproxy:2.17.0@sha256:030d…`, `superfly/flyctl-actions/setup-flyctl@ed8efb3…` (v1.6) z flyctl 0.4.123.
-- `TRUSTED_PROXIES` nie ustawione w `fly.staging.toml` (wartość do potwierdzenia przy pierwszym wdrożeniu, `deployment.md`).
+- `TRUSTED_PROXIES = "172.16.0.0/16"` (z `remoteAddress` w logach Fly; zaufanie do `X-Forwarded-For` tylko od tych adresów). QA: sprawdzić, że limit per IP liczy adres klienta.
+- `scripts/deploy.sh` z `--ha=false`; drugą maszynę ze staging usunąłem `flyctl scale count 1 --app lista-staging` (2026-10-29).
+- Migracje (`migrateDatabase` w `apps/api/src/db/migrate.ts`, wywołuje je `migrate-cli.ts`) z limitem połączenia 30 s; pula API zostaje przy 3 s. Ryzyko poza zakresem: pierwsze żądanie API po uśpieniu Neon może przekroczyć 3 s (smoke ponawia; użytkownik może raz zobaczyć błąd) — do sprawdzenia w QA („uśpiona baza Neon”).
+- Gałęzie zdalne `deploy-test/T-010` i `deploy-test/T-010-zla-migracja` zostają do zamknięcia epiku (warunek w `deployment.md`); obraz `:91c62fd…` z błędną migracją jest w GHCR (nigdy nie uruchomiony jako aplikacja).
 
 **Po odpowiedzi właściciela (2026-10-29, przebieg 2 implementera):**
 
