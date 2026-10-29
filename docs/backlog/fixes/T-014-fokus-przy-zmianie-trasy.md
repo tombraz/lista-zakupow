@@ -4,7 +4,7 @@ title: "Fokus na nagłówku ekranu po zmianie trasy (web)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: in-progress     # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [N-04]
@@ -72,3 +72,25 @@ Ten sam wzorzec gdzie indziej: wszystkie ekrany z AppBar (SC-05, SC-06, SC-07, S
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-29)
+
+Verdict: fail
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` bez zmian; `pnpm vitest run apps/web/src/routeFocus.test.tsx` 5/5; `pnpm lint`, `pnpm typecheck`, `pnpm design-check`, `pnpm quality` OK; `pnpm format:check` zgłasza 3 pliki taska tylko z powodu CRLF w lokalnej kopii roboczej (zacommitowane bloby przechodzą Prettiera, patrz #3); `pnpm test` 401/402 — 1 porażka w znanym niestabilnym `InvitationScreen.entry.test.tsx` (`accepts.count` 1 zamiast 0, T-019; osobno 3 × 4/4 zielone); `pnpm test:e2e` 34 passed (J-02 z nową asercją fokusu).
+
+**Spot-check:** zastąpienie `if (named) ref.current?.focus();` no-opem → 4 z 5 testów `routeFocus.test.tsx` czerwone (AC1, AC2 ×2, AC3), test pustej listy zielony zgodnie z założeniem; przywrócone `git checkout`.
+
+**Kryteria:**
+- AC1 — pass (test RTL + Playwright: SC-05 → Enter na karcie „Pelna” → `h1` „Pelna” ma fokus).
+- AC2 — pass (SC-06 → SC-07 → wstecz → `h1` nowego ekranu; SC-05 → SC-09; pusta lista: fokus w „Co kupić?” przy pierwszym wejściu, po „Wstecz” z SC-07 i po „wstecz” przeglądarki — z danymi z pamięci podręcznej).
+- AC3 — pass (T-011, SC-08 bez zmian w E2E J-04; „wstecz”/„dalej” przeglądarki ustawiają fokus na `h1`; SC-06 „brak dostępu” i przeładowanie SC-05/SC-09 → `h1`).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | major | design / dostępność (2.4.7, design-system.md „AppBar” i „Fokus”) | Fokus na `h1` paska jest niewidoczny. Po wejściu klawiaturą `h1` dostaje `:focus-visible` i globalną obwódkę `color.focus.ring` (#0b4fbf) — w tym samym kolorze co tło paska `color.surface.brand` (#0b4fbf). Użytkownik klawiatury traci z oczu miejsce fokusu po każdej zmianie trasy. | Playwright (komputer): po Enter na karcie listy `document.activeElement` = `H1 "Pelna"`, `:focus-visible` = true, `outline: rgb(11, 79, 191) solid 3px`, tło rodzica `rgb(11, 79, 191)`; to samo dla „Moje listy”, „Konto”, „Nie masz dostępu do tej listy.”; zrzut ekranu bez widocznej obwódki. `AppBar.module.css` ma `outline-color: var(--color-focus-ring-on-brand)` tylko dla `.control`, nie dla `.title`. | Tytuł paska z fokusem ma obwódkę `color.focus.ring-on-brand` (np. `.title:focus-visible { outline-color: var(--color-focus-ring-on-brand); }`), zgodnie z „fokus `focus.ring-on-brand`” (AppBar) i „`color.focus.ring-on-brand` na pasku marki; widoczna w każdym stanie”; plus test (E2E lub komponent) sprawdzający kolor obwódki `h1` z fokusem. |
+| 2 | note | testy | Strażnik „fokus dopiero, gdy tytuł niepusty” (`named`) nie ma testu, który by go bronił: usunięcie warunku nie zmieni wyniku testów (ten sam element `h1` dostaje fokus, gdy jest jeszcze pusty). | przegląd `routeFocus.test.tsx` | Opcjonalnie: asercja, że w trakcie wczytywania SC-06 fokus nie jest na pustym `h1`. |
+| 3 | note | środowisko | `format:check` lokalnie zgłasza 3 pliki taska — kopia robocza ma CRLF (`core.autocrlf=true`), repozytorium LF (`.gitattributes eol=lf`); bloby w `HEAD` przechodzą Prettiera, CI niezagrożone. | `file apps/web/src/routeFocus.test.tsx` → CRLF; `git show HEAD:<plik> \| prettier --check` → OK | Brak działania w tasku; ewentualnie `core.autocrlf=false` lokalnie. |
+| 4 | note | testy (poza zakresem) | Znany niestabilny test `InvitationScreen.entry.test.tsx` padł w pełnym przebiegu. | `pnpm test` 1 failed / 401 passed; osobno 3 × zielony | T-019. |
+
+**Do zmiany:** #1 — widoczna obwódka `focus.ring-on-brand` dla `h1` w AppBar z testem, który ją sprawdza.
