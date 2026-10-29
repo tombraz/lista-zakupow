@@ -1,9 +1,10 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { aList, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const TOKEN = "t".repeat(43);
@@ -40,8 +41,9 @@ async function expectFocusedHeading(name: string) {
 describe("SC-08 Zaproszenie", () => {
   it("says it is checking the link while the preview loads", async () => {
     sessionIs(null);
+    const response = heldResponse();
     previewIs(async () => {
-      await delay(200);
+      await response.released;
       return HttpResponse.json({ listName: "Dom", ownerName: "Ania" });
     });
 
@@ -49,6 +51,7 @@ describe("SC-08 Zaproszenie", () => {
 
     expect(await screen.findByText("Sprawdzamy zaproszenie…")).toBeVisible();
     await expectFocusedHeading("Zaproszenie do listy");
+    response.release();
   });
 
   it("anonymous: who invites to which list, focus on h1, sign-up and sign-in (AC3)", async () => {

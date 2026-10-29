@@ -12,8 +12,17 @@ declare module "vitest" {
 
 let container: StartedPostgreSqlContainer | undefined;
 
+const NO_DURABILITY = ["fsync", "synchronous_commit", "full_page_writes"].flatMap((setting) => [
+  "-c",
+  `${setting}=off`,
+]);
+
 export async function setup(project: TestProject): Promise<void> {
-  container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
+  // Baza testów jest jednorazowa: bez trwałości zapisu (fsync) tworzenie baz i commity są
+  // kilka razy szybsze (T-021).
+  container = await new PostgreSqlContainer(POSTGRES_IMAGE)
+    .withCommand(["postgres", ...NO_DURABILITY])
+    .start();
   const admin = createPool(container.getConnectionUri());
   await admin.query(`CREATE DATABASE ${TEMPLATE_DATABASE}`);
   await admin.end();

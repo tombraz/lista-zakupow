@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "../test/msw-server";
 import { renderApp, sessionIs } from "../test/render";
+import { fillIn } from "../test/user";
 
 const ANIA = { id: "u-1", name: "Ania", email: "ania@example.com" };
 
@@ -46,8 +47,8 @@ describe("routes (AC6)", () => {
     server.use(http.post("*/api/auth/sign-in/email", () => HttpResponse.json({ user: ANIA })));
     const user = userEvent.setup();
     const { router } = renderApp("/konto");
-    await user.type(await screen.findByLabelText("E-mail"), ANIA.email);
-    await user.type(screen.getByLabelText("Hasło"), "dobre-haslo");
+    await fillIn(user, await screen.findByLabelText("E-mail"), ANIA.email);
+    await fillIn(user, screen.getByLabelText("Hasło"), "dobre-haslo");
     sessionIs(ANIA);
 
     await user.click(screen.getByRole("button", { name: "Zaloguj się" }));

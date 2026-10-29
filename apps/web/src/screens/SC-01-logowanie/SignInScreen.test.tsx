@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
+import { fillIn } from "../../../test/user";
 
 const ANIA = { id: "u-1", name: "Ania", email: "ania@example.com" };
 
@@ -19,8 +20,8 @@ function signInAnswers(status: number, body: object) {
 }
 
 async function signInWith(user: ReturnType<typeof userEvent.setup>, password = "dobre-haslo") {
-  await user.type(screen.getByLabelText("E-mail"), "ania@example.com");
-  await user.type(screen.getByLabelText("Hasło"), password);
+  await fillIn(user, screen.getByLabelText("E-mail"), "ania@example.com");
+  await fillIn(user, screen.getByLabelText("Hasło"), password);
   await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
 }
 

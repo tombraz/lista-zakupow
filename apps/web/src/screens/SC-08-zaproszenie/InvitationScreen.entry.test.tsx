@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { aList, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
 import { renderApp } from "../../../test/render";
+import { fillIn } from "../../../test/user";
 
 const TOKEN = "t".repeat(43);
 const PAGE = `/zaproszenie/${TOKEN}`;
@@ -46,8 +47,8 @@ function inviteToDom() {
 }
 
 async function fillSignUp(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByRole("textbox", { name: /Imię/ }), "Tomek");
-  await user.type(screen.getByLabelText(/^Hasło/), "haslo-tomka-123");
+  await fillIn(user, screen.getByRole("textbox", { name: /Imię/ }), "Tomek");
+  await fillIn(user, screen.getByLabelText(/^Hasło/), "haslo-tomka-123");
   await user.click(screen.getByRole("checkbox", { name: /regulamin/ }));
   await user.click(screen.getByRole("checkbox", { name: /16 lat/ }));
 }
@@ -63,8 +64,8 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
     await user.click(await screen.findByRole("button", { name: "Mam konto — zaloguj się" }));
 
     expect(await screen.findByText("Zaloguj się, żeby dołączyć do listy „Dom”.")).toBeVisible();
-    await user.type(screen.getByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
-    await user.type(screen.getByLabelText(/^Hasło/), "haslo-tomka-123");
+    await fillIn(user, screen.getByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
+    await fillIn(user, screen.getByLabelText(/^Hasło/), "haslo-tomka-123");
     await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
 
     expect(await screen.findByText("Dołączyłeś(-aś) do listy „Dom”.")).toBeVisible();
@@ -81,7 +82,7 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
     renderApp(PAGE);
 
     await user.click(await screen.findByRole("button", { name: "Mam konto — zaloguj się" }));
-    await user.type(await screen.findByRole("textbox", { name: "E-mail" }), "tomek@example.com");
+    await fillIn(user, await screen.findByRole("textbox", { name: "E-mail" }), "tomek@example.com");
     await user.click(screen.getByRole("link", { name: "Załóż konto" }));
 
     expect(await screen.findByText("Po założeniu konta dołączysz do listy „Dom”.")).toBeVisible();
@@ -103,7 +104,7 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
 
     await user.click(await screen.findByRole("button", { name: "Załóż konto i dołącz" }));
     expect(await screen.findByText("Po założeniu konta dołączysz do listy „Dom”.")).toBeVisible();
-    await user.type(screen.getByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
+    await fillIn(user, screen.getByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
     await fillSignUp(user);
     await user.click(screen.getByRole("button", { name: "Załóż konto" }));
 
@@ -129,7 +130,7 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
     const { router } = renderApp(PAGE);
 
     await user.click(await screen.findByRole("button", { name: "Załóż konto i dołącz" }));
-    await user.type(await screen.findByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
+    await fillIn(user, await screen.findByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
     await fillSignUp(user);
     notifyManager.setScheduler((callback) => {
       callback();
@@ -165,7 +166,7 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
     renderApp(PAGE);
 
     await user.click(await screen.findByRole("button", { name: "Załóż konto i dołącz" }));
-    await user.type(await screen.findByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
+    await fillIn(user, await screen.findByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
     await fillSignUp(user);
     await user.click(screen.getByRole("button", { name: "Załóż konto" }));
 

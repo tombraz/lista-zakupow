@@ -1,10 +1,11 @@
 import type { Item, ListSummary } from "@lista/shared";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, anItem, ANIA, detailsOf, listsAre } from "../test/lists";
 import { server } from "../test/msw-server";
+import { heldResponse } from "../test/held";
 import { renderApp, sessionIs } from "../test/render";
 
 /** Lista „Dom” Ani na SC-05, jej SC-06 i SC-07. */
@@ -49,9 +50,10 @@ describe("focus after a route change (T-014)", () => {
 
   it("waits for the list name before focusing the SC-06 heading", async () => {
     const list = homeListIs();
+    const response = heldResponse();
     server.use(
       http.get(`*/api/v1/lists/${list.id}`, async () => {
-        await delay(200);
+        await response.released;
         return HttpResponse.json(detailsOf(list, [anItem({ name: "Chleb" })]));
       }),
     );
@@ -61,6 +63,7 @@ describe("focus after a route change (T-014)", () => {
     const pending = await screen.findByRole("heading", { level: 1 });
     expect(pending).toHaveTextContent("");
     expect(pending).not.toHaveFocus();
+    response.release();
     const title = await heading("Dom");
     await waitFor(() => {
       expect(title).toHaveFocus();

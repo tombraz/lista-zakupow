@@ -20,8 +20,13 @@ describe("limit of 50 own lists", () => {
     return rows[0]?.count ?? 0;
   }
 
+  /** `count` list jednym zapytaniem (po jednej to dziesiątki zapytań na test, T-021). */
   async function createLists(owner: TestUser, count: number) {
-    for (let index = 0; index < count; index += 1) await createList(db.pool, owner);
+    await db.pool.query(
+      `INSERT INTO shopping_list (id, owner_id, name)
+       SELECT gen_random_uuid(), $1, 'Lista ' || n FROM generate_series(1, $2::int) AS n`,
+      [owner.id, count],
+    );
   }
 
   it("is 50 lists", () => {

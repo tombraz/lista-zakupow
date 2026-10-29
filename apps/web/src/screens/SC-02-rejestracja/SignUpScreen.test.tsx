@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
+import { fillIn } from "../../../test/user";
 
 const ANIA = { id: "u-1", name: "Ania", email: "ania@example.com" };
 
@@ -19,9 +20,9 @@ function signUpAnswers(status: number, body: object) {
 }
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText("Imię"), " Ania ");
-  await user.type(screen.getByLabelText("E-mail"), "Ania@Example.com");
-  await user.type(screen.getByLabelText("Hasło"), "dobre-haslo");
+  await fillIn(user, screen.getByLabelText("Imię"), " Ania ");
+  await fillIn(user, screen.getByLabelText("E-mail"), "Ania@Example.com");
+  await fillIn(user, screen.getByLabelText("Hasło"), "dobre-haslo");
   await user.click(screen.getByRole("checkbox", { name: /Akceptuję regulamin/ }));
   await user.click(screen.getByRole("checkbox", { name: "Mam ukończone 16 lat." }));
 }
@@ -79,9 +80,9 @@ describe("SC-02 Rejestracja", () => {
   it("links each summary entry to its field and uses the right plural form", async () => {
     const user = userEvent.setup();
     renderApp("/rejestracja");
-    await user.type(await screen.findByLabelText("Imię"), "a".repeat(31));
-    await user.type(screen.getByLabelText("E-mail"), "ania@example.com");
-    await user.type(screen.getByLabelText("Hasło"), "dobre-haslo");
+    await fillIn(user, await screen.findByLabelText("Imię"), "a".repeat(31));
+    await fillIn(user, screen.getByLabelText("E-mail"), "ania@example.com");
+    await fillIn(user, screen.getByLabelText("Hasło"), "dobre-haslo");
     await user.click(screen.getByRole("checkbox", { name: "Mam ukończone 16 lat." }));
 
     await user.click(screen.getByRole("button", { name: "Załóż konto" }));

@@ -35,13 +35,13 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
 
-Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do bazy `lista_template`, każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE`, przed każdym testem `TRUNCATE … RESTART IDENTITY CASCADE` wszystkich tabel schematu `public`. W pliku testów: `const db = useTestDatabase();`, potem `db.pool`.
+Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do bazy `lista_template`, każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE`, przed każdym testem `DELETE` ze wszystkich tabel schematu `public` (z `session_replication_role = replica`, więc bez kolejności kluczy obcych; `TRUNCATE` kosztował ~0,4 s na test, T-021). Schemat nie ma sekwencji; nowa tabela z sekwencją wymaga jej restartu w `apps/api/test/database.ts`. W pliku testów: `const db = useTestDatabase();`, potem `db.pool`.
 
 ## Testy w tej warstwie
 
 - **Seam:** repozytorium modułu albo trasa API (testy integracyjne backendu); osobne testy tylko dla ograniczeń, których API nie pokazuje wprost.
 - **Narzędzia:** Vitest + Testcontainers (prawdziwy PostgreSQL), wszystkie migracje na czystej bazie.
-- **Dane testowe:** fabryki z `apps/api/test/factories.ts`; reset przez bazę-szablon albo `TRUNCATE … CASCADE`.
+- **Dane testowe:** fabryki z `apps/api/test/factories.ts`; reset przez bazę-szablon i `DELETE` przed każdym testem; dziesiątki wierszy (testy limitów) jednym `INSERT … SELECT generate_series`, nie w pętli.
 - **Mocki:** brak — baza zawsze prawdziwa.
 
 ## Zasady bezpieczeństwa
@@ -72,6 +72,7 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-29 | T-021: izolacja testów — `DELETE` zamiast `TRUNCATE`, dane testów limitów jednym `INSERT … SELECT`. |
 | 2026-10-28 | T-008: `invitation`, migracja `0006_zaproszenia`, `lockList`. |
 | 2026-10-28 | T-007: `list_daily_activity`, migracja `0005_statystyki`. |
 | 2026-10-28 | T-006: `item`, migracja `0004_pozycje`. |

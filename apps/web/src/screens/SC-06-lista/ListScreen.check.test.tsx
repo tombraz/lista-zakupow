@@ -1,10 +1,11 @@
 import type { Item, ListSummary } from "@lista/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, anItem, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse, type HeldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const CHECKED_AT = "2026-10-28T12:00:00.000Z";
@@ -33,13 +34,13 @@ function shopping() {
 }
 
 /** Odpowiedź API scalona z pozycją z listy (MSW zwraca tylko zmienione pola). */
-function withFullItems(list: ListSummary, items: Item[], wait = 0) {
+function withFullItems(list: ListSummary, items: Item[], response?: HeldResponse) {
   const requests: unknown[] = [];
   server.use(
     http.patch(`*/api/v1/lists/${list.id}/items/:itemId`, async ({ request, params }) => {
       const { checked } = (await request.json()) as { checked: boolean };
       requests.push({ itemId: params.itemId, checked });
-      await delay(wait);
+      await response?.released;
       const item = items.find(({ id }) => id === params.itemId);
       return HttpResponse.json({
         ...item,
@@ -70,7 +71,8 @@ describe("SC-06 checking an item", () => {
   it("keeps the item in „Do kupienia” with a saving checkbox until the API answers", async () => {
     const items = shopping();
     const { user, list } = await showList(items);
-    const requests = withFullItems(list, items, 200);
+    const response = heldResponse();
+    const requests = withFullItems(list, items, response);
 
     await user.click(toBuy().getByRole("button", { name: "Odhacz Chleb" }));
 
@@ -78,6 +80,7 @@ describe("SC-06 checking an item", () => {
     expect(saving).toHaveAttribute("aria-busy", "true");
     expect(saving).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("3 do kupienia")).toBeVisible();
+    response.release();
     await waitFor(() => {
       expect(toBuy().queryByRole("button", { name: "Odhacz Chleb" })).toBeNull();
     });
@@ -87,11 +90,13 @@ describe("SC-06 checking an item", () => {
   it("ignores more clicks while saving (one request)", async () => {
     const items = shopping();
     const { user, list } = await showList(items);
-    const requests = withFullItems(list, items, 200);
+    const response = heldResponse();
+    const requests = withFullItems(list, items, response);
 
     const checkbox = toBuy().getByRole("button", { name: "Odhacz Chleb" });
     await user.click(checkbox);
     await user.click(checkbox);
+    response.release();
 
     await screen.findByText("2 do kupienia");
     expect(requests).toHaveLength(1);

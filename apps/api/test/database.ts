@@ -4,6 +4,11 @@ import { afterAll, beforeAll, beforeEach, inject } from "vitest";
 import { createPool } from "../src/db/pool";
 import { databaseUrl, TEMPLATE_DATABASE } from "./database-constants";
 
+// Produkcyjne 3 s chronią żądanie przed martwą bazą; w testach połączenie z kontenerem przy
+// obciążonej maszynie bywa wolniejsze i kończyło się „Connection terminated due to connection
+// timeout” (T-021). Limit testu (30 s) nadal przerywa test, jeśli baza naprawdę nie odpowiada.
+const TEST_CONNECTION_TIMEOUT_MS = 20_000;
+
 export interface TestDatabase {
   readonly pool: Pool;
 }
@@ -21,7 +26,9 @@ export function useTestDatabase(): TestDatabase {
     const admin = createPool(adminUrl);
     await admin.query(`CREATE DATABASE ${name} TEMPLATE ${TEMPLATE_DATABASE}`);
     await admin.end();
-    pool = createPool(databaseUrl(adminUrl, name));
+    pool = createPool(databaseUrl(adminUrl, name), {
+      connectionTimeoutMillis: TEST_CONNECTION_TIMEOUT_MS,
+    });
   });
 
   beforeEach(async () => {
@@ -44,11 +51,15 @@ export function useTestDatabase(): TestDatabase {
 }
 
 // Wszystkie tabele w schemacie public; tabela migracji leży w schemacie drizzle i zostaje.
+// DELETE, nie TRUNCATE: test zostawia kilka wierszy, a TRUNCATE tworzy nowe pliki każdej tabeli
+// i indeksu (~0,4 s na test, pod obciążeniem do 3 s; T-021). Rola `replica` wyłącza wyzwalacze
+// kluczy obcych, więc kolejność tabel nie ma znaczenia. Schemat nie ma sekwencji do restartu.
 async function truncateAllTables(pool: Pool | undefined): Promise<void> {
   if (!pool) return;
   const { rows } = await pool.query<{ name: string }>(
     "SELECT format('%I.%I', schemaname, tablename) AS name FROM pg_tables WHERE schemaname = 'public'",
   );
   if (rows.length === 0) return;
-  await pool.query(`TRUNCATE ${rows.map((row) => row.name).join(", ")} RESTART IDENTITY CASCADE`);
+  const deletes = rows.map((row) => `DELETE FROM ${row.name};`).join(" ");
+  await pool.query(`BEGIN; SET LOCAL session_replication_role = replica; ${deletes} COMMIT;`);
 }

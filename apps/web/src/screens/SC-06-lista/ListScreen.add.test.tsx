@@ -2,10 +2,11 @@ import type { Item, ListSummary } from "@lista/shared";
 import { focusManager } from "@tanstack/react-query";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, anItem, ANIA, apiError, detailsOf } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse, type HeldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -17,13 +18,13 @@ function listIs(list: ListSummary, items: Item[] = []) {
 }
 
 /** `POST …/items` odpowiada pozycją zbudowaną z treści żądania; zwraca odebrane treści. */
-function addingSucceeds(list: ListSummary, wait = 0) {
+function addingSucceeds(list: ListSummary, response?: HeldResponse) {
   const requests: Record<string, unknown>[] = [];
   server.use(
     http.post(`*/api/v1/lists/${list.id}/items`, async ({ request }) => {
       const body = (await request.json()) as { id: string; name: string; note?: string };
       requests.push(body);
-      await delay(wait);
+      await response?.released;
       return HttpResponse.json(anItem({ id: body.id, name: body.name, note: body.note ?? null }), {
         status: 201,
       });
@@ -50,7 +51,8 @@ describe("SC-06 AddBar", () => {
   it("adds an item after the API answers: saving, on top, fields cleared, focus kept, announced (AC1)", async () => {
     const older = anItem({ name: "Chleb" });
     const { user, list, name } = await openList([older]);
-    const requests = addingSucceeds(list, 100);
+    const response = heldResponse();
+    const requests = addingSucceeds(list, response);
 
     await user.type(name, "Mleko");
     await user.type(screen.getByRole("textbox", { name: "Ilość / notatka (opcjonalnie)" }), "2 l");
@@ -61,6 +63,7 @@ describe("SC-06 AddBar", () => {
       "true",
     );
     expect(screen.queryByRole("button", { name: "Edytuj Mleko" })).toBeNull();
+    response.release();
     expect(await screen.findByRole("button", { name: "Edytuj Mleko" })).toBeVisible();
     const rows = within(screen.getByRole("list", { name: "Do kupienia" })).getAllByRole("listitem");
     expect(
@@ -185,8 +188,12 @@ describe("SC-06 AddBar warnings", () => {
   });
 
   it("shows the limit and disables the AddBar at 500 items (AC5)", async () => {
-    const items = Array.from({ length: 500 }, (_, index) => anItem({ name: `P${String(index)}` }));
-    await openList(items);
+    // Limit liczy też kupione; zwinięte „Kupione” się nie renderują, więc test nie płaci
+    // za 500 wierszy w jsdom (~2 s, T-021).
+    const bought = Array.from({ length: 499 }, (_, index) =>
+      anItem({ name: `P${String(index)}`, checked: true }),
+    );
+    await openList([anItem({ name: "Mleko" }), ...bought]);
 
     expect(
       screen.getByText("Lista ma 500 pozycji — to limit. Usuń kupione albo niepotrzebne pozycje."),
@@ -236,11 +243,13 @@ describe("SC-06 AddBar while saving and after a failed save", () => {
 
   it("keeps text typed while the previous item is saving and adds it next (QA round 1 #1)", async () => {
     const { user, list, name } = await openList();
-    const requests = addingSucceeds(list, 200);
+    const response = heldResponse();
+    const requests = addingSucceeds(list, response);
 
     await user.type(name, "Mleko{Enter}");
     await user.clear(name);
     await user.type(name, "Chleb");
+    response.release();
 
     expect(await screen.findByRole("button", { name: "Edytuj Mleko" })).toBeVisible();
     expect(name).toHaveValue("Chleb");

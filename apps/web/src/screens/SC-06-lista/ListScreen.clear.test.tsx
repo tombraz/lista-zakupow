@@ -1,10 +1,11 @@
 import type { Item } from "@lista/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, anItem, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse, type HeldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const bought = (name: string) =>
@@ -22,12 +23,12 @@ async function showList(items: Item[]) {
 }
 
 /** `POST …/clear-checked` usuwa podane pozycje; zwraca liczbę żądań. */
-function clearingSucceeds(listId: string, deleted: Item[], wait = 0) {
+function clearingSucceeds(listId: string, deleted: Item[], response?: HeldResponse) {
   const requests: string[] = [];
   server.use(
     http.post(`*/api/v1/lists/${listId}/items/clear-checked`, async ({ request }) => {
       requests.push(request.method);
-      await delay(wait);
+      await response?.released;
       return HttpResponse.json({ deletedIds: deleted.map(({ id }) => id) });
     }),
   );
@@ -83,7 +84,8 @@ describe("SC-06 „Usuń wszystkie kupione”", () => {
   it("deletes the bought items after confirmation and keeps the unchecked one", async () => {
     const items = [anItem({ name: "Mleko" }), bought("Chleb"), bought("Jajka")];
     const { user, list } = await showList(items);
-    const requests = clearingSucceeds(list.id, items.slice(1), 100);
+    const response = heldResponse();
+    const requests = clearingSucceeds(list.id, items.slice(1), response);
 
     const { dialog } = await openClearDialog(user);
     await user.click(within(dialog).getByRole("button", { name: "Usuń kupione" }));
@@ -92,6 +94,7 @@ describe("SC-06 „Usuń wszystkie kupione”", () => {
       "aria-busy",
       "true",
     );
+    response.release();
     await waitFor(() => {
       expect(screen.queryByRole("alertdialog")).toBeNull();
     });

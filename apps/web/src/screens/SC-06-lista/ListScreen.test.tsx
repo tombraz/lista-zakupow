@@ -5,6 +5,7 @@ import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 function listIs(list: ListSummary) {
@@ -31,9 +32,10 @@ describe("SC-06 Lista", () => {
 
   it("shows five skeleton rows while loading", async () => {
     const list = aList({ name: "Dom" });
+    const response = heldResponse();
     server.use(
       http.get(`*/api/v1/lists/${list.id}`, async () => {
-        await delay(200);
+        await response.released;
         return HttpResponse.json(detailsOf(list));
       }),
     );
@@ -44,6 +46,7 @@ describe("SC-06 Lista", () => {
     const main = screen.getByRole("main");
     expect(main).toHaveAttribute("aria-busy", "true");
     expect(main.querySelectorAll("[data-skeleton]")).toHaveLength(5);
+    response.release();
     expect(await screen.findByRole("heading", { level: 1, name: "Dom" })).toBeVisible();
     expect(main).not.toHaveAttribute("aria-busy");
   });

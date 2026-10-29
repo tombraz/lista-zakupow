@@ -5,6 +5,7 @@ import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { aList, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const EXPIRES = "2026-11-09T10:00:00.000Z";
@@ -80,11 +81,12 @@ describe("SC-07 invitations of the owner", () => {
     const old = anInvitation("old");
     const { user, list, links } = await showParticipants({ links: [old] });
     const created = anInvitation("new");
+    const response = heldResponse();
     let posts = 0;
     server.use(
       http.post(`*/api/v1/lists/${list.id}/invitations`, async () => {
         posts += 1;
-        await delay(100);
+        await response.released;
         links.current = [created, old];
         return HttpResponse.json(created, { status: 201 });
       }),
@@ -94,6 +96,7 @@ describe("SC-07 invitations of the owner", () => {
 
     await user.click(create);
     await user.click(create);
+    response.release();
 
     await waitFor(() => {
       expect(linkBoxes()).toHaveLength(2);

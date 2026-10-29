@@ -1,9 +1,10 @@
 import { fireEvent, screen, within } from "@testing-library/react";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { aList, ANIA, apiError, detailsOf, listsAre, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
+import { heldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
 describe("SC-05 Moje listy", () => {
@@ -22,9 +23,10 @@ describe("SC-05 Moje listy", () => {
   });
 
   it("shows three skeleton cards and a busy region while loading (AC5)", async () => {
+    const response = heldResponse();
     server.use(
       http.get("*/api/v1/lists", async () => {
-        await delay(200);
+        await response.released;
         return HttpResponse.json([aList({ name: "Dom" })]);
       }),
     );
@@ -35,6 +37,7 @@ describe("SC-05 Moje listy", () => {
     const main = screen.getByRole("main");
     expect(main).toHaveAttribute("aria-busy", "true");
     expect(main.querySelectorAll("[data-skeleton]")).toHaveLength(3);
+    response.release();
     expect(await screen.findByRole("link", { name: /Dom/ })).toBeVisible();
     expect(main).not.toHaveAttribute("aria-busy");
   });
