@@ -75,6 +75,14 @@ Inne wystąpienia: brak (wszystkie pięć ścieżek przeniesione na `logLimitEve
 
 ## Prevention
 
+Zapobiegłby temu jeden punkt budowy zdarzenia wymuszony automatycznie — niespójność wracała czwarty raz (T-027, T-033, T-034, T-035). Przyjęte przez użytkownika 2026-10-30:
+
+1. **Reguła eslint** (`eslint.config.js`, `API_LIMIT_LOG_SYNTAX`, `apps/api/src` poza `logging.ts` i `http/rate-limit.ts`): zakaz wywołania `warn/info/error` z obiektem `event: "limit_reached" | "rate_limited"` oraz `config.rateLimit` w opcjach trasy. Zamyka też uwagę minor 1 z QA rundy 1 (trasa z ręcznym `rateLimit` dałaby 429 bez zdarzenia). Sprawdzone próbką: oba wzorce dają błąd lintu.
+2. **„Pułapki” w `layers/backend.md`**: jedyna ścieżka to `logLimitEvent`, `limit` = `LimitKey`, `perIp(key)` (uwaga 3 z QA).
+3. **T-036** (nowe zadanie): niestabilny `live.limits.test.ts › frees a slot when a connection closes` (z Evidence).
+
+Uwaga 2 z QA (`route` w `list_access_denied` / `sign_in_failed`) poza zakresem; bez zadania.
+
 ## Incident note
 
 <Nie dotyczy.>

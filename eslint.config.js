@@ -54,6 +54,23 @@ const API_CLOCK_SYNTAX = [
   },
 ];
 
+// T-035 (TH-21): zdarzenie limitu tylko przez `logLimitEvent` (logging.ts), limit per IP tylko przez
+// `perIp` (rate-limit.ts). Ręczny kształt zdarzenia lub `config.rateLimit` trasy rozjeżdżał log
+// `security` (T-027, T-033, T-034, T-035).
+const API_LIMIT_LOG_SYNTAX = [
+  {
+    selector:
+      "CallExpression[callee.property.name=/^(warn|info|error)$/] > ObjectExpression > Property[key.name='event'][value.value=/^(limit_reached|rate_limited)$/]",
+    message:
+      "Zdarzenie limitu przez logLimitEvent (src/logging.ts): limit = klucz stałej, zawsze route (T-035, layers/backend.md).",
+  },
+  {
+    selector: "Property[key.name='config'] > ObjectExpression > Property[key.name='rateLimit']",
+    message:
+      "Limit trasy przez perIp(key) z src/http/rate-limit.ts: tylko on loguje przekroczenie (T-035, layers/backend.md).",
+  },
+];
+
 // T-018: koniec sesji tylko przez `endSession` (session/useSession.ts). `clear()` usuwa też zapytanie
 // sesji obserwowane przez `RequireSession`, więc strażnik nie widzi `null` i nie prowadzi na SC-01.
 const WEB_SESSION_SYNTAX = [
@@ -242,6 +259,19 @@ export default tseslint.config(
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/api/src/**/*.ts"],
     rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...API_CLOCK_SYNTAX] },
+  },
+  {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX i API_CLOCK_SYNTAX.
+    files: ["apps/api/src/**/*.ts"],
+    ignores: ["apps/api/src/logging.ts", "apps/api/src/http/rate-limit.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...API_CLOCK_SYNTAX,
+        ...API_LIMIT_LOG_SYNTAX,
+      ],
+    },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
