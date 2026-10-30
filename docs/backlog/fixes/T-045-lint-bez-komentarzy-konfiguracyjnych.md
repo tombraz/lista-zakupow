@@ -4,7 +4,7 @@ title: "Reguł lintu nie wyłącza komentarz konfiguracyjny `/* eslint … */`"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-044]
 layers: [backend, web]
 requirements: []
@@ -100,3 +100,23 @@ Kryteria:
 Edge cases potwierdzone: `// eslint no-restricted-syntax: off` (liniowy) nie działa jako konfiguracja (reguła dalej zgłasza); `/* eslint-disable-next-line eslint-comments/no-use */` nad komentarzem konfiguracyjnym nie pomaga (błąd `no-use` zostaje). Próbne pliki usunięte.
 
 Do zmiany: zamknąć #1 i #2, dodać do Evidence red/green dla próbnych `p3`, `p4`, `p10`, uzupełnić Prevention.
+
+## QA round 2 (2026-10-30)
+
+Verdict: pass
+
+Odtworzenie (czyste drzewo, `ea4beee`, `pnpm install --frozen-lockfile`): `pnpm lint` exit 0 (oba przebiegi), `pnpm typecheck` exit 0, `pnpm quality` exit 0, `pnpm format:check` exit 0, `pnpm test` exit 0 (93 pliki / 515 testów).
+
+Kryteria:
+
+- AC1: pass — przebieg `eslint -c eslint.directives.config.js --no-inline-config` na próbnych plikach: `p3` (`/* eslint eslint-comments/no-use: off, no-restricted-syntax: off */`) — `no-use`; `p4` (`/* eslint-disable eslint-comments/no-use */` + konfiguracja) — `no-restricted-disable` + `no-use`; `p10` (wyłączenie `no-use` i `no-restricted-disable` w komentarzu + `eslint-disable-next-line no-restricted-syntax`) — oba błędy; `/*eslint no-restricted-syntax:0*/` bez spacji — `no-use`; `/* globals foo: writable */`, `/* exported */`, `/* eslint-env */` w `apps/web/src/*.tsx` — 3× `no-use`; `/* eslint no-restricted-syntax: ["error"] */` w `packages/shared/src/*.tsx` — `no-use`. `pnpm lint` z samym `/* eslint no-restricted-syntax: off */` nad `rate_limited` w `apps/api/src` — exit 1 (`no-use` z drugiego przebiegu).
+- AC2: pass — `pnpm lint` na repo zielony; `// eslint-disable-next-line react-hooks/exhaustive-deps` przyjęty w drugim przebiegu; `eslint-disable-next-line no-restricted-syntax` / `no-restricted-imports` (`apps/web/test`) nadal `no-restricted-disable`; `/* eslint-disable */` bez reguły — `no-restricted-disable`.
+- AC3: pass — wiersz „Wyjątki od reguł z przeglądów” i „Zmiany” w `CODING_STANDARDS.md` opisują zakaz i osobny przebieg.
+- AC4: pass — jak wyżej.
+
+Runda 1 zamknięta: #1, #2 (próbne `p3`, `p4`, `p10` padają), #3 (Prevention uzupełnione). Spot-check: ten sam próbny plik z `/* eslint eslint-comments/no-use: off */` bez `--no-inline-config` — exit 0, z flagą — exit 1, więc flaga jest nośna. Dodatkowo: `/* eslint-disable eslint-comments/no-restricted-disable */` i `/* eslint-disable-next-line eslint-comments/no-use, … */` padają; `/** eslint no-restricted-syntax: off */` (JSDoc) nie jest dyrektywą — główny przebieg dalej zgłasza `no-restricted-syntax`. Próbne pliki usunięte.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | CI | Filtr `all` w `.github/workflows/ci.yml` (dorny/paths-filter) wymienia `eslint.config.js`, ale nie nowy `eslint.directives.config.js`; PR zmieniający tylko ten plik nie uruchomi joba `static` (`pnpm lint`). | `ci.yml` wiersze 38–48 | Dopisać `'eslint.directives.config.js'` (lub `'eslint*.config.js'`) do filtra `all`. |
+| 2 | note | Testy | Próby lintu są jednorazowe (usunięte), brak stałego testu, który pilnuje, że drugi przebieg dalej łapie `p3`/`p4`/`p10`. | Evidence | Rozważyć fixture + test wywołujący ESLint API z `noInlineConfig` na próbnych plikach. |
