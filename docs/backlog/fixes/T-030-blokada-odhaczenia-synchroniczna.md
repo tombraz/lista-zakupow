@@ -72,6 +72,12 @@ Znalezisko poza zakresem (istniało przed zmianą): przy szybkim odhaczeniu dwó
 
 ## Prevention
 
+Co by zapobiegło: wyjątek od lintu w komentarzu przeżył zmianę, która usunęła jego powód (`lockOf` w T-020) — nikt nie musiał go ponownie uzasadnić. Test przechodził bez blokady, bo przerysowanie w `act` dawało ochronę przypadkiem.
+
+- Zrobione w zadaniu (AC3): „Pułapki” w `layers/web.md` bez wyjątku i z opisem testu w jednym `act`.
+- Przyjęte przez użytkownika (2026-10-30): `@eslint-community/eslint-plugin-eslint-comments` 4.8.1, reguła `eslint-comments/no-restricted-disable` dla `no-restricted-imports` w `apps/web` — wyjątek od blokady wysłania tylko przez `eslint.config.js`, nie komentarzem w kodzie. Sprawdzone: przywrócony `// eslint-disable-next-line no-restricted-imports` w `useCheckItem.ts` daje `Disabling 'no-restricted-imports' is not allowed`; bez niego `pnpm lint` czysty.
+- Znalezisko o fokusie przy dwóch odhaczeniach: T-039.
+
 ## Incident note
 
 ## QA round 1 (2026-10-30)

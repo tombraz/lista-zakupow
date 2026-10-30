@@ -1,3 +1,4 @@
+import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import js from "@eslint/js";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
@@ -212,9 +213,12 @@ export default tseslint.config(
   {
     // T-020: zapis przez `useGuardedMutation` (synchroniczna blokada podwójnego wysłania).
     // T-019: `RouterProvider` z `react-router/dom` — inaczej `flushSync` po cichu nie działa.
+    // T-030: bez wyjątków w komentarzu — wyjątek od blokady wysłania tylko przez tę konfigurację.
     files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/test/**/*.{ts,tsx}"],
     ignores: ["apps/web/src/api/useGuardedMutation.ts"],
+    plugins: { "eslint-comments": eslintComments },
     rules: {
+      "eslint-comments/no-restricted-disable": ["error", "no-restricted-imports"],
       "no-restricted-imports": [
         "error",
         {
