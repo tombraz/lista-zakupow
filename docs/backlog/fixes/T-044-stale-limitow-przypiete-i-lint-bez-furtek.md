@@ -4,7 +4,7 @@ title: "Wszystkie stałe limitów przypięte liczbą; reguły lintu z przegląd�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa               # todo | in-progress | in-qa | done | blocked
+status: done               # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: []
@@ -74,3 +74,24 @@ Uwaga: T-008 proponował „20 linków / h na właściciela”, stała i test li
 ## Prevention
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Przebieg (czysty stan, `pnpm install --frozen-lockfile`): `pnpm lint` 0 błędów, `pnpm typecheck` zielony, `pnpm test` 93 pliki / 515 testów zielone, `pnpm quality` 0 klonów, 0 naruszeń zależności. `git status` czysty po przebiegu.
+
+Kryteria:
+
+- **AC1 — pass.** Mutacje w `packages/shared/src/limits.ts` (każda osobno, przywrócone): `healthReadyPerIp.max` 30→31, `signUpPerIp.max` 5→6, `invitationsCreatedPerList.windowSeconds` 3600→1800 → `FAIL … RATE_LIMITS … keeps the documented thresholds`; `participantsPerList` 20→21 → `FAIL … BUSINESS_LIMITS …`; `bodyBytes` 16·1024→16·1000 → `FAIL … HTTP_LIMITS …`. Diff `toEqual` pokazuje nazwę klucza. Wartości oczekiwane zgodne z BRD (50/500/20, BRD.md:130,155,220), api.md:24 (10/min, 5/15 min, 5/h, 30/min), threat-model.md:100 (16 kB) i T-008:176 (30/min, 20/h na listę).
+- **AC2 — pass.** Próbne pliki (usunięte): `// eslint-disable-next-line no-restricted-syntax` nad `log.warn({ event: "rate_limited" })` w `apps/api/src`, `/* eslint-disable no-restricted-syntax */` blokowo, `// eslint-disable-line` bez nazwy reguły, w `apps/web/src` nad `mutate(1, {})` i `<Link to="/logowanie">`, w `packages/shared/src` i `apps/mobile/src` → `Disabling 'no-restricted-syntax' is not allowed`. Bez komentarza reguła T-035 nadal pada. Wyjątki zawężone w konfiguracji: `update(shoppingList).set({ updatedAt: sql\`now()\` })` dozwolone, `update(item)`, `set({ createdAt })`, `insert(shoppingList)` → błąd T-017; w `schema.ts` `sql.raw(userInput)`, `sql.raw(String(userInput))`, `` sql.raw(`${STAŁA}`) `` → błąd, `sql.raw(String(ITEM_NOTE_MAX_LENGTH))` dozwolone; w teście web `delay(100)` po `live.send` dozwolone, po `other.send`, bez poprzednika i z instrukcją pomiędzy → błąd T-021; `useSession.ts` z `mutate(1, {})` → błąd T-029. `EntryLink` ma tablicę `WEB_ENTRY_LINK_SYNTAX`. W `apps/*/src`, `packages/*/src`, `apps/web/test` zostały tylko `eslint-disable` dla `react-hooks/exhaustive-deps` (poza zakresem, opisane w Root cause).
+- **AC3 — pass.** Jak wyżej.
+
+Jakość testów: test przypina liczby niezależne od implementacji (literały z dokumentów), czerwony dowód w Evidence dla AC1 i AC2, potwierdzony mutacjami. Root cause wyjaśnia, dlaczego istniejące testy tego nie wychwyciły. TH-21: reguła kształtu zdarzenia limitu nie daje się wyłączyć komentarzem (sprawdzone próbą).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | lint | Zakaz `eslint-disable` obejmuje `packages/*/src/**/*.ts`, bez `.tsx` (dziś brak takich plików). | `eslint.config.js`, blok `no-restricted-disable` | `packages/*/src/**/*.{ts,tsx}`, jak `SOURCE` |
+| 2 | note | lint | Wyjątek DDL przepuszcza `sql.raw(String(X))` dla dowolnego identyfikatora w SCREAMING_CASE, nie tylko importowanych stałych długości. | selektor `SAFE_SYNTAX_DDL` | ewentualnie lista dozwolonych nazw (`*_MAX_LENGTH`) |
+| 3 | note | lint | Wyjątek `updatedAt` listy przepuszcza dowolne wyrażenie z `now()` (np. `now() + interval '1 day'`) w `update(shoppingList).set`. | próba w `apps/api/src` | akceptowalne; ewentualnie dokładnie `now()` |
+| 4 | note | test | Wyjątek T-021 dopuszcza dowolnie długi `delay(ms)` zaraz po `live.send(...)`. | `WEB_TEST_SYNTAX` | akceptowalne, opisane w konfiguracji |
