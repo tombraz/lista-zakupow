@@ -4,7 +4,7 @@ title: "Tokeny typografii w rem (skalowanie tekstu w przeglądarce)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug            # bug | small-change
 severity: normal     # incident | high | normal | low
-status: in-qa     # todo | in-progress | in-qa | done | blocked
+status: done     # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [N-04]
@@ -102,3 +102,31 @@ Verdict: fail
 **Accessibility:** the axe E2E scans pass. Manual 200% text check: see #1. The auth screens, SC-04, SC-05, SC-07, SC-08, SC-09 reflow at 200% with nothing cut.
 
 **To fix (round 2):** #1 — AppBar title limited to 2 lines with ellipsis and word-boundary wrapping at 200% text on the phone, with a test that proves it.
+
+## QA round 2 (2026-10-30)
+
+Verdict: pass
+
+**Reproduce:** `pnpm install --frozen-lockfile`; `pnpm check` exit 0 (format, lint, typecheck, quality, design-check, backlog, workflow, Vitest 90 files / 431 tests, mobile Jest 10 tests). `pnpm test:e2e`: 42 passed (5.9 min), including both `rozmiar-tekstu` tests on telefon and komputer; `j03-pozycje` 500 items passed this time (48 s).
+
+**Acceptance criteria**
+
+- AC1 — pass (unchanged since round 1, test still green).
+- AC2 — pass (`rozmiar-tekstu.spec.ts` › text scales, both projects).
+- AC3 — pass. Round 1 #1 is fixed. Own measurements with a temporary Playwright script (deleted afterwards) on SC-06, at widths 320/360/390/1280 px and default text 16/32 px, with three titles (25 characters, 100 characters with words, 100 characters as a single word): the `h1` is never taller than 2 line heights (50/100 px), it gets an ellipsis when cut, nothing scrolls sideways, and no word is split when it fits. At 200% on a phone the title moves to its own row under "Wstecz" and the icons (bar 172 px out of 844, was about 465 px). SC-05, SC-07 and SC-09 at 360 px and 16/32 px: title on 1 line, no horizontal scroll. Screenshots are in the QA scratchpad (`med-390-32.png`, `word-360-32.png`, `page-listy-360-16.png`).
+
+**Findings**
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | tests | The new test does not prove the 2-line clamp. Its title, "Zakupy na weekend u babci", fits in 2 lines on its own row at 200%, so the test still passes with `line-clamp` removed. Only the media query is protected: with it disabled, 2 tests fail ("Zakupy" on 2 lines). | Spot-check: `-webkit-line-clamp`/`line-clamp: none` → 2 passed; `@media (max-width: 1px)` → 2 failed (Expected 1, Received 2); restored, `git status` clean. | Use a title long enough to need the clamp (e.g. 100 characters) and assert height ≤ 2 lines plus `scrollHeight > clientHeight` (text cut). |
+| 2 | minor | design (AppBar) | The `max-width: 24em` breakpoint also applies at 100% text on phones narrower than 384 px (320/360 px). There, even short titles ("Moje listy", "Konto", "Uczestnicy") move under the buttons, the bar grows from 64 to 97 px and leaves an empty left half next to the icon. Nothing breaks and the design system does not fix the bar layout, but it changes the layout at 100% on common 360 px Android phones. | Measurements: SC-05 at 360/16 → bar 97 px, at 390/16 → about 64–66 px; screenshot `page-listy-360-16.png`. | Accept, or wrap only when the title would be too narrow (e.g. a lower breakpoint, or a `flex-wrap` with a minimum title width). Designer's call. |
+| 3 | note | design (AppBar) | At 100% on a 390 px phone with "Wstecz" and 2 icons, the title column is 138 px, so a 25-character name is already cut ("Zakupy na weekend u…"). This matches the spec (2 lines, then an ellipsis). The full name stays in the `h1` for screen readers and is visible on the SC-05 card. | Screenshot `med-390-16.png`. | Nothing required. |
+
+Round 1 #2 (E2E timeout under load) was not reproduced. Round 1 #3 (a second Enter during an add in flight) is outside this task and still open as a follow-up.
+
+**Code review:** `AppBar.module.css` only. It uses tokens (design-check clean). It removes `overflow-wrap: anywhere` and adds `min-width: 0` so the flex item can shrink. `margin-inline-start: auto` keeps the actions on the right when the bar wraps. Root cause section updated. No scope creep beyond the AppBar fix requested in round 1.
+
+**Accessibility:** the axe E2E scans pass. The heading keeps its full text in the DOM, the focus ring on `h1` is not clipped (screenshot), nothing scrolls sideways at 200%, and the 48 px targets are unchanged.
+
+**Security:** no surface (CSS and build-time tokens only; `threats: []`).
