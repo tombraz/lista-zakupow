@@ -58,6 +58,8 @@ Poprawka (`routes.ts`): `SocketsPerSession` liczy gniazda sesji od upgrade'u do 
 
 - Red: `drops a socket over the per-session socket limit, counting closing ones` → `Error: connection still open` (11. gniazdo przyjęte i trzymane).
 - Spot-check testu #2: bez opcji `closeTimeout` → `AssertionError: promise resolved "1006" instead of rejecting` (sloty zajęte do 30 s).
+- Red testu #3 (QA round 1, #2): `sockets.hold` wyłączone → `socketsPerSession: exceeding the limit logs one security event` → `Error: connection still open`; przywrócone.
+- QA round 1, #1: `pnpm format:check` czerwony na `test/live.ts`, `test/live.limits.test.ts` → `prettier --write`, zielony. #3: `layers/backend.md` (opis `na-zywo`, „Pułapki”, historia).
 - Green: `pnpm vitest run --project api live limits.security` 10 plików / 51 testów; `pnpm test` 92 pliki / 496 testów zielone; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm --filter @lista/api build` OK.
 
 ## Prevention

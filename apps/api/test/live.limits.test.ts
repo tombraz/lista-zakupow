@@ -4,14 +4,7 @@ import { LIVE_LIMITS } from "@lista/shared";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
-import {
-  closeCode,
-  closeWithoutFin,
-  connectLive,
-  liveUrl,
-  pause,
-  type LiveClient,
-} from "./live";
+import { closeCode, closeWithoutFin, connectLive, liveUrl, pause, type LiveClient } from "./live";
 import { captureLogs } from "./logs";
 
 describe("WebSocket limits (SEC6, TH-25)", () => {

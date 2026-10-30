@@ -63,7 +63,7 @@ export function closeCode(
   });
 }
 
-function open(url: string,{ cookie, origin = TEST_ORIGIN, query = "" }: UpgradeOptions) {
+function open(url: string, { cookie, origin = TEST_ORIGIN, query = "" }: UpgradeOptions) {
   const headers: Record<string, string> = {};
   if (cookie) headers["cookie"] = cookie;
   return new WebSocket(`${url}${query}`, { headers, ...(origin ? { origin } : {}) });
