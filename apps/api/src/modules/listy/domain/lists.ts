@@ -1,5 +1,5 @@
 import { BUSINESS_LIMITS, type Item, type ListRole, type Person } from "@lista/shared";
-import { DomainError } from "../../../domain-error";
+import { DomainError, type SecurityEvent } from "../../../domain-error";
 import { isUuid } from "../../../ids";
 
 export type { ListRole, Person };
@@ -73,7 +73,7 @@ export function requireJoined(outcome: JoinOutcome, listId: string, userId: stri
   if (outcome === "limit_reached") {
     throw new DomainError("limit_reached", {
       limit: "participants",
-      security: { event: "limit_reached", ids: { userId, listId } },
+      security: { event: "limit_reached", limit: "participantsPerList", ids: { userId, listId } },
     });
   }
   throw new DomainError(outcome, { listId });
@@ -102,7 +102,10 @@ export async function requireListAccess(
   const valid = isUuid(listId);
   const role = valid ? await repository.roleOf(userId, listId) : null;
   // Do logu tylko identyfikatory; dowolny tekst z adresu zostaje poza logiem.
-  const security = { event: "list_access_denied", ids: valid ? { userId, listId } : { userId } };
+  const security: SecurityEvent = {
+    event: "list_access_denied",
+    ids: valid ? { userId, listId } : { userId },
+  };
   if (!role) throw new DomainError("not_found", { security });
   if (required === "owner" && role !== "owner") throw new DomainError("owner_only", { security });
   return { listId, role };
@@ -138,7 +141,7 @@ export async function createList(
   if (!listId) {
     throw new DomainError("limit_reached", {
       limit: "lists",
-      security: { event: "limit_reached", ids: { userId: ownerId } },
+      security: { event: "limit_reached", limit: "listsPerOwner", ids: { userId: ownerId } },
     });
   }
   return listOf(repository, ownerId, { listId, role: "owner" });

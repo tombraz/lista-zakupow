@@ -8,7 +8,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { validate } from "../../../http/validate";
-import { securityLog } from "../../../logging";
+import { logLimitEvent, securityLog } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { SignInFailures } from "../infra/sign-in-failures";
@@ -54,7 +54,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
   app.post("/api/auth/sign-up/email", async (request, reply) => {
     const { name, email, password, invitationToken } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
-    if (response.status === 429) logSecurity(request, "rate_limited", {});
+    if (response.status === 429) logLimitEvent(request, "rate_limited", "signUpPerIp");
     if (await lostEmailRace(auth, response, email)) throw new ApiError(409, "email_taken");
     const accept = deps.invitationOnSignUp();
     if (invitationToken === undefined || !accept) return relay(response, reply);
@@ -67,13 +67,15 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     const credentials = validate(signInRequestSchema, request.body);
     const accountKey = failures.accountKey(credentials.email);
     if (!(await failures.reserve(accountKey))) {
-      logSecurity(request, "rate_limited", { accountKey });
+      logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", { accountKey });
       throw new ApiError(429, "rate_limited");
     }
     const response = await forward(auth, origin, request, credentials);
     if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
     else await failures.release(accountKey);
-    if (response.status === 429) logSecurity(request, "rate_limited", { accountKey });
+    if (response.status === 429) {
+      logLimitEvent(request, "rate_limited", "signInPerIp", { accountKey });
+    }
     return relay(response, reply);
   });
 
@@ -88,8 +90,8 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
 // architecture.md, „Obserwowalność”: zdarzenia bezpieczeństwa tylko z identyfikatorami.
 function logSecurity(
   request: FastifyRequest,
-  event: "sign_in_failed" | "rate_limited",
-  ids: { accountKey?: string },
+  event: "sign_in_failed",
+  ids: { accountKey: string },
 ) {
   securityLog(request.log).warn({ event, route: request.url, ...ids }, event);
 }

@@ -4,7 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type WebSocket from "ws";
 import { DomainError } from "../../../domain-error";
 import { ApiError, logSecurityEvent } from "../../../http/api-error";
-import { securityLog } from "../../../logging";
+import { logLimitEvent } from "../../../logging";
 import { POLICY_VIOLATION, type LiveConnection, type LiveHub } from "../domain/hub";
 import { MessageBudget } from "../domain/message-budget";
 import { heartbeat, WsConnection } from "../infra/ws-connection";
@@ -102,8 +102,7 @@ function limitLog(request: FastifyRequest, userId: string) {
   return (event: "limit_reached" | "rate_limited", limit: keyof typeof LIVE_LIMITS) => {
     if (logged) return;
     logged = true;
-    const route = request.routeOptions.url;
-    securityLog(request.log).warn({ event, route, limit, userId }, event);
+    logLimitEvent(request, event, limit, { userId });
   };
 }
 

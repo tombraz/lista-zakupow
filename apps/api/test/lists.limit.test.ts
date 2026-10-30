@@ -110,7 +110,7 @@ describe("limit of 50 own lists", () => {
     expect(statuses.slice(50)).toEqual([409, 409]);
     const limited = logs.security().filter((entry) => entry["event"] === "limit_reached");
     expect(limited).toHaveLength(2);
-    expect(limited[0]).toMatchObject({ userId: bot.id, limit: "lists" });
+    expect(limited[0]).toMatchObject({ userId: bot.id, limit: "listsPerOwner" });
     expect(logs.lines.join("\n")).not.toContain("Spam 51");
     await app.close();
   });

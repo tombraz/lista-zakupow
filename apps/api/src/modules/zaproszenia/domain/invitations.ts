@@ -72,7 +72,11 @@ export async function createInvitation(
   if ((await lists.participantCount(listId)) >= BUSINESS_LIMITS.participantsPerList) {
     throw new DomainError("limit_reached", {
       limit: "participants",
-      security: { event: "limit_reached", ids: { userId: ownerId, listId } },
+      security: {
+        event: "limit_reached",
+        limit: "participantsPerList",
+        ids: { userId: ownerId, listId },
+      },
     });
   }
   const createdAt = clock.now();
@@ -87,7 +91,7 @@ export async function createInvitation(
   // TH-13: skrypt nie zapcha bazy linkami.
   if (!created) {
     throw new DomainError("rate_limited", {
-      security: { event: "rate_limited", ids: { listId } },
+      security: { event: "rate_limited", limit: "invitationsCreatedPerList", ids: { listId } },
     });
   }
   return created;

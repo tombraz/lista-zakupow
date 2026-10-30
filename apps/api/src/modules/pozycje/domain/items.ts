@@ -119,7 +119,11 @@ export async function addItem(
   if (result.status === "limit_reached") {
     throw new DomainError("limit_reached", {
       limit: "items",
-      security: { event: "limit_reached", ids: { userId, listId: access.listId } },
+      security: {
+        event: "limit_reached",
+        limit: "itemsPerList",
+        ids: { userId, listId: access.listId },
+      },
     });
   }
   if (result.status === "duplicate") throw new DomainError("duplicate_item");

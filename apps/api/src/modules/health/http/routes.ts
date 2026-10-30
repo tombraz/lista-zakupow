@@ -1,4 +1,4 @@
-import { RATE_LIMITS, type HealthReadyResponse } from "@lista/shared";
+import type { HealthReadyResponse } from "@lista/shared";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
@@ -11,7 +11,7 @@ export function healthRoutes(app: FastifyInstance, pool: Pool): void {
   void app.register(async (scope) => {
     await perIpRateLimit(scope);
 
-    scope.get("/health/ready", perIp(RATE_LIMITS.healthReadyPerIp), async (request, reply) => {
+    scope.get("/health/ready", perIp("healthReadyPerIp"), async (request, reply) => {
       try {
         await pool.query("SELECT 1");
         return { status: "ok", database: "up" } satisfies HealthReadyResponse;

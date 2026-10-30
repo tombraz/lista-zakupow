@@ -38,6 +38,7 @@ export {
   INVITATION_VALIDITY_DAYS,
   LIVE_LIMITS,
   RATE_LIMITS,
+  type LimitKey,
   type RateLimit,
 } from "./limits";
 export {

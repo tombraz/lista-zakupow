@@ -1,7 +1,7 @@
 import type { ApiErrorBody, DomainErrorCode, ErrorCode } from "@lista/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { DomainError } from "../domain-error";
-import { securityLog } from "../logging";
+import { logLimitEvent, securityLog } from "../logging";
 
 /** Błąd z kodem z `packages/shared`; jeden handler zamienia go na odpowiedź HTTP. */
 export class ApiError extends Error {
@@ -39,17 +39,15 @@ export function domainErrorBody(error: DomainError): ApiErrorBody {
 }
 
 export function logSecurityEvent(request: FastifyRequest, error: DomainError): void {
-  const { security, limit } = error.details;
+  const { security } = error.details;
   if (!security) return;
-  securityLog(request.log).warn(
-    {
-      event: security.event,
-      route: request.routeOptions.url,
-      ...security.ids,
-      ...(limit && { limit }),
-    },
-    security.event,
-  );
+  if (security.event === "list_access_denied") {
+    const route = request.routeOptions.url;
+    securityLog(request.log).warn(
+      { event: security.event, route, ...security.ids },
+      security.event,
+    );
+  } else logLimitEvent(request, security.event, security.limit, security.ids);
 }
 
 interface ErrorSummary {
@@ -93,13 +91,7 @@ export function apiErrors(app: FastifyInstance): void {
       return reply.code(DOMAIN_STATUS[error.code]).send(domainErrorBody(error));
     }
     // TH-13, TH-21: limit treści (`bodyLimit`) też zostawia zdarzenie w logu `security` (T-034).
-    if (isBodyTooLarge(error)) {
-      const route = request.routeOptions.url;
-      securityLog(request.log).warn(
-        { event: "limit_reached", route, limit: "bodyBytes" },
-        "limit_reached",
-      );
-    }
+    if (isBodyTooLarge(error)) logLimitEvent(request, "limit_reached", "bodyBytes");
     // Błędy klienta z Fastify (np. 413 z limitu treści, zły JSON) obsługuje jego handler.
     if (isClientError(error)) throw error;
     // Domyślny handler wysłałby klientowi `message` wyjątku (np. SQL z parametrami).

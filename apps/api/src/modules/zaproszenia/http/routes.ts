@@ -1,5 +1,4 @@
 import {
-  RATE_LIMITS,
   type AcceptInvitationResponse,
   type Invitation,
   type InvitationPreview,
@@ -80,7 +79,7 @@ function ownerRoutes(app: FastifyInstance, deps: InvitationRoutesDeps): void {
   );
 }
 
-const LOOKUP_LIMIT = perIp(RATE_LIMITS.invitationLookupPerIp);
+const LOOKUP_LIMIT = perIp("invitationLookupPerIp");
 
 /**
  * Trasy z tokenem: token jest uprawnieniem, więc bez `requireListAccess`. TH-06: limit

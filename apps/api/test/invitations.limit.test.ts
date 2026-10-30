@@ -95,7 +95,7 @@ describe("participant limit 20", () => {
       expect.objectContaining({
         userId: ania.id,
         listId: list.id,
-        limit: "participants",
+        limit: "participantsPerList",
         route: "/api/v1/lists/:listId/invitations",
       }),
     ]);

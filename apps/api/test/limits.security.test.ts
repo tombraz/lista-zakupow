@@ -30,7 +30,10 @@ interface Context {
   live: (cookie: string) => Promise<LiveClient>;
 }
 
-/** Przekracza limit dokładnie raz; zwraca pola oczekiwanego zdarzenia w logu `security`. */
+/**
+ * Przekracza limit dokładnie raz; zwraca pola oczekiwanego zdarzenia w logu `security` poza
+ * `limit` i `route`, które sprawdza jeden wspólny warunek (T-035).
+ */
 type Scenario = (ctx: Context) => Promise<Record<string, unknown>>;
 
 const SIGN_IN = "/api/auth/sign-in/email";
@@ -127,7 +130,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       const ania = await createUser(app);
       await repeat(BUSINESS_LIMITS.listsPerOwner, () => createList(db.pool, ania));
       await requestsAs(app, ania)("POST", "/api/v1/lists", { name: "Za dużo" });
-      return { event: "limit_reached", route: "/api/v1/lists", limit: "lists", userId: ania.id };
+      return { event: "limit_reached", route: "/api/v1/lists", userId: ania.id };
     },
     itemsPerList: async ({ app }) => {
       const ania = await createUser(app);
@@ -142,7 +145,6 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       return {
         event: "limit_reached",
         route: "/api/v1/lists/:listId/items",
-        limit: "items",
         userId: ania.id,
         listId: list.id,
       };
@@ -160,7 +162,6 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       return {
         event: "limit_reached",
         route: "/api/v1/lists/:listId/invitations",
-        limit: "participants",
         userId: ania.id,
         listId: list.id,
       };
@@ -169,21 +170,21 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       const ania = await createUser(app);
       await repeat(LIVE_LIMITS.connectionsPerSession, () => live(ania.cookie));
       await (await live(ania.cookie)).closed();
-      return { event: "limit_reached", limit: "connectionsPerSession", userId: ania.id };
+      return { event: "limit_reached", userId: ania.id };
     },
     messagesPerSecond: async ({ app, live }) => {
       const ania = await createUser(app);
       const client = await live(ania.cookie);
       for (let i = 0; i <= LIVE_LIMITS.messagesPerSecond; i += 1) client.send({ type: "pong" });
       await client.closed();
-      return { event: "rate_limited", limit: "messagesPerSecond", userId: ania.id };
+      return { event: "rate_limited", userId: ania.id };
     },
     messageBytes: async ({ app, live }) => {
       const ania = await createUser(app);
       const client = await live(ania.cookie);
       client.send({ type: "subscribe", listId: "x".repeat(LIVE_LIMITS.messageBytes) });
       await client.closed();
-      return { event: "limit_reached", limit: "messageBytes", userId: ania.id };
+      return { event: "limit_reached", userId: ania.id };
     },
     bodyBytes: async ({ app }) => {
       await app.inject({
@@ -192,7 +193,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
         headers: { "content-type": "application/json", origin: TEST_ORIGIN },
         payload: JSON.stringify({ name: "x".repeat(HTTP_LIMITS.bodyBytes) }),
       });
-      return { event: "limit_reached", route: "/api/v1/lists", limit: "bodyBytes" };
+      return { event: "limit_reached", route: "/api/v1/lists" };
     },
   };
 
@@ -229,7 +230,10 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       const events = logs
         .security()
         .filter((entry) => entry["event"] === "limit_reached" || entry["event"] === "rate_limited");
-      expect(events).toEqual([expect.objectContaining(expected)]);
+      // T-035: jeden schemat zdarzenia — `limit` to klucz stałej, `route` zawsze jest.
+      expect(events).toEqual([
+        expect.objectContaining({ route: expect.any(String) as unknown, ...expected, limit: key }),
+      ]);
       expect(events[0]?.["requestId"]).toEqual(expect.any(String));
     } finally {
       for (const client of clients) client.close();

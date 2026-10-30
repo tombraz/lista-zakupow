@@ -29,6 +29,13 @@ export const HTTP_LIMITS = {
   bodyBytes: 16 * 1024,
 } as const;
 
+/** Klucz limitu ze stałych w tym pliku; pole `limit` zdarzenia w logu `security` (T-035). */
+export type LimitKey =
+  | keyof typeof RATE_LIMITS
+  | keyof typeof BUSINESS_LIMITS
+  | keyof typeof HTTP_LIMITS
+  | keyof typeof LIVE_LIMITS;
+
 /** F-11: link zaproszenia działa 7 dni od utworzenia. */
 export const INVITATION_VALIDITY_DAYS = 7;
 

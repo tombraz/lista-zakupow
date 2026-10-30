@@ -111,7 +111,7 @@ describe("limit of 500 items per list", () => {
     expect(statuses).toEqual([201, 201, 201, 409, 409]);
     const limited = logs.security().filter((entry) => entry["event"] === "limit_reached");
     expect(limited).toHaveLength(2);
-    expect(limited[0]).toMatchObject({ userId: bot.id, listId: list.id, limit: "items" });
+    expect(limited[0]).toMatchObject({ userId: bot.id, listId: list.id, limit: "itemsPerList" });
     expect(logs.lines.join("\n")).not.toContain("Spam 4");
     await app.close();
   });

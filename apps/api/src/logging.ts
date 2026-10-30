@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { LimitKey } from "@lista/shared";
 import {
   LogController,
   type FastifyBaseLogger,
@@ -81,7 +82,24 @@ export function loggingOptions(settings: LogSettings | undefined) {
   } satisfies FastifyServerOptions;
 }
 
+/** `route` zdarzenia w logu `security`, gdy żądanie nie trafiło w żadną trasę (T-035). */
+export const UNKNOWN_ROUTE = "(unknown)";
+
 /** Zdarzenia bezpieczeństwa (architecture.md, „Obserwowalność”): tylko identyfikatory. */
 export function securityLog(log: FastifyBaseLogger): FastifyBaseLogger {
   return log.child({ channel: "security" });
+}
+
+/**
+ * TH-21: jedyne miejsce kształtu zdarzenia przekroczenia limitu (T-035): `limit` to klucz
+ * stałej z `packages/shared/src/limits.ts`, `route` jest zawsze, `ids` tylko identyfikatory.
+ */
+export function logLimitEvent(
+  request: FastifyRequest,
+  event: "limit_reached" | "rate_limited",
+  limit: LimitKey,
+  ids: Record<string, string> = {},
+): void {
+  const route = request.routeOptions.url ?? UNKNOWN_ROUTE;
+  securityLog(request.log).warn({ event, ...ids, route, limit }, event);
 }
