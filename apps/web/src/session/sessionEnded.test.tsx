@@ -70,4 +70,40 @@ describe("session ended while signed in", () => {
     await act(() => vi.advanceTimersByTimeAsync(15_000));
     expect(live.connections()).toBe(1);
   });
+
+  // QA T-018: zerwane połączenie wylogowuje tylko wtedy, gdy API potwierdzi brak sesji.
+  for (const [when, me] of [
+    ["the session is still valid", () => HttpResponse.json(ANIA)],
+    ["the session check has no network", () => HttpResponse.error()],
+  ] as const) {
+    it(`keeps the person signed in and reconnects after a dropped connection when ${when}`, async () => {
+      listsAre([aList({ name: "Dom" })]);
+      const live = liveServer();
+      sessionIs(ANIA);
+      const { router } = renderApp("/listy");
+      await screen.findByRole("heading", { level: 1, name: "Moje listy" });
+      await waitFor(() => {
+        expect(live.connections()).toBe(1);
+      });
+      const checks: string[] = [];
+      server.use(
+        http.get("*/api/v1/me", ({ request }) => {
+          checks.push(request.url);
+          return me();
+        }),
+      );
+
+      live.dropAll();
+
+      await waitFor(
+        () => {
+          expect(live.connections()).toBe(2);
+        },
+        { timeout: 3000 },
+      );
+      expect(checks).toHaveLength(1);
+      expect(router.state.location.pathname).toBe("/listy");
+      expect(screen.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+    });
+  }
 });

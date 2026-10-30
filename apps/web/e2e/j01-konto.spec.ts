@@ -89,3 +89,28 @@ test("SC-02 shows a taken e-mail and SC-04 opens without signing in (AC2, AC7)",
   ).toBeVisible();
   await expectNoAxeViolations(page);
 });
+
+// T-018: wylogowanie w innej karcie (ta sama sesja; drugiej strony nie otwieramy, layers/web.md
+// „Pułapki”) — API zamyka połączenie na żywo (TH-17), strona trafia na SC-01 i po zalogowaniu wraca.
+test("J-01 signed out in another tab: goes to SC-01 and back after signing in (T-018)", async ({
+  page,
+}) => {
+  const account = newAccount();
+  await signUp(page, account);
+  await expect(page.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+
+  const signedOut = await page.request.post("/api/auth/sign-out", {
+    data: {},
+    headers: { origin: new URL(page.url()).origin },
+  });
+  expect(signedOut.ok()).toBe(true);
+
+  await expect(page.getByRole("heading", { level: 1, name: "Zaloguj się" })).toBeVisible();
+  await expect(page).toHaveURL(/\/logowanie$/);
+
+  await page.getByLabel("E-mail").fill(account.email);
+  await page.getByLabel("Hasło", { exact: true }).fill(account.password);
+  await page.getByRole("button", { name: "Zaloguj się" }).click();
+  await expect(page).toHaveURL(/\/listy$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+});

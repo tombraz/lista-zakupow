@@ -66,7 +66,14 @@ Koniec sesji klient rozpoznawał tylko w `fetchMe` (401 z `/api/v1/me` → `null
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+**Co by zapobiegło:** jedno miejsce reakcji na 401 od początku (T-004), test „sesja kończy się w trakcie pracy” na poziomie całej aplikacji, a nie tylko „anonim od wejścia”, i test zerwania WS po wylogowaniu (T-009). Dodatkowo klient musi kończyć sesję tak, żeby `RequireSession` to zobaczył (bez `clear()`).
+
+Przyjęte przez użytkownika (2026-10-30), wszystkie wdrożone:
+
+1. **Lint** (`eslint.config.js`, `WEB_SESSION_SYNTAX`): `no-restricted-syntax` zakazuje `clear()` na `QueryClient` (`*client.clear()`, `useQueryClient().clear()`) w `apps/web/src` poza `session/useSession.ts`. Sprawdzone na pliku próbnym: oba wzorce są błędem, a `Set.clear()` nie.
+2. **Testy `useCheckSession`** (uwaga minor QA round 1): `sessionEnded.test.tsx` › keeps the person signed in and reconnects after a dropped connection when the session is still valid / when the session check has no network. Kontrola mutacyjna: gdy błąd sieci kończy sesję, test „no network” jest czerwony.
+3. **„Pułapki” w `layers/web.md`**: 401 obsługuje `RequireSession` i `LiveProvider`, a nie ekran; koniec sesji tylko przez `useSetSession(null)`; test na poziomie `renderApp`.
+4. **E2E J-01** (`e2e/j01-konto.spec.ts` › J-01 signed out in another tab: goes to SC-01 and back after signing in): wylogowanie przez `page.request` w tej samej sesji (bez drugiej strony, pułapka E2E na Windows), prawdziwe API zamyka WS (TH-17). Wynik: 2/2 (telefon, komputer). Bez `live.onDrop(checkSession)` test jest czerwony.
 
 ## Incident note
 

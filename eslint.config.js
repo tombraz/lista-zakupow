@@ -54,6 +54,17 @@ const API_CLOCK_SYNTAX = [
   },
 ];
 
+// T-018: koniec sesji tylko przez `endSession` (session/useSession.ts). `clear()` usuwa też zapytanie
+// sesji obserwowane przez `RequireSession`, więc strażnik nie widzi `null` i nie prowadzi na SC-01.
+const WEB_SESSION_SYNTAX = [
+  "CallExpression[callee.property.name='clear'][callee.object.name=/client$/i]",
+  "CallExpression[callee.property.name='clear'][callee.object.callee.name='useQueryClient']",
+].map((selector) => ({
+  selector,
+  message:
+    "Nie czyść QueryClient wprost: koniec sesji przez useSetSession(null) (T-018, layers/web.md „Pułapki”).",
+}));
+
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
 // Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
 const SESSION_KEY = "/sess|token|auth|cookie|jwt/i";
@@ -196,6 +207,12 @@ export default tseslint.config(
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/api/src/**/*.ts"],
     rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...API_CLOCK_SYNTAX] },
+  },
+  {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
+    files: ["apps/web/src/**/*.{ts,tsx}"],
+    ignores: [...TESTS, "apps/web/src/session/useSession.ts"],
+    rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...WEB_SESSION_SYNTAX] },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
