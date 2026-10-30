@@ -113,6 +113,25 @@ test("SC-06 at 500 items shows the limit and disables the AddBar", async ({ page
   await expectNoAxeViolations(page);
 });
 
+// T-023: własne dodanie 500. pozycji wyłącza pole z fokusem; fokus na ostrzeżeniu, nie na `body`.
+test("SC-06 adding the 500th item moves focus to the limit warning (T-023)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const list = await openNewList(page, "Prawie pełna");
+  await addViaApi(page, list.id, 499);
+  await expect(page.getByLabel(NAME)).toBeEnabled();
+
+  await page.getByLabel(NAME).fill("Ostatnia");
+  await page.keyboard.press("Enter");
+
+  const limit = page
+    .getByRole("status")
+    .filter({
+      hasText: "Lista ma 500 pozycji — to limit. Usuń kupione albo niepotrzebne pozycje.",
+    });
+  await expect(limit).toBeFocused();
+  await expect(page.getByLabel(NAME)).toBeDisabled();
+});
+
 // AC9 (WCAG 2.4.11): element z fokusem nie chowa się pod przyklejonym AddBar.
 test("SC-06 keeps the focused item above the AddBar", async ({ page }) => {
   const list = await openNewList(page, "Długa");

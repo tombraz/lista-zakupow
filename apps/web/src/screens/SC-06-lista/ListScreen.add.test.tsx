@@ -9,6 +9,7 @@ import { server } from "../../../test/msw-server";
 import { heldResponse, type HeldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
 
+const LIMIT = "Lista ma 500 pozycji — to limit. Usuń kupione albo niepotrzebne pozycje.";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function listIs(list: ListSummary, items: Item[] = []) {
@@ -218,6 +219,49 @@ describe("SC-06 AddBar warnings", () => {
       ),
     ).toBeVisible();
     expect(name).toBeDisabled();
+  });
+
+  // T-023: pole i „Dodaj” dostają `disabled`, więc fokus z nich spada na `body` (WCAG 2.4.3);
+  // przechodzi na ostrzeżenie o limicie. jsdom nie zdejmuje fokusu z `disabled` — w przeglądarce
+  // sprawdza to E2E J-03.
+  it("moves focus to the limit warning when the own 500th item is added (T-023 AC1)", async () => {
+    const bought = Array.from({ length: 498 }, (_, index) =>
+      anItem({ name: `P${String(index)}`, checked: true }),
+    );
+    const { user, list, name } = await openList([anItem({ name: "Chleb" }), ...bought]);
+    addingSucceeds(list);
+
+    await user.type(name, "Mleko{Enter}");
+
+    const limit = await screen.findByText(LIMIT);
+    expect(limit.closest('[role="status"]')).toHaveFocus();
+    expect(name).toBeDisabled();
+  });
+
+  it("moves focus to the limit warning when the API says the list is full (T-023 AC1)", async () => {
+    const { user, list, name } = await openList();
+    server.use(
+      http.post(`*/api/v1/lists/${list.id}/items`, () =>
+        apiError(409, { code: "limit_reached", limit: "items" }),
+      ),
+    );
+
+    await user.type(name, "Mleko{Enter}");
+
+    const limit = await screen.findByText(LIMIT);
+    expect(limit.closest('[role="status"]')).toHaveFocus();
+  });
+
+  it("leaves focus on the heading when the list opens already full (T-023 AC2)", async () => {
+    const bought = Array.from({ length: 499 }, (_, index) =>
+      anItem({ name: `P${String(index)}`, checked: true }),
+    );
+    await openList([anItem({ name: "Mleko" }), ...bought]);
+
+    await expect
+      .poll(() => document.activeElement)
+      .toBe(screen.getByRole("heading", { level: 1, name: "Dom" }));
+    expect(screen.getByText(LIMIT).closest('[role="status"]')).not.toHaveFocus();
   });
 
   it("says the save failed and keeps the text (Error — zapis)", async () => {

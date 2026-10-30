@@ -84,6 +84,47 @@ describe("SC-06 live changes of other people", () => {
     expect(rowOf("Mleko")).toHaveAttribute("data-highlighted", "true");
   });
 
+  // T-023: 500. pozycja innej osoby wyłącza AddBar; fokus z pola przechodzi na ostrzeżenie,
+  // fokus w innym miejscu ekranu zostaje.
+  describe("Tomek's 500th item (T-023)", () => {
+    const LIMIT = "Lista ma 500 pozycji — to limit. Usuń kupione albo niepotrzebne pozycje.";
+    const almostFull = () => [
+      BREAD,
+      ...Array.from({ length: 498 }, (_, index) =>
+        anItem({ name: `P${String(index)}`, checked: true }),
+      ),
+    ];
+    const tomeksItem = () => ({
+      type: "item.upserted" as const,
+      item: anItem({ name: "Jajka", addedBy: TOMEK, updatedAt: "2026-10-29T10:05:00.000Z" }),
+    });
+
+    it("moves focus from the AddBar to the limit warning", async () => {
+      const { live, list } = await openList({ items: almostFull() });
+      screen.getByRole("textbox", { name: "Co kupić?" }).focus();
+
+      act(() => {
+        live.send({ ...tomeksItem(), listId: list.id });
+      });
+
+      const limit = await screen.findByText(LIMIT);
+      expect(limit.closest('[role="status"]')).toHaveFocus();
+    });
+
+    it("leaves focus elsewhere on the screen where it is", async () => {
+      const { live, list } = await openList({ items: almostFull() });
+      const check = screen.getByRole("button", { name: "Odhacz Chleb" });
+      check.focus();
+
+      act(() => {
+        live.send({ ...tomeksItem(), listId: list.id });
+      });
+
+      await screen.findByText(LIMIT);
+      expect(check).toHaveFocus();
+    });
+  });
+
   it("updates only the „N do kupienia” status when someone adds an item", async () => {
     const { live, list } = await openList();
     expect(screen.getByText("2 do kupienia")).toBeInTheDocument();

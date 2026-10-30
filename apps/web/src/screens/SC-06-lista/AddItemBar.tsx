@@ -1,4 +1,5 @@
 import { ITEM_NAME_MAX_LENGTH, ITEM_NOTE_MAX_LENGTH } from "@lista/shared";
+import { useEffect, useRef, type RefObject } from "react";
 import { AddBar } from "../../components/AddBar/AddBar";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { itemNameErrorText, itemNoteErrorText, messages, saveErrorText } from "./messages";
@@ -14,6 +15,7 @@ interface AddItemBarProps {
 }
 
 export function AddItemBar({ state, disabled, onShowBought }: AddItemBarProps) {
+  const limitRef = useLimitFocus(state);
   return (
     <AddBar
       label={messages.add.submitName}
@@ -33,7 +35,7 @@ export function AddItemBar({ state, disabled, onShowBought }: AddItemBarProps) {
         error: state.fields.note ? itemNoteErrorText() : null,
         maxChars: ITEM_NOTE_MAX_LENGTH,
       }}
-      alert={<AddAlert state={state} onShowBought={onShowBought} />}
+      alert={<AddAlert state={state} onShowBought={onShowBought} limitRef={limitRef} />}
       pending={state.pending}
       disabled={disabled || state.limitReached}
       onSubmit={state.submit}
@@ -41,8 +43,37 @@ export function AddItemBar({ state, disabled, onShowBought }: AddItemBarProps) {
   );
 }
 
-function AddAlert({ state, onShowBought }: Omit<AddItemBarProps, "disabled">) {
-  if (state.limitReached) return <InlineAlert tone="warning">{messages.limit}</InlineAlert>;
+/**
+ * Limit wyłącza pole i „Dodaj” (`disabled`), więc fokus z nich spadłby na `body` (WCAG 2.4.3).
+ * Gdy limit pojawia się, a fokus jest w AddBar (albo już spadł), przechodzi na ostrzeżenie;
+ * wejście na pełną listę i fokus w innym miejscu ekranu zostają bez zmian (T-023).
+ */
+function useLimitFocus(state: AddItemState) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reached = useRef(state.limitReached);
+  useEffect(() => {
+    const became = state.limitReached && !reached.current;
+    reached.current = state.limitReached;
+    if (!became) return;
+    const focused = document.activeElement;
+    const inBar = state.nameRef.current?.form?.contains(focused) ?? false;
+    if (focused === document.body || inBar) ref.current?.focus();
+  }, [state.limitReached, state.nameRef]);
+  return ref;
+}
+
+function AddAlert({
+  state,
+  onShowBought,
+  limitRef,
+}: Omit<AddItemBarProps, "disabled"> & { limitRef: RefObject<HTMLDivElement | null> }) {
+  if (state.limitReached) {
+    return (
+      <InlineAlert ref={limitRef} tone="warning">
+        {messages.limit}
+      </InlineAlert>
+    );
+  }
   const bought = state.warning?.kind === "duplicate" && state.warning.bought;
   if (bought) {
     return (
