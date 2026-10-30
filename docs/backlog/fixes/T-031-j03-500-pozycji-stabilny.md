@@ -69,6 +69,15 @@ Inne wystąpienia: pozostałe wywołania API w `e2e/` (j01, j02, j04, j05) to po
 
 ## Prevention
 
+Co by zapobiegło: przygotowanie danych, które samo sprawdza statusy i czeka na stan ekranu, w jednym wspólnym miejscu zamiast w każdym spec.
+
+Przyjęte przez użytkownika (2026-10-30), oba:
+
+1. `addViaApi` przeniesiony do `apps/web/e2e/lists.ts` (wspólny helper: statusy 201, najwyżej 10 żądań naraz, czekanie na „N do kupienia”).
+2. `layers/web.md` „Pułapki” — dane E2E przez API: sprawdzone statusy, najwyżej 10 żądań naraz, czekanie na stan ekranu.
+
+Odrzucone: sprawdzanie statusu w ogólnym `api()` — część testów celowo oczekuje odmowy (np. limit zaproszeń w J-04).
+
 ## Incident note
 
 <Nie dotyczy.>

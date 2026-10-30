@@ -1,6 +1,5 @@
-import type { Page } from "@playwright/test";
 import { expect, expectNoAxeViolations, test } from "./fixtures";
-import { add, api, NAME, NOTE, openNewList } from "./lists";
+import { add, addViaApi, api, NAME, NOTE, openNewList } from "./lists";
 
 // J-03 (część T-006): dodanie, duplikat, edycja, usunięcie; skany axe stanów SC-06 (AC1–AC3, AC7, AC9).
 test("J-03 adds, blocks a duplicate, edits and deletes items", async ({ page }) => {
@@ -85,25 +84,6 @@ test("SC-06 shows that an item was deleted by someone else", async ({ page }) =>
   await sheet.getByRole("button", { name: "Zamknij" }).click();
   await expect(page.getByRole("button", { name: "Edytuj Chleb" })).toHaveCount(0);
 });
-
-// Nie więcej żądań naraz niż połączeń w puli API (10): zapisy i tak czekają na blokadę listy,
-// a nadmiar czeka na połączenie dłużej niż 3 s i dostaje 500 (T-031).
-const PARALLEL_ADDS = 10;
-
-/** `count` pozycji przez API, potem przeładowanie i czekanie, aż ekran pokaże wszystkie. */
-async function addViaApi(page: Page, listId: string, count: number) {
-  const url = `/api/v1/lists/${listId}/items`;
-  for (let start = 0; start < count; start += PARALLEL_ADDS) {
-    const responses = await Promise.all(
-      Array.from({ length: Math.min(PARALLEL_ADDS, count - start) }, (_, index) =>
-        api(page).post(url, { name: `Pozycja ${String(start + index)}` }),
-      ),
-    );
-    expect(responses.map((response) => response.status())).toEqual(responses.map(() => 201));
-  }
-  await page.reload();
-  await expect(page.getByText(`${String(count)} do kupienia`)).toBeVisible();
-}
 
 // AC5: limit 500 pozycji.
 test("SC-06 at 500 items shows the limit and disables the AddBar", async ({ page }) => {
