@@ -139,8 +139,8 @@ export function limitLogWindow(app: FastifyInstance, clock: Clock): void {
 }
 
 /**
- * TH-21: jedyne miejsce kształtu zdarzenia przekroczenia limitu (T-035): `limit` to klucz
- * stałej z `packages/shared/src/limits.ts`, `route` jest zawsze, `ids` tylko identyfikatory.
+ * TH-21: zdarzenie przekroczenia limitu (T-035) przez `securityEvent` (T-041): `limit` to klucz
+ * stałej z `packages/shared/src/limits.ts`, `ids` tylko identyfikatory.
  * `subject` — kto przekracza limit (okno `LimitLogWindow`): domyślnie identyfikatory, bez nich
  * adres IP; nie trafia do logu.
  */

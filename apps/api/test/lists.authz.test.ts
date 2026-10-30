@@ -96,13 +96,14 @@ describe("authorization of /api/v1/lists", () => {
     const logs = captureLogs();
     const { app, bartek, tomek, list } = await listOfAnia(logs);
 
-    await requestsAs(app, bartek)("GET", `/api/v1/lists/${list.id}`);
+    await requestsAs(app, bartek)("GET", `/api/v1/lists/${list.id}?x=1`);
     await requestsAs(app, tomek)("DELETE", `/api/v1/lists/${list.id}`);
 
     const denied = logs.security().filter((entry) => entry["event"] === "list_access_denied");
-    expect(denied.map((entry) => [entry["userId"], entry["listId"]])).toEqual([
-      [bartek.id, list.id],
-      [tomek.id, list.id],
+    // T-041: `route` to wzorzec trasy, nie surowy adres z identyfikatorem i query.
+    expect(denied.map((entry) => [entry["userId"], entry["listId"], entry["route"]])).toEqual([
+      [bartek.id, list.id, "/api/v1/lists/:listId"],
+      [tomek.id, list.id, "/api/v1/lists/:listId"],
     ]);
     for (const entry of denied) expect(typeof entry["requestId"]).toBe("string");
     expect(logs.lines.join("\n")).not.toContain("Lista Ani");
