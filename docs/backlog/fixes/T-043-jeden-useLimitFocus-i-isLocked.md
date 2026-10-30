@@ -4,7 +4,7 @@ title: "Jeden useLimitFocus w SC-06; stan zapisu na klucz z useGuardedMutation (
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07, F-08, F-11]
@@ -74,3 +74,26 @@ Ten sam wzorzec (stan na klucz obok `lockOf`): tylko SC-06 odhaczanie i SC-07 un
 ## Prevention
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Reproduce: `pnpm install --frozen-lockfile`, `pnpm test` (92 files, 510 tests pass), `pnpm typecheck`, `pnpm lint` (0 warnings), `pnpm format:check`, `pnpm quality` (0 dependency violations), `pnpm design-check` (0 hard-coded) - all green. E2E `j03-pozycje`, `j03-kupione`, `j04-zaproszenie` on telefon + komputer: 22 passed.
+
+Acceptance criteria:
+
+- AC1 pass - `ParticipantsScreen.test.tsx` "keeps both links saving while two revokes are held (T-043)" asserts `aria-disabled="true"` on both links, and on A after B returns. Spot-check: restoring `revoke.isPending && revoke.variables === link.id` makes it fail.
+- AC2 pass - `useGuardedMutation` returns `isLocked(key)` backed by state synced on `mutate` and `onSettled`; `useCheckItem` and SC-07 use it, own `Set` removed. Spot-check: `isSaving` → `false` fails "keeps the item in „Do kupienia” with a saving checkbox until the API answers".
+- AC3 pass - private `useLimitFocus` removed from `AddItemBar.tsx`; shared hook used with `formRef`; `web.md:89` points to `components/useFocus.ts`. Spot-check: dropping `formRef` fails 3 T-023 focus tests (add, live, API 409).
+- AC4 pass - full suite and E2E J-03/J-04 green.
+
+Exploratory: temporary test (removed) - two held revokes, A answers 500: A leaves the saving state and can be retried, B stays `aria-disabled` until its response. Root cause section explains why T-020 tests missed it (request count only). Red evidence recorded.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | tests | No committed test for the error path of one of two parallel locked saves (QA plan edge case); verified only by a temporary QA test. | QA exploratory test above | A regression test for release of one key on error while another stays locked |
+| 2 | note | tests | SC-06 has no test that two parallel item checks both show the saving checkbox (only the single-item case asserts `isSaving`). | `ListScreen.check.test.tsx:72,110` | Optional: AC1-style test for SC-06 |
+| 3 | note | docs | `## Prevention` section still empty. | task file | Fill in after QA (as in T-042) |
+
+`git status` clean after spot-checks and the temporary test.
