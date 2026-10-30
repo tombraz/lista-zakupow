@@ -314,6 +314,66 @@ describe("SC-07 invitations of the owner", () => {
     });
   });
 
+  // T-025: „Utwórz link” dostaje `disabled` przy limicie, więc fokus z niego spadłby na `body`.
+  describe("focus at the limit of 20 participants (T-025)", () => {
+    const LIMIT = "Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę.";
+    const twenty = Array.from({ length: 20 }, (_, index) => ({
+      id: `u-${String(index)}`,
+      name: `Osoba ${String(index)}`,
+    }));
+
+    it("moves focus to the limit warning when creating a link is refused (409)", async () => {
+      const { user, list } = await showParticipants();
+      server.use(
+        http.post(`*/api/v1/lists/${list.id}/invitations`, () => {
+          server.use(
+            http.get(`*/api/v1/lists/${list.id}`, () =>
+              HttpResponse.json(detailsOf({ ...list, members: twenty })),
+            ),
+          );
+          return apiError(409, { code: "limit_reached", limit: "participants" });
+        }),
+      );
+
+      await user.click(
+        invitationsSection().getByRole("button", { name: "Utwórz link zaproszenia" }),
+      );
+
+      const limit = await screen.findByText(LIMIT);
+      await waitFor(() => {
+        expect(limit.closest('[role="status"]')).toHaveFocus();
+      });
+    });
+
+    it("keeps focus off body after revoking a link on a full list", async () => {
+      const link = anInvitation("a");
+      const { user, list, links } = await showParticipants({
+        links: [link],
+        list: { members: twenty },
+      });
+      server.use(
+        http.delete(`*/api/v1/lists/${list.id}/invitations/${link.id}`, () => {
+          links.current = [];
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      await user.click(await invitationsSection().findByRole("button", { name: "Unieważnij" }));
+
+      await waitFor(() => {
+        expect(linkBoxes()).toHaveLength(0);
+      });
+      expect(screen.getByText(LIMIT).closest('[role="status"]')).toHaveFocus();
+    });
+
+    it("leaves focus on the heading when the list is already full on entry", async () => {
+      await showParticipants({ list: { members: twenty } });
+
+      await screen.findByText(LIMIT);
+      expect(screen.getByRole("heading", { level: 1, name: "Uczestnicy" })).toHaveFocus();
+    });
+  });
+
   it("says the participants did not load and loads them again on request", async () => {
     const user = userEvent.setup();
     const list = aList({ name: "Dom" });

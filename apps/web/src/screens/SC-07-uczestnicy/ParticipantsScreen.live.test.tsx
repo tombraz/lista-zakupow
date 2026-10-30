@@ -70,6 +70,48 @@ describe("SC-07 live changes", () => {
     expect(invitations().getAllByRole("group")).toHaveLength(1);
   });
 
+  // T-025: 20. uczestnik wyłącza „Utwórz link”; fokus z przycisku przechodzi na ostrzeżenie,
+  // fokus w innym miejscu ekranu zostaje.
+  describe("20th participant joins (T-025)", () => {
+    const LIMIT = "Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę.";
+    const people = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({ id: `u-${String(index)}`, name: "X" }));
+
+    it("moves focus from „Utwórz link” to the limit warning", async () => {
+      const list = aList({ name: "Dom", members: people(19) });
+      const { live, state } = await showParticipants(list);
+      await screen.findByRole("region", { name: "Zaproszenia" });
+      const create = await invitations().findByRole("button", { name: "Utwórz link zaproszenia" });
+      create.focus();
+
+      state.list = { ...list, members: people(20) };
+      act(() => {
+        live.send({ type: "members.changed", listId: list.id });
+      });
+
+      const limit = await screen.findByText(LIMIT);
+      await waitFor(() => {
+        expect(limit.closest('[role="status"]')).toHaveFocus();
+      });
+    });
+
+    it("leaves focus elsewhere on the screen where it is", async () => {
+      const list = aList({ name: "Dom", members: people(19) });
+      const { live, state } = await showParticipants(list, [LINK]);
+      await screen.findByRole("region", { name: "Zaproszenia" });
+      const copy = await invitations().findByRole("button", { name: "Kopiuj" });
+      copy.focus();
+
+      state.list = { ...list, members: people(20) };
+      act(() => {
+        live.send({ type: "members.changed", listId: list.id });
+      });
+
+      await screen.findByText(LIMIT);
+      expect(copy).toHaveFocus();
+    });
+  });
+
   it("returns a participant to „Moje listy” when the owner deletes the list", async () => {
     const list = aList({ name: "Dom", role: "participant", owner: TOMEK });
     const { live } = await showParticipants(list);

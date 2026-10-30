@@ -4,12 +4,13 @@ import { useFocusRequest } from "../../components/useFocus";
 
 /**
  * Formularz nowej listy w miejscu przycisku (SC-05): otwarcie, powrót fokusu po „Anuluj” / Esc
- * i limit 50 własnych list (F-05) — z przeglądu albo z odpowiedzi 409 API.
+ * i limit 50 własnych list (F-05) — z przeglądu albo z odpowiedzi 409 API. Odmowa API trwa do
+ * następnego stanu list z serwera; potem decyduje liczba własnych list (T-025).
  */
 export function useNewList(lists: ListSummary[] | undefined) {
   const [open, setOpen] = useState(false);
   const [focus, requestFocus] = useFocusRequest<"trigger">();
-  const [refusedByApi, setRefusedByApi] = useState(false);
+  const [refusedFor, setRefusedFor] = useState<ListSummary[]>();
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function useNewList(lists: ListSummary[] | undefined) {
   }, [focus]);
 
   const ownLists = lists?.filter((list) => list.role === "owner").length ?? 0;
+  const refusedByApi = refusedFor !== undefined && refusedFor === lists;
   const limitReached = refusedByApi || ownLists >= BUSINESS_LIMITS.listsPerOwner;
 
   return {
@@ -31,7 +33,7 @@ export function useNewList(lists: ListSummary[] | undefined) {
       requestFocus("trigger");
     },
     refusedByLimit: () => {
-      setRefusedByApi(true);
+      setRefusedFor(lists);
       setOpen(false);
     },
   };

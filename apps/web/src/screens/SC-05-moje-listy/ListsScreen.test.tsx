@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
@@ -267,6 +267,33 @@ describe("SC-05 Moje listy", () => {
 
       expect(await screen.findByText(LIMIT)).toBeVisible();
       expect(screen.getByRole("button", { name: "+ Nowa lista" })).toBeDisabled();
+    });
+
+    // T-025: odmowa zamyka formularz z fokusem, a „+ Nowa lista” wraca jako `disabled`.
+    it("moves focus to the limit warning when a new list is refused (409)", async () => {
+      const user = userEvent.setup();
+      listsAre([aList({ name: "Dom" })]);
+      server.use(
+        http.post("*/api/v1/lists", () => apiError(409, { code: "limit_reached", limit: "lists" })),
+      );
+      renderApp("/listy");
+      await user.click(await screen.findByRole("button", { name: "+ Nowa lista" }));
+
+      await user.type(screen.getByRole("textbox", { name: "Nazwa listy" }), "Zakupy{Enter}");
+
+      const limit = await screen.findByText(LIMIT);
+      await waitFor(() => {
+        expect(limit.closest('[role="status"]')).toHaveFocus();
+      });
+    });
+
+    it("leaves focus on the heading when the lists load already at the limit (T-025)", async () => {
+      listsAre(Array.from({ length: 50 }, () => aList()));
+
+      renderApp("/listy");
+
+      await screen.findByText(LIMIT);
+      expect(screen.getByRole("heading", { level: 1, name: "Moje listy" })).toHaveFocus();
     });
   });
 });

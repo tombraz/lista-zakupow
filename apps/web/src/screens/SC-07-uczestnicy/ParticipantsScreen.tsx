@@ -9,6 +9,7 @@ import { InviteLinkBox } from "../../components/InviteLinkBox/InviteLinkBox";
 import { LoadError } from "../../components/LoadError/LoadError";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { Toast, useToast } from "../../components/Toast/Toast";
+import { useLimitFocus } from "../../components/useFocus";
 import { useList } from "../../lists/useList";
 import { useLiveList } from "../../live/useLiveList";
 import { createErrorText, messages, revokeErrorText } from "./messages";
@@ -94,14 +95,16 @@ function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }
   const [focusCopyOf, setFocusCopyOf] = useState<string>();
   const [announcement, setAnnouncement] = useState("");
   const toast = useToast();
+  const full = list.members.length >= BUSINESS_LIMITS.participantsPerList;
+  // Pełna lista wyłącza „Utwórz link”, więc fokus idzie na ostrzeżenie (T-025).
+  const limitRef = useLimitFocus(full, createRef);
   const changes = useInvitationChanges(list.id, {
     onCreated: setFocusCopyOf,
     onRevoked: () => {
       setAnnouncement(messages.revoked);
-      createRef.current?.focus();
+      (full ? limitRef : createRef).current?.focus();
     },
   });
-  const full = list.members.length >= BUSINESS_LIMITS.participantsPerList;
   const { failure } = changes;
 
   const copy = async (url: string) => {
@@ -115,7 +118,11 @@ function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }
       <h2 id="invites-heading" className={styles.heading}>
         {messages.invites}
       </h2>
-      {full && <InlineAlert tone="warning">{messages.limit}</InlineAlert>}
+      {full && (
+        <InlineAlert ref={limitRef} tone="warning">
+          {messages.limit}
+        </InlineAlert>
+      )}
       {failure && (
         <InlineAlert tone="error">
           {failure.action === "create"

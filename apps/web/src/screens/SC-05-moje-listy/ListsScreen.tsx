@@ -6,6 +6,7 @@ import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { ListCard } from "../../components/ListCard/ListCard";
 import { LoadError } from "../../components/LoadError/LoadError";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
+import { useLimitFocus } from "../../components/useFocus";
 import { useLists } from "../../lists/useLists";
 import type { RemovedListState } from "../../live/useLiveList";
 import { useNewListAnnouncement } from "./useNewListAnnouncement";
@@ -18,6 +19,8 @@ export function ListsScreen() {
   const lists = useLists();
   const newList = useNewList(lists.data);
   const announcement = useNewListAnnouncement(lists.data);
+  // Limit wyłącza „+ Nowa lista”, więc fokus idzie na ostrzeżenie (T-025).
+  const limitRef = useLimitFocus(newList.limitReached, newList.triggerRef);
 
   const trigger = (label: string) =>
     newList.open ? (
@@ -57,7 +60,11 @@ export function ListsScreen() {
                 </li>
               ))}
             </ul>
-            {newList.limitReached && <InlineAlert tone="warning">{messages.limit}</InlineAlert>}
+            {newList.limitReached && (
+              <InlineAlert ref={limitRef} tone="warning">
+                {messages.limit}
+              </InlineAlert>
+            )}
             {trigger(messages.new.open)}
           </>
         )}
