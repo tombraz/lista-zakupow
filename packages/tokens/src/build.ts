@@ -10,9 +10,21 @@ export async function buildTokens({ source, outDir }: BuildTokensOptions): Promi
   const dictionary = new StyleDictionary({
     source: [source],
     log: { verbosity: "silent" },
+    hooks: {
+      transforms: {
+        // Rozmiary tekstu w rem, żeby szły za rozmiarem tekstu przeglądarki (design-system.md, WCAG 1.4.4).
+        "typography-size/pxToRem": {
+          type: "value",
+          filter: (token) => token.path[0] === "typography" && token.path[1] === "size",
+          transform: (token) =>
+            `${String(parseFloat(String(token.$value ?? token.value)) / 16)}rem`,
+        },
+      },
+    },
     platforms: {
       css: {
         transformGroup: "css",
+        transforms: ["typography-size/pxToRem"],
         buildPath: `${outDir}/`,
         files: [{ destination: "tokens.css", format: "css/variables" }],
       },

@@ -28,12 +28,19 @@ describe("buildTokens (AC8)", () => {
     expect(css).toContain("--color-text-primary: #0f172a;");
     expect(css).toContain("--color-surface-brand: #0b4fbf;");
     expect(css).toContain("--spacing-lg: 16px;");
-    expect(css).toContain("--typography-size-body: 16px;");
     expect(css).toContain("--size-target-min: 48px;");
+  });
+
+  it("writes typography sizes in rem so they follow the browser text size (T-016 AC1)", () => {
+    const sizes = [...css.matchAll(/--typography-size-[\w-]+: ([^;]+);/g)].map((m) => m[1]);
+    expect(sizes).toEqual(["1.5rem", "1.25rem", "1.125rem", "1rem", "0.875rem"]);
+    expect(css).toContain("--typography-size-body: 1rem;");
+    expect(css).toContain("--spacing-lg: 16px;");
   });
 
   it("writes TypeScript constants for mobile with the same values", () => {
     expect(ts).toContain('export const ColorTextPrimary = "#0f172a";');
     expect(ts).toContain('export const SpacingLg = "16px";');
+    expect(ts).toContain('export const TypographySizeBody = "16px";');
   });
 });
