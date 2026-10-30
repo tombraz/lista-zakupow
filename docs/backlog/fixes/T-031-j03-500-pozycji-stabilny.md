@@ -4,7 +4,7 @@ title: "E2E j03 „500th item” czeka na pełną listę; plik zgodny z Prettier
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07]
@@ -53,9 +53,19 @@ related_tasks: [T-006, T-023]
 
 ## Root cause
 
-<Wypełnia /fix.>
+Nie opóźnienie ekranu: AddBar włącza się dopiero po jednym `GET` listy ze wszystkimi pozycjami, więc „497 do kupienia” znaczy, że na serwerze było mniej pozycji. `addViaApi` wysyłał po 50 `POST` naraz i nie sprawdzał odpowiedzi. API ma pulę 10 połączeń z limitem czekania 3 s (`db/pool.ts`), a zapisy pozycji idą po kolei przez blokadę listy (`lockList`). Część żądań czeka na połączenie zbyt długo i dostaje `500 internal`, którego test nie widział. Lokalnie najwolniejsze żądanie w paczce 50 trwało ~4,4 s, czyli blisko progu. Na obciążonej maszynie (QA) kilka żądań przekracza próg. Przyczynę 500 (czekanie na pulę) wywnioskowano z konfiguracji, bo log API nie trafia do wyjścia Playwright. Samo 500 pod obciążeniem jest potwierdzone.
+
+Dlaczego testy tego nie złapały: przygotowanie danych nie sprawdzało statusów, a czekanie na `toBeEnabled()` nie sprawdzało liczby pozycji, więc błąd przygotowania wyglądał jak błąd fokusu.
+
+Poprawka (tylko test): `addViaApi` wysyła najwyżej 10 żądań naraz (rozmiar puli; zapisy i tak są szeregowane blokadą, więc czas bez zmian: 7,8 → 8,2 min dla 10 przebiegów), wymaga `201` od każdego i po przeładowaniu czeka na „N do kupienia”. Format zgodny z Prettierem.
+
+Inne wystąpienia: pozostałe wywołania API w `e2e/` (j01, j02, j04, j05) to pojedyncze żądania po kolei, bez obciążenia, po których asercje UI padają jawnie. To nie ta sama przyczyna, więc bez zmian. Zachowanie API (500 zamiast czekania przy >10 równoległych zapisach do jednej listy) nie jest zmieniane: w produkcji jedna lista nie dostaje dziesiątek zapisów naraz (F-07). Do rozważenia przy pracy nad wydajnością.
 
 ## Evidence
+
+- Red (AC2): `prettier --check apps/web/e2e/j03-pozycje.spec.ts` → „Code style issues found”.
+- Red (AC1): niestabilności nie udało się odtworzyć powtórzeniami. `pnpm test:e2e -g T-023 --repeat-each 5` przed poprawką: 10/10 zielonych (7,8 min). Mechanizm odtworzono doraźnym spec (usunięty): 499 `POST` po 50 naraz → wszystkie 201, najwolniejsze 4,2–4,5 s. Po 150 naraz → 242× 201, 257× `500 {"error":{"code":"internal"}}`, a test tego nie widzi. Z nową asercją statusów i paczką 150 test T-023 pada już w `addViaApi` (`expect(received).toEqual(expected)`: statusy ≠ 201), nie na fokusie.
+- Green: `pnpm test:e2e -g T-023 --repeat-each 5` → 10 passed (telefon 5, komputer 5; 8,2 min). `format:check`, `lint`, `typecheck`, `quality`, `design-check` → OK. Zmiana dotyczy tylko `e2e/`, więc `pnpm test` (Vitest) jej nie obejmuje. Cały `j03-pozycje.spec.ts` (oba projekty): 10 passed (5,1 min).
 
 ## Prevention
 
