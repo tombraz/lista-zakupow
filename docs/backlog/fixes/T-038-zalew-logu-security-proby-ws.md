@@ -60,7 +60,7 @@ Poprawka: `LimitLogWindow` (wspólny dla trasy, zegar `Clock` z `app.ts`) przepu
 **Poza zakresem / inne wystąpienia:**
 
 - Koszt próby (zapytanie o sesję w `preValidation` przy każdym upgradzie) zostaje — poprawka ogranicza log, nie liczbę upgrade'ów. Limit upgrade'ów na IP / sesję to osobna decyzja (TH-25).
-- Ten sam wzorzec w HTTP: `perIp` (`http/rate-limit.ts`) i most Better Auth (`auth-routes.ts`) zapisują `rate_limited` przy każdej odpowiedzi 429, więc zalew 429 z jednego IP to linia logu na żądanie. Inna warstwa (`http`, klucz IP, nie sesja) — propozycja osobnego taska, nie naprawione tutaj.
+- Ten sam wzorzec w HTTP: `perIp` (`http/rate-limit.ts`) i most Better Auth (`auth-routes.ts`) zapisują `rate_limited` przy każdej odpowiedzi 429, więc zalew 429 z jednego IP to linia logu na żądanie. Inna warstwa (`http`, klucz IP, nie sesja) — osobny task T-040, nie naprawione tutaj.
 
 ## Evidence
 
@@ -70,6 +70,11 @@ Poprawka: `LimitLogWindow` (wspólny dla trasy, zegar `Clock` z `app.ts`) przepu
 - Regresja: istniejące testy T-033 / T-035 / T-037 (dokładnie jedno zdarzenie przy pierwszym przekroczeniu) i tabela `limits.security.test.ts` zielone bez zmian asercji.
 
 ## Prevention
+
+Co by zapobiegło: test limitu, który powtarza przekroczenie (N prób), a nie tylko jedno — wszystkie testy limitów T-033 / T-037 sprawdzały wpis po jednej próbie, więc liniowy przyrost logu był niewidoczny. Propozycja (czeka na decyzję użytkownika):
+
+1. Test automatyczny w tabeli `limits.security.test.ts`: każdy scenariusz przekracza limit dwa razy (albo N razy) i sprawdza nadal jedno zdarzenie — gryzie każdy nowy limit bez deduplikacji (dziś czerwony dla limitów HTTP z T-040, więc wejdzie razem z T-040).
+2. Wpis w „Pułapkach” `docs/architecture/layers/backend.md`: zdarzenie limitu raz na podmiot i limit w oknie, nie raz na żądanie / połączenie.
 
 ## Incident note
 
