@@ -76,7 +76,10 @@ Inne wystąpienia: brak. Po T-027 i T-033 każdy limit z `RATE_LIMITS`, `BUSINES
 
 ## Prevention
 
-<Propozycja po QA.>
+Co by zapobiegło: test, który przy każdym limicie sprawdza wpis w logu `security`, nie tylko status lub kod zamknięcia. Ten sam błąd wyszedł dwa razy z rzędu (T-027, T-033), więc notatka nie wystarczy.
+
+- Przyjęte (2026-10-30): wpis w „Pułapkach” `docs/architecture/layers/backend.md` — dopisany.
+- Przyjęte (2026-10-30): automatyczny test „każdy limit ma test zdarzenia w logu `security`” jako osobne zadanie T-034 (razem z limitem treści 16 kB, 413).
 
 ## Incident note
 
