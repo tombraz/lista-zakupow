@@ -4,7 +4,7 @@ title: "Fokus nie spada na body przy limicie list (SC-05) i uczestników (SC-07)
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05, F-12, N-04]
@@ -110,3 +110,24 @@ Verdict: fail
 **Root cause / prevention:** sekcja wyjaśnia, dlaczego testy nie wyłapały błędu (tylko `toBeDisabled()`). Testy nr 1, 2, 4, 6, 7 i 9 padają bez poprawki (spot-check). Strażniki 3, 5 i 8 przechodzą zgodnie z opisem.
 
 **Do zmiany:** finding 1, czyli blokada po 409 musi wygasać po spadku liczby list na serwerze także wtedy, gdy ekran nie dostał zdarzenia o utworzeniu 50. listy. Do tego test odwzorowujący prawdziwą sekwencję. Opcjonalnie finding 2.
+
+## QA round 2 (2026-10-30)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | AC4 / SC-05 | Wąskie okno wyścigu: jeśli 50. lista zostanie usunięta, zanim przyjdzie odpowiedź na odświeżenie wywołane przez 409, `GET` zwraca te same 49 list. Structural sharing zachowuje wtedy referencję i blokada trwa do następnej zmiany list (np. kolejnego `lists.changed` albo refetchu po powrocie do okna). | Przegląd kodu: `useNewList.ts` (`refusedFor === lists`), `NewListForm.tsx` (`invalidateQueries` przy 409). | Do rozważenia: blokada po odmowie wygasa także, gdy odświeżenie po 409 przyniesie mniej niż 50 własnych list. |
+| 2 | note | E2E / T-023 | `j03-pozycje.spec.ts` › „SC-06 adding the 500th item moves focus to the limit warning (T-023)” jest niestabilny: test wpisuje pozycję, gdy ekran ma 497 z 499 pozycji (`toBeEnabled()` nie czeka na pełny stan). T-025 nie zmienia SC-06. | 1 z 3 uruchomień czerwone; w `error-context` widać „497 do kupienia”. | Osobna poprawka testu: przed wpisaniem czekać na 499 pozycji. |
+| 3 | note | CI | `pnpm format:check` nadal pada na `apps/web/e2e/j03-pozycje.spec.ts` (z rundy 1, #4). | Jak w rundzie 1. | Osobna poprawka formatowania. |
+
+**Reprodukcja (QA):** `pnpm install --frozen-lockfile`, `pnpm services:up`, `pnpm test`: 91 plików, 460/460 zielonych. `typecheck`, `lint` (0 ostrzeżeń), `quality` (0 naruszeń), `design-check` (0 hard-coded) OK. Build web i api OK. `-t T-025` uruchamia 9 testów, wszystkie zielone (runda 1 #2 naprawione). E2E (komputer) J-02, J-04: zielone.
+
+**Kryteria:**
+- AC1: pass. Spot-check bez przenoszenia fokusu w `useLimitFocus` daje czerwone testy 1, 2, 6, 7.
+- AC2: pass. Test 4 jest zielony (sprawdzone też w rundzie 1 spot-checkiem `onRevoked`).
+- AC3: pass. Prawdziwy Chrome: po prawdziwym 409 `document.activeElement` to `DIV[role=status]` „Masz już 50 list — to limit…”.
+- AC4: pass (runda 1 #1 naprawione). Doraźny spec Playwright (usunięty po teście) odtwarza sekwencję z rundy 1: 49 list, otwarty formularz, 50. lista przez API bez zdarzenia na żywo, Enter → 409. Ekran pokazuje 50 list i wyłączony przycisk. `DELETE` 50. listy → 204, potem ekran ma 49 list, „+ Nowa lista” jest aktywny, a ostrzeżenie znika. Test 9 nie wysyła już sztucznego `lists.changed`. Spot-check bez `invalidateQueries` przy 409 daje czerwony test 9.
+- AC5: pass. Pełny zestaw i E2E J-02, J-04 zielone. Testy T-023 i T-015 w zestawie komponentów zielone. Jedyna czerwień E2E SC-06 to niestabilny test (#2), niezwiązany ze zmianą.
+
+**Root cause / prevention:** sekcja wyjaśnia, dlaczego testy nie wyłapały błędu, i opisuje poprawkę z rundy 1. Testy padają bez poprawki (spot-checki powyżej i z rundy 1).
