@@ -37,7 +37,7 @@ related_tasks: [T-033, T-035]
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
 | 1 | `frees a slot when the closing handshake ends, before TCP closes` — klient `closeWithoutFin` (`test/live.ts`) kończy zamknięcie WS, ale nie wysyła FIN, więc serwer nie emituje `close` (utrwalone okno wyścigu) | integracja | Vitest + Testcontainers | AC1 |
-| 2 | `frees a slot when a connection closes` powtórzony 30× | integracja | Vitest + Testcontainers | AC1 |
+| 2 | `frees a slot when a connection closes` powtórzony 30× ręcznie (`-t "frees a slot"`), bez pętli w kodzie: test #1 utrwala wyścig deterministycznie | integracja | Vitest + Testcontainers | AC1 |
 
 **Run:** `pnpm vitest run --project api live.limits`
 
@@ -60,6 +60,8 @@ Poprawka: `LiveConnection.open` (`WsConnection`: `readyState === OPEN`); `attach
 - `pnpm test` 92 pliki / 493 testy zielone; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm --filter @lista/api build` OK.
 
 ## Prevention
+
+Co by zapobiegło: wiedza, że `close` serwera w `ws` przychodzi dopiero po TCP, i test deterministyczny okna zamykania zamiast testu, który czeka na `close` klienta. Reguła lint nie jest wykonalna (zależność od semantyki zdarzeń biblioteki). Przyjęte przez użytkownika: wpis w „Pułapkach” `docs/architecture/layers/backend.md`; pomocnik `closeWithoutFin` zostaje w `test/live.ts` do kolejnych testów. Luka TH-25 z QA rundy 1 (uwaga 3) → T-037.
 
 ## Incident note
 
