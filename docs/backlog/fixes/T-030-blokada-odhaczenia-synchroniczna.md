@@ -4,7 +4,7 @@ title: "Blokada podwójnego odhaczenia przez useGuardedMutation z lockOf; test, 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-08]
@@ -43,8 +43,8 @@ related_tasks: [T-007, T-020]
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | `ignores a second click on the same item before re-render (one request)` (czerwony po usunięciu blokady) | komponent | Vitest + RTL + MSW | AC1 |
-| 2 | `checks two different items in quick succession` | komponent | Vitest + RTL + MSW | AC2 |
+| 1 | `ignores a second click on the same item before re-render (one request, T-030)` (czerwony bez blokady synchronicznej) | komponent | Vitest + RTL + MSW | AC1 |
+| 2 | `checks two different items in quick succession (T-030)` (czerwony przy blokadzie bez `lockOf`) | komponent | Vitest + RTL + MSW | AC2 |
 
 **Run:** `pnpm vitest run --project web ListScreen.check` i `pnpm lint`
 
@@ -56,9 +56,19 @@ related_tasks: [T-007, T-020]
 
 ## Root cause
 
-<Wypełnia /fix.>
+`useCheckItem` (T-007) blokował drugie odhaczenie przez `saving` w `useState`, a T-020 zostawił go jako wyjątek od lintu, bo `useGuardedMutation` nie miał jeszcze `lockOf`. Stan z `useState` widać dopiero po przerysowaniu, więc dwa kliknięcia w jednym przebiegu React (bez przerysowania między nimi) wysyłały dwa `PATCH`. Istniejący test tego nie złapał z dwóch powodów: `await user.click` daje czas na przerysowanie, a `setSaving` przed `mutate` sprawia, że nawet `fireEvent.click` ×2 przerysowuje `ItemRow` (stan „zapisywanie” ignoruje kliknięcia, `ItemRow.tsx:73`) — test przechodził także bez blokady w hooku.
+
+Poprawka: `useGuardedMutation` z `lockOf: ({ itemId }) => itemId`; `setFailure` / `setSaving` w `onMutate` (tylko gdy zapis naprawdę rusza, jak w SC-07). Wyjątek `eslint-disable` usunięty; `layers/web.md` „Pułapki” bez wyjątku, z opisem testu w jednym `act`.
+
+Inne wystąpienia: brak — `grep "eslint-disable.*no-restricted-imports" apps/web/src` jest pusty, wszystkie zapisy idą przez `useGuardedMutation`.
+
+Znalezisko poza zakresem (istniało przed zmianą): przy szybkim odhaczeniu dwóch sąsiednich pozycji cel fokusu drugiej (liczony w chwili kliknięcia, `neighbourOf`) to pierwsza, która już jest w zwiniętym „Kupione” — fokus nigdzie nie trafia (w przeglądarce spada na `body`, WCAG 2.4.3). Test #2 nie sprawdza fokusu z tego powodu. Propozycja osobnego zadania.
 
 ## Evidence
+
+- Czerwone przed poprawką: #1 `expected [ { …(2) }, { …(2) } ] to deeply equal [ { …(2) } ]` (dwa `PATCH` tej samej pozycji; kliknięcia w jednym `act`). Wariant z samym `fireEvent.click` ×2 (bez wspólnego `act`) przechodził także po usunięciu `if (saving.has(item.id)) return;` — potwierdza raport.
+- #2 czerwony, gdy `useGuardedMutation` bez `lockOf` (blokada wspólna): `Tests 1 failed | 10 passed`.
+- Po poprawce: `ListScreen.check` 11/11 (3 przebiegi); web + tokens 26 plików / 229 testów; `pnpm test` 92 pliki / 498 testów; `pnpm lint`, `pnpm typecheck`, Prettier, `pnpm quality`, `pnpm design-check` czyste; build web OK. E2E nie uruchamiane (zmiana w hooku, pokryta testami komponentu; J-03 bez zmian w zachowaniu).
 
 ## Prevention
 

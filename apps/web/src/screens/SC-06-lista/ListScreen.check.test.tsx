@@ -1,5 +1,5 @@
 import type { Item, ListSummary } from "@lista/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -88,19 +88,47 @@ describe("SC-06 checking an item", () => {
     expect(requests).toEqual([{ itemId: items[1]?.id, checked: true }]);
   });
 
-  it("ignores more clicks while saving (one request)", async () => {
+  it("ignores a second click on the same item before re-render (one request, T-030)", async () => {
     const items = shopping();
-    const { user, list } = await showList(items);
+    const { list } = await showList(items);
     const response = heldResponse();
     const requests = withFullItems(list, items, response);
 
+    // Oba kliknięcia w jednym `act`: React przerysowuje dopiero po nim, więc nie chroni ani stan
+    // „zapisywanie” w `ItemRow`, ani `useState` w hooku — tylko blokada synchroniczna.
     const checkbox = toBuy().getByRole("button", { name: "Odhacz Chleb" });
-    await user.click(checkbox);
-    await user.click(checkbox);
+    act(() => {
+      fireEvent.click(checkbox);
+      fireEvent.click(checkbox);
+    });
     response.release();
 
     await screen.findByText("2 do kupienia");
-    expect(requests).toHaveLength(1);
+    expect(requests).toEqual([{ itemId: items[1]?.id, checked: true }]);
+  });
+
+  it("checks two different items in quick succession (T-030)", async () => {
+    const items = shopping();
+    const { list } = await showList(items);
+    const response = heldResponse();
+    const requests = withFullItems(list, items, response);
+
+    fireEvent.click(toBuy().getByRole("button", { name: "Odhacz Chleb" }));
+    fireEvent.click(toBuy().getByRole("button", { name: "Odhacz Mleko" }));
+    response.release();
+
+    await screen.findByText("1 do kupienia");
+    // Kolejność odbioru w MSW nie jest gwarantowana (asynchroniczne `request.json()`).
+    expect(requests).toHaveLength(2);
+    expect(requests).toEqual(
+      expect.arrayContaining([
+        { itemId: items[1]?.id, checked: true },
+        { itemId: items[2]?.id, checked: true },
+      ]),
+    );
+    expect(boughtToggle()).toHaveAccessibleName("Kupione (2)");
+    // Ogłoszenie ostatniej odpowiedzi; kolejność odpowiedzi jak wyżej.
+    expect(screen.getByText(/^Odhaczono (Chleb|Mleko)$/)).toBeInTheDocument();
   });
 
   it("moves the checked item to the collapsed „Kupione (1)”, struck through and signed", async () => {

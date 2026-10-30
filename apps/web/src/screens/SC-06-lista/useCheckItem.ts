@@ -1,9 +1,9 @@
 import type { Item } from "@lista/shared";
-// eslint-disable-next-line no-restricted-imports -- T-020: blokada na pozycję (`saving`); różne pozycje odhaczane naraz.
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { checkItem } from "../../api/items";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 import { listKey } from "../../lists/useList";
 import { replaceItem } from "./itemsCache";
 import { messages } from "./messages";
@@ -54,21 +54,26 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
 
   // Wywołania zwrotne hooka, nie `mutate`: te drugie dostaje tylko ostatnie z równoległych
   // odhaczeń różnych pozycji (TanStack Query).
-  const mutation = useMutation({
-    mutationFn: ({ itemId, checked }: Toggle) => checkItem(listId, itemId, checked),
-    onSuccess: (updated, toggled) => {
-      saved(updated, toggled);
+  const mutation = useGuardedMutation(
+    {
+      mutationFn: ({ itemId, checked }: Toggle) => checkItem(listId, itemId, checked),
+      onMutate: ({ itemId }) => {
+        setFailure(null);
+        setSaving((current) => new Set(current).add(itemId));
+      },
+      onSuccess: (updated, toggled) => {
+        saved(updated, toggled);
+      },
+      onError: failed,
+      onSettled: (_data, _error, { itemId }) => {
+        settle(itemId);
+      },
     },
-    onError: failed,
-    onSettled: (_data, _error, { itemId }) => {
-      settle(itemId);
-    },
-  });
+    // Różne pozycje można odhaczać naraz; tę samą tylko raz w czasie zapisu (T-030).
+    ({ itemId }) => itemId,
+  );
 
   const toggle = (item: Item) => {
-    if (saving.has(item.id)) return;
-    setFailure(null);
-    setSaving((current) => new Set(current).add(item.id));
     const checked = !item.checked;
     // Cel fokusu z kolejności w chwili kliknięcia: zdarzenie na żywo tej samej zmiany może
     // przenieść pozycję do „Kupione” przed odpowiedzią API (F-14).
