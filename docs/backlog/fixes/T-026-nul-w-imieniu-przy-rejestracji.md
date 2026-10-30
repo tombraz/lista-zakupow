@@ -4,7 +4,7 @@ title: "Imię z NUL przy rejestracji daje 400, nie 500"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: [F-01]
@@ -32,9 +32,9 @@ related_tasks: [T-004, T-005]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given rejestracja z imieniem zawierającym NUL, when API ją przyjmie, then odpowiada 400 `validation_failed` z `fields.name = "invalid"`, a konto nie powstaje. — verified by: test integracyjny `sign-up.test.ts`
-- [ ] AC2: Given to samo pole w SC-02, when użytkownik wyśle formularz, then przy polu jest komunikat błędu (walidacja klienta tym samym schematem). — verified by: test schematu w `packages/shared/test`
-- [ ] AC3: No regression in: J-01 (rejestracja), T-004.
+- [x] AC1: Given rejestracja z imieniem zawierającym NUL, when API ją przyjmie, then odpowiada 400 `validation_failed` z `fields.name = "invalid"`, a konto nie powstaje. — verified by: test integracyjny `sign-up.test.ts`
+- [x] AC2: Given to samo pole w SC-02, when użytkownik wyśle formularz, then przy polu jest komunikat błędu (walidacja klienta tym samym schematem). — verified by: test schematu w `packages/shared/test`
+- [x] AC3: No regression in: J-01 (rejestracja), T-004.
 
 ## TDD plan
 
@@ -76,3 +76,21 @@ Regresja: J-01 (rejestracja) i T-004 — pełne pliki `sign-up*.test.ts`, `accou
 ## Prevention
 
 ## Incident note
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Odtworzenie: `pnpm install --frozen-lockfile`, `pnpm test` (464/464 zielone, w tym Testcontainers), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd, depcruise) — bez błędów. `design-check --scan apps/web/src/screens/SC-02-rejestracja` — 0 wartości zakodowanych na sztywno.
+
+Kryteria:
+
+- AC1 — pass. `sign-up.test.ts` › `name with NUL (T-026)` sprawdza 400, `{ code: "validation_failed", fields: { name: "invalid" } }` i pustą tabelę `"user"` przez prawdziwy most HTTP i bazę. Spot-check: bez `.refine(withoutNul)` test czerwony `expected 500 to be 400` (błąd z raportu odtworzony, poprawka go usuwa).
+- AC2 — pass. `account.test.ts` sprawdza NUL na początku, w środku, na końcu i samo NUL; `SignUpScreen.test.tsx` sprawdza podsumowanie „Popraw 1 pole”, komunikat „Wpisz imię” powiązany z polem (`aria-describedby`) i brak żądania do API. Spot-check: bez `refine` czerwone testy schematu i ekranu; bez `name.invalid` w `messages.ts` czerwony test ekranu. Tekst „Wpisz imię” jest w tabeli stanów SC-02.
+- AC3 — pass. Pełne pliki `sign-up*.test.ts`, `account.test.ts`, `SignUpScreen.test.tsx` i cały zestaw zielone.
+
+Root cause: wyjaśnia, dlaczego testy nie złapały błędu (NUL sprawdzany tylko dla nazwy listy). Test reprodukujący bez poprawki jest czerwony (spot-check wyżej). TH-20: próba z NUL w imieniu przeciwko lokalnemu API (Testcontainers) daje teraz 400 i brak konta; żaden błąd bazy nie dociera do klienta.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | kod (duplikacja wiedzy) | Schemat `name` w `packages/shared/src/api/account.ts:17-22` jest teraz identyczny z `requiredName(NAME_MAX_LENGTH)` z `text.ts`; reguła „nazwa = trim, 1–max, bez NUL” jest zapisana dwa razy, a właśnie takie rozejście się kopii spowodowało ten błąd. | diff `c0b67db` | `const name = requiredName(NAME_MAX_LENGTH);` |
