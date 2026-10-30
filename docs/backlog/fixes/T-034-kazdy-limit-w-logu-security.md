@@ -4,7 +4,7 @@ title: "Test: każdy limit nadużyć ma sprawdzone zdarzenie w logu security (ta
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-033]
 layers: [backend]
 requirements: []
@@ -51,9 +51,22 @@ related_tasks: [T-027, T-033]
 
 ## Root cause
 
-<Wypełnia /fix.>
+Limit treści HTTP (`bodyLimit`, T-003/TH-13) zgłasza parser treści Fastify błędem `FST_ERR_CTP_BODY_TOO_LARGE` (413) jeszcze przed trasą. `apiErrors` (`http/api-error.ts`) przekazywał każdy błąd klienta z Fastify (`isClientError`) do domyślnego handlera, który nie zna kanału `security`; żadna z trzech ścieżek logu limitów (`DomainError` z `security`, `perIpRateLimit`, `limitLog` WS) tego limitu nie obejmuje. `body-limit.test.ts` sprawdzał tylko status 413, a nic nie wiązało listy limitów z testami logu — dlatego T-027 i T-033 znalazły luki dopiero w przeglądzie.
+
+Poprawka: `apiErrors` zapisuje `limit_reached` z `route` i `limit: "bodyBytes"` (bez treści) dla `FST_ERR_CTP_BODY_TOO_LARGE`, potem odpowiedź jak dotąd (413 z handlera Fastify). Nowy `test/limits.security.test.ts`: tabela klucz → scenariusz dla wszystkich kluczy `RATE_LIMITS`, `BUSINESS_LIMITS`, `LIVE_LIMITS` (typ `Record<AbuseLimit, Scenario>` + test w czasie wykonania), jawne wyłączenia `pingIntervalSeconds`, `pongTimeoutSeconds` z uzasadnieniem; każdy scenariusz przekracza limit dokładnie raz i wymaga dokładnie jednego zdarzenia `limit_reached` / `rate_limited` z `requestId`.
+
+AC3 — luki znalezione przez test pokrycia: brak. Wszystkie 12 limitów nadużyć ze stałych już logowało zdarzenie (także logowanie i rejestracja przez Better Auth: most `auth-routes.ts` loguje 429; `invitationsCreatedPerList`: `DomainError` z `security`). Uwaga (bez zmian w tym zadaniu): zdarzenia limitów per IP (`signInPerIp`, `signUpPerIp`, `healthReadyPerIp`, `invitationLookupPerIp`) i `invitationsCreatedPerList` nie mają pola `limit` — rozpoznaje je `route`; na trasie logowania `signInPerIp` i `signInFailuresPerAccount` dają w logu ten sam kształt (`rate_limited`, `accountKey`).
+
+Inne wystąpienia: limit treści wiadomości WS (`messageBytes`) ma już log (T-033); innych limitów poza stałymi i `bodyLimit` w kodzie nie ma.
 
 ## Evidence
+
+- Red (przed poprawką), `pnpm vitest run --project api body-limit`: `body-limit.test.ts` › `logs limit_reached when the request body exceeds 16 kB` → `AssertionError: expected [] to deeply equal [ ObjectContaining{…} ]`.
+- Test pokrycia `limits.security.test.ts`: 13 testów zielonych już przed poprawką (12 scenariuszy + test pokrycia) — żadnej luki w stałych. Spot-checki (cofnięte):
+  1. tymczasowy klucz `probnyLimit` w `RATE_LIMITS` → `every abuse limit has a security-log scenario` czerwony: `expected [ 'probnyLimit' ] to deeply equal []`, a `probnyLimit: …` → `Error: no security-log scenario for limit probnyLimit`;
+  2. usunięty log w `perIpRateLimit` → czerwone `healthReadyPerIp` i `invitationLookupPerIp`.
+- Green: `pnpm vitest run --project api body-limit limits.security` → 2 pliki / 16 testów passed; `pnpm test` → 92 pliki / 490 testów passed; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm quality` (0 klonów, 0 naruszeń depcruise), `pnpm build` bez błędów.
+- Regresja: `security-log.test.ts`, `body-limit.test.ts` (dotychczasowe 2 testy), `live.limits.test.ts`, `invitations.*`, `sign-in-rate-limit`, `sign-up-rate-limit` (T-027, T-033, J-01) — zielone w pełnym przebiegu.
 
 ## Prevention
 
