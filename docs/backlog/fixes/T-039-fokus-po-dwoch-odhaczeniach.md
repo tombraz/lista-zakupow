@@ -4,7 +4,7 @@ title: "Fokus spada na body po szybkim odhaczeniu dwóch sąsiednich pozycji"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-08]
@@ -65,3 +65,22 @@ Inne wystąpienia: brak — `checkboxFocus.focus({ itemId })` po „Pokaż w Kup
 ## Prevention
 
 ## Incident note
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Sprawdzone samodzielnie (świeży kontekst): `pnpm test` 92 pliki / 500 testów zielone; `pnpm vitest run --project web` 228/228; `pnpm typecheck`, `pnpm lint` czyste; `design-check --scan apps/web/src/screens/SC-06-lista` 0 wartości wpisanych na sztywno; E2E `j03` + `j05` (telefon i komputer) 16/16.
+
+Kryteria:
+- AC1 — **pass**. Testy `moves focus to a still unchecked item…` i `moves focus to „Kupione (3)”…` asertują fokus na „Odhacz Jajka” / „Kupione (3)” po zwolnieniu obu odpowiedzi. Spot-check: przywrócenie `useCheckItem.ts` i `useCheckboxFocus.ts` z `0bd7740~1` → oba testy czerwone (`Tests 2 failed | 11 passed`), po przywróceniu zielone, `git status` czysty. Dodatkowo tymczasowy test eksploracyjny (usunięty) z osobnym zwalnianiem odpowiedzi: kolejność Mleko→Chleb, Chleb→Mleko, ostatnia (Mleko) potem poprzednia (Chleb), trzy pozycje w mieszanej kolejności → za każdym razem fokus na „Odhacz Jajka” albo „Kupione (3)”; 4/4.
+- AC2 — **pass**. Istniejące testy fokusu po pojedynczym odhaczeniu (następna / poprzednia / „Kupione”), `ListScreen.live`, testy T-007 i T-030 zielone; E2E J-03 i J-05 zielone.
+
+Fix: czerwony dowód w „Evidence” obecny; „Root cause” wyjaśnia, czemu testy tego nie złapały (T-007 tylko pojedyncze odhaczenie, T-030 celowo bez fokusu).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | proces | Sekcja „Prevention” pusta, choć szablon `fix.md` jej wymaga. | `## Prevention` bez treści | Co by zapobiegło (np. reguła: test fokusu przy każdym teście zapisów równoległych) i co przyjął użytkownik. |
+| 2 | minor | nazewnictwo | `neighbourOf` zwraca teraz listę kandydatów, nie sąsiada; komentarz „bez nich sekcja Kupione” opisuje zachowanie `useCheckboxFocus`, nie tej funkcji. | `useCheckItem.ts`, `neighbourOf` | Nazwa zgodna z wynikiem, np. `focusCandidates`. |
+| 3 | note | zachowanie | Kandydaci są zamrożeni w chwili kliknięcia: pozycja dodana na żywo (F-14) po kliknięciu nie jest kandydatem, więc gdy wszyscy kandydaci zostaną odhaczeni, fokus trafi na „Kupione (N)”, choć na liście jest nowa nieodhaczona pozycja. | analiza `neighbourOf` / `firstUnchecked` | Rzadki przypadek; do decyzji, czy wybierać też spośród aktualnych nieodhaczonych. |
+| 4 | note | dostępność | Ręczne sprawdzenie czytnikiem ekranu i dotykiem na telefonie (QA plan) nie wykonane w trybie automatycznym; wyścig odpowiedzi trudny do odtworzenia ręcznie. Pokrycie: testy komponentu + E2E J-03/J-05. | — | Sprawdzić przy UAT E-01. |
