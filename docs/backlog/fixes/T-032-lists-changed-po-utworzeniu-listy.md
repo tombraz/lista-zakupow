@@ -4,7 +4,7 @@ title: "Utworzenie listy wysyła lists.changed do właściciela (inne karty i ur
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-05, F-14, N-06]
@@ -30,10 +30,10 @@ related_tasks: [T-003, T-005, T-009, T-025]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given właściciel z otwartym kanałem na żywo, when utworzy listę przez `POST /api/v1/lists`, then jego kanał użytkownika dostaje `lists.changed`. — verified by: test API (`app.inject` + klient WebSocket)
-- [ ] AC2: Given odmowa (409 `limit_reached`, 400 walidacji), when `POST /api/v1/lists`, then zdarzenie nie jest wysyłane. — verified by: test API
-- [ ] AC3: Given inny użytkownik z kanałem na żywo, when właściciel tworzy listę, then on nie dostaje zdarzenia (lista nie jest jeszcze udostępniona; TH-04). — verified by: test API
-- [ ] AC4: No regression in: J-02 (utworzenie listy), T-009 (zmiany na żywo), T-025 (SC-05 po 409).
+- [x] AC1: Given właściciel z otwartym kanałem na żywo, when utworzy listę przez `POST /api/v1/lists`, then jego kanał użytkownika dostaje `lists.changed`. — verified by: test API (`app.inject` + klient WebSocket)
+- [x] AC2: Given odmowa (409 `limit_reached`, 400 walidacji), when `POST /api/v1/lists`, then zdarzenie nie jest wysyłane. — verified by: test API
+- [x] AC3: Given inny użytkownik z kanałem na żywo, when właściciel tworzy listę, then on nie dostaje zdarzenia (lista nie jest jeszcze udostępniona; TH-04). — verified by: test API
+- [x] AC4: No regression in: J-02 (utworzenie listy), T-009 (zmiany na żywo), T-025 (SC-05 po 409).
 
 ## TDD plan
 
@@ -55,9 +55,17 @@ related_tasks: [T-003, T-005, T-009, T-025]
 
 ## Root cause
 
-<Wypełnia /fix.>
+`POST /api/v1/lists` powstał w T-005, zanim istniał kanał na żywo; T-009 dopisał `lists.changed` do tras, które zmieniają **istniejące** listy (PATCH, DELETE, pozycje, przyjęcie zaproszenia), a tworzenie pominął. Testy T-009 (`live.lists.test.ts`) obejmowały tylko zmianę nazwy, usunięcie i zaproszenia — nie było przypadku „własna akcja w jednej karcie, druga karta tego samego konta”, a test SC-05 na żywo podstawia zdarzenie zamiast sprawdzać, kiedy API je wysyła.
+
+Inne wystąpienia: brak. Wszystkie pozostałe trasy, które zmieniają zawartość SC-05 (`listy` PATCH/DELETE, `pozycje/http/item-events.ts`, `zaproszenia/http/invitation-events.ts`), już wysyłają `lists.changed`; utworzenie i odwołanie zaproszenia nie zmieniają SC-05.
+
+Poprawka: `live.notify([user.id], { type: "lists.changed" })` po `createList` — świeża lista ma tylko właściciela, więc bez zapytania o osoby z dostępem. Web nie wymaga zmian: `LiveProvider` odświeża SC-05 na `lists.changed`, a `useNewListAnnouncement` ogłasza tylko listy z rolą `participant`, więc własna karta nie ogłasza nowej listy podwójnie ani nie rusza fokusu.
 
 ## Evidence
+
+- Red (przed poprawką): `T-032: POST /lists notifies the owner with lists.changed` → `Error: no "lists.changed" within 1000 ms; got []` (`apps/api/test/live.lists.test.ts`). Testy AC2 i AC3 przechodziły już przed poprawką (strażnicy regresji).
+- Green: `pnpm vitest run --project api -t T-032` → 3 passed; `pnpm test` → 91 plików / 469 testów passed; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` bez błędów. Commit `8bd33f2`.
+- Regresja: J-02 (`lists.create.test.ts`), T-009 (`live.*.test.ts`, `ListsScreen.live.test.tsx`), T-025 (`lists.limit.test.ts`, testy SC-05) w pełnym przebiegu — zielone.
 
 ## Prevention
 
