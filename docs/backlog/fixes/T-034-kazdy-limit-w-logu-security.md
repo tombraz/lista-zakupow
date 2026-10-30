@@ -4,7 +4,7 @@ title: "Test: każdy limit nadużyć ma sprawdzone zdarzenie w logu security (ta
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-033]
 layers: [backend]
 requirements: []
