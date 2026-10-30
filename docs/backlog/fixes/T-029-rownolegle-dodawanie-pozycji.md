@@ -4,7 +4,7 @@ title: "Wywołania zwrotne zapisu w opcjach hooka, nie w mutate (uśpiona utrata
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07]
@@ -91,3 +91,33 @@ related_tasks: [T-006, T-020, T-024]
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+**Reproduce:** `pnpm lint` 0 / `pnpm typecheck` 0 / `pnpm format:check` 0 / `pnpm quality` (0 klonów, 0 naruszeń zależności) / `pnpm test` 91 plików, 461 testów pass / `pnpm test:e2e` 48 passed (8.6 min; J-01, J-03, J-04, J-05, T-023 limit 500, rozmiar tekstu). `node scripts/backlog-check.mjs` OK.
+
+**Kryteria akceptacji:**
+
+- AC1 **pass** — spot-check: `mutation.mutate(parsed.data.name, { onSuccess: onSaved })` w `listName.ts` → `pnpm eslint` 1 błąd `no-restricted-syntax` z odesłaniem do T-029; przywrócone.
+- AC2 **pass** — grep `.mutate(` w `apps/web/src` (bez testów): wszystkie wywołania jednoargumentowe (jedynie `mutation.mutate(...call)` w `useGuardedMutation.ts`, przekazanie dalej). `useAddItem.ts` bez `eslint-disable`, importuje `useGuardedMutation`. Wywołania zwrotne w opcjach hooka w `useAddItem`, `useEditItem` (zapis, usunięcie), `useListNameForm`, `useSignInForm`, `useSignUpForm`.
+- AC3 **pass** — test `sends nothing when Enter is pressed while the previous item is saving (T-029)` sprawdza: tylko jedno żądanie „Mleko”, pozycja na liście, ogłoszenie `role=status`, „Chleb” zostaje w polu. Spot-check: test pada dopiero po zdjęciu wszystkich trzech blokad naraz (`if (!pending)` w AddBar, `preventDefault` przy `loading` w `Button`, `useGuardedMutation` → `useMutation`); każda z osobna wystarcza. Przywrócone, `git status` czysty.
+- AC4 **pass** — pełny zestaw testów komponentu i E2E zielony (dodanie, ponowienie z tym samym `id`, T-020, T-024, edycja, usuwanie, zmiana nazwy listy, SC-01, SC-02).
+
+**Eksploracja (tymczasowy test, usunięty):**
+
+- dwa `fireEvent.submit` formularza AddBar bez `await` między nimi → jedno `POST` (blokada `useGuardedMutation`; przed zmianą surowy `useMutation` wysłałby dwa).
+- arkusz „Edytuj pozycję”: Zapisz z wstrzymaną odpowiedzią, Esc zamyka arkusz w trakcie zapisu, po zwolnieniu odpowiedzi notatka „2 l” jest na liście (wywołanie zwrotne hooka działa po odmontowaniu), 0 wywołań `console.error`.
+- wyjście z SC-02 w trakcie rejestracji: nie sprawdzone osobno; ten sam mechanizm (opcje `useGuardedMutation`) potwierdzony na arkuszu edycji.
+
+**Root cause (kind: fix):** sekcja wyjaśnia, dlaczego testy nie złapały (zachowanie nieosiągalne z UI, brak testu blokady Enter, brak reguły). Czerwień: reguła lint (6 błędów przed zmianą, potwierdzone spot-checkiem reguły).
+
+**Bezpieczeństwo:** bez zmian w autoryzacji, wejściu ani logach; `threats: []`. Brak zmian w stylach (design-check nie dotyczy).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | Wpis historii zmian T-029 trafił do tabeli „Komendy” (2 kolumny w tabeli 3-kolumnowej), a nie do „Historia zmian”. | `docs/architecture/layers/web.md:43` | Wiersz w tabeli `## Historia zmian` (ok. l. 102), tabela „Komendy” bez niego. |
+| 2 | note | lint | Reguła `WEB_MUTATE_SYNTAX` nie obejmuje `mutateAsync(vars, { … })` (ta sama semantyka TanStack Query) ani `mutate(...args)` z rozwinięciem. Dziś nieużywane w `apps/web/src`. | `eslint.config.js` selektor `callee.property.name='mutate'` | Selektor `callee.property.name=/^mutate(Async)?$/`. |
+| 3 | note | tests | Test AC3 przechodzi, dopóki działa którakolwiek z trzech blokad (AddBar, Button, `useGuardedMutation`); nie wskazuje, która chroni. To akceptowalne (test zachowania), ale brak czerwonego dowodu w Evidence. | spot-check powyżej | — |
+| 4 | note | platforms | Safari iOS z VoiceOver nie sprawdzone ręcznie; zmiana nie dotyka UI ani ogłoszeń (te same teksty `role=status`). | — | — |
