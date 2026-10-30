@@ -4,7 +4,7 @@ title: "Test: każdy limit nadużyć ma sprawdzone zdarzenie w logu security (ta
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: [T-033]
 layers: [backend]
 requirements: []
@@ -73,3 +73,21 @@ Inne wystąpienia: limit treści wiadomości WS (`messageBytes`) ma już log (T-
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Kryteria: AC1 pass (test pokrycia `limits.security.test.ts`: 12 kluczy + 2 jawne wyłączenia z uzasadnieniem; spot-check: klucz `qaProbe` w `RATE_LIMITS` → `expected [ 'qaProbe' ] to deeply equal []` i `no security-log scenario for limit qaProbe`), AC2 pass (`body-limit.test.ts`: `limit_reached`, `limit: "bodyBytes"`, `route`, `requestId`, bez treści; spot-check: wyłączony log w `apiErrors` → `expected [] to deeply equal [ ObjectContaining{…} ]`), AC3 pass (żadnej luki w stałych; spot-check: wyłączony log `messageBytes` w `limitLog` WS → czerwony tylko scenariusz `messageBytes`), AC4 pass (pełny przebieg zielony).
+
+Reprodukcja: `pnpm vitest run --project api limits.security body-limit` → 2 pliki / 16 testów passed; `pnpm test` → 92 pliki / 490 testów passed; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm quality` (0 klonów, 0 naruszeń) bez błędów. Root cause wyjaśnia, czemu testy nie złapały luki; test reprodukujący pada bez poprawki (spot-check wyżej).
+
+Eksploracja (tymczasowy test, usunięty): treść > 16 kB na `POST /api/auth/sign-up/email`, `POST /api/auth/sign-in/email`, `POST /api/v1/lists` z `text/plain`, `PATCH /api/v1/lists/:listId/items/:itemId`, `POST /api/v1/nope` → zawsze 413 i dokładnie jedno zdarzenie `limit_reached` / `bodyBytes` z `requestId`; w całym logu brak treści żądania (hasło-znacznik nie wystąpił). TH-13, TH-21: brak obejścia.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | logi | 413 na nieistniejącej trasie daje zdarzenie bez pola `route` (`request.routeOptions.url` jest `undefined`). | `POST /api/v1/nope` z treścią > 16 kB → `{"event":"limit_reached","limit":"bodyBytes","requestId":…}` bez `route` | Pole `route` zawsze obecne (np. stała wartość dla trasy 404), żeby zdarzenie dało się filtrować. |
+| 2 | minor | logi | Zdarzenia limitów per IP i `invitationsCreatedPerList` nie mają pola `limit`; `signInPerIp` i `signInFailuresPerAccount` różni tylko `accountKey` (odnotowane przez autora). | `limits.security.test.ts`, oczekiwane kształty scenariuszy | Jednolity schemat zdarzenia limitu: zawsze `limit: <klucz>`. |
+| 3 | note | testy | Limit treści (`BODY_LIMIT_BYTES`) nie jest w tabeli pokrycia; pilnuje go osobny test w `body-limit.test.ts`. Nowy limit spoza trzech stałych nie zostanie wymuszony. | `limits.security.test.ts`, `ALL_LIMITS` | Rozważyć dopisanie `bodyBytes` do tabeli (jedna lista wszystkich limitów nadużyć). |
+
+`git status` po spot-checkach czysty; zmieniony tylko plik zadania.
