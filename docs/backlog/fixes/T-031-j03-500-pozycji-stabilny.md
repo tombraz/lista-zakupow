@@ -4,7 +4,7 @@ title: "E2E j03 „500th item” czeka na pełną listę; plik zgodny z Prettier
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07]
@@ -72,3 +72,27 @@ Inne wystąpienia: pozostałe wywołania API w `e2e/` (j01, j02, j04, j05) to po
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | API / performance | When the pool runs out (more than 10 parallel writes to one list), the API returns `500 internal` instead of making the request wait or returning 503. The fix covers only the test, as the root cause says. | Spot-check with `PARALLEL_ADDS = 150`: 65 of 150 responses were not 201. | Consider for performance work: 503 + `Retry-After`, or a longer queue. |
+| 2 | note | Test | After `addViaApi`, the line `await expect(page.getByLabel(NAME)).toBeEnabled()` in the T-023 test is now redundant, because the wait for „499 do kupienia” is stronger. It does no harm. | `j03-pozycje.spec.ts:128` | Can stay or be removed. |
+| 3 | note | Environment | About 50 leftover testcontainers containers (`docker ps`) are running on the local machine and add load during E2E runs. | `docker ps` | Clean up the environment or fix where Vitest/testcontainers leak containers. |
+| 4 | note | TDD | The original red state (flakiness) was not reproduced with repetitions. Only the mechanism was reproduced. That is acceptable for a test-only fix: the spot-check confirms that the new status check catches the problem in data setup. | Evidence section; QA spot-check below. | — |
+
+**Reproduction (QA):**
+- `pnpm format:check` → „All matched files use Prettier code style!” (AC2 pass).
+- `pnpm lint`, `pnpm typecheck`, `pnpm quality` → OK; `backlog-check` → OK (2 WARNs about TH-10/TH-18, not related).
+- `pnpm test:e2e -g T-023 --repeat-each 5` → 10 passed (5 telefon + 5 komputer, 8.9 min) (AC1 pass).
+- `pnpm test:e2e j03-pozycje` → 10 passed (5.3 min): J-03, deleted item, 500 items, T-023, AddBar (AC3 pass).
+- Vitest not run: the change touches only `apps/web/e2e/`, which Vitest does not cover.
+
+**Spot-check:** `PARALLEL_ADDS = 150` → the T-023 test fails in `addViaApi` (`expect(received).toEqual(expected)`, 65 statuses other than 201, line 102), not on focus. Reverted with `git checkout`; `git status` is clean.
+
+**Code review:** scope limited to the helper in the test; the constant has a comment explaining why. The wait is on an event (text „N do kupienia”), not on a timeout, as `testing-strategy.md` requires. The other `addViaApi` callers (500, 30) run correctly with the new wait. The root cause explains why the tests missed the problem.
+
+**Security:** not applicable (test only, `threats: []`).
