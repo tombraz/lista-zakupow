@@ -4,7 +4,7 @@ title: "SC-05: ostrzeżenie limitu w pustym stanie i wygasanie odmowy 409 po lic
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05]
@@ -34,10 +34,10 @@ related_tasks: [T-025, T-023, T-006]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-05 w pustym stanie z fokusem w formularzu nowej listy, when API odpowie 409 `limit_reached`, then ostrzeżenie o limicie jest widoczne i ma fokus (nie `body`). — verified by: test komponentu SC-05 (atrapa `test/disabledFocus.ts`)
-- [ ] AC2: Given SC-05 po odmowie 409, when odświeżenie zwróci tyle samo albo mniej własnych list niż przy odmowie, then blokada obowiązuje do spadku liczby i przycisk wraca do aktywnego stanu, gdy liczba spadnie, niezależnie od tożsamości tablicy w cache. — verified by: test komponentu SC-05
-- [ ] AC3: SC-05 i SC-06 wyznaczają wygaśnięcie odmowy limitu z API tą samą zasadą (liczba z chwili odmowy) przez jeden wspólny helper. — verified by: przegląd kodu i istniejące testy SC-06
-- [ ] AC4: No regression in: J-02, T-025 (testy fokusu SC-05), T-023 (limit pozycji SC-06).
+- [x] AC1: Given SC-05 w pustym stanie z fokusem w formularzu nowej listy, when API odpowie 409 `limit_reached`, then ostrzeżenie o limicie jest widoczne i ma fokus (nie `body`). — verified by: test komponentu SC-05 (atrapa `test/disabledFocus.ts`)
+- [x] AC2: Given SC-05 po odmowie 409, when odświeżenie zwróci tyle samo albo mniej własnych list niż przy odmowie, then blokada obowiązuje do spadku liczby i przycisk wraca do aktywnego stanu, gdy liczba spadnie, niezależnie od tożsamości tablicy w cache. — verified by: test komponentu SC-05
+- [x] AC3: SC-05 i SC-06 wyznaczają wygaśnięcie odmowy limitu z API tą samą zasadą (liczba z chwili odmowy) przez jeden wspólny helper. — verified by: przegląd kodu i istniejące testy SC-06
+- [x] AC4: No regression in: J-02, T-025 (testy fokusu SC-05), T-023 (limit pozycji SC-06).
 
 ## TDD plan
 
@@ -74,3 +74,29 @@ Inne wystąpienia: SC-07 (limit uczestników) nie zapamiętuje odmowy API; poza 
 ## Prevention
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Reproduce: `pnpm install --frozen-lockfile`, `pnpm test` (92 files, 509 tests pass), `pnpm typecheck`, `pnpm lint`, `pnpm format:check` clean; `design-check --scan` on SC-05, SC-06, `api/`: 0 hard-coded values.
+
+Acceptance criteria:
+
+- AC1 pass: `ListsScreen.test.tsx` "moves focus to the limit warning when the first list is refused (409) (T-042)" asserts focus on the `role=status` warning while the empty state is still shown, CTA disabled, and focus kept after the refresh switches to 50 cards (one `InlineAlert` slot shared by both branches keeps its identity).
+- AC2 pass: `ListsScreen.live.test.tsx` "keeps the refusal (409) until the number of own lists drops (T-042)" uses a new array with the same 49 lists (button stays disabled), then 48 (enabled, warning gone).
+- AC3 pass: `apps/web/src/api/useLimitRefusal.ts` used by `useNewList` (SC-05) and `useAddItem` (SC-06); SC-06 limit tests (AC5, T-023 AC1, QA round 1 #3) pass.
+- AC4 pass: full suite green, including T-025 focus tests and T-023 SC-06 limit tests.
+
+Spot-checks (all reverted, `git status` clean):
+
+1. Warning only in card branch → T-042 empty-state test fails.
+2. No bump of the remembered count when the refresh shows more → T-042 empty-state test and T-025 "re-enables … following a refusal" fail (confirms the root-cause claim).
+3. Helper never refuses → 7 SC-05/SC-06 limit tests fail.
+
+Red evidence for both planned tests is recorded. Root cause explains why T-025 tests missed the bug.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | code | `AddWarning.kind: "duplicate"` is now a single-variant discriminant that nothing reads (dead field after removing the `limit` variant). | `apps/web/src/screens/SC-06-lista/useAddItem.ts:25-30,42` | Drop `kind` or keep the union only if a second variant is planned. |
+| 2 | note | design | In the empty state the limit warning renders below the EmptyState CTA; with cards it renders above „+ Nowa lista”. SC-05 does not fix the order. | `ListsScreen.tsx:51-71` | Optional: consistent placement relative to the disabled button. |
