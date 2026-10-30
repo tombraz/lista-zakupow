@@ -72,7 +72,7 @@ Poprawka: `live.notify([user.id], { type: "lists.changed" })` po `createList` �
 Co by zapobiegło: reguła „każda trasa, która zmienia zawartość SC-05 (lista dochodzi lub znika, nazwa, licznik do kupienia, uczestnicy), wysyła `lists.changed` do wszystkich osób z dostępem, także do autora” i test z drugą kartą autora. T-009 traktował zdarzenia jako powiadamianie *innych* osób, więc tworzenie (którego nikt inny nie widzi) wypadło.
 
 - Automatyczny test na wszystkie trasy naraz byłby drogi (osobna konfiguracja dla każdej trasy) i nie złapałby nowej trasy, której nikt do niego nie dopisze — nie proponuję.
-- Propozycja: wpis w „Pułapkach” `docs/architecture/layers/backend.md` z regułą powyżej i wymogiem testu w `live.lists.test.ts` z drugim połączeniem autora. — czeka na decyzję użytkownika.
+- Propozycja: wpis w „Pułapkach” `docs/architecture/layers/backend.md` z regułą powyżej i wymogiem testu w `live.lists.test.ts` z drugim połączeniem autora. — przyjęte i dopisane (2026-10-30).
 
 ## Incident note
 
