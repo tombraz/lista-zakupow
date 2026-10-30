@@ -4,7 +4,7 @@ title: "Jeden schemat zdarzenia limitu w logu security: zawsze `limit` (klucz) i
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: [T-034]
 layers: [backend]
 requirements: []
@@ -78,3 +78,24 @@ Inne wystąpienia: brak (wszystkie pięć ścieżek przeniesione na `logLimitEve
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Reproduction (QA, clean `pnpm install --frozen-lockfile`): `pnpm vitest run --project api limits.security body-limit` 18/18; `pnpm test` 92 files / 492 tests green (the `live.limits` flake from the Evidence did not occur); `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` clean.
+
+Acceptance criteria:
+
+- AC1 pass: the coverage table asserts one shared condition `objectContaining({ route: any(String), ...expected, limit: key })` with `limit: key` last, so a scenario cannot override it; all abuse limits covered (coverage test green).
+- AC2 pass: `body-limit.test.ts` POST `/api/v1/nope` > 16 kB → 413 and one `limit_reached` with `limit: "bodyBytes"`, `route: "(unknown)"`.
+- AC3 pass: response bodies still use `LimitName` (`domainErrorBody` unchanged; `*.limit.test.ts` response assertions unchanged, only log assertions renamed to keys).
+- AC4 pass: full suite green, incl. `security-log`, `live.limits`, auth/sign-in tests.
+
+Spot-checks (reverted, `git status` clean): removing `?? UNKNOWN_ROUTE` in `logging.ts` fails the AC2 test; labelling the Better Auth 429 as `signInFailuresPerAccount` in `auth-routes.ts` fails `signInPerIp: exceeding the limit logs one security event`. Red evidence present in the task. Root cause explains why the T-034 table missed it (per-scenario expected shapes). TH-21: `logLimitEvent` spreads `ids` before `route`/`limit`, so identifiers cannot overwrite them; no body, e-mail, token, cookie or IP in the event (existing negative assertions in `body-limit`/`limits.security` still pass). Exploit attempts were the integration scenarios above run locally (Testcontainers).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Security / robustness | The plugin-level `errorResponseBuilder` was removed from `perIpRateLimit`; logging now lives only in `perIp(key)`. A route that sets `config: { rateLimit: {...} }` by hand inside a `perIpRateLimit` scope would return the plugin's default 429 body and leave no `security` event. The eslint rule only blocks importing `@fastify/rate-limit`, not hand-written route config. | `apps/api/src/http/rate-limit.ts` | Keep a fallback builder at plugin level (logging with an "unknown" limit is impossible with `LimitKey`, so e.g. throw/lint) or an eslint `no-restricted-syntax` on `rateLimit` property in route config outside `rate-limit.ts`. |
+| 2 | note | Consistency | Non-limit security events keep the old route sources: `list_access_denied` uses `routeOptions.url` (may be `undefined`), `sign_in_failed` uses `request.url`. Out of scope (task covers limit events only). | `api-error.ts` `logSecurityEvent`, `auth-routes.ts` `logSecurity` | Consider one `route` helper for every `security` event. |
+| 3 | note | Docs | `layers/backend.md` "Pułapki" still names the old paths (`perIpRateLimit`, `limitLog`) and not `logLimitEvent` / `LimitKey`. Prevention section is empty. | `docs/architecture/layers/backend.md` line 88 | Update in the Prevention step. |
