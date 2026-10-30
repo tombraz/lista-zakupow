@@ -25,8 +25,8 @@ export function useCheckboxFocus(items: Item[]) {
     const shown = settled === null || items.some((item) => sameState(item, settled));
     if (!shown) return;
     done.current = request.seq;
-    const element =
-      target === "bought" ? boughtToggle.current : checkboxes.current.get(target.itemId);
+    const itemId = "itemId" in target ? target.itemId : firstUnchecked(items, target.unchecked);
+    const element = itemId ? checkboxes.current.get(itemId) : boughtToggle.current;
     element?.focus();
   }, [request, items]);
 
@@ -45,3 +45,6 @@ export function useCheckboxFocus(items: Item[]) {
 export type CheckboxFocus = ReturnType<typeof useCheckboxFocus>;
 
 const sameState = (a: Item, b: Item) => a.id === b.id && a.checked === b.checked;
+
+const firstUnchecked = (items: Item[], ids: string[]) =>
+  ids.find((id) => items.some((item) => item.id === id && !item.checked));

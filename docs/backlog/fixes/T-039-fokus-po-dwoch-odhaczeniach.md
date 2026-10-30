@@ -4,7 +4,7 @@ title: "Fokus spada na body po szybkim odhaczeniu dwóch sąsiednich pozycji"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-08]
@@ -51,9 +51,16 @@ related_tasks: [T-007, T-030]
 
 ## Root cause
 
-<Wypełnia /fix.>
+`useCheckItem` (T-007, `97062f9`) wyliczał przy kliknięciu jeden cel fokusu — najbliższego nieodhaczonego sąsiada — a `useCheckboxFocus` po odpowiedzi szukał tylko jego checkboxa. Gdy sąsiad został w międzyczasie odhaczony (drugie szybkie kliknięcie, odpowiedzi w dowolnej kolejności), jego checkbox był już w zwiniętym „Kupione”, efekt nie znajdował elementu i fokus zostawał na usuniętym przycisku (`body`). Testy tego nie złapały: testy fokusu (T-007) sprawdzają tylko pojedyncze odhaczenie, a test dwóch odhaczeń (T-030) celowo pomijał fokus.
+
+Poprawka: przy kliknięciu zapamiętana jest kolejność kandydatów (`CheckFocus` `{ unchecked: string[] }`: nieodhaczone po pozycji, potem przed nią od najbliższej — kolejność z chwili kliknięcia zostaje, bo zdarzenie na żywo może przenieść pozycję przed odpowiedzią, F-14). `useCheckboxFocus` wybiera przy fokusie pierwszego kandydata, który na ekranie jest nadal nieodhaczony; bez takiego — „Kupione (N)”. Wariant `"bought"` zastąpiony pustą listą kandydatów.
+
+Inne wystąpienia: brak — `checkboxFocus.focus({ itemId })` po „Pokaż w Kupione” (AddItemBar) celuje w konkretną pozycję, nie w sąsiada; fokus po usunięciu pozycji (`Items.tsx`, `afterRemoving`) nie dotyczy zapisów równoległych.
 
 ## Evidence
+
+- Czerwone przed poprawką (`pnpm vitest run --project web ListScreen.check`): `moves focus to a still unchecked item when two neighbours are checked quickly (T-039)` i `moves focus to „Kupione (3)” when all items are checked quickly (T-039)` — `expect(element).toHaveFocus()`, fokus na `h1` zamiast „Odhacz Jajka” / „Kupione (3)”; `Tests 2 failed | 11 passed`.
+- Po poprawce: `ListScreen.check` 13/13; web + tokens 26 plików / 231 testy; `pnpm typecheck`, `pnpm lint`, `pnpm design-check` czyste; build web OK. E2E nie uruchamiane (zmiana w hookach SC-06, pokryta testami komponentu).
 
 ## Prevention
 

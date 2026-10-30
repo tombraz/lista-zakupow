@@ -8,8 +8,11 @@ import { listKey } from "../../lists/useList";
 import { replaceItem } from "./itemsCache";
 import { messages } from "./messages";
 
-/** Gdzie przenieść fokus po zapisie: checkbox pozycji albo przycisk sekcji „Kupione”. */
-export type CheckFocus = { itemId: string } | "bought";
+/**
+ * Gdzie przenieść fokus po zapisie: checkbox pozycji albo pierwszej z `unchecked`, która na
+ * ekranie jest jeszcze nieodhaczona (bez takiej przycisk sekcji „Kupione”).
+ */
+export type CheckFocus = { itemId: string } | { unchecked: string[] };
 
 interface Toggle {
   itemId: string;
@@ -75,8 +78,9 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
 
   const toggle = (item: Item) => {
     const checked = !item.checked;
-    // Cel fokusu z kolejności w chwili kliknięcia: zdarzenie na żywo tej samej zmiany może
-    // przenieść pozycję do „Kupione” przed odpowiedzią API (F-14).
+    // Kandydaci z kolejności w chwili kliknięcia: zdarzenie na żywo tej samej zmiany może
+    // przenieść pozycję do „Kupione” przed odpowiedzią API (F-14). Wybór przy fokusie, bo sąsiad
+    // mógł zostać odhaczony w międzyczasie (T-039).
     const next = checked ? neighbourOf(items, item.id) : { itemId: item.id };
     mutation.mutate({ itemId: item.id, checked, next });
   };
@@ -86,10 +90,9 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
 
 export type CheckItemState = ReturnType<typeof useCheckItem>;
 
-/** Następna nieodhaczona po `itemId`, przy ostatniej poprzednia; bez nich sekcja „Kupione”. */
+/** Nieodhaczone po `itemId`, potem przed nią od najbliższej; bez nich sekcja „Kupione”. */
 function neighbourOf(items: Item[], itemId: string): CheckFocus {
-  const toBuy = items.filter((item) => !item.checked);
-  const index = toBuy.findIndex((item) => item.id === itemId);
-  const neighbour = toBuy[index + 1] ?? toBuy[index - 1];
-  return neighbour ? { itemId: neighbour.id } : "bought";
+  const toBuy = items.filter((item) => !item.checked).map((item) => item.id);
+  const index = toBuy.indexOf(itemId);
+  return { unchecked: [...toBuy.slice(index + 1), ...toBuy.slice(0, index).reverse()] };
 }

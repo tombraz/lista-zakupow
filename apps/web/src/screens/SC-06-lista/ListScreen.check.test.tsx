@@ -131,6 +131,40 @@ describe("SC-06 checking an item", () => {
     expect(screen.getByText(/^Odhaczono (Chleb|Mleko)$/)).toBeInTheDocument();
   });
 
+  // Cel fokusu wyliczony przy kliknięciu (sąsiad) bywa odhaczony, zanim przyjdzie odpowiedź.
+  it("moves focus to a still unchecked item when two neighbours are checked quickly (T-039)", async () => {
+    const items = shopping();
+    const { list } = await showList(items);
+    const response = heldResponse();
+    withFullItems(list, items, response);
+
+    fireEvent.click(toBuy().getByRole("button", { name: "Odhacz Chleb" }));
+    fireEvent.click(toBuy().getByRole("button", { name: "Odhacz Mleko" }));
+    response.release();
+
+    await screen.findByText("1 do kupienia");
+    await waitFor(() => {
+      expect(toBuy().getByRole("button", { name: "Odhacz Jajka" })).toHaveFocus();
+    });
+  });
+
+  it("moves focus to „Kupione (3)” when all items are checked quickly (T-039)", async () => {
+    const items = shopping();
+    const { list } = await showList(items);
+    const response = heldResponse();
+    withFullItems(list, items, response);
+
+    for (const name of ["Jajka", "Chleb", "Mleko"]) {
+      fireEvent.click(toBuy().getByRole("button", { name: `Odhacz ${name}` }));
+    }
+    response.release();
+
+    await screen.findByText("Wszystko kupione.");
+    await waitFor(() => {
+      expect(boughtToggle()).toHaveFocus();
+    });
+  });
+
   it("moves the checked item to the collapsed „Kupione (1)”, struck through and signed", async () => {
     const items = shopping();
     const { user, list } = await showList(items);
