@@ -4,7 +4,7 @@ title: "Jeden schemat zdarzenia limitu w logu security: zawsze `limit` (klucz) i
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-034]
 layers: [backend]
 requirements: []
@@ -31,10 +31,10 @@ related_tasks: [T-027, T-033, T-034]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given dowolny limit nadużyć z tabeli w `limits.security.test.ts`, when zostanie przekroczony, then jedyne zdarzenie `limit_reached` / `rate_limited` ma `limit: <klucz>` i `route`; test pokrycia sprawdza to jednym, wspólnym warunkiem (`limit` = klucz scenariusza), nie per scenariusz. — verified by: `limits.security.test.ts`
-- [ ] AC2: Given 413 na nieistniejącej trasie, when treść przekracza 16 kB, then zdarzenie ma `route` (stała wartość dla trasy nieznanej). — verified by: `body-limit.test.ts`
-- [ ] AC3: Odpowiedzi API (`{ error: { code, limit } }`, `LimitName`) bez zmian. — verified by: istniejące testy `*.limit.test.ts`
-- [ ] AC4: No regression in: T-027, T-033, T-034, `security-log.test.ts`, `live.limits.test.ts`, J-01.
+- [x] AC1: Given dowolny limit nadużyć z tabeli w `limits.security.test.ts`, when zostanie przekroczony, then jedyne zdarzenie `limit_reached` / `rate_limited` ma `limit: <klucz>` i `route`; test pokrycia sprawdza to jednym, wspólnym warunkiem (`limit` = klucz scenariusza), nie per scenariusz. — verified by: `limits.security.test.ts`
+- [x] AC2: Given 413 na nieistniejącej trasie, when treść przekracza 16 kB, then zdarzenie ma `route` (stała wartość dla trasy nieznanej). — verified by: `body-limit.test.ts`
+- [x] AC3: Odpowiedzi API (`{ error: { code, limit } }`, `LimitName`) bez zmian. — verified by: istniejące testy `*.limit.test.ts`
+- [x] AC4: No regression in: T-027, T-033, T-034, `security-log.test.ts`, `live.limits.test.ts`, J-01.
 
 ## TDD plan
 
@@ -55,9 +55,23 @@ related_tasks: [T-027, T-033, T-034]
 
 ## Root cause
 
-<Wypełnia /fix.>
+Kształt zdarzenia limitu składano ręcznie w pięciu miejscach (`logSecurityEvent` dla `DomainError`, limit treści w `apiErrors`, `perIpRateLimit`, `logSecurity` w moście Better Auth, `limitLog` w WS). `SecurityEvent` nie miał pola na klucz limitu, więc domena wpisywała do logu nazwę z odpowiedzi API (`LimitName`) albo nic, a `perIp` nie znał klucza limitu trasy; `route` brano z `routeOptions.url`, które dla nieznanej trasy jest `undefined`. Testy nie złapały tego, bo tabela w `limits.security.test.ts` (T-034) zapisywała oczekiwany kształt osobno dla każdego scenariusza — przepisała więc niespójność, zamiast wymagać jednego schematu.
+
+Inne wystąpienia: brak (wszystkie pięć ścieżek przeniesione na `logLimitEvent`). `list_access_denied` nie jest zdarzeniem limitu i zostaje osobno.
+
+## Fix
+
+- `logLimitEvent(request, event, limit, ids)` w `apps/api/src/logging.ts` — jedyne miejsce kształtu zdarzenia limitu; `route` = `routeOptions.url ?? UNKNOWN_ROUTE` (`"(unknown)"`).
+- `LimitKey` w `packages/shared/src/limits.ts` (klucze `RATE_LIMITS`, `BUSINESS_LIMITS`, `HTTP_LIMITS`, `LIVE_LIMITS`); `SecurityEvent` dla limitów wymaga `limit: LimitKey`.
+- `perIp(key)` przyjmuje klucz `RATE_LIMITS` i ustawia na trasie `errorResponseBuilder` z tym kluczem; most Better Auth loguje `signInPerIp` / `signUpPerIp` / `signInFailuresPerAccount`.
+- Odpowiedzi API (`LimitName`) bez zmian.
 
 ## Evidence
+
+- **Red** (`pnpm vitest run --project api limits.security body-limit`): 10 failed | 8 passed. Np. `signInPerIp: exceeding the limit logs one security event` — `- "limit": "signInPerIp"`, otrzymano zdarzenie bez `limit`, z `accountKey` (nieodróżnialne od `signInFailuresPerAccount`); `logs limit_reached with a route when the body exceeds 16 kB on an unknown route` — `- "route": "(unknown)"`, otrzymano zdarzenie bez `route`.
+- **Green:** te same testy 18/18. Zaktualizowane asercje logu w `lists.limit`, `items.limit`, `invitations.limit` (`listsPerOwner`, `itemsPerList`, `participantsPerList`); asercje odpowiedzi API bez zmian.
+- **Pełny zestaw:** `pnpm test` 92 pliki / 492 testy zielone; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm quality` (depcruise) czyste.
+- **Uwaga (poza zakresem):** w jednym przebiegu pełnego zestawu padł `live.limits.test.ts › frees a slot when a connection closes` (zielony 3× w izolacji i w kolejnym pełnym przebiegu). Kod huba i `attach` nie był zmieniany; wygląda na wyścig między zamknięciem po stronie klienta a `hub.detach` na serwerze.
 
 ## Prevention
 
