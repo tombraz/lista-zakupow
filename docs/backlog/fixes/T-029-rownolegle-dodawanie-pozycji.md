@@ -85,7 +85,7 @@ related_tasks: [T-006, T-020, T-024]
 
 **Przyjęte przez użytkownika (2026-10-30), zrobione:**
 
-- lint `no-restricted-syntax` (`WEB_MUTATE_SYNTAX` w `eslint.config.js`) na `mutate` z dwoma argumentami w `apps/web/src` (bez testów); komunikat odsyła do `layers/web.md`,
+- lint `no-restricted-syntax` (`WEB_MUTATE_SYNTAX` w `eslint.config.js`) na `mutate` / `mutateAsync` z dwoma argumentami w `apps/web/src` (bez testów); komunikat odsyła do `layers/web.md`. `mutateAsync` dopisany po QA round 1 (uwaga QA; 2026-10-30). Rozwinięcie `mutate(...args)` celowo bez reguły: jedyne użycie to `useGuardedMutation.ts`, który przekazuje argumenty dalej,
 - wpis „Pułapki” w `docs/architecture/layers/web.md` i poprawiony wpis T-020 o wyjątkach (dodawanie pozycji bez wyjątku).
 
 ## Incident note

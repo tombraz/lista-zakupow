@@ -69,9 +69,9 @@ const WEB_SESSION_SYNTAX = [
 // Te z `mutate` TanStack Query wywołuje tylko dla ostatniego wywołania i nie po odmontowaniu.
 const WEB_MUTATE_SYNTAX = [
   {
-    selector: "CallExpression[callee.property.name='mutate'][arguments.length>1]",
+    selector: "CallExpression[callee.property.name=/^mutate(Async)?$/][arguments.length>1]",
     message:
-      "onSuccess / onError / onSettled w opcjach useGuardedMutation, nie w mutate(…): te z mutate przychodzą tylko dla ostatniego wywołania (T-029, layers/web.md „Pułapki”).",
+      "onSuccess / onError / onSettled w opcjach useGuardedMutation, nie w mutate(…) / mutateAsync(…): te z mutate przychodzą tylko dla ostatniego wywołania (T-029, layers/web.md „Pułapki”).",
   },
 ];
 
