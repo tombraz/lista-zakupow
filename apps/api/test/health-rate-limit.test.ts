@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { randomIp } from "./factories";
+import { captureLogs } from "./logs";
 
 // SEC8 (CodeQL js/missing-rate-limiting): /health/ready odpytuje bazę — 30 na minutę z jednego IP.
 describe("health rate limits (SEC8)", () => {
@@ -43,6 +44,24 @@ describe("health rate limits (SEC8)", () => {
     }
 
     expect(statuses).toEqual(Array.from({ length: 40 }, () => 200));
+    await app.close();
+  });
+
+  // T-027 (TH-21): przekroczenie limitu zostawia ślad w logu `security`, bez adresu IP.
+  it("logs rate_limited on /health/ready", async () => {
+    const logs = captureLogs();
+    const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+    const ip = randomIp();
+
+    for (let request = 1; request <= 31; request += 1) {
+      await app.inject({ method: "GET", url: "/health/ready", remoteAddress: ip });
+    }
+
+    const limited = logs.security().filter((entry) => entry["event"] === "rate_limited");
+    expect(limited).toHaveLength(1);
+    expect(limited[0]).toMatchObject({ route: "/health/ready" });
+    expect(limited[0]?.["requestId"]).toEqual(expect.any(String));
+    expect(JSON.stringify(limited)).not.toContain(ip);
     await app.close();
   });
 });

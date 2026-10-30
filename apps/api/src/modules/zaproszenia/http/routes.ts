@@ -1,4 +1,3 @@
-import rateLimit from "@fastify/rate-limit";
 import {
   RATE_LIMITS,
   type AcceptInvitationResponse,
@@ -6,7 +5,7 @@ import {
   type InvitationPreview,
 } from "@lista/shared";
 import type { FastifyInstance } from "fastify";
-import { ApiError } from "../../../http/api-error";
+import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import type { Accounts } from "../../konta";
 import type { Lists } from "../../listy";
 import type { Live } from "../../na-zywo";
@@ -80,8 +79,7 @@ function ownerRoutes(app: FastifyInstance, deps: InvitationRoutesDeps): void {
   );
 }
 
-const { windowSeconds, max } = RATE_LIMITS.invitationLookupPerIp;
-const LOOKUP_LIMIT = { config: { rateLimit: { max, timeWindow: windowSeconds * 1000 } } };
+const LOOKUP_LIMIT = perIp(RATE_LIMITS.invitationLookupPerIp);
 
 /**
  * Trasy z tokenem: token jest uprawnieniem, więc bez `requireListAccess`. TH-06: limit
@@ -90,10 +88,7 @@ const LOOKUP_LIMIT = { config: { rateLimit: { max, timeWindow: windowSeconds * 1
 async function tokenRoutes(scope: FastifyInstance, deps: InvitationRoutesDeps): Promise<void> {
   const { accounts, invitations } = deps;
   const events = { live: deps.live, lists: deps.lists };
-  await scope.register(rateLimit, {
-    global: false,
-    errorResponseBuilder: () => new ApiError(429, "rate_limited"),
-  });
+  await perIpRateLimit(scope);
 
   // Publiczna (SC-08): także bez sesji.
   scope.get<TokenParams>("/api/v1/invitations/:token", LOOKUP_LIMIT, async (request) => {

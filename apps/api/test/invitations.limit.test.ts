@@ -5,6 +5,7 @@ import { user } from "../src/db/schema";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { addMember, createInvitation, createList, createUser, type TestList } from "./factories";
+import { captureLogs } from "./logs";
 import { requestsAs } from "./requests";
 
 const LIMIT = { error: { code: "limit_reached", limit: "participants" } };
@@ -75,6 +76,28 @@ describe("participant limit 20", () => {
 
     expect(response.statusCode).toBe(409);
     expect(response.json()).toEqual(LIMIT);
+    await app.close();
+  });
+
+  // T-027 (TH-21): każde przekroczenie limitu zostawia ślad w logu `security`.
+  it("logs limit_reached when creating a link on a full list", async () => {
+    const logs = captureLogs();
+    const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+    await fillWithParticipants(list, 20);
+
+    const response = await requestsAs(app, ania)("POST", `/api/v1/lists/${list.id}/invitations`);
+
+    expect(response.statusCode).toBe(409);
+    const limited = logs.security().filter((entry) => entry["event"] === "limit_reached");
+    expect(limited).toEqual([
+      expect.objectContaining({
+        listId: list.id,
+        limit: "participants",
+        route: "/api/v1/lists/:listId/invitations",
+      }),
+    ]);
     await app.close();
   });
 });

@@ -1,8 +1,9 @@
 import { fileURLToPath } from "node:url";
+import { RATE_LIMITS } from "@lista/shared";
 import { describe, expect, it } from "vitest";
-import { buildTestApp } from "./app";
+import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
-import { createInvitation, createList, createUser } from "./factories";
+import { createInvitation, createList, createUser, randomIp } from "./factories";
 import { captureLogs } from "./logs";
 import { requestsAs } from "./requests";
 
@@ -64,4 +65,37 @@ describe("invitation token in logs", () => {
     expect(urls).toContain("/zaproszenie/[redacted]?x=1");
     await app.close();
   });
+
+  // T-027 (TH-06, TH-21): odgadywanie tokenu zostawia ślad w logu `security`.
+  it.each([
+    ["GET", "/api/v1/invitations/:token", ""],
+    ["POST", "/api/v1/invitations/:token/accept", "/accept"],
+  ] as const)(
+    "logs a security event when invitation lookups exceed the IP limit (%s %s)",
+    async (method, route, suffix) => {
+      const logs = captureLogs();
+      const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+      const ania = await createUser(app);
+      const tomek = await createUser(app);
+      const list = await createList(db.pool, ania);
+      const link = await createInvitation(db.pool, list);
+      const ip = randomIp();
+      const { max } = RATE_LIMITS.invitationLookupPerIp;
+
+      for (let attempt = 0; attempt <= max; attempt += 1) {
+        await app.inject({
+          method,
+          url: `/api/v1/invitations/${link.token}${suffix}`,
+          headers: { origin: TEST_ORIGIN, cookie: tomek.cookie },
+          remoteAddress: ip,
+        });
+      }
+
+      const limited = logs.security().filter((entry) => entry["event"] === "rate_limited");
+      expect(limited).toEqual([expect.objectContaining({ route })]);
+      expect(logs.lines.join("\n")).not.toContain(link.token);
+      expect(JSON.stringify(limited)).not.toContain(ip);
+      await app.close();
+    },
+  );
 });

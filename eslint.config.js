@@ -220,6 +220,25 @@ export default tseslint.config(
     },
   },
   {
+    // T-027: limit per IP tylko przez helper — on zapisuje przekroczenie w logu `security` (TH-21).
+    files: ["apps/api/src/**/*.ts"],
+    ignores: ["apps/api/src/http/rate-limit.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@fastify/rate-limit",
+              message:
+                "Limit per IP przez perIpRateLimit / perIp z src/http/rate-limit.ts: zapisuje przekroczenie w logu security (T-027, layers/backend.md).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/api/src/**/*.ts"],
     rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...API_CLOCK_SYNTAX] },

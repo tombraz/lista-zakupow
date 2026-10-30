@@ -69,7 +69,10 @@ export async function createInvitation(
 ): Promise<StoredInvitation> {
   // F-12: link, którym nikt nie mógłby dołączyć, nie powstaje.
   if ((await lists.participantCount(listId)) >= BUSINESS_LIMITS.participantsPerList) {
-    throw new DomainError("limit_reached", { limit: "participants" });
+    throw new DomainError("limit_reached", {
+      limit: "participants",
+      security: { event: "limit_reached", ids: { listId } },
+    });
   }
   const createdAt = clock.now();
   const expiresAt = new Date(createdAt.getTime() + INVITATION_VALIDITY_DAYS * DAY_MS);
