@@ -4,7 +4,7 @@ title: "Fokus nie spada na body przy limicie list (SC-05) i uczestników (SC-07)
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05, F-12, N-04]
@@ -85,3 +85,27 @@ Inne wystąpienia: `AddItemBar.tsx` (SC-06) ma własną, prywatną wersję tej s
 Przyjęte przez użytkownika (2026-10-30): w `layers/web.md` „Pułapki” jest lista kontrolna. Każde `disabled={…}` zależne od API lub zdarzeń na żywo ma test komponentu, który sprawdza, gdzie trafia fokus.
 
 ## Incident note
+
+## QA round 1 (2026-10-30)
+
+Verdict: fail
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | AC4 / F-05, SC-05 | Krok 3 raportu nadal się odtwarza. Serwer nie wysyła `lists.changed` po `POST /api/v1/lists` (`apps/api/src/modules/listy/http/routes.ts`: tylko PATCH i DELETE), a `NewListForm` po 409 nie odświeża list. Po odmowie ekran pokazuje więc wciąż 49 list, a `refusedFor` to ta sama tablica. Gdy 50. lista zostanie usunięta gdzie indziej, `GET /api/v1/lists` zwraca te same 49 list. Structural sharing w TanStack Query zachowuje referencję, więc `refusedFor === lists` dalej daje `true` i „+ Nowa lista” zostaje `disabled`. | E2E w prawdziwym Chrome (doraźny spec QA, usunięty): 49 list, otwarty formularz, 50. lista przez API (ta sama sesja, bez zdarzenia na żywo), Enter → 409, „links shown after refusal: 49”. `DELETE` 50. listy → 204, potem `lists.changed` i refetch `GET` → 200 z 49 listami. Po 10 s `expect(„+ Nowa lista”).toBeEnabled()` daje „Received: disabled”. Test planu nr 9 przechodzi tylko dlatego, że między odmową a usunięciem wysyła sztuczne `lists.changed` z 50 listami, którego serwer nigdy nie wysyła. | Po odmowie 409, gdy liczba własnych list na serwerze spadnie poniżej liczby z chwili odmowy, „+ Nowa lista” jest aktywny, a ostrzeżenie znika. Np. po 409 unieważnić `LISTS_KEY`, żeby ekran pokazał prawdziwy stan (50 list), i wtedy liczba z serwera decyduje o blokadzie. Test nr 9 ma odwzorować prawdziwą sekwencję zdarzeń: bez `lists.changed` po utworzeniu listy w innej karcie. |
+| 2 | minor | Testy | Test nr 6 z planu („limit of 50 own lists (AC3) › moves focus to the limit warning when a new list is refused (409)”) nie ma w nazwie „T-025”, więc polecenie `Run` z planu (`-t T-025`) uruchamia 8 z 9 testów. | `pnpm vitest run --project web … -t T-025` daje 8 testów, zielonych. Test nr 6 uruchomiony osobno przechodzi. | Nazwa albo polecenie obejmuje wszystkie zaplanowane testy. |
+| 3 | note | API / F-14 | `POST /api/v1/lists` nie wysyła `lists.changed` do właściciela. Inne karty i urządzenia tego samego konta nie widzą nowej listy na żywo, więc ścieżka AC3 „`lists.changed` podnosi liczbę do 50” w praktyce zachodzi tylko przez inne zdarzenia (np. zmiana pozycji) albo przez refetch po powrocie do okna. Poza zakresem tego zadania (warstwa web). | `routes.ts`: `notify(..., lists.changed)` jest tylko w PATCH i DELETE. | Do decyzji użytkownika: osobne zadanie. |
+| 4 | note | CI | `pnpm format:check` pada na `apps/web/e2e/j03-pozycje.spec.ts` (z T-023, nie z tego zadania), więc `pnpm check` jest czerwony. | Wyjście Prettier: „Code style issues found”. | Osobna poprawka formatowania. |
+
+**Reprodukcja (QA):** `pnpm install --frozen-lockfile`, `pnpm services:up`, `pnpm test`: 91 plików, 460/460 zielonych. `typecheck`, `lint` (0 ostrzeżeń), `quality` (0 naruszeń), `design-check` (0 hard-coded) OK. `pnpm build` OK. E2E `j02` + `j04` (komputer): 7/7 zielonych.
+
+**Kryteria:**
+- AC1: pass. Testy 1 i 2 są zielone. Spot-check, w którym `useLimitFocus` nie przenosi fokusu, daje czerwone testy 1, 2, 6, 7 („Received element with focus:” pusty).
+- AC2: pass. Test 4 jest zielony. Spot-check z powrotem `createRef.current?.focus()` w `onRevoked` daje czerwony test.
+- AC3: pass. Prawdziwy Chrome: po prawdziwym 409 z serwera `document.activeElement` to `DIV[role=status]` z ostrzeżeniem o limicie. Testy 6 i 7 są zielone.
+- AC4: fail (finding 1). Spot-check z trwałym `refusedByApi` daje czerwony test 9, ale test 9 nie pokrywa rzeczywistej sekwencji.
+- AC5: pass. Pełny zestaw i E2E J-02, J-04 są zielone. Testy T-023 i T-015 w pakiecie są zielone.
+
+**Root cause / prevention:** sekcja wyjaśnia, dlaczego testy nie wyłapały błędu (tylko `toBeDisabled()`). Testy nr 1, 2, 4, 6, 7 i 9 padają bez poprawki (spot-check). Strażniki 3, 5 i 8 przechodzą zgodnie z opisem.
+
+**Do zmiany:** finding 1, czyli blokada po 409 musi wygasać po spadku liczby list na serwerze także wtedy, gdy ekran nie dostał zdarzenia o utworzeniu 50. listy. Do tego test odwzorowujący prawdziwą sekwencję. Opcjonalnie finding 2.
