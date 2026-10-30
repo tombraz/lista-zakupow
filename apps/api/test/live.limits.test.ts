@@ -4,7 +4,14 @@ import { LIVE_LIMITS } from "@lista/shared";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
-import { closeWithoutFin, connectLive, liveUrl, type LiveClient } from "./live";
+import {
+  closeCode,
+  closeWithoutFin,
+  connectLive,
+  liveUrl,
+  pause,
+  type LiveClient,
+} from "./live";
 import { captureLogs } from "./logs";
 
 describe("WebSocket limits (SEC6, TH-25)", () => {
@@ -69,6 +76,33 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
     const { user, url, connect } = await connected();
     sockets.push(await closeWithoutFin(url, { cookie: user.cookie }));
     for (let i = 1; i < LIVE_LIMITS.connectionsPerSession; i += 1) await connect();
+
+    const next = await connect();
+
+    await expect(next.closed(200)).rejects.toThrow("still open");
+  });
+
+  // T-037 (TH-25): klient bez FIN trzyma zamykane gniazda; limit liczy je razem z otwartymi.
+  it("drops a socket over the per-session socket limit, counting closing ones", async () => {
+    const { user, url, logs } = await connected();
+    for (let i = 0; i < LIVE_LIMITS.socketsPerSession; i += 1)
+      sockets.push(await closeWithoutFin(url, { cookie: user.cookie }));
+
+    expect(await closeCode(url, { cookie: user.cookie })).toBe(1006);
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining({
+        event: "limit_reached",
+        limit: "socketsPerSession",
+        userId: user.id,
+      }),
+    ]);
+  });
+
+  it("releases closing sockets after the close timeout", async () => {
+    const { user, url, connect } = await connected();
+    for (let i = 0; i < LIVE_LIMITS.socketsPerSession; i += 1)
+      sockets.push(await closeWithoutFin(url, { cookie: user.cookie }));
+    await pause(LIVE_LIMITS.closeTimeoutSeconds * 1000 + 300);
 
     const next = await connect();
 

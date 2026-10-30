@@ -1,4 +1,4 @@
-import websocket from "@fastify/websocket";
+import websocket, { type WebsocketPluginOptions } from "@fastify/websocket";
 import { LIVE_LIMITS, parseClientMessage, type LiveClientMessage } from "@lista/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type WebSocket from "ws";
@@ -28,7 +28,13 @@ export interface LiveRouteDeps {
 /** `GET /api/v1/live` → WebSocket (api.md, „Zmiany na żywo”). */
 export function liveRoutes(app: FastifyInstance, deps: LiveRouteDeps): void {
   const sessions = new WeakMap<FastifyRequest, LiveSession>();
-  void app.register(websocket, { options: { maxPayload: LIVE_LIMITS.messageBytes } });
+  const sockets = new SocketsPerSession();
+  // `closeTimeout` ma `ws` 8.22; @types/ws 8.18 jeszcze go nie zna.
+  const options: NonNullable<WebsocketPluginOptions["options"]> & { closeTimeout: number } = {
+    maxPayload: LIVE_LIMITS.messageBytes,
+    closeTimeout: LIVE_LIMITS.closeTimeoutSeconds * 1000,
+  };
+  void app.register(websocket, { options });
   void app.register((scope, _options, done) => {
     scope.get(
       "/api/v1/live",
@@ -42,12 +48,37 @@ export function liveRoutes(app: FastifyInstance, deps: LiveRouteDeps): void {
       },
       (socket, request) => {
         const session = sessions.get(request);
-        if (session) serve(socket, request, session, deps);
-        else socket.close(POLICY_VIOLATION);
+        if (!session) socket.close(POLICY_VIOLATION);
+        else if (!sockets.hold(socket, session.sessionId)) {
+          limitLog(request, session.userId)("limit_reached", "socketsPerSession");
+          // Bez wymiany ramek close: zerwane gniazdo nie czeka na klienta (`closeTimeout`).
+          socket.terminate();
+        } else serve(socket, request, session, deps);
       },
     );
     done();
   });
+}
+
+/**
+ * TH-25: gniazda sesji do zamknięcia TCP (`close` w `ws`), także odrzucone 1008 i zamykane —
+ * klient bez FIN trzyma je do `closeTimeout`; `connectionsPerSession` liczy tylko otwarte (T-037).
+ */
+class SocketsPerSession {
+  private readonly counts = new Map<string, number>();
+
+  /** `false`, gdy sesja ma już komplet gniazd; wtedy gniazda nie liczy. */
+  hold(socket: WebSocket, sessionId: string): boolean {
+    const count = this.counts.get(sessionId) ?? 0;
+    if (count >= LIVE_LIMITS.socketsPerSession) return false;
+    this.counts.set(sessionId, count + 1);
+    socket.once("close", () => {
+      const left = (this.counts.get(sessionId) ?? 1) - 1;
+      if (left > 0) this.counts.set(sessionId, left);
+      else this.counts.delete(sessionId);
+    });
+    return true;
+  }
 }
 
 function serve(

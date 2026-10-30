@@ -46,10 +46,12 @@ describe("LIVE_LIMITS (TH-25, architecture.md „Zmiany na żywo”)", () => {
   it("keeps the WebSocket limits and heartbeat in one place", () => {
     expect(LIVE_LIMITS).toEqual({
       connectionsPerSession: 5,
+      socketsPerSession: 10,
       messagesPerSecond: 20,
       messageBytes: 4096,
       pingIntervalSeconds: 25,
       pongTimeoutSeconds: 10,
+      closeTimeoutSeconds: 2,
     });
   });
 });

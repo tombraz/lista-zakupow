@@ -7,7 +7,7 @@ import { user } from "../src/db/schema";
 import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
 import { addMember, createInvitation, createList, createUser, randomIp } from "./factories";
-import { connectLive, liveUrl, type LiveClient } from "./live";
+import { closeCode, closeWithoutFin, connectLive, liveUrl, type LiveClient } from "./live";
 import { captureLogs } from "./logs";
 import { requestsAs } from "./requests";
 
@@ -21,6 +21,7 @@ type LimitKey =
 const NOT_ABUSE_LIMITS = {
   pingIntervalSeconds: "co ile serwer wysyła ping (bicie serca), nie ogranicza klienta",
   pongTimeoutSeconds: "zerwane połączenie (brak pong), nie nadużycie",
+  closeTimeoutSeconds: "czas oczekiwania serwera na zamknięcie TCP, nie ogranicza klienta",
 } satisfies Partial<Record<LimitKey, string>>;
 
 type AbuseLimit = Exclude<LimitKey, keyof typeof NOT_ABUSE_LIMITS>;
@@ -28,6 +29,9 @@ type AbuseLimit = Exclude<LimitKey, keyof typeof NOT_ABUSE_LIMITS>;
 interface Context {
   app: FastifyInstance;
   live: (cookie: string) => Promise<LiveClient>;
+  /** Adres `/api/v1/live`; gniazda `closeWithoutFin` zrywa sprzątanie testu. */
+  liveUrl: () => Promise<string>;
+  held: (() => void)[];
 }
 
 /**
@@ -172,6 +176,15 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       await (await live(ania.cookie)).closed();
       return { event: "limit_reached", userId: ania.id };
     },
+    socketsPerSession: async ({ app, liveUrl, held }) => {
+      const ania = await createUser(app);
+      const url = await liveUrl();
+      await repeat(LIVE_LIMITS.socketsPerSession, async () => {
+        held.push(await closeWithoutFin(url, { cookie: ania.cookie }));
+      });
+      await closeCode(url, { cookie: ania.cookie });
+      return { event: "limit_reached", userId: ania.id };
+    },
     messagesPerSecond: async ({ app, live }) => {
       const ania = await createUser(app);
       const client = await live(ania.cookie);
@@ -216,16 +229,17 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
     const logs = captureLogs();
     const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
     const clients: LiveClient[] = [];
+    const held: (() => void)[] = [];
     let url: Promise<string> | undefined;
+    const appUrl = () => (url ??= liveUrl(app));
     const live = async (cookie: string) => {
-      url ??= liveUrl(app);
-      const client = await connectLive(await url, { cookie });
+      const client = await connectLive(await appUrl(), { cookie });
       clients.push(client);
       return client;
     };
 
     try {
-      const expected = await scenario({ app, live });
+      const expected = await scenario({ app, live, liveUrl: appUrl, held });
 
       const events = logs
         .security()
@@ -237,6 +251,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       expect(events[0]?.["requestId"]).toEqual(expect.any(String));
     } finally {
       for (const client of clients) client.close();
+      for (const destroy of held) destroy();
       await app.close();
     }
   });

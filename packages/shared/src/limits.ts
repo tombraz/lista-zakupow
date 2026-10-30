@@ -42,6 +42,11 @@ export const INVITATION_VALIDITY_DAYS = 7;
 /** TH-25, architecture.md „Zmiany na żywo”: limity połączeń WebSocket i bicie serca. */
 export const LIVE_LIMITS = {
   connectionsPerSession: 5,
+  /**
+   * Gniazda sesji razem z zamykanymi (ramka close bez zamknięcia TCP); ponad limit gniazdo jest
+   * zrywane od razu, bez wymiany ramek close (T-037).
+   */
+  socketsPerSession: 10,
   messagesPerSecond: 20,
   messageBytes: 4096,
   pingIntervalSeconds: 25,
@@ -50,4 +55,6 @@ export const LIVE_LIMITS = {
    * `pingIntervalSeconds + pongTimeoutSeconds` łączy się ponownie.
    */
   pongTimeoutSeconds: 10,
+  /** Serwer: po ramce close najdłużej tyle czeka, aż klient zamknie TCP (T-037). */
+  closeTimeoutSeconds: 2,
 } as const;

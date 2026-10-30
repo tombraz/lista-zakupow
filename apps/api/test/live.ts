@@ -41,7 +41,29 @@ export function upgradeStatus(url: string, options: UpgradeOptions = {}): Promis
   });
 }
 
-function open(url: string, { cookie, origin = TEST_ORIGIN, query = "" }: UpgradeOptions) {
+/** Kod zamknięcia połączenia, także zerwanego tuż po upgrade (wtedy `1006`, bez `open`). */
+export function closeCode(
+  url: string,
+  options: UpgradeOptions = {},
+  timeoutMs = 1000,
+): Promise<number> {
+  const socket = open(url, options);
+  socket.on("error", () => {
+    // Zerwane gniazdo: `ws` zgłasza błąd, a potem `close` z kodem 1006.
+  });
+  return new Promise((resolve, reject) => {
+    const timer = wait(() => {
+      socket.terminate();
+      reject(new Error("connection still open"));
+    }, timeoutMs);
+    socket.once("close", (code) => {
+      stopWaiting(timer);
+      resolve(code);
+    });
+  });
+}
+
+function open(url: string,{ cookie, origin = TEST_ORIGIN, query = "" }: UpgradeOptions) {
   const headers: Record<string, string> = {};
   if (cookie) headers["cookie"] = cookie;
   return new WebSocket(`${url}${query}`, { headers, ...(origin ? { origin } : {}) });
