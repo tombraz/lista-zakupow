@@ -1,4 +1,3 @@
-import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import js from "@eslint/js";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
@@ -236,37 +235,8 @@ export default tseslint.config(
       "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...MOBILE_SESSION_SYNTAX],
     },
   },
-  {
-    // T-030, T-044: reguł z przeglądów nie wyłącza komentarz w kodzie (także `eslint-disable` bez
-    // nazwy reguły). Wyjątek tylko w tej konfiguracji: zawężony selektor albo files / ignores
-    // z komentarzem.
-    // T-045: reguły zmienia tylko ta konfiguracja; komentarze `/* eslint reguła: … */`, `/* global */`,
-    // `/* eslint-env */`, `/* exported */` zakazane.
-    files: [
-      "apps/*/src/**/*.{ts,tsx}",
-      "packages/*/src/**/*.{ts,tsx}",
-      "apps/web/test/**/*.{ts,tsx}",
-    ],
-    plugins: { "eslint-comments": eslintComments },
-    rules: {
-      "eslint-comments/no-restricted-disable": [
-        "error",
-        "no-restricted-imports",
-        "no-restricted-syntax",
-      ],
-      "eslint-comments/no-use": [
-        "error",
-        {
-          allow: [
-            "eslint-disable",
-            "eslint-disable-line",
-            "eslint-disable-next-line",
-            "eslint-enable",
-          ],
-        },
-      ],
-    },
-  },
+  // T-030, T-044, T-045: zakaz komentarzy wyłączających i konfiguracyjnych w osobnym przebiegu
+  // z --no-inline-config: eslint.directives.config.js (`pnpm lint`).
   {
     // T-020: zapis przez `useGuardedMutation` (synchroniczna blokada podwójnego wysłania).
     // T-019: `RouterProvider` z `react-router/dom` — inaczej `flushSync` po cichu nie działa.

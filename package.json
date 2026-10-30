@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm --filter @lista/web test:e2e",
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint . --max-warnings 0 && eslint -c eslint.directives.config.js --no-inline-config --max-warnings 0 apps packages",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "quality": "pnpm quality:duplication && pnpm quality:deps",

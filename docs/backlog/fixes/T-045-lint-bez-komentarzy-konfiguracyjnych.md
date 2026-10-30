@@ -58,6 +58,8 @@ Wskazówka: `eslint-comments/no-use` z `allow: ["eslint-disable", "eslint-disabl
 
 T-044 zamknął tylko dyrektywy wyłączenia (`eslint-comments/no-restricted-disable` widzi wyłącznie `eslint-disable*`). Komentarz konfiguracyjny `/* eslint reguła: … */` (oraz `/* global(s) */`, `/* eslint-env */`, `/* exported */`) to inny rodzaj dyrektywy: ESLint stosuje go jako lokalną konfigurację pliku, więc `off` lub podmiana opcji (`["error"]` bez selektorów) usuwa regułę z przeglądu bez śladu w `eslint.config.js`. Istniejące kontrole tego nie łapały, bo nikt nie sprawdzał tej drugiej klasy komentarzy — w repo nie było żadnego, więc lint był zielony.
 
+QA runda 1: reguła w głównej konfiguracji sama jest wyłączalna komentarzem w pliku (`/* eslint eslint-comments/no-use: off, … */` albo `/* eslint-disable eslint-comments/no-use */` nad komentarzem konfiguracyjnym), a ESLint stosuje konfigurację z komentarza przed uruchomieniem reguł. Ta sama luka dotyczyła `no-restricted-disable` z T-044. Zamknięcie: obie reguły w osobnym przebiegu `eslint.directives.config.js` z `--no-inline-config` (drugie polecenie w `pnpm lint`); plugin czyta komentarze sam, więc widzi je mimo wyłączonej konfiguracji z komentarzy, a komentarze nie zmieniają reguł tego przebiegu.
+
 Ten sam wzorzec gdzie indziej: brak (w repo zero komentarzy konfiguracyjnych; `apps/web/e2e` i pliki `*.js` poza zakresem `files` jak w T-044).
 
 ## Evidence
@@ -66,8 +68,12 @@ Ten sam wzorzec gdzie indziej: brak (w repo zero komentarzy konfiguracyjnych; `a
 - **Green (po zmianie):** każdy komentarz konfiguracyjny w probe1, probe2, `probe4.tsx` (`/* global foo */` z użyciem `foo`) i `packages/shared/src/__t045/probe6.tsx` — `Unexpected ESLint directive comment  eslint-comments/no-use`; probe3 nadal `no-restricted-disable`.
 - **Edge:** `// eslint no-restricted-syntax: off` (komentarz liniowy) nie działa jako konfiguracja — `no-restricted-syntax` dalej zgłasza `rate_limited` (probe5). Próbne pliki usunięte.
 - **Regression:** `pnpm lint` exit 0 (dozwolone `eslint-disable-next-line react-hooks/exhaustive-deps` w `Modal.tsx`, `useFocus.ts` przechodzą), `pnpm typecheck` ok, `pnpm quality` ok (depcruise bez naruszeń), `pnpm test` exit 0 (93 pliki / 515 testów w wyświetlonym podsumowaniu).
+- **QA runda 1 (red, `98537ad`):** `b1.ts` z `/* eslint eslint-comments/no-use: off, no-restricted-syntax: off */` nad `rate_limited` i `b2.ts` z `/* eslint-disable eslint-comments/no-use */` + `/* eslint no-restricted-syntax: off */` — `pnpm exec eslint` exit 0.
+- **QA runda 1 (green):** przebieg `eslint -c eslint.directives.config.js --no-inline-config`: `b1.ts` `eslint-comments/no-use`; `b2.ts` `Disabling 'eslint-comments/no-use' is not allowed` + `no-use`; `b3.ts` `/* eslint-disable */` — `no-restricted-disable`; `apps/web/test/__t045/b4.tsx` — `eslint-disable-next-line` dla `no-restricted-syntax`, `eslint-comments/no-restricted-disable`, `no-restricted-imports` — trzy błędy. `pnpm lint` z samym `probe1.ts` (przechodzi pierwszy przebieg): błąd `eslint-comments/no-use` z drugiego. Na repo drugi przebieg 0 błędów i 0 ostrzeżeń (dozwolone `eslint-disable-next-line react-hooks/exhaustive-deps` bez ostrzeżeń o `noInlineConfig`). Po usunięciu próbnych plików: `pnpm lint`, `pnpm typecheck`, `pnpm quality`, `pnpm test` exit 0.
 
 ## Prevention
+
+Co by zapobiegło: kontrola, której plik nie może wyłączyć sam dla siebie. Ta luka wróciła trzy razy (T-030, T-044, T-045), bo każda poprawka była regułą ESLint w głównej konfiguracji, a taką regułę wyłącza komentarz w tym samym pliku. Zastosowane w tym zadaniu (sprawdzenie automatyczne): przebieg `eslint.directives.config.js` z `--no-inline-config` w `pnpm lint` (CI uruchamia `pnpm lint`), z `eslint-comments/*` na liście `no-restricted-disable`. Nowe zakazy komentarzy dopisywać tam, nie w `eslint.config.js`.
 
 <!-- QA rounds are appended below by /qa-task -->
 
