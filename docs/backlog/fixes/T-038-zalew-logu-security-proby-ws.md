@@ -4,7 +4,7 @@ title: "Próby połączenia WS ponad limit zalewają log security"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -74,3 +74,27 @@ Poprawka: `LimitLogWindow` (wspólny dla trasy, zegar `Clock` z `app.ts`) przepu
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Odtworzenie (QA, czysty stan): `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check` OK; `pnpm vitest run --project api live.limits limits.security` 2 pliki / 30 testów zielone; `pnpm test` 92 pliki / 502 testy zielone; `pnpm quality` (depcruise: 0 naruszeń), `pnpm --filter @lista/api build` OK.
+
+Kryteria:
+
+- **AC1 — pass.** Test #1: 20 prób ponad `socketsPerSession` (1006) → dokładnie jeden wpis `limit_reached` z `route`, `limit`, `userId` (`toEqual([objectContaining])`, więc liczba wpisów nie zależy od N). Test #2: 3 próby ponad `connectionsPerSession` (1008) → 1 wpis; zegar + `limitLogWindowSeconds` → drugi wpis (granica okna `end <= now` sprawdzona). Kształt przez `logLimitEvent`, bez zmian.
+- **AC2 — pass.** Testy T-033 / T-035 / T-036 / T-037 i tabela `limits.security.test.ts` zielone bez zmiany asercji; `limitLogWindowSeconds` w `NOT_ABUSE_LIMITS` i w `LIVE_LIMITS` (`packages/shared/test/live.test.ts`).
+
+Spot-checki (przywrócone, `git status` czysty):
+
+- okno wyłączone (`take` zawsze `true`) → oba nowe testy czerwone (`…(19)` wpisów; `length of 1 but got 3`) — zgodnie z red w Evidence;
+- okno bez wygasania (`Infinity`) → test #2 czerwony (`expected [ {…} ] to deeply equal [ …(1) ]`).
+
+Eksploracja (tymczasowy plik testowy, usunięty): dwie sesje tej samej osoby, każda ponad `connectionsPerSession` po 3 próby → 2 wpisy (okno per sesja, zgodnie z Root cause); dwa kolejne połączenia tej samej sesji przekraczające `messagesPerSecond` w jednym oknie → 1008 dla obu, log ograniczony oknem. Bezpieczeństwo: w logu tylko `userId` (bez ciasteczka — `limitEvents` sprawdza), autoryzacja upgrade'u bez zmian (`Origin` 403, sesja 401), mapa okien sprzątana przy zapisie (ograniczona liczbą zdarzeń w ostatnich 60 s). Próba nadużycia TH-21/TH-25 (seria upgrade'ów ponad limit) wykonana lokalnie przez testy powyżej: log nie rośnie z N.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security / log (TH-21) | Wpis w oknie nie niesie liczby pominiętych prób, więc log `security` pokazuje, że nadużycie trwa (wpis co 60 s), ale nie jego skalę. Raport dopuszczał wariant „z licznikiem prób”; AC1 tego nie wymaga. | `LimitLogWindow.take` w `na-zywo/http/routes.ts` zwraca tylko `boolean`, licznik nie istnieje | opcjonalnie: pole `suppressed` (liczba pominiętych prób od poprzedniego wpisu) w następnym wpisie okna — decyzja użytkownika |
+| 2 | note | test coverage | Okno obejmuje też limity wiadomości (`messagesPerSecond`, `messageBytes`) na kolejnych połączeniach tej samej sesji — zachowanie zamierzone (komentarz `limitLog`), ale bez testu; to samo dla „dwie sesje tej samej osoby logują osobno” (z QA planu). Oba sprawdzone eksploracyjnie przez QA. | `routes.ts` `exceeded(...)` dla `messageBytes` / `messagesPerSecond` idzie przez `logWindow.take` | opcjonalny test regresji dwóch sesji w `live.limits.test.ts` |
+| 3 | note | scope / TH-25 | Koszt próby (zapytanie o sesję w `preValidation` przy każdym upgradzie) i zalew `rate_limited` w HTTP (`perIp`, most Better Auth) zostają — opisane w Root cause jako poza zakresem. | sekcja „Poza zakresem” | osobne zadania, jeśli użytkownik zechce |
