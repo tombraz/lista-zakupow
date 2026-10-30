@@ -11,15 +11,22 @@ import tseslint from "typescript-eslint";
 const SOURCE = ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"];
 const TESTS = ["**/*.test.{ts,tsx}"];
 
-const SAFE_SYNTAX = [
+const SQL_RAW = "MemberExpression[object.name='sql'][property.name='raw']";
+const SQL_RAW_MESSAGE = "sql.raw jest zakazany (TH-20): używaj zapytań parametryzowanych Drizzle.";
+const NO_INNER_HTML = {
+  selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+  message: "dangerouslySetInnerHTML jest zakazany (TH-15): renderuj treść jako tekst.",
+};
+const SAFE_SYNTAX = [{ selector: SQL_RAW, message: SQL_RAW_MESSAGE }, NO_INNER_HTML];
+
+// T-044: CHECK w DDL nie przyjmuje parametru ($1), więc schema.ts wkleja stałą liczbową z kodu
+// przez sql.raw(String(STAŁA)). Tylko w schema.ts i tylko w tej postaci; inne sql.raw zakazane.
+const SAFE_SYNTAX_DDL = [
   {
-    selector: "MemberExpression[object.name='sql'][property.name='raw']",
-    message: "sql.raw jest zakazany (TH-20): używaj zapytań parametryzowanych Drizzle.",
+    selector: `${SQL_RAW}:not(CallExpression[arguments.length=1][arguments.0.callee.name='String'][arguments.0.arguments.0.name=/^[A-Z][A-Z0-9_]*$/] > MemberExpression.callee)`,
+    message: SQL_RAW_MESSAGE,
   },
-  {
-    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-    message: "dangerouslySetInnerHTML jest zakazany (TH-15): renderuj treść jako tekst.",
-  },
+  NO_INNER_HTML,
 ];
 
 // T-012: limity per IP (MC-04 / MC-05) łączą klientów z tym samym adresem; adres nadaje tylko fixtures.ts.
@@ -37,10 +44,12 @@ const E2E_CLIENT_SYNTAX = [
 
 // T-021: stan „w trakcie” w testach komponentów trzyma heldResponse(), nie okno czasowe delay(ms),
 // które pod obciążeniem mija przed kolejnym krokiem testu. Dozwolone: delay() i delay("infinite").
+// T-044: dozwolone też `await delay(ms)` zaraz po `live.send(…)` (handler MSW): porządek „zdarzenie
+// WS przed odpowiedzią HTTP”, nie okno na kroki testu.
 const WEB_TEST_SYNTAX = [
   {
     selector:
-      "CallExpression[callee.name='delay'][arguments.length=1]:not([arguments.0.value='infinite'])",
+      "CallExpression[callee.name='delay'][arguments.length=1]:not([arguments.0.value='infinite']):not(ExpressionStatement:has(CallExpression[callee.object.name='live'][callee.property.name='send']) + ExpressionStatement > AwaitExpression > CallExpression)",
     message:
       "Zamiast delay(ms) wstrzymaj odpowiedź heldResponse() (test/held.ts) i zwolnij ją po asercjach (T-021, layers/web.md).",
   },
@@ -48,9 +57,13 @@ const WEB_TEST_SYNTAX = [
 
 // T-017: znaczniki czasu z wstrzykiwanego `Clock` (layers/db.md „Konwencje”), nie z zegara bazy —
 // klient porównuje wersje pozycji po `updatedAt` (api.md).
+// T-044: wyjątek `update(shoppingList).set({ updatedAt: sql`now()` })` — `updated_at` listy tylko
+// porządkuje SC-05, klient nie porównuje nim wersji.
+const LIST_UPDATED_AT_NOW =
+  "CallExpression[callee.property.name='set'][callee.object.callee.property.name='update'][callee.object.arguments.0.name='shoppingList'] > ObjectExpression > Property[key.name='updatedAt'] > TaggedTemplateExpression > TemplateLiteral > TemplateElement";
 const API_CLOCK_SYNTAX = [
   {
-    selector: "TaggedTemplateExpression[tag.name='sql'] TemplateElement[value.raw=/now\\(\\)/i]",
+    selector: `TaggedTemplateExpression[tag.name='sql'] TemplateElement[value.raw=/now\\(\\)/i]:not(${LIST_UPDATED_AT_NOW})`,
     message: "Czas z Clock w domenie (actor.clock.now()), nie now() bazy (T-017, layers/db.md).",
   },
 ];
@@ -100,6 +113,10 @@ const WEB_MUTATE_SYNTAX = [
     message:
       "Stan zapisu elementu przez isLocked(key) z useGuardedMutation: variables mutacji opisuje tylko ostatnie z równoległych wywołań (T-043, layers/web.md „Pułapki”).",
   })),
+];
+
+// T-028: SC-01 ↔ SC-02 przez `EntryLink`, który przenosi wpisany e-mail i zaproszenie.
+const WEB_ENTRY_LINK_SYNTAX = [
   {
     selector:
       "JSXOpeningElement[name.name='Link'] > JSXAttribute[name.name='to'][value.value=/^.(logowanie|rejestracja)$/]",
@@ -220,14 +237,25 @@ export default tseslint.config(
     },
   },
   {
-    // T-020: zapis przez `useGuardedMutation` (synchroniczna blokada podwójnego wysłania).
-    // T-019: `RouterProvider` z `react-router/dom` — inaczej `flushSync` po cichu nie działa.
-    // T-030: bez wyjątków w komentarzu — wyjątek od blokady wysłania tylko przez tę konfigurację.
-    files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/test/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/api/useGuardedMutation.ts"],
+    // T-030, T-044: reguł z przeglądów nie wyłącza komentarz w kodzie (także `eslint-disable` bez
+    // nazwy reguły). Wyjątek tylko w tej konfiguracji: zawężony selektor albo files / ignores
+    // z komentarzem.
+    files: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.ts", "apps/web/test/**/*.{ts,tsx}"],
     plugins: { "eslint-comments": eslintComments },
     rules: {
-      "eslint-comments/no-restricted-disable": ["error", "no-restricted-imports"],
+      "eslint-comments/no-restricted-disable": [
+        "error",
+        "no-restricted-imports",
+        "no-restricted-syntax",
+      ],
+    },
+  },
+  {
+    // T-020: zapis przez `useGuardedMutation` (synchroniczna blokada podwójnego wysłania).
+    // T-019: `RouterProvider` z `react-router/dom` — inaczej `flushSync` po cichu nie działa.
+    files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/test/**/*.{ts,tsx}"],
+    ignores: ["apps/web/src/api/useGuardedMutation.ts"],
+    rules: {
       "no-restricted-imports": [
         "error",
         {
@@ -287,6 +315,18 @@ export default tseslint.config(
     },
   },
   {
+    // Nadpisanie no-restricted-syntax zastępuje listę: schema.ts z SAFE_SYNTAX_DDL (T-044).
+    files: ["apps/api/src/db/schema.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX_DDL,
+        ...API_CLOCK_SYNTAX,
+        ...API_LIMIT_LOG_SYNTAX,
+      ],
+    },
+  },
+  {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/web/src/**/*.{ts,tsx}"],
     ignores: [...TESTS, "apps/web/src/session/useSession.ts"],
@@ -296,6 +336,33 @@ export default tseslint.config(
         ...SAFE_SYNTAX,
         ...WEB_SESSION_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
+        ...WEB_ENTRY_LINK_SYNTAX,
+      ],
+    },
+  },
+  {
+    // T-044: „Wróć” na SC-04 cofa w historii; do SC-01 prowadzi tylko przy wejściu wprost, bez
+    // e-maila i zaproszenia, więc zwykły Link. Bez WEB_ENTRY_LINK_SYNTAX.
+    files: ["apps/web/src/screens/SC-04-regulamin/TermsScreen.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...WEB_SESSION_SYNTAX,
+        ...WEB_MUTATE_SYNTAX,
+      ],
+    },
+  },
+  {
+    // T-044: useSession.ts jako jedyny czyści QueryClient (koniec sesji, T-018); pozostałe reguły
+    // web go obejmują. Bez WEB_SESSION_SYNTAX.
+    files: ["apps/web/src/session/useSession.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...WEB_MUTATE_SYNTAX,
+        ...WEB_ENTRY_LINK_SYNTAX,
       ],
     },
   },

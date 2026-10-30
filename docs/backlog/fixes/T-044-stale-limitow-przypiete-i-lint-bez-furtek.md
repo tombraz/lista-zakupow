@@ -4,7 +4,7 @@ title: "Wszystkie stałe limitów przypięte liczbą; reguły lintu z przegląd�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress         # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: []
@@ -53,7 +53,23 @@ related_tasks: [T-027, T-028, T-029, T-034, T-035, T-040]
 
 ## Root cause
 
+Zasada „test limitu przypina wartość liczbą” (testing-strategy.md, przegląd E-01 runda 2, S13) weszła po napisaniu testów limitów i została zastosowana tylko tam, gdzie wskazał przegląd (`listsPerOwner`, `LIVE_LIMITS`); testy w `apps/api` nadal biorą progi ze stałych, więc zła stała zmienia test i kod razem. Zakaz `eslint-disable` (T-030) objął tylko `no-restricted-imports` w web; reguły `no-restricted-syntax` dodawane później (T-017, T-021, T-028, T-029, T-035) nie rozszerzyły tej listy, więc wyjątki zapisano komentarzem w kodzie. Istniejące testy nie mogły tego wychwycić: nic nie sprawdzało wartości stałych ani samej konfiguracji lintu.
+
+Ten sam wzorzec gdzie indziej (poprawione tutaj, ta sama przyczyna i warstwa): komentarze `no-restricted-syntax` w `apps/api/src/db/schema.ts` (4× `sql.raw` w CHECK), w `ListScreen.live.test.tsx` (4× `delay(100)` po `live.send`) i `ParticipantsScreen.test.tsx` (1× `delay(50)`); `session/useSession.ts` był wyjęty z całego bloku reguł web, nie tylko z `WEB_SESSION_SYNTAX`. Poza zakresem: `apps/web/e2e/j01-konto.spec.ts` (2× `no-restricted-properties`, reguła TH-16, nie z przeglądów) i `react-hooks/exhaustive-deps` w `Modal.tsx`, `useFocus.ts`.
+
+Uwaga: T-008 proponował „20 linków / h na właściciela”, stała i test liczą na listę (`invitationsCreatedPerList`); test przypina stan zaimplementowany.
+
 ## Evidence
+
+- AC1 red: `packages/shared/src/limits.ts` z `participantsPerList: 21` — `pnpm vitest run packages/shared --exclude "**/limits.test.ts"`: 31/31 zielone; z nowym plikiem: `FAIL test/limits.test.ts > BUSINESS_LIMITS (F-05, F-07, F-12, TH-13) > keeps the BRD limits 50 / 500 / 20`. Z `invitationLookupPerIp.max: 31`: `FAIL … RATE_LIMITS … > keeps the documented thresholds`, diff `"invitationLookupPerIp": { - "max": 30, + "max": 31 }`.
+- AC2 red: próbne `apps/api/src/zz-probe.ts` (`// eslint-disable-next-line no-restricted-syntax` nad `log.warn({ event: "rate_limited" })`) i `apps/web/src/zz-probe.ts` (nad `m.mutate(1, {})`) — `eslint` exit 0.
+- AC2 green, te same próby + kontrolne: `Disabling 'no-restricted-syntax' is not allowed`, blanket `eslint-disable-next-line` → `Disabling 'no-restricted-imports,no-restricted-syntax' is not allowed`; bez komentarza nadal błąd T-035; `sql`now()`` w `update(item)` i w `update(shoppingList).set({ name })` → błąd T-017, `update(shoppingList).set({ updatedAt })` dozwolone; `sql.raw(String(LIMIT))` poza schema.ts → błąd; w schema.ts `sql.raw(userInput)` i `sql.raw(String(userInput))` → błąd, `sql.raw(String(NAME_MAX_LENGTH))` dozwolone; `mutate(1, {})` w `TermsScreen.tsx` i `useSession.ts` → błąd T-029; `<Link to="/logowanie">` poza TermsScreen → błąd T-028; w teście web `delay(100)` po `live.send` dozwolone, po `other.send`, bez poprzednika i z instrukcją pomiędzy → błąd T-021.
+- Pełny przebieg: `pnpm lint` 0 błędów, `pnpm test` 93 pliki / 515 testów, `pnpm typecheck`, `pnpm build`, `pnpm quality` (0 klonów, 0 naruszeń zależności) zielone. `ParticipantsScreen.test.tsx` 3× zielony z `delay()` zamiast `delay(50)`.
+
+## Regression
+
+- Testy limitów API (`limits.security.test.ts`, `invitations.rate-limit.test.ts`, `health-rate-limit.test.ts`, `lists.limit.test.ts`) — bez zmian, zielone.
+- SC-07 „Unieważnij” dwa razy (T-020) — `ParticipantsScreen.test.tsx`; SC-06 na żywo (T-025, T-039) — `ListScreen.live.test.tsx`; SC-04 „Wróć” — `TermsScreen` testy.
 
 ## Prevention
 

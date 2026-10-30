@@ -206,7 +206,6 @@ describe("SC-06 live changes of other people", () => {
       http.delete(`*/api/v1/lists/${list.id}`, async () => {
         live.send({ type: "list.deleted", listId: list.id });
         live.send({ type: "access.revoked", listId: list.id });
-        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
         await delay(100);
         return new HttpResponse(null, { status: 204 });
       }),
@@ -251,7 +250,6 @@ describe("SC-06 live changes of other people", () => {
     server.use(
       http.patch(`*/api/v1/lists/${list.id}/items/:id`, async () => {
         live.send({ type: "item.upserted", listId: list.id, item: checkedBread });
-        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
         await delay(100);
         return HttpResponse.json(checkedBread);
       }),
@@ -275,7 +273,6 @@ describe("SC-06 live changes of other people", () => {
     server.use(
       http.patch(`*/api/v1/lists/${list.id}/items/:id`, async () => {
         live.send({ type: "item.upserted", listId: list.id, item: tomeks });
-        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
         await delay(100);
         return HttpResponse.json({ ...MILK, note: "1 l", updatedAt: "2026-10-29T10:05:00.000Z" });
       }),
@@ -310,7 +307,6 @@ describe("SC-06 live changes of other people", () => {
           listId: list.id,
           item: { ...MILK, updatedAt: "2026-10-29T10:06:00.000Z" },
         });
-        // eslint-disable-next-line no-restricted-syntax -- porządek: zdarzenie WS przed odpowiedzią HTTP, nie okno na kroki testu (T-021)
         await delay(100);
         return HttpResponse.json(checkedMilk);
       }),

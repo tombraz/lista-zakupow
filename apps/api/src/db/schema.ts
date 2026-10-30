@@ -43,7 +43,6 @@ export const user = pgTable(
     check(
       "user_name_length",
       // Stała liczbowa z kodu, nie dane wejściowe: parametr ($1) jest w DDL niedozwolony.
-      // eslint-disable-next-line no-restricted-syntax
       sql`char_length(${table.name}) BETWEEN 1 AND ${sql.raw(String(NAME_MAX_LENGTH))}`,
     ),
   ],
@@ -126,7 +125,6 @@ export const shoppingList = pgTable(
     check(
       "shopping_list_name_length",
       // Stała liczbowa z kodu, nie dane wejściowe: parametr ($1) jest w DDL niedozwolony.
-      // eslint-disable-next-line no-restricted-syntax
       sql`char_length(${table.name}) BETWEEN 1 AND ${sql.raw(String(LIST_NAME_MAX_LENGTH))}`,
     ),
   ],
@@ -173,12 +171,10 @@ export const item = pgTable(
     // TH-13, TH-20: długości z F-07 także w bazie. Stałe liczbowe z kodu, nie dane wejściowe.
     check(
       "item_name_length",
-      // eslint-disable-next-line no-restricted-syntax
       sql`char_length(${table.name}) BETWEEN 1 AND ${sql.raw(String(ITEM_NAME_MAX_LENGTH))}`,
     ),
     check(
       "item_note_length",
-      // eslint-disable-next-line no-restricted-syntax
       sql`char_length(${table.note}) <= ${sql.raw(String(ITEM_NOTE_MAX_LENGTH))}`,
     ),
   ],
