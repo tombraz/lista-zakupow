@@ -23,6 +23,12 @@ export const BUSINESS_LIMITS = {
   participantsPerList: 20,
 } as const;
 
+/** TH-13: limity żądań HTTP; jedyne miejsce tych wartości. */
+export const HTTP_LIMITS = {
+  // Żadna trasa nie potrzebuje więcej niż 16 kB treści.
+  bodyBytes: 16 * 1024,
+} as const;
+
 /** F-11: link zaproszenia działa 7 dni od utworzenia. */
 export const INVITATION_VALIDITY_DAYS = 7;
 

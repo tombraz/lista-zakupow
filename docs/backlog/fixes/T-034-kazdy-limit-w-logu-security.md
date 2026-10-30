@@ -70,6 +70,12 @@ Inne wystąpienia: limit treści wiadomości WS (`messageBytes`) ma już log (T-
 
 ## Prevention
 
+Co by zapobiegło: automatyczny test łączący listę limitów z testami logu — to zadanie go dodaje (`limits.security.test.ts`). Luka 413 wzięła się stąd, że limit treści był stałą w `app.ts`, poza listami limitów.
+
+- Przyjęte (2026-10-30): `BODY_LIMIT_BYTES` przeniesiony do `packages/shared/src/limits.ts` jako `HTTP_LIMITS.bodyBytes`; scenariusz `bodyBytes` w tabeli pokrycia (uwaga QA nr 3) — zrobione.
+- Przyjęte (2026-10-30): wpis w „Pułapkach” `docs/architecture/layers/backend.md` (nowy limit w stałych `packages/shared` i w tabeli testu pokrycia) — dopisany.
+- Przyjęte (2026-10-30): jeden schemat zdarzenia limitu (`limit: <klucz>`, zawsze `route`; uwagi QA nr 1, 2) jako osobne zadanie T-035.
+
 ## Incident note
 
 <Nie dotyczy.>

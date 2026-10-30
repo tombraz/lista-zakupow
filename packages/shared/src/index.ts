@@ -34,6 +34,7 @@ export type {
 } from "./api/invitations";
 export {
   BUSINESS_LIMITS,
+  HTTP_LIMITS,
   INVITATION_VALIDITY_DAYS,
   LIVE_LIMITS,
   RATE_LIMITS,

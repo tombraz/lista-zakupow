@@ -1,3 +1,4 @@
+import { HTTP_LIMITS } from "@lista/shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { systemClock, type Clock } from "./clock";
@@ -13,9 +14,6 @@ import { createLiveHub, liveModule } from "./modules/na-zywo";
 import { createItems, itemsModule } from "./modules/pozycje";
 import { invitationsModule } from "./modules/zaproszenia";
 
-// TH-13: żadna trasa nie potrzebuje więcej niż 16 kB treści.
-const BODY_LIMIT_BYTES = 16 * 1024;
-
 export interface AppOptions {
   pool: Pool;
   auth: AuthSettings;
@@ -30,7 +28,7 @@ export interface AppOptions {
 export function buildApp(options: AppOptions): FastifyInstance {
   const app = Fastify({
     ...loggingOptions(options.logger),
-    bodyLimit: BODY_LIMIT_BYTES,
+    bodyLimit: HTTP_LIMITS.bodyBytes,
     ...(options.trustedProxies ? { trustProxy: options.trustedProxies } : {}),
   });
   watchPool(app, options.pool);

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
-import { BUSINESS_LIMITS, LIVE_LIMITS, RATE_LIMITS } from "@lista/shared";
+import { BUSINESS_LIMITS, HTTP_LIMITS, LIVE_LIMITS, RATE_LIMITS } from "@lista/shared";
 import { describe, expect, it } from "vitest";
 import { user } from "../src/db/schema";
 import { buildTestApp, TEST_ORIGIN } from "./app";
@@ -11,7 +11,11 @@ import { connectLive, liveUrl, type LiveClient } from "./live";
 import { captureLogs } from "./logs";
 import { requestsAs } from "./requests";
 
-type LimitKey = keyof typeof RATE_LIMITS | keyof typeof BUSINESS_LIMITS | keyof typeof LIVE_LIMITS;
+type LimitKey =
+  | keyof typeof RATE_LIMITS
+  | keyof typeof BUSINESS_LIMITS
+  | keyof typeof LIVE_LIMITS
+  | keyof typeof HTTP_LIMITS;
 
 /** Progi, które nie są limitem nadużyć: ich przekroczenie nie jest zdarzeniem bezpieczeństwa. */
 const NOT_ABUSE_LIMITS = {
@@ -47,7 +51,8 @@ async function repeat(times: number, send: () => Promise<unknown>) {
 }
 
 // T-034 (TH-21, architecture.md „Obserwowalność”): każdy limit nadużyć ma tu scenariusz.
-// Nowy klucz w `RATE_LIMITS`, `BUSINESS_LIMITS` lub `LIVE_LIMITS` bez scenariusza → test czerwony.
+// Nowy klucz w `RATE_LIMITS`, `BUSINESS_LIMITS`, `LIVE_LIMITS` lub `HTTP_LIMITS` bez scenariusza
+// → test czerwony.
 describe("every abuse limit leaves a security event (TH-21)", () => {
   const db = useTestDatabase();
 
@@ -180,12 +185,22 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       await client.closed();
       return { event: "limit_reached", limit: "messageBytes", userId: ania.id };
     },
+    bodyBytes: async ({ app }) => {
+      await app.inject({
+        method: "POST",
+        url: "/api/v1/lists",
+        headers: { "content-type": "application/json", origin: TEST_ORIGIN },
+        payload: JSON.stringify({ name: "x".repeat(HTTP_LIMITS.bodyBytes) }),
+      });
+      return { event: "limit_reached", route: "/api/v1/lists", limit: "bodyBytes" };
+    },
   };
 
   const ALL_LIMITS = [
     ...Object.keys(RATE_LIMITS),
     ...Object.keys(BUSINESS_LIMITS),
     ...Object.keys(LIVE_LIMITS),
+    ...Object.keys(HTTP_LIMITS),
   ];
   const ABUSE_LIMITS = ALL_LIMITS.filter((key) => !(key in NOT_ABUSE_LIMITS));
 
