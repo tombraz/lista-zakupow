@@ -4,7 +4,7 @@ title: "Fokus nie spada na body przy limicie list (SC-05) i uczestników (SC-07)
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05, F-12, N-04]
@@ -47,13 +47,17 @@ related_tasks: [T-005, T-008, T-015, T-023]
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | `moves focus to the limit warning when creating a link is refused (409)` | komponent | Vitest + RTL + MSW | AC1 |
-| 2 | `moves focus to the limit warning when members.changed fills the list` | komponent | Vitest + RTL + MSW | AC1 |
-| 3 | `keeps focus off body after revoking a link on a full list` | komponent | Vitest + RTL + MSW | AC2 |
-| 4 | `moves focus to the limit warning when a new list is refused (409)` | komponent | Vitest + RTL + MSW | AC3 |
-| 5 | `re-enables „+ Nowa lista” after an own list is deleted` | komponent | Vitest + RTL + MSW | AC4 |
+| 1 | `focus at the limit of 20 participants (T-025) › moves focus to the limit warning when creating a link is refused (409)` | komponent | Vitest + RTL + MSW | AC1 |
+| 2 | `20th participant joins (T-025) › moves focus from „Utwórz link” to the limit warning` | komponent | Vitest + RTL + MSW (WS) | AC1 |
+| 3 | `20th participant joins (T-025) › leaves focus elsewhere on the screen where it is` | komponent | Vitest + RTL + MSW (WS) | edge: fokus nie „skacze” |
+| 4 | `focus at the limit of 20 participants (T-025) › keeps focus off body after revoking a link on a full list` | komponent | Vitest + RTL + MSW | AC2 |
+| 5 | `focus at the limit of 20 participants (T-025) › leaves focus on the heading when the list is already full on entry` | komponent | Vitest + RTL + MSW | edge: brak kradzieży fokusu przy wejściu |
+| 6 | `limit of 50 own lists (AC3) › moves focus to the limit warning when a new list is refused (409)` | komponent | Vitest + RTL + MSW | AC3 |
+| 7 | `limit of 50 own lists from another tab (T-025) › moves focus from „+ Nowa lista” to the limit warning at the 50th list` | komponent | Vitest + RTL + MSW (WS) | AC3 |
+| 8 | `limit of 50 own lists (AC3) › leaves focus on the heading when the lists load already at the limit (T-025)` | komponent | Vitest + RTL + MSW | edge: brak kradzieży fokusu przy wejściu |
+| 9 | `limit of 50 own lists from another tab (T-025) › re-enables „+ Nowa lista” after an own list is deleted following a refusal (409)` | komponent | Vitest + RTL + MSW (WS) | AC4 |
 
-**Run:** `pnpm vitest run --project web`
+**Run:** `pnpm vitest run --project web src/screens/SC-05-moje-listy src/screens/SC-07-uczestnicy -t T-025`
 
 ## QA plan
 
@@ -63,9 +67,18 @@ related_tasks: [T-005, T-008, T-015, T-023]
 
 ## Root cause
 
-<Wypełnia /fix.>
+SC-05 (T-005) i SC-07 (T-008) wyłączają przycisk (`disabled`), gdy limit przychodzi z odpowiedzi 409 albo z odświeżenia na żywo, i nic nie przenosi fokusu — przeglądarka zdejmuje go z elementu `disabled` (albo z zamkniętego formularza) i spada on na `body`; `onRevoked` na SC-07 dodatkowo celował w wyłączony przycisk. Blokada SC-05 po 409 była flagą `refusedByApi` bez warunku wygaśnięcia. Testy nie złapały tego, bo sprawdzały tylko `toBeDisabled()`; atrapa utraty fokusu (`test/disabledFocus.ts`, T-023) pojawiła się później i nikt nie dopisał asercji fokusu dla tych ekranów.
+
+Poprawka: wspólny hook `useLimitFocus(reached, from)` w `components/useFocus.ts` (ta sama reguła co w SC-06, T-023: tylko przejście „nie limit → limit”, tylko gdy fokus jest na wyłączanym elemencie albo na `body`). SC-05: odmowa API trwa, dopóki serwer nie poda nowego stanu list (`refusedFor === lists`; TanStack Query zachowuje referencję przy niezmienionych danych), potem decyduje liczba własnych list. To szersze niż AC4 („spadnie poniżej liczby z chwili odmowy”) celowo: przy odmowie ekran pokazuje 49 list (50. powstała w innej karcie), więc reguła `atCount` jak w SC-06 blokowałaby przycisk także po usunięciu tej 50. listy (49 ≥ 49) — scenariusz z kroku 3 raportu.
+
+Inne wystąpienia: `AddItemBar.tsx` (SC-06) ma własną, prywatną wersję tej samej reguły (T-023) — można ją zastąpić wspólnym hookiem (wymaga refa formularza AddBar); poza zakresem, bez zmiany zachowania. Innych `disabled={…}` zależnych od API/na żywo w `apps/web/src/screens` nie ma (pozostałe: offline i `loading` przez `aria-disabled`, T-015).
 
 ## Evidence
+
+- Red (przed poprawką): testy 1, 2, 4, 6, 7 padały na `expect(element).toHaveFocus()` — „Received element with focus:” pusty (`body`); test 9 na `toBeEnabled()` — „Received element is not enabled”. Testy 3, 5, 8 (strażniki) przechodziły już przed poprawką.
+- Green: `pnpm test` — 91 plików, 460 testów zielone; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm quality` (0 klonów, 0 naruszeń zależności), `pnpm design-check`, build web — OK. `pnpm format:check`: jedno ostrzeżenie w `apps/web/e2e/j03-pozycje.spec.ts` — istniało przed tą zmianą (plik z T-023, nietknięty).
+- Lint React Compiler (`react-hooks/refs`) odrzucał ref ostrzeżenia zwracany w obiekcie `useNewList`, więc `useLimitFocus` jest wołany w `ListsScreen`.
+- E2E nie dopisano: atrapa `disabledFocus.ts` odtwarza spadek fokusu w jsdom (sprawdzone w T-023), a AC wskazują test komponentu.
 
 ## Prevention
 
