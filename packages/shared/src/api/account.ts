@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withoutNul } from "./text";
 
 export const NAME_MAX_LENGTH = 30;
 export const PASSWORD_MIN_LENGTH = 8;
@@ -17,7 +18,8 @@ const name = z
   .string({ error: "required" })
   .trim()
   .min(1, { error: "required" })
-  .max(NAME_MAX_LENGTH, { error: "too_long" });
+  .max(NAME_MAX_LENGTH, { error: "too_long" })
+  .refine(withoutNul, { error: "invalid" });
 
 const signUpEmail = z
   .string({ error: "required" })

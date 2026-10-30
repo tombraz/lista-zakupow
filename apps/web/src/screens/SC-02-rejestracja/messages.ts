@@ -26,7 +26,11 @@ export const messages = {
 
 /** Kod błędu pola z API lub schematu → tekst pod polem. */
 export const fieldMessages: Record<SignUpField, Partial<Record<FieldErrorCode, string>>> = {
-  name: { required: "Wpisz imię", too_long: "Imię może mieć najwyżej 30 znaków" },
+  name: {
+    required: "Wpisz imię",
+    invalid: "Wpisz imię",
+    too_long: "Imię może mieć najwyżej 30 znaków",
+  },
   email: { required: "Wpisz poprawny adres e-mail", invalid: "Wpisz poprawny adres e-mail" },
   password: {
     required: "Hasło musi mieć co najmniej 8 znaków",

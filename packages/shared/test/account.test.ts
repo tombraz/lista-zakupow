@@ -45,6 +45,12 @@ describe("signUpRequestSchema (AC3, F-01)", () => {
     expect(errorsOf({ ...valid, name: "   " })).toEqual({ name: "required" });
   });
 
+  it("rejects NUL anywhere in the name, which the database cannot store (T-026)", () => {
+    for (const name of ["\u0000Ania", "a\u0000b", "Ania\u0000", "\u0000"]) {
+      expect(errorsOf({ ...valid, name })).toEqual({ name: "invalid" });
+    }
+  });
+
   it("counts emoji as one character each, like the database does", () => {
     expect(errorsOf({ ...valid, name: "🙂".repeat(30) })).toEqual({});
     expect(errorsOf({ ...valid, name: "🙂".repeat(31) })).toEqual({ name: "too_long" });

@@ -178,6 +178,7 @@ describe("POST /api/auth/sign-up/email with invalid data (AC3)", () => {
     ["password of 7 characters", { password: "1234567" }, { password: "too_short" }],
     ["empty name", { name: "" }, { name: "required" }],
     ["name of 31 characters", { name: "a".repeat(31) }, { name: "too_long" }],
+    ["name with NUL (T-026)", { name: "a\u0000b" }, { name: "invalid" }],
   ];
 
   for (const [label, change, fields] of cases) {

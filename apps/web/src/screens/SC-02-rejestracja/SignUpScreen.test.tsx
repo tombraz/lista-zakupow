@@ -164,6 +164,23 @@ describe("SC-02 Rejestracja", () => {
     );
   });
 
+  it("explains under „Imię” that a pasted NUL character cannot be saved (T-026)", async () => {
+    const requests = signUpAnswers(200, { user: ANIA });
+    const user = userEvent.setup();
+    renderApp("/rejestracja");
+    await screen.findByLabelText("Imię");
+    await fillValidForm(user);
+    fireEvent.change(screen.getByLabelText("Imię"), { target: { value: "An\u0000ia" } });
+
+    await user.click(screen.getByRole("button", { name: "Załóż konto" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Popraw 1 pole");
+    expect(screen.getByLabelText("Imię")).toHaveAccessibleDescription(
+      expect.stringContaining("Wpisz imię") as string,
+    );
+    expect(requests).toEqual([]);
+  });
+
   it("shows the server's field errors the same way as its own (AC3)", async () => {
     signUpAnswers(400, { error: { code: "validation_failed", fields: { name: "too_long" } } });
     const user = userEvent.setup();
