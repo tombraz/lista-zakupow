@@ -4,16 +4,18 @@ import { LIVE_LIMITS } from "@lista/shared";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
-import { connectLive, liveUrl, type LiveClient } from "./live";
+import { closeWithoutFin, connectLive, liveUrl, type LiveClient } from "./live";
 import { captureLogs } from "./logs";
 
 describe("WebSocket limits (SEC6, TH-25)", () => {
   const db = useTestDatabase();
   let app: FastifyInstance | undefined;
   const clients: LiveClient[] = [];
+  const sockets: (() => void)[] = [];
 
   afterEach(async () => {
     for (const client of clients.splice(0)) client.close();
+    for (const destroy of sockets.splice(0)) destroy();
     await app?.close();
     app = undefined;
   });
@@ -28,7 +30,7 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
       clients.push(client);
       return client;
     };
-    return { user, connect, logs };
+    return { user, url, connect, logs };
   }
 
   // T-033 (TH-21, TH-25): przekroczenie limitu zostawia ślad w logu `security`, bez ciasteczka.
@@ -56,6 +58,17 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
     for (let i = 1; i < LIVE_LIMITS.connectionsPerSession; i += 1) await connect();
     first.close();
     await first.closed();
+
+    const next = await connect();
+
+    await expect(next.closed(200)).rejects.toThrow("still open");
+  });
+
+  // T-036: `ws` zgłasza `close` serwera dopiero po zamknięciu TCP; klient mógł połączyć się wcześniej.
+  it("frees a slot when the closing handshake ends, before TCP closes", async () => {
+    const { user, url, connect } = await connected();
+    sockets.push(await closeWithoutFin(url, { cookie: user.cookie }));
+    for (let i = 1; i < LIVE_LIMITS.connectionsPerSession; i += 1) await connect();
 
     const next = await connect();
 

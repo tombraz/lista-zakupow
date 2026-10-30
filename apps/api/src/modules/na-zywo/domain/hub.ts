@@ -4,6 +4,8 @@ import { LIVE_LIMITS, type ListEvent, type LiveServerMessage, type UserEvent } f
 export interface LiveConnection {
   readonly userId: string;
   readonly sessionId: string;
+  /** `false` od początku zamykania (ramka close), zanim zamknie się TCP i przyjdzie `detach`. */
+  readonly open: boolean;
   send(message: LiveServerMessage): void;
   /** Zamyka połączenie z kodem WebSocket (np. 1008 — naruszenie zasad). */
   close(code: number): void;
@@ -32,10 +34,13 @@ export class LiveHub implements Live {
   /** Połączenie → subskrybowane listy. */
   private readonly connections = new Map<LiveConnection, Set<string>>();
 
-  /** `false`, gdy sesja ma już komplet połączeń (TH-25): nowe trzeba zamknąć. */
+  /**
+   * `false`, gdy sesja ma już komplet otwartych połączeń (TH-25): nowe trzeba zamknąć. Zamykane
+   * się nie liczą — klient mógł już połączyć się ponownie (T-036).
+   */
   attach(connection: LiveConnection): boolean {
     const ofSession = [...this.connections.keys()].filter(
-      ({ sessionId }) => sessionId === connection.sessionId,
+      ({ sessionId, open }) => open && sessionId === connection.sessionId,
     );
     if (ofSession.length >= LIVE_LIMITS.connectionsPerSession) return false;
     this.connections.set(connection, new Set());

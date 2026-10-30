@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { connect as tcpConnect } from "node:net";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 import type { LiveServerMessage } from "@lista/shared";
@@ -144,4 +146,54 @@ export async function connectLive(
 /** Pauza w czasie rzeczywistym (także przy podstawionym zegarze), np. na dotarcie wiadomości. */
 export function pause(ms: number): Promise<void> {
   return new Promise((resolve) => wait(resolve, ms));
+}
+
+/**
+ * Połączenie, które kończy zamknięcie WebSocket (ramka close w obie strony), ale nie zamyka TCP —
+ * jak klient, którego FIN jeszcze nie dotarł do serwera (T-036). Zwraca zerwanie gniazda.
+ */
+export async function closeWithoutFin(
+  url: string,
+  { cookie, origin = TEST_ORIGIN }: UpgradeOptions,
+): Promise<() => void> {
+  const { hostname, port, pathname } = new URL(url);
+  const socket = tcpConnect({ host: hostname, port: Number(port), allowHalfOpen: true });
+  const headers = [
+    `GET ${pathname} HTTP/1.1`,
+    `Host: ${hostname}:${port}`,
+    "Upgrade: websocket",
+    "Connection: Upgrade",
+    `Sec-WebSocket-Key: ${randomBytes(16).toString("base64")}`,
+    "Sec-WebSocket-Version: 13",
+    ...(origin ? [`Origin: ${origin}`] : []),
+    ...(cookie ? [`Cookie: ${cookie}`] : []),
+  ];
+  const end = "\r\n\r\n";
+  socket.write(`${headers.join("\r\n")}${end}`);
+  let received = Buffer.alloc(0);
+  const until = (done: (data: Buffer) => boolean) =>
+    new Promise<void>((resolve, reject) => {
+      const check = () => {
+        if (!done(received)) return;
+        socket.off("data", onData);
+        resolve();
+      };
+      const onData = (chunk: Buffer) => {
+        received = Buffer.concat([received, chunk]);
+        check();
+      };
+      socket.on("data", onData);
+      socket.once("error", reject);
+      check();
+    });
+  await until((data) => data.includes(end));
+  const head = received.toString("latin1");
+  if (!head.startsWith("HTTP/1.1 101")) throw new Error(`upgrade failed: ${head.slice(0, 40)}`);
+  received = received.subarray(head.indexOf(end) + end.length);
+  // Ramka close klienta (maskowana), kod 1000.
+  const mask = randomBytes(4);
+  const code = [0x03, 0xe8].map((byte, i) => byte ^ (mask[i] ?? 0));
+  socket.write(Buffer.from([0x88, 0x82, ...mask, ...code]));
+  await until((data) => data[0] === 0x88);
+  return () => socket.destroy();
 }

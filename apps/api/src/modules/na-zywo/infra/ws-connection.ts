@@ -10,8 +10,12 @@ export class WsConnection implements LiveConnection {
     readonly sessionId: string,
   ) {}
 
+  get open(): boolean {
+    return this.socket.readyState === this.socket.OPEN;
+  }
+
   send(message: LiveServerMessage): void {
-    if (this.socket.readyState === this.socket.OPEN) this.socket.send(JSON.stringify(message));
+    if (this.open) this.socket.send(JSON.stringify(message));
   }
 
   close(code: number): void {
