@@ -4,7 +4,7 @@ title: "Fokus nie spada na body przy limicie list (SC-05) i uczestników (SC-07)
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05, F-12, N-04]
