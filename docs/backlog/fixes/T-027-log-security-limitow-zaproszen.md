@@ -4,7 +4,7 @@ title: "Limity zaproszeń zostawiają zdarzenie w logu security; jeden helper li
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12]
@@ -86,3 +86,25 @@ Co by zapobiegło: jedno miejsce rejestracji limitu, które samo loguje przekroc
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Reproduce: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` (0 warnings), `pnpm format:check`, `pnpm quality` — all clean; `pnpm test` → 473/473 passed (Testcontainers on local Docker).
+
+Acceptance criteria:
+
+- AC1 pass — `invitations.logs.test.ts` (GET and POST accept): 31 requests from one IP via `fastify.inject` against the local test app, exactly one `security` entry `rate_limited` with the route pattern; asserts no token in any log line and no IP in the event.
+- AC2 pass — `invitations.limit.test.ts`: list with 20 participants, 409 and one `limit_reached` event with `listId`, `limit`, route.
+- AC3 pass — `health-rate-limit.test.ts`: `rate_limited` with `route: "/health/ready"` and `requestId`, no IP. Both modules use `perIpRateLimit` / `perIp` from `apps/api/src/http/rate-limit.ts`.
+- AC4 pass — `invitations.rate-limit.test.ts`, `health*.test.ts`, J-04 invitation tests green in the full run.
+
+Test quality: spot-check removed the `securityLog(...)` line in `rate-limit.ts` and the `security` detail in `createInvitation` → all 4 new tests red (`4 failed | 7 passed`); restored, `git status` clean. Red evidence present in Evidence. Root cause explains why existing tests missed it (asserted only status/body). Lint rule spot-checked: a temporary file in `modules/health/` importing `@fastify/rate-limit` → `no-restricted-imports` error; file removed. No other config block overrides `no-restricted-imports` for `apps/api/src`.
+
+Threats: TH-06 / TH-21 exercised locally through the test harness (repeated token lookups from one IP → 429 + security event, no token or IP in the log). No production environment touched.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Logging consistency | `limit_reached` from `createInvitation` logs only `listId`; the other `limit_reached` events also log the acting `userId` (`listy/domain/lists.ts:76`, `pozycje/domain/items.ts:122`). | `apps/api/src/modules/zaproszenia/domain/invitations.ts:74` | Same identifier set as sibling events (owner `userId` + `listId`), if the domain function has access to it. |
+| 2 | note | Scope | WebSocket limits (TH-25) close the socket without a `security` event — the author already flagged it as out of scope. | `apps/api/src/modules/na-zywo/http/routes.ts` | Separate fix task, if the user agrees. |
