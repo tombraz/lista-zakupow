@@ -69,7 +69,12 @@ Platforma `css` w `packages/tokens/src/build.ts` (T-001) używała samej grupy `
 
 ## Prevention
 
-<Uzupełnia /fix; propozycje w `docs/reviews/E-01-2026-10-29-1.md`, sekcja „Proposals”.>
+**Co by zapobiegło:** kontrola, która nie przepuszcza rozmiaru tekstu w `px`, i test zmieniający rozmiar tekstu przeglądarki. Oba wdrożone za zgodą użytkownika:
+
+1. **Kontrola automatyczna:** `scripts/design-check.mjs` (punkt 5, w `pnpm check`) odrzuca `font-size` / `font` / `fontSize` w `px` w `apps/web/src` i `apps/mobile/src` (liczby bez jednostki w React Native przechodzą). Sprawdzone na próbce: 3 trafienia (`font-size: 16px`, `font: bold 14px`, `fontSize: "12px"`), `var(--…)`, `rem` i `fontSize: 16` przechodzą; kod projektu: 0. Dodatkowo test `rozmiar-tekstu.spec.ts` › SC-06 AppBar title is cut after 2 lines at 100% text on a phone (domyka QA runda 2 #1: limit 2 linii nie był pokryty). Red bez `line-clamp`: wysokość 150 px przy limicie 50 px.
+2. **Pułapka w `docs/architecture/layers/web.md`:** rozmiary tekstu tylko z tokenów w `rem`; nowy komponent lub ekran sprawdzić przy 200% tekstu na 390 i 320 px; przełącznik układu przez media query w `em`; w E2E CDP `Page.setFontSizes` (CSP blokuje `addStyleTag`).
+
+Uwaga: `scripts/design-check.mjs` jest kopią skryptu skilla `brd-to-design`; zmiana jest tylko w projekcie.
 
 ## Incident note
 

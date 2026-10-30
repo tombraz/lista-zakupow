@@ -56,3 +56,21 @@ test("SC-06 AppBar title stays within 2 lines at 200% text on a phone", async ({
   expect(height).toBeLessThanOrEqual(2 * lineHeight);
   expect(await linesOfWord(title, "Zakupy")).toBe(1);
 });
+
+// T-016 (prewencja, QA runda 2): przy 100% tekstu długa nazwa listy nie rozpycha paska —
+// tytuł kończy się wielokropkiem po 2 liniach (line-clamp), zamiast zawijać się dalej.
+test("SC-06 AppBar title is cut after 2 lines at 100% text on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const name = "Zakupy na długi weekend majowy u babci i dziadka w Zakopanem";
+  await openNewList(page, name);
+
+  const title = page.getByRole("heading", { level: 1, name });
+  const { height, lineHeight, cut } = await title.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    lineHeight: parseFloat(getComputedStyle(element).lineHeight),
+    cut: element.scrollHeight > element.clientHeight,
+  }));
+  expect(lineHeight).toBe(25);
+  expect(height).toBeLessThanOrEqual(2 * lineHeight);
+  expect(cut).toBe(true);
+});
