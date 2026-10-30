@@ -1,5 +1,5 @@
 import type { Me } from "@lista/shared";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { defaultScheduler, notifyManager } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
@@ -87,6 +87,35 @@ describe("SC-08 → SC-01 / SC-02 → the shared list", () => {
 
     expect(await screen.findByText("Po założeniu konta dołączysz do listy „Dom”.")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "E-mail" })).toHaveValue("tomek@example.com");
+  });
+
+  it("sign up with a taken e-mail → „Zaloguj się” keeps the invitation and joins after sign-in (T-028)", async () => {
+    const user = userEvent.setup();
+    anonymousUntilSignedIn();
+    const { list, accepts } = inviteToDom();
+    server.use(http.post("*/api/auth/sign-up/email", () => apiError(409, { code: "email_taken" })));
+    const { router } = renderApp(PAGE);
+
+    await user.click(await screen.findByRole("button", { name: "Załóż konto i dołącz" }));
+    await fillIn(user, await screen.findByRole("textbox", { name: "E-mail" }), TOMEK_ME.email);
+    await fillSignUp(user);
+    await user.click(screen.getByRole("button", { name: "Załóż konto" }));
+    const email = screen.getByRole("textbox", { name: "E-mail" });
+    await waitFor(() => {
+      expect(email).toHaveAccessibleDescription(/Konto z tym adresem już istnieje/);
+    });
+    const taken = document.getElementById(`${email.id}-error`);
+    if (!taken) throw new Error("no e-mail error");
+    await user.click(within(taken).getByRole("link", { name: "Zaloguj się" }));
+
+    expect(await screen.findByText("Zaloguj się, żeby dołączyć do listy „Dom”.")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "E-mail" })).toHaveValue(TOMEK_ME.email);
+    await fillIn(user, screen.getByLabelText(/^Hasło/), "haslo-tomka-123");
+    await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
+
+    expect(await screen.findByText("Dołączyłeś(-aś) do listy „Dom”.")).toBeVisible();
+    expect(accepts.count).toBe(1);
+    expect(router.state.location.pathname).toBe(`/listy/${list.id}`);
   });
 
   it("sign up: the request carries the token and the new account lands on the list", async () => {

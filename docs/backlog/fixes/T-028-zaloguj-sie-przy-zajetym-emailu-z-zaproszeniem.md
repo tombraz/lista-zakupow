@@ -4,7 +4,7 @@ title: "„Zaloguj się” w komunikacie o zajętym e-mailu zachowuje zaproszeni
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-01, F-12]
@@ -58,9 +58,19 @@ related_tasks: [T-004, T-008]
 
 ## Root cause
 
-<Wypełnia /fix. Link do resetu w tym samym komunikacie prowadzi do nieistniejącej trasy `/reset-hasla` (przegląd P2, minor): rozważyć przy okazji.>
+`EmailTaken` powstał w T-004 (`dbca17a`) jako zwykły `<Link to="/logowanie">`, zanim istniał kontekst zaproszenia. T-008 (`0f997f6`) dodał `EntryLink` i podmienił dolny przełącznik SC-02 oraz link na SC-01, ale pominął drugi link do SC-01 w komunikacie o zajętym e-mailu. Testy tego nie złapały, bo test T-004 AC2 sprawdzał tylko `href`, a testy przejść SC-08 → SC-01 / SC-02 (T-008 AC5) nie obejmowały odpowiedzi 409 `email_taken`.
+
+Inne wystąpienia: brak. SC-01 → SC-02 idzie przez `EntryLink`; „Wróć” na SC-04 cofa w historii; `guards.tsx` przekierowuje z `from`. Link „zresetuj hasło” w tym samym komunikacie prowadzi do `/reset-hasla`, którego nie ma (SC-03, F-03, poza E-01) — poza zakresem tej poprawki: trasa i ekran powstaną z SC-03.
 
 ## Evidence
+
+- Red (Vitest):
+  - `SC-08 → SC-01 / SC-02 → the shared list > sign up with a taken e-mail → „Zaloguj się” keeps the invitation and joins after sign-in (T-028)` — `Unable to find an element with the text: Zaloguj się, żeby dołączyć do listy „Dom”.`
+  - `SC-02 Rejestracja > „Zaloguj się” under a taken e-mail keeps the typed e-mail on SC-01 (T-028)` — `Expected the element to have value: Ania@Example.com, Received: ""`.
+- Red (E2E, Playwright): `J-04 taken e-mail on sign-up from the link → sign in → shared list` — `getByText('Zaloguj się, żeby dołączyć do listy „Dom”.')`: element(s) not found (telefon i komputer).
+- Green: poprawka — `EmailTaken` używa `EntryLink` z wpisanym e-mailem i kontekstem zaproszenia (`SignUpScreen.tsx`). Vitest: 91 plików, 466 testów — pass. E2E `pnpm test:e2e`: 50 passed. `pnpm typecheck`, `pnpm lint`, `pnpm design-check`, `pnpm --filter @lista/web build` — bez błędów.
+- E2E wpisuje e-mail wielkimi literami (przypadek brzegowy z planu QA): 409, e-mail przeniesiony bez zmian, logowanie się udaje.
+- Regresja: J-01 (`j01-konto.spec.ts`, w tym zajęty e-mail bez zaproszenia), J-04 (`j04-zaproszenie.spec.ts`), T-019 (`no second accept…`) — pass.
 
 ## Prevention
 

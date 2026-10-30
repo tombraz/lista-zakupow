@@ -28,6 +28,13 @@ function errorText(errors: FieldErrors, field: SignUpField): string | undefined 
   return code && code !== "email_taken" ? fieldMessages[field][code] : undefined;
 }
 
+/** Pod polem e-mail: zajęty adres z linkami (e-mail i zaproszenie idą na SC-01) albo tekst błędu. */
+function emailError(form: ReturnType<typeof useSignUpForm>) {
+  const { errors, values, invitation } = form;
+  if (errors.email !== "email_taken") return errorText(errors, "email");
+  return <EmailTaken email={values.email} invitation={invitation} />;
+}
+
 export function SignUpScreen() {
   const form = useSignUpForm();
   const { values, errors, setField } = form;
@@ -86,7 +93,7 @@ export function SignUpScreen() {
           onChange={(event) => {
             setField("email", event.target.value);
           }}
-          error={errors.email === "email_taken" ? <EmailTaken /> : errorText(errors, "email")}
+          error={emailError(form)}
         />
         <PasswordField
           id={FIELD_IDS.password}
@@ -120,12 +127,15 @@ function SignInSwitch(props: { email: string; invitation: InvitationContext | nu
   );
 }
 
-function EmailTaken() {
+function EmailTaken(props: { email: string; invitation: InvitationContext | null }) {
   const text = messages.emailTaken;
   return (
     <>
-      {text.before} <Link to="/logowanie">{text.signIn}</Link> {text.or}{" "}
-      <Link to="/reset-hasla">{text.reset}</Link>.
+      {text.before}{" "}
+      <EntryLink to="/logowanie" {...props}>
+        {text.signIn}
+      </EntryLink>{" "}
+      {text.or} <Link to="/reset-hasla">{text.reset}</Link>.
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -162,6 +162,26 @@ describe("SC-02 Rejestracja", () => {
       "href",
       "/logowanie",
     );
+  });
+
+  it("„Zaloguj się” under a taken e-mail keeps the typed e-mail on SC-01 (T-028)", async () => {
+    signUpAnswers(409, { error: { code: "email_taken" } });
+    const user = userEvent.setup();
+    renderApp("/rejestracja");
+    await screen.findByLabelText("Imię");
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Załóż konto" }));
+    const email = screen.getByLabelText("E-mail");
+    await waitFor(() => {
+      expect(email).toHaveAccessibleDescription(/Konto z tym adresem już istnieje/);
+    });
+
+    const taken = document.getElementById(`${email.id}-error`);
+    if (!taken) throw new Error("no e-mail error");
+    await user.click(within(taken).getByRole("link", { name: "Zaloguj się" }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Zaloguj się" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "E-mail" })).toHaveValue("Ania@Example.com");
   });
 
   it("explains under „Imię” that a pasted NUL character cannot be saved (T-026)", async () => {

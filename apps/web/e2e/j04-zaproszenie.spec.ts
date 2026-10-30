@@ -97,6 +97,50 @@ test("J-04 invite link, sign-up from the link, shared list, reused link", async 
   await tomekClient.close();
 });
 
+// T-028: zaproszona osoba z kontem wybiera rejestrację, adres zajęty → „Zaloguj się” w komunikacie
+// zachowuje e-mail i zaproszenie, po zalogowaniu od razu na liście.
+test("J-04 taken e-mail on sign-up from the link → sign in → shared list", async ({
+  page,
+  browser,
+}) => {
+  const list = await openNewList(page, "Dom");
+  const invitation = (await (
+    await api(page).post(`/api/v1/lists/${list.id}/invitations`, {})
+  ).json()) as { url: string };
+  const tomekAccount = { ...newAccount(), name: "Tomek" };
+  const signedUp = await newClient(browser);
+  const first = await signedUp.newPage();
+  await signUp(first, tomekAccount);
+  await expect(first.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+  await signedUp.close();
+
+  const tomekClient = await newClient(browser);
+  const tomek = await tomekClient.newPage();
+  await tomek.goto(new URL(invitation.url).pathname);
+  await tomek.getByRole("button", { name: "Załóż konto i dołącz" }).click();
+  await tomek.getByLabel("Imię").fill("Tomek");
+  const typed = tomekAccount.email.toUpperCase();
+  await tomek.getByLabel("E-mail").fill(typed);
+  await tomek.getByLabel("Hasło", { exact: true }).fill("inne-haslo-12");
+  await tomek.getByRole("checkbox", { name: /Akceptuję regulamin/ }).check();
+  await tomek.getByRole("checkbox", { name: "Mam ukończone 16 lat." }).check();
+  await tomek.getByRole("button", { name: "Załóż konto" }).click();
+  const taken = tomek.getByText("Konto z tym adresem już istnieje.", { exact: false });
+  await expect(taken).toBeVisible();
+  await taken.getByRole("link", { name: "Zaloguj się" }).click();
+
+  await expect(tomek.getByText("Zaloguj się, żeby dołączyć do listy „Dom”.")).toBeVisible();
+  await expect(tomek.getByLabel("E-mail")).toHaveValue(typed);
+  await expectNoAxeViolations(tomek);
+  await tomek.getByLabel("Hasło", { exact: true }).fill(tomekAccount.password);
+  await tomek.getByRole("button", { name: "Zaloguj się" }).click();
+
+  await expect(tomek.getByText("Dołączyłeś(-aś) do listy „Dom”.")).toBeVisible();
+  await expect(tomek.getByRole("heading", { level: 1, name: "Dom" })).toBeVisible();
+  expect(tomek.url()).toContain(`/listy/${list.id}`);
+  await tomekClient.close();
+});
+
 // AC7: właściciel na własnym linku; unieważniony link (AC2, SEC1).
 test("SC-08 own link and a revoked link", async ({ page }) => {
   const list = await openNewList(page, "Dom");
