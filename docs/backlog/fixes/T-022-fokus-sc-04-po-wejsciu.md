@@ -4,7 +4,7 @@ title: "Fokus na nagłówku SC-04 po wejściu linkiem (web)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: [T-014]
 layers: [web]
 requirements: [N-04]
@@ -38,23 +38,32 @@ related_tasks: [T-004, T-014]
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | <odtwarza błąd — uzupełnia /fix> | | | AC1 |
+| 1 | `focuses the SC-04 heading opened by keyboard from SC-09 (AC1)` (odtwarza błąd) | komponent (cała aplikacja) | Vitest + RTL + MSW | AC1 |
+| 2 | `focuses the SC-04 heading opened from SC-01, and „Wróć” gives SC-01 its own focus (AC2)` | komponent | Vitest + RTL + MSW | AC2 |
+| 3 | `focuses the section named in the address, not the heading (SC-02 → #polityka-prywatnosci)` | komponent | Vitest + RTL + MSW | AC3 (SC-02 link do sekcji) |
+| 4 | `keeps focus on the section chosen in the table of contents (AC3)` | komponent | Vitest + RTL + MSW | AC3 |
+| 5 | J-01 `SC-04 opened by keyboard from SC-01 focuses its heading; the table of contents keeps focus in the section (T-022)` | E2E | Playwright | AC1/AC2 w przeglądarce, AC3 |
 
-**Run:** `pnpm vitest run apps/web/src/routeFocus.test.tsx`
+**Run:** `pnpm vitest run apps/web/src/routeFocus.test.tsx`; E2E `pnpm test:e2e -g T-022`
 
 ## QA plan
 
 - **Regression:** spis treści SC-04 (fokus na `h2`), „Wróć” do SC-01 / SC-09, SC-02 (nowa karta)
-- **Edge cases:** <uzupełnia /fix>
+- **Edge cases:** wejście pod adres z `#polityka-prywatnosci` (SC-02 otwiera tak politykę w nowej karcie) — fokus na `h2` tej sekcji, nie na `h1` (inaczej fokus na `h1` przewinąłby stronę do góry); kliknięcie w spisie treści zmienia `#` w adresie — fokus ustawiany tylko przy montowaniu ekranu, więc nie wraca z sekcji na `h1`; pierwsze wejście / przeładowanie `/regulamin` też ustawia fokus na `h1` (jak AppBar w T-014); obwódka fokusu na `h1` — globalna `focus.ring` na jasnym tle (bez paska marki).
 - **Platforms:** web (komputer i telefon), CI Linux
 
 ## Root cause
 
-<Uzupełnia /fix.>
+`TermsScreen` (T-004) renderuje `h1` bez `tabIndex` i bez obsługi fokusu. T-014 przeniósł zarządzanie fokusem po zmianie trasy do `AppBar`, a SC-04 nie ma AppBar, więc po nawigacji po stronie klienta fokus zostaje na `body`. Istniejące testy SC-04 (`TermsScreen.test.tsx`) startowały z `renderApp("/regulamin")` i sprawdzały tylko fokus spisu treści; `routeFocus.test.tsx` (T-014) obejmował tylko ekrany z AppBar.
+
+Ten sam wzorzec gdzie indziej: wszystkie trasy sprawdzone (`routes.tsx`) — SC-05/06/07/09 przez `AppBar`, SC-01/SC-02 fokus w pierwszym polu (`useFocusTargets`), SC-08 własny `h1` z fokusem; SC-04 był jedynym ekranem bez obsługi.
 
 ## Evidence
 
-<Uzupełnia /fix.>
+- Red (przed poprawką): `routeFocus.test.tsx` — 4 nowe testy T-022 padały na `expect(element).toHaveFocus()` (fokus na `body`), m.in. `focuses the SC-04 heading opened by keyboard from SC-09 (AC1)`.
+- Green: `TermsScreen.tsx` — `h1` z `tabIndex={-1}` i `useEntryFocus` (przy montowaniu fokus na `h1`, albo na `h2` sekcji wskazanej przez `#` w adresie). `pnpm vitest run --project web --project tokens`: 25 plików, 199 testów; pełny `pnpm test`: 90 plików, 435 testów zielone; `pnpm typecheck`, `pnpm lint`, `pnpm design-check`, build web — OK; `pnpm test:e2e`: 46 passed.
+- Uwaga dla QA: sprawdziłem, czy E2E odróżni wariant „fokus na `h1` przy każdej zmianie `location.key`” — nie odróżnia (przechodzi też z nim; React Router nie zmienia `key` przy kliknięciu w `#`). Ochronę spisu treści daje projekt efektu (tylko przy montowaniu), a test 4 i E2E pilnują samego zachowania.
+- Poza zakresem (niezweryfikowane w przeglądarce): po kliknięciu w spisie treści „Wróć” (`navigate(-1)`) prawdopodobnie cofa do `/regulamin` bez `#`, a nie na poprzedni ekran — istniało przed T-022.
 
 ## Prevention
 

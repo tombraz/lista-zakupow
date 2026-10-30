@@ -126,3 +126,68 @@ describe("focus after a route change (T-014)", () => {
     });
   });
 });
+
+// SC-04 nie ma AppBar, więc ustawia fokus sam (web.md „Pułapki”, T-014 „Prevention” #3).
+describe("focus on SC-04 after a route change (T-022)", () => {
+  const terms = () => heading("Regulamin i polityka prywatności");
+
+  it("focuses the SC-04 heading opened by keyboard from SC-09 (AC1)", async () => {
+    sessionIs(ANIA);
+    homeListIs();
+    const user = userEvent.setup();
+    renderApp("/konto");
+    await heading("Konto");
+
+    screen.getByRole("link", { name: "Regulamin i polityka prywatności" }).focus();
+    await user.keyboard("{Enter}");
+
+    const title = await terms();
+    await waitFor(() => {
+      expect(title).toHaveFocus();
+    });
+  });
+
+  it("focuses the SC-04 heading opened from SC-01, and „Wróć” gives SC-01 its own focus (AC2)", async () => {
+    sessionIs(null);
+    const user = userEvent.setup();
+    renderApp("/logowanie");
+    await heading("Zaloguj się");
+
+    await user.click(screen.getByRole("link", { name: "Regulamin i polityka prywatności" }));
+    const title = await terms();
+    await waitFor(() => {
+      expect(title).toHaveFocus();
+    });
+
+    await user.click(screen.getByRole("link", { name: "Wróć" }));
+    await heading("Zaloguj się");
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "E-mail" })).toHaveFocus();
+    });
+  });
+
+  it("focuses the section named in the address, not the heading (SC-02 → #polityka-prywatnosci)", async () => {
+    sessionIs(null);
+    renderApp("/regulamin#polityka-prywatnosci");
+
+    await terms();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 2, name: "Polityka prywatności" })).toHaveFocus();
+    });
+  });
+
+  it("keeps focus on the section chosen in the table of contents (AC3)", async () => {
+    sessionIs(null);
+    const user = userEvent.setup();
+    renderApp("/regulamin");
+    await waitFor(async () => {
+      expect(await terms()).toHaveFocus();
+    });
+
+    await user.click(screen.getByRole("link", { name: "Polityka prywatności" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 2, name: "Polityka prywatności" })).toHaveFocus();
+    });
+  });
+});

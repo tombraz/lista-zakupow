@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { PrivacyPolicy, TermsOfService } from "./documents";
 import { messages } from "./messages";
@@ -11,11 +11,14 @@ const SECTIONS = [
 
 /** SC-04: publiczny, także przed rejestracją (F-01, N-02). */
 export function TermsScreen() {
+  const titleRef = useEntryFocus();
   return (
     <main className={styles.page}>
       <title>{`${messages.title} · Wspólna lista zakupów`}</title>
       <BackLink />
-      <h1 className={styles.title}>{messages.title}</h1>
+      <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
+        {messages.title}
+      </h1>
       <nav aria-label={messages.toc.label}>
         <ul className={styles.toc}>
           {SECTIONS.map((section) => (
@@ -39,6 +42,22 @@ export function TermsScreen() {
       ))}
     </main>
   );
+}
+
+/**
+ * Ekran bez AppBar ustawia fokus sam (WCAG 2.4.3): po wejściu na `h1`, a gdy adres wskazuje sekcję
+ * (SC-02 → `#polityka-prywatnosci`), na jej `h2`. Tylko przy montowaniu: link spisu treści zmienia
+ * `#` w adresie i nie może oddać fokusu z sekcji na `h1`.
+ */
+function useEntryFocus() {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const { hash } = useLocation();
+  const [entryHash] = useState(hash);
+  useEffect(() => {
+    const section = SECTIONS.find((s) => `#${s.id}` === entryHash);
+    (section ? document.getElementById(section.id) : ref.current)?.focus();
+  }, [entryHash]);
+  return ref;
 }
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {

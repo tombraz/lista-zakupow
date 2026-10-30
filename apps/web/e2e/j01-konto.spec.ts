@@ -114,3 +114,23 @@ test("J-01 signed out in another tab: goes to SC-01 and back after signing in (T
   await expect(page).toHaveURL(/\/listy$/);
   await expect(page.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
 });
+
+// T-022: SC-04 bez AppBar ustawia fokus sam; link spisu treści (zmiana `#` w prawdziwej przeglądarce)
+// przenosi fokus do sekcji.
+test("J-01 SC-04 opened by keyboard from SC-01 focuses its heading; the table of contents keeps focus in the section (T-022)", async ({
+  page,
+}) => {
+  await page.goto("/logowanie");
+  await expect(page.getByLabel("E-mail")).toBeFocused();
+
+  await page.getByRole("link", { name: "Regulamin i polityka prywatności" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Regulamin i polityka prywatności" }),
+  ).toBeFocused();
+
+  await page.getByRole("link", { name: "Polityka prywatności" }).click();
+  await expect(page).toHaveURL(/#polityka-prywatnosci$/);
+  const section = page.getByRole("heading", { level: 2, name: "Polityka prywatności" });
+  await expect(section).toBeFocused();
+});
