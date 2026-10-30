@@ -76,7 +76,13 @@ Poprawka: `LimitLogWindow` przeniesione do `src/logging.ts`, jedno na aplikację
 - Red: `pnpm vitest run --project api health-rate-limit sign-in-rate-limit live.limits limits.security` → 12 testów czerwonych: 11 wierszy tabeli `limits.security.test.ts` (wszystkie limity HTTP, np. `healthReadyPerIp: exceeding the limit repeatedly logs one security event` → `AssertionError: expected [ { level: 40, …(9) }, …(2) ] to deeply equal [ ObjectContaining{…} ]`), `logs repeated 429s once per IP and window, separately for each IP` → `expected [ … ] to have a length of 2 but got 20`, `logs repeated attempts over the account limit once per account` → `expected [ { level: 40, …(10) }, …(19) ] to deeply equal [ ObjectContaining{…}, …(1) ]`. Wiersze WS i nowy `logs the connection limit separately for two sessions of one person` zielone od początku (regresja T-038 / AC2).
 - Zmiana asercji w testach sprzed T-040: `lists.limit.test.ts` i `items.limit.test.ts` (`stops a bot … logs it with identifiers only`) oczekiwały 2 wpisów na 2 odrzucenia; po poprawce 1 (zamierzona zmiana zachowania, AC1).
 - Green: te same 4 pliki / 44 testy; `pnpm test` 92 pliki / 505 testów zielone; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm quality` (depcruise: 0 naruszeń), `pnpm --filter @lista/api build` OK.
+
 ## Prevention
+
+Co by zapobiegło: deduplikacja w jednym miejscu, przez które przechodzi każde zdarzenie limitu (`logLimitEvent`), zamiast w każdej trasie osobno, oraz test, który przekracza limit wielokrotnie. Oba punkty przyjęte przez użytkownika w T-038 (2026-10-30) i wykonane w tym zadaniu (AC3):
+
+1. Sprawdzenie automatyczne: tabela `limits.security.test.ts` przekracza każdy limit nadużyć `OVER` (3) razy i oczekuje dokładnie jednego zdarzenia. Nowy limit bez deduplikacji albo z niewłaściwym podmiotem (np. `signInPerIp` bez `subject: request.ip`) daje czerwony test (spot-checki QA runda 1).
+2. „Pułapki” w `docs/architecture/layers/backend.md`: zdarzenie limitu raz na podmiot i limit w oknie, nie raz na żądanie / połączenie; jawne `subject`, gdy limit liczy coś innego niż identyfikatory zdarzenia.
 
 ## Incident note
 
