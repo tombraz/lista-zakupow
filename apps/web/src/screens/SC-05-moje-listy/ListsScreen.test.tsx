@@ -270,7 +270,7 @@ describe("SC-05 Moje listy", () => {
     });
 
     // T-025: odmowa zamyka formularz z fokusem, a „+ Nowa lista” wraca jako `disabled`.
-    it("moves focus to the limit warning when a new list is refused (409)", async () => {
+    it("moves focus to the limit warning when a new list is refused (409) (T-025)", async () => {
       const user = userEvent.setup();
       listsAre([aList({ name: "Dom" })]);
       server.use(

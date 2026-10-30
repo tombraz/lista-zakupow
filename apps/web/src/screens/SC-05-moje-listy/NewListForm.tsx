@@ -30,8 +30,11 @@ export function NewListForm({ onCancel, onLimitReached }: NewListFormProps) {
       void navigate(`/listy/${list.id}`);
     },
     onFailure: (code) => {
-      if (code === "limit_reached") onLimitReached();
-      else setFailure(code);
+      if (code === "limit_reached") {
+        // Limit przekroczyła lista z innej karty, której ekran jeszcze nie zna (T-025).
+        void client.invalidateQueries({ queryKey: LISTS_KEY });
+        onLimitReached();
+      } else setFailure(code);
     },
   });
 

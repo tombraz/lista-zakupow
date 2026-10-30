@@ -5,7 +5,7 @@ import { useFocusRequest } from "../../components/useFocus";
 /**
  * Formularz nowej listy w miejscu przycisku (SC-05): otwarcie, powrót fokusu po „Anuluj” / Esc
  * i limit 50 własnych list (F-05) — z przeglądu albo z odpowiedzi 409 API. Odmowa API trwa do
- * następnego stanu list z serwera; potem decyduje liczba własnych list (T-025).
+ * następnego stanu list z serwera (formularz go pobiera); potem decyduje liczba list (T-025).
  */
 export function useNewList(lists: ListSummary[] | undefined) {
   const [open, setOpen] = useState(false);

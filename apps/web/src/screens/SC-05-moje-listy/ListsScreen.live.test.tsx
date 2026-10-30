@@ -105,22 +105,21 @@ describe("SC-05 live changes", () => {
       const user = userEvent.setup();
       const lists = own(49);
       const { live, setLists } = await showLists(lists);
+      // Druga karta tworzy 50. listę; `POST /lists` nie wysyła `lists.changed`, więc ekran
+      // dalej pokazuje 49 list, a 409 przychodzi przy 49 na ekranie (QA runda 1 #1).
+      setLists([...lists, aList()]);
       server.use(
         http.post("*/api/v1/lists", () => apiError(409, { code: "limit_reached", limit: "lists" })),
       );
       await user.click(await screen.findByRole("button", { name: "+ Nowa lista" }));
       await user.type(screen.getByRole("textbox", { name: "Nazwa listy" }), "Zakupy{Enter}");
       await screen.findByText(LIMIT);
-
-      // Druga karta: 50. lista (to ona dała 409), potem usunięcie jednej.
-      setLists([...lists, aList()]);
-      act(() => {
-        live.send({ type: "lists.changed" });
-      });
       await waitFor(() => {
         expect(screen.getAllByRole("link", { name: /Lista/ })).toHaveLength(50);
       });
-      setLists(lists.slice(1));
+
+      // Druga karta usuwa tę 50. listę: serwer zwraca te same 49 list co przed odmową.
+      setLists(lists);
       act(() => {
         live.send({ type: "lists.changed" });
       });
