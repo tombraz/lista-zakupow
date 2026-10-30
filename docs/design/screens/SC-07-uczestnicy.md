@@ -84,7 +84,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 ## Accessibility
 
 - `h1` „Uczestnicy”, `h2` „Na liście”, „Zaproszenia”.
-- Po usunięciu uczestnika fokus na następnym wierszu (albo na nagłówku sekcji); po unieważnieniu linku — na „Utwórz link zaproszenia”.
+- Po usunięciu uczestnika fokus na następnym wierszu (albo na nagłówku sekcji); po unieważnieniu linku — na „Utwórz link zaproszenia”, a przy pełnej liście (przycisk nieaktywny) na ostrzeżeniu o limicie (T-025).
 - Toast i komunikaty `role="status"`; nic nie znika z akcją, której nie da się powtórzyć.
 - Nazwy dostępne przycisków „Usuń” zawierają imię.
 - Sprawdzone z tabelą „Design”.
