@@ -4,7 +4,7 @@ title: "Reguł lintu nie wyłącza komentarz konfiguracyjny `/* eslint … */`"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-044]
 layers: [backend, web]
 requirements: []
@@ -70,3 +70,27 @@ Ten sam wzorzec gdzie indziej: brak (w repo zero komentarzy konfiguracyjnych; `a
 ## Prevention
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: fail
+
+Odtworzenie (czyste drzewo, `98537ad`): `pnpm lint` exit 0, `pnpm typecheck` exit 0, `pnpm quality` exit 0 (depcruise 0 naruszeń), `pnpm format:check` exit 0, `pnpm test` exit 0 (515/515).
+
+Kryteria:
+
+- AC1: **fail** — komentarze `/* eslint no-restricted-syntax: off */`, `["error"]`, `/* global */`, `/* globals */`, `/* eslint-env */`, `/* exported */`, `/*eslint …:off*/` bez spacji, w `apps/api/src`, `apps/web/test`, `packages/shared/src/*.tsx` dają `eslint-comments/no-use` (potwierdzone na próbnych plikach). Ale komentarz konfiguracyjny może wyłączyć samą regułę pilnującą — patrz #1, #2.
+- AC2: pass — `pnpm lint` na repo zielony (`Modal.tsx`, `useFocus.ts`); próbny `// eslint-disable-next-line react-hooks/exhaustive-deps` przyjęty; `// eslint-disable-next-line no-restricted-syntax` nadal pada.
+- AC3: pass — wiersz i „Zmiany” w `CODING_STANDARDS.md`.
+- AC4: pass — jak wyżej.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | AC1 / TH-21 | Komentarz konfiguracyjny wyłącza regułę, która ma go zgłaszać. ESLint stosuje konfigurację z komentarza przed uruchomieniem reguł, więc `eslint-comments/no-use` wyłączona w tym samym komentarzu nic nie zgłasza. Furtka z Report zostaje otwarta, a przy okazji znika też zakaz z T-044. | Próbny `apps/api/src/__qa45/p3.ts`: `/* eslint eslint-comments/no-use: off, no-restricted-syntax: off */` nad `log.warn({ event: "rate_limited" })` — 0 błędów `no-use` i 0 `no-restricted-syntax` (ten sam kod bez komentarza: błąd `no-restricted-syntax`). `p10.ts`: `/* eslint eslint-comments/no-use: off, eslint-comments/no-restricted-disable: off */` + `// eslint-disable-next-line no-restricted-syntax` — 0 błędów. | Każdy komentarz `/* eslint <reguła>: … */` w zakresie pada, także gdy dotyczy reguł `eslint-comments/*`. Kontrola, której nie da się wyłączyć z poziomu pliku: np. skrypt w `pnpm lint`/CI (wzorzec `/\*\s*(eslint\s|eslint-env|globals?\s|exported\s)` w `apps/*/src`, `packages/*/src`, `apps/web/test`), albo inne rozwiązanie spoza konfiguracji inline. Test: próbny plik z `p3`/`p10` pada. |
+| 2 | blocker | AC1 / TH-21 | `eslint-disable` dla `eslint-comments/no-use` nie jest zakazany, więc wystarczy go postawić nad komentarzem konfiguracyjnym. | `p4.ts`: `/* eslint-disable eslint-comments/no-use */` + `/* eslint no-restricted-syntax: off */` nad `rate_limited` — 0 błędów. | `eslint-comments/no-restricted-disable` obejmuje też `eslint-comments/*` (dozwolony glob). Test: próbny `p4` pada. |
+| 3 | minor | Proces (fix) | Sekcja `## Prevention` jest pusta. | plik taska | Wpis o tym, co zapobiega powtórce (np. kontrola niewyłączalna z pliku z #1). |
+| 4 | note | Narzędzia | `/* eslint-env */` daje dziś `ESLintEnvWarning` na stderr; w ESLint 10 będzie błędem sam z siebie. Bez wpływu na werdykt. | wyjście `eslint` na `p2.ts` | — |
+
+Edge cases potwierdzone: `// eslint no-restricted-syntax: off` (liniowy) nie działa jako konfiguracja (reguła dalej zgłasza); `/* eslint-disable-next-line eslint-comments/no-use */` nad komentarzem konfiguracyjnym nie pomaga (błąd `no-use` zostaje). Próbne pliki usunięte.
+
+Do zmiany: zamknąć #1 i #2, dodać do Evidence red/green dla próbnych `p3`, `p4`, `p10`, uzupełnić Prevention.
