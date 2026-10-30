@@ -73,6 +73,10 @@ Propozycje (decyduje użytkownik):
 2. (Pułapki w `web.md`) uzupełnić wpis T-015: „Element, który może mieć fokus, nie dostaje `disabled` bez przeniesienia fokusu (ostrzeżenie, nagłówek) — także gdy stan przychodzi z API lub na żywo (T-023)”; po wdrożeniu 1 — zdanie o atrapie w `setup.ts` zamiast „łapie tylko E2E”.
 3. Zadanie uzupełniające: SC-05 — 409 na 51. listę zamyka formularz z fokusem i wyłącza „Nowa lista” (prawdopodobnie fokus na `body`; potwierdzone też przez QA jako prawdopodobne).
 
+**Decyzja użytkownika (2026-10-30):** przyjęte 1 i 2; 3 — osobne zadanie.
+- 1: `apps/web/test/disabledFocus.ts` (`blurOnDisabled`, wołane w `test/setup.ts`) + `src/disabledFocus.test.tsx` (przycisk i `fieldset`). jsdom ignoruje `blur()` elementu `disabled`, więc atrapa przenosi fokus na chwilowy element i go usuwa. Wszystkie 212 testów web zielone z atrapą — żaden istniejący test nie ujawnił nowego wystąpienia (SC-05 nie ma asercji fokusu po 409). Sprawdzone: z cofniętą poprawką T-023 test „fokus nie na `body` po 409 limitu” pada z atrapą, a bez niej przechodzi.
+- 2: `web.md` „Pułapki” (wpis T-015 uzupełniony) i „Gdzie jest kod”; wpis w dzienniku zmian.
+
 ## Incident note
 
 <Nie dotyczy.>
