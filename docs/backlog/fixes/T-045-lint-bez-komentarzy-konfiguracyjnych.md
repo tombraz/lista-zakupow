@@ -4,7 +4,7 @@ title: "Reguł lintu nie wyłącza komentarz konfiguracyjny `/* eslint … */`"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-044]
 layers: [backend, web]
 requirements: []
@@ -29,10 +29,10 @@ related_tasks: [T-030, T-044]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given komentarz `/* eslint <reguła>: off */` (także z inną opcją reguły, np. `["error"]`) w `apps/*/src`, `packages/*/src` lub `apps/web/test`, when uruchomię `pnpm lint`, then lint pada. To samo dla `/* global */`, `/* globals */`, `/* eslint-env */` i `/* exported */`. — verified by: `pnpm lint` na próbnym pliku
-- [ ] AC2: Given dozwolony komentarz `// eslint-disable-next-line react-hooks/exhaustive-deps` (jak w `Modal.tsx`, `useFocus.ts`), when uruchomię `pnpm lint`, then lint go przyjmuje; komentarz `eslint-disable` dla `no-restricted-syntax` nadal pada (T-044). — verified by: `pnpm lint` na repo i próbnym pliku
-- [ ] AC3: `CODING_STANDARDS.md`, wiersz „Wyjątki od reguł z przeglądów”, opisuje też zakaz komentarzy konfiguracyjnych; linia w „Zmiany”.
-- [ ] AC4: No regression in: `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm quality`.
+- [x] AC1: Given komentarz `/* eslint <reguła>: off */` (także z inną opcją reguły, np. `["error"]`) w `apps/*/src`, `packages/*/src` lub `apps/web/test`, when uruchomię `pnpm lint`, then lint pada. To samo dla `/* global */`, `/* globals */`, `/* eslint-env */` i `/* exported */`. — verified by: `pnpm lint` na próbnym pliku
+- [x] AC2: Given dozwolony komentarz `// eslint-disable-next-line react-hooks/exhaustive-deps` (jak w `Modal.tsx`, `useFocus.ts`), when uruchomię `pnpm lint`, then lint go przyjmuje; komentarz `eslint-disable` dla `no-restricted-syntax` nadal pada (T-044). — verified by: `pnpm lint` na repo i próbnym pliku
+- [x] AC3: `CODING_STANDARDS.md`, wiersz „Wyjątki od reguł z przeglądów”, opisuje też zakaz komentarzy konfiguracyjnych; linia w „Zmiany”.
+- [x] AC4: No regression in: `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm quality`.
 
 ## TDD plan
 
@@ -56,7 +56,16 @@ Wskazówka: `eslint-comments/no-use` z `allow: ["eslint-disable", "eslint-disabl
 
 ## Root cause
 
+T-044 zamknął tylko dyrektywy wyłączenia (`eslint-comments/no-restricted-disable` widzi wyłącznie `eslint-disable*`). Komentarz konfiguracyjny `/* eslint reguła: … */` (oraz `/* global(s) */`, `/* eslint-env */`, `/* exported */`) to inny rodzaj dyrektywy: ESLint stosuje go jako lokalną konfigurację pliku, więc `off` lub podmiana opcji (`["error"]` bez selektorów) usuwa regułę z przeglądu bez śladu w `eslint.config.js`. Istniejące kontrole tego nie łapały, bo nikt nie sprawdzał tej drugiej klasy komentarzy — w repo nie było żadnego, więc lint był zielony.
+
+Ten sam wzorzec gdzie indziej: brak (w repo zero komentarzy konfiguracyjnych; `apps/web/e2e` i pliki `*.js` poza zakresem `files` jak w T-044).
+
 ## Evidence
+
+- **Red (przed zmianą, `b6801a0`+):** `pnpm exec eslint` na próbnych plikach: `apps/api/src/__t045/probe1.ts` (`/* eslint no-restricted-syntax: off */` nad `log.warn({ event: "rate_limited" })`) — 0 błędów; `apps/web/src/__t045/probe2.ts` — `/* eslint-env node */`, `/* exported baz */`, `/* eslint no-restricted-syntax: ["error"] */` bez błędu (`/* global foo */` tylko przypadkiem przez `no-unused-vars`); `probe3.ts` z `// eslint-disable-next-line no-restricted-syntax` — błąd `eslint-comments/no-restricted-disable` (T-044 trzyma).
+- **Green (po zmianie):** każdy komentarz konfiguracyjny w probe1, probe2, `probe4.tsx` (`/* global foo */` z użyciem `foo`) i `packages/shared/src/__t045/probe6.tsx` — `Unexpected ESLint directive comment  eslint-comments/no-use`; probe3 nadal `no-restricted-disable`.
+- **Edge:** `// eslint no-restricted-syntax: off` (komentarz liniowy) nie działa jako konfiguracja — `no-restricted-syntax` dalej zgłasza `rate_limited` (probe5). Próbne pliki usunięte.
+- **Regression:** `pnpm lint` exit 0 (dozwolone `eslint-disable-next-line react-hooks/exhaustive-deps` w `Modal.tsx`, `useFocus.ts` przechodzą), `pnpm typecheck` ok, `pnpm quality` ok (depcruise bez naruszeń), `pnpm test` exit 0 (93 pliki / 515 testów w wyświetlonym podsumowaniu).
 
 ## Prevention
 

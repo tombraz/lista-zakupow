@@ -240,6 +240,8 @@ export default tseslint.config(
     // T-030, T-044: reguł z przeglądów nie wyłącza komentarz w kodzie (także `eslint-disable` bez
     // nazwy reguły). Wyjątek tylko w tej konfiguracji: zawężony selektor albo files / ignores
     // z komentarzem.
+    // T-045: reguły zmienia tylko ta konfiguracja; komentarze `/* eslint reguła: … */`, `/* global */`,
+    // `/* eslint-env */`, `/* exported */` zakazane.
     files: [
       "apps/*/src/**/*.{ts,tsx}",
       "packages/*/src/**/*.{ts,tsx}",
@@ -251,6 +253,17 @@ export default tseslint.config(
         "error",
         "no-restricted-imports",
         "no-restricted-syntax",
+      ],
+      "eslint-comments/no-use": [
+        "error",
+        {
+          allow: [
+            "eslint-disable",
+            "eslint-disable-line",
+            "eslint-disable-next-line",
+            "eslint-enable",
+          ],
+        },
       ],
     },
   },
