@@ -66,7 +66,7 @@ Inne wystąpienia: brak — `checkboxFocus.focus({ itemId })` po „Pokaż w Kup
 
 Co by zapobiegło: fokus po zapisie był celem wyliczonym w chwili akcji i niesprawdzanym wobec stanu ekranu przy fokusie; testy fokusu obejmowały tylko jeden zapis naraz, choć od T-030 różne pozycje zapisują się równolegle. Automatyczna reguła (lint, typ) nie wyrazi tego tanio.
 
-- Propozycja (czeka na decyzję użytkownika): wpis w „Pułapki” `layers/web.md` — cel fokusu po zapisie, który może przyjść równolegle z innym zapisem, rozstrzygany przy fokusie wobec aktualnego stanu ekranu (lista kandydatów, potem stały element zastępczy); każdy fokus po zapisie z `lockOf` ma test dwóch zapisów naraz z `heldResponse()`, sprawdzający, gdzie trafił fokus.
+- Przyjęte przez użytkownika (2026-10-30), zrobione: wpis w „Pułapki” `layers/web.md` — cel fokusu po zapisie, który może przyjść równolegle z innym zapisem, rozstrzygany przy fokusie wobec aktualnego stanu ekranu (lista kandydatów, potem stały element zastępczy); każdy fokus po zapisie z `lockOf` ma test dwóch zapisów naraz z `heldResponse()`, sprawdzający, gdzie trafił fokus.
 
 ## Incident note
 
