@@ -66,7 +66,12 @@ Inne wystąpienie tej samej klasy (poza zakresem, inny ekran): SC-05 — odpowie
 
 ## Prevention
 
-<Uzupełnia /fix.>
+**Co by zapobiegło?** Test komponentu, który widzi utratę fokusu przy `disabled`. To już druga poprawka tej klasy (T-015: `loading`, T-023: limit), a obie przeszły przez testy komponentu, bo jsdom zostawia fokus na elemencie `disabled` — w przeglądarce spada on na `body`. Wpis w „Pułapkach” (T-015) opisuje problem, ale każe go łapać tylko E2E, którego dla każdego stanu nikt nie pisze.
+
+Propozycje (decyduje użytkownik):
+1. (automatyczna kontrola) `apps/web/test/setup.ts`: `MutationObserver` na atrybucie `disabled` — gdy element z fokusem (albo zawierający fokus) dostaje `disabled`, `blur()`, jak przeglądarka. Wtedy każdy test komponentu z asercją fokusu widzi spadek na `body`; nowe wystąpienia (np. SC-05) wyjdą w istniejących lub nowych testach. Do sprawdzenia przy wdrożeniu: które istniejące testy zaczną padać (to byłyby prawdziwe błędy albo testy do poprawy).
+2. (Pułapki w `web.md`) uzupełnić wpis T-015: „Element, który może mieć fokus, nie dostaje `disabled` bez przeniesienia fokusu (ostrzeżenie, nagłówek) — także gdy stan przychodzi z API lub na żywo (T-023)”; po wdrożeniu 1 — zdanie o atrapie w `setup.ts` zamiast „łapie tylko E2E”.
+3. Zadanie uzupełniające: SC-05 — 409 na 51. listę zamyka formularz z fokusem i wyłącza „Nowa lista” (prawdopodobnie fokus na `body`; potwierdzone też przez QA jako prawdopodobne).
 
 ## Incident note
 
