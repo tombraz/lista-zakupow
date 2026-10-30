@@ -269,6 +269,50 @@ describe("SC-07 invitations of the owner", () => {
     });
   });
 
+  // T-043: błąd jednego z równoległych zapisów zwalnia tylko jego blokadę.
+  it("after one of two held revokes fails, frees only that link for a retry (T-043)", async () => {
+    const [a, b] = [anInvitation("a"), anInvitation("b")];
+    const { list, links } = await showParticipants({ links: [a, b] });
+    const held = { a: heldResponse(), b: heldResponse() };
+    const deletes: string[] = [];
+    server.use(
+      http.delete(`*/api/v1/lists/${list.id}/invitations/:id`, async ({ params }) => {
+        const id = String(params["id"]) as "a" | "b";
+        deletes.push(id);
+        await held[id].released;
+        if (id === "a") return HttpResponse.error();
+        links.current = links.current.filter((link) => link.id !== id);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(2);
+    });
+    const revokeOf = (index: number) =>
+      within(linkBoxes()[index] as HTMLElement).getByRole("button", { name: "Unieważnij" });
+
+    fireEvent.click(revokeOf(0));
+    fireEvent.click(revokeOf(1));
+    held.a.release();
+
+    expect(
+      await screen.findByText("Brak połączenia. Sprawdź internet i spróbuj ponownie."),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(revokeOf(0)).not.toHaveAttribute("aria-disabled");
+    });
+    expect(revokeOf(1)).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(revokeOf(0));
+    await waitFor(() => {
+      expect(deletes).toEqual(["a", "b", "a"]);
+    });
+    held.b.release();
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(1);
+    });
+  });
+
   it("after a lost revoke response shows the server state and an error", async () => {
     const link = anInvitation("a");
     const { user, list, links } = await showParticipants({ links: [link] });

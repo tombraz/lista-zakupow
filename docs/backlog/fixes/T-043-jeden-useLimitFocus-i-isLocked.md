@@ -73,6 +73,12 @@ Ten sam wzorzec (stan na klucz obok `lockOf`): tylko SC-06 odhaczanie i SC-07 un
 
 ## Prevention
 
+Co by temu zapobiegło: jedno reaktywne źródło stanu blokady od początku (T-020) i test dwóch zapisów naraz, który sprawdza stan obu przycisków, a nie tylko liczbę żądań. Przyjęte przez użytkownika i zrobione:
+
+1. Lint: `no-restricted-syntax` na `variables` mutacji (`x.variables`, `{ variables }`) w `apps/web/src` (`WEB_MUTATE_SYNTAX` w `eslint.config.js`).
+2. Pułapki `layers/web.md` (punkt o `useGuardedMutation`): stan zapisu elementu tylko z `isLocked(key)` i wzorzec testu.
+3. Testy z uwag QA (runda 1, #1 i #2): „after one of two held revokes fails, frees only that link for a retry (T-043)” (SC-07) i „keeps both checkboxes saving while two checks are held (T-043)” (SC-06). Oba, razem z testem AC1, padają przy stanie liczonym z `isPending && variables`.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-30)

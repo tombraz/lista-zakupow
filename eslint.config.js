@@ -91,6 +91,15 @@ const WEB_MUTATE_SYNTAX = [
     message:
       "onSuccess / onError / onSettled w opcjach useGuardedMutation, nie w mutate(…) / mutateAsync(…): te z mutate przychodzą tylko dla ostatniego wywołania (T-029, layers/web.md „Pułapki”).",
   },
+  // T-043: `variables` (i `isPending`) opisują tylko ostatnie z równoległych wywołań mutacji.
+  ...[
+    "MemberExpression[property.name='variables']",
+    "ObjectPattern > Property[key.name='variables']",
+  ].map((selector) => ({
+    selector,
+    message:
+      "Stan zapisu elementu przez isLocked(key) z useGuardedMutation: variables mutacji opisuje tylko ostatnie z równoległych wywołań (T-043, layers/web.md „Pułapki”).",
+  })),
   {
     selector:
       "JSXOpeningElement[name.name='Link'] > JSXAttribute[name.name='to'][value.value=/^.(logowanie|rejestracja)$/]",

@@ -88,6 +88,30 @@ describe("SC-06 checking an item", () => {
     expect(requests).toEqual([{ itemId: items[1]?.id, checked: true }]);
   });
 
+  // T-043: stan zapisu na pozycję, nie tylko dla ostatniego z równoległych odhaczeń.
+  it("keeps both checkboxes saving while two checks are held (T-043)", async () => {
+    const items = shopping();
+    const { list } = await showList(items);
+    const response = heldResponse();
+    withFullItems(list, items, response);
+
+    fireEvent.click(toBuy().getByRole("button", { name: "Odhacz Chleb" }));
+    fireEvent.click(toBuy().getByRole("button", { name: "Odhacz Mleko" }));
+
+    await waitFor(() => {
+      expect(toBuy().getByRole("button", { name: "Odhacz Mleko" })).toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
+    });
+    expect(toBuy().getByRole("button", { name: "Odhacz Chleb" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    response.release();
+    await screen.findByText("1 do kupienia");
+  });
+
   it("ignores a second click on the same item before re-render (one request, T-030)", async () => {
     const items = shopping();
     const { list } = await showList(items);
