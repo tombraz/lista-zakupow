@@ -22,6 +22,7 @@ const NOT_ABUSE_LIMITS = {
   pingIntervalSeconds: "co ile serwer wysyła ping (bicie serca), nie ogranicza klienta",
   pongTimeoutSeconds: "zerwane połączenie (brak pong), nie nadużycie",
   closeTimeoutSeconds: "czas oczekiwania serwera na zamknięcie TCP, nie ogranicza klienta",
+  limitLogWindowSeconds: "okno deduplikacji zdarzeń w logu security, nie ogranicza klienta",
 } satisfies Partial<Record<LimitKey, string>>;
 
 type AbuseLimit = Exclude<LimitKey, keyof typeof NOT_ABUSE_LIMITS>;

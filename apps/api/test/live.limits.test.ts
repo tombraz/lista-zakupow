@@ -14,6 +14,7 @@ import {
   silentUpgrade,
   type LiveClient,
 } from "./live";
+import { testClock } from "./clock";
 import { captureLogs } from "./logs";
 
 describe("WebSocket limits (SEC6, TH-25)", () => {
@@ -29,9 +30,12 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
     app = undefined;
   });
 
-  async function connected() {
+  async function connected(clock = testClock("2026-10-30T10:00:00Z")) {
     const logs = captureLogs();
-    const built = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+    const built = buildTestApp(db.pool, {
+      logger: { level: "info", stream: logs.stream },
+      clock,
+    });
     app = built;
     const user = await createUser(built);
     const url = await liveUrl(built);
@@ -206,6 +210,50 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
     expect(await client.closed()).toBe(1009);
     expect(limitEvents(logs, user.cookie)).toEqual([
       expect.objectContaining({ event: "limit_reached", limit: "messageBytes", userId: user.id }),
+    ]);
+  });
+
+  // T-038 (TH-21): próby ponad limit nie zalewają logu `security` — jedno zdarzenie na sesję i
+  // limit w oknie `limitLogWindowSeconds`, niezależnie od liczby prób.
+  it("logs repeated attempts over the socket limit once per session", async () => {
+    const { user, url, logs } = await connected();
+    for (let i = 0; i < LIVE_LIMITS.socketsPerSession; i += 1)
+      sockets.push(await closeWithoutFin(url, { cookie: user.cookie }));
+
+    for (let i = 0; i < 20; i += 1)
+      expect(await closeCode(url, { cookie: user.cookie })).toBe(1006);
+
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining({
+        event: "limit_reached",
+        route: "/api/v1/live",
+        limit: "socketsPerSession",
+        userId: user.id,
+      }),
+    ]);
+  });
+
+  it("logs repeated attempts over the connection limit once per window", async () => {
+    const start = "2026-10-30T10:00:00Z";
+    const clock = testClock(start);
+    const { user, connect, logs } = await connected(clock);
+    for (let i = 0; i < LIVE_LIMITS.connectionsPerSession; i += 1) await connect();
+    for (let i = 0; i < 3; i += 1) expect(await (await connect()).closed()).toBe(1008);
+    expect(limitEvents(logs, user.cookie)).toHaveLength(1);
+
+    const later = Date.parse(start) + LIVE_LIMITS.limitLogWindowSeconds * 1000;
+    clock.set(new Date(later).toISOString());
+    expect(await (await connect()).closed()).toBe(1008);
+
+    const event = {
+      event: "limit_reached",
+      route: "/api/v1/live",
+      limit: "connectionsPerSession",
+      userId: user.id,
+    };
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining(event),
+      expect.objectContaining(event),
     ]);
   });
 });

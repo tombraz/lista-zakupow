@@ -57,4 +57,9 @@ export const LIVE_LIMITS = {
   pongTimeoutSeconds: 10,
   /** Serwer: po ramce close najdłużej tyle czeka, aż klient zamknie TCP (T-037). */
   closeTimeoutSeconds: 2,
+  /**
+   * Log `security`: najwyżej jedno zdarzenie przekroczenia na sesję i limit w tym oknie — próby
+   * ponad limit nie zalewają logu (TH-21, T-038).
+   */
+  limitLogWindowSeconds: 60,
 } as const;

@@ -62,6 +62,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
     requireListAccess: async (userId, listId) => {
       await lists.requireListAccess(userId, listId, "member");
     },
+    clock,
   });
   webApp(app, options.webDistDir);
   return app;

@@ -2,6 +2,7 @@ import websocket, { type WebsocketPluginOptions } from "@fastify/websocket";
 import { LIVE_LIMITS, parseClientMessage, type LiveClientMessage } from "@lista/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type WebSocket from "ws";
+import type { Clock } from "../../../clock";
 import { DomainError } from "../../../domain-error";
 import { ApiError, logSecurityEvent } from "../../../http/api-error";
 import { logLimitEvent } from "../../../logging";
@@ -23,12 +24,14 @@ export interface LiveRouteDeps {
   sessionOf: (request: FastifyRequest, reply: FastifyReply) => Promise<LiveSession>;
   /** `requireListAccess` modułu `listy`; brak dostępu = `DomainError("not_found")`. */
   requireListAccess: (userId: string, listId: string) => Promise<void>;
+  clock: Clock;
 }
 
 /** `GET /api/v1/live` → WebSocket (api.md, „Zmiany na żywo”). */
 export function liveRoutes(app: FastifyInstance, deps: LiveRouteDeps): void {
   const sessions = new WeakMap<FastifyRequest, LiveSession>();
   const sockets = new SocketsPerSession();
+  const logWindow = new LimitLogWindow(deps.clock);
   // `closeTimeout` ma `ws` 8.22; @types/ws 8.18 jeszcze go nie zna.
   const options: NonNullable<WebsocketPluginOptions["options"]> & { closeTimeout: number } = {
     maxPayload: LIVE_LIMITS.messageBytes,
@@ -50,10 +53,10 @@ export function liveRoutes(app: FastifyInstance, deps: LiveRouteDeps): void {
         const session = sessions.get(request);
         if (!session) socket.close(POLICY_VIOLATION);
         else if (!sockets.hold(socket, session.sessionId)) {
-          limitLog(request, session.userId)("limit_reached", "socketsPerSession");
+          limitLog(request, session, logWindow)("limit_reached", "socketsPerSession");
           // Bez wymiany ramek close: zerwane gniazdo nie czeka na klienta (`closeTimeout`).
           socket.terminate();
-        } else serve(socket, request, session, deps);
+        } else serve(socket, request, session, { ...deps, logWindow });
       },
     );
     done();
@@ -85,11 +88,11 @@ function serve(
   socket: WebSocket,
   request: FastifyRequest,
   session: LiveSession,
-  deps: LiveRouteDeps,
+  deps: LiveRouteDeps & { logWindow: LimitLogWindow },
 ) {
   const { hub } = deps;
   const connection = new WsConnection(socket, session.userId, session.sessionId);
-  const exceeded = limitLog(request, session.userId);
+  const exceeded = limitLog(request, session, deps.logWindow);
   if (!hub.attach(connection)) {
     exceeded("limit_reached", "connectionsPerSession");
     socket.close(POLICY_VIOLATION);
@@ -125,15 +128,37 @@ function serve(
 }
 
 /**
- * TH-21, TH-25: przekroczenie limitu połączenia trafia do logu `security` z identyfikatorem
- * osoby, raz na połączenie (kolejne wiadomości po zamknięciu nie zalewają logu; T-033).
+ * TH-21: najwyżej jedno zdarzenie na sesję i limit w oknie `limitLogWindowSeconds` — kolejne
+ * próby połączenia ponad limit nie zalewają logu `security` (T-038).
  */
-function limitLog(request: FastifyRequest, userId: string) {
+class LimitLogWindow {
+  private readonly until = new Map<string, number>();
+
+  constructor(private readonly clock: Clock) {}
+
+  /** `true`, gdy zdarzenie trzeba zapisać; wtedy otwiera okno dla sesji i limitu. */
+  take(sessionId: string, limit: keyof typeof LIVE_LIMITS): boolean {
+    const now = this.clock.now().getTime();
+    const key = `${sessionId}:${limit}`;
+    if ((this.until.get(key) ?? 0) > now) return false;
+    for (const [open, end] of this.until) if (end <= now) this.until.delete(open);
+    this.until.set(key, now + LIVE_LIMITS.limitLogWindowSeconds * 1000);
+    return true;
+  }
+}
+
+/**
+ * TH-21, TH-25: przekroczenie limitu połączenia trafia do logu `security` z identyfikatorem
+ * osoby, raz na połączenie (kolejne wiadomości po zamknięciu nie zalewają logu; T-033) i raz na
+ * sesję i limit w oknie (`LimitLogWindow`, T-038).
+ */
+function limitLog(request: FastifyRequest, session: LiveSession, logWindow: LimitLogWindow) {
   let logged = false;
   return (event: "limit_reached" | "rate_limited", limit: keyof typeof LIVE_LIMITS) => {
     if (logged) return;
     logged = true;
-    logLimitEvent(request, event, limit, { userId });
+    if (logWindow.take(session.sessionId, limit))
+      logLimitEvent(request, event, limit, { userId: session.userId });
   };
 }
 

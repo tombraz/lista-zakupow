@@ -52,6 +52,7 @@ describe("LIVE_LIMITS (TH-25, architecture.md „Zmiany na żywo”)", () => {
       pingIntervalSeconds: 25,
       pongTimeoutSeconds: 10,
       closeTimeoutSeconds: 2,
+      limitLogWindowSeconds: 60,
     });
   });
 });
