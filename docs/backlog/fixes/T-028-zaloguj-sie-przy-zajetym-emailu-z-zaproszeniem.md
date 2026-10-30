@@ -79,7 +79,10 @@ Co by temu zapobiegło: jedno miejsce przejścia SC-01 ↔ SC-02 wymuszone autom
 - Lint `no-restricted-syntax` w `apps/web/src` (`eslint.config.js`, `WEB_MUTATE_SYNTAX`): zakaz `<Link to="/logowanie">` i `<Link to="/rejestracja">` — tylko `EntryLink`. Sprawdzone: na kodzie sprzed poprawki reguła zgłasza `SignUpScreen.tsx:127`. Wyjątek z uzasadnieniem: „Wróć” na SC-04 (`TermsScreen.tsx`).
 - Wpis w „Pułapkach” `docs/architecture/layers/web.md`.
 
-Do rozważenia poza tym zadaniem (uwagi QA, runda 1): komunikat `email_taken` zostaje po zmianie e-maila (`useSignUpForm.ts`); link „zresetuj hasło” → `/reset-hasla` nie istnieje do czasu SC-03 (F-03); Safari iOS nie sprawdzone ręcznie.
+Uwagi QA, runda 1 — decyzje (2026-10-30):
+- Komunikat `email_taken` zostaje po zmianie e-maila (`useSignUpForm.ts`): bez zmian. Jak pozostałe błędy SC-02 sprawdzany przy wysłaniu; spec nie wymaga czyszczenia przy pisaniu.
+- Link „zresetuj hasło” → `/reset-hasla` nie istnieje do czasu SC-03 (F-03): wymaganie trasy i przeniesienia e-maila dopisane do S-02-01 w `E-02-konto-i-uczestnicy/epic.md`.
+- Safari iOS: ręczne sprawdzenie przez użytkownika na stagingu przed scaleniem E-01.
 
 ## Incident note
 

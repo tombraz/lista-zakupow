@@ -29,6 +29,7 @@ Domownik odzyskuje dostęp do konta resetem hasła, zmienia imię i usuwa konto;
 Zarys; taski planowane, gdy E-02 stanie się następny (krok 1 `/plan-backlog` od nowa).
 
 - S-02-01 Reset hasła mailem (F-03, SC-01, SC-03; TH-10, TH-11; Brevo na staging)
+  - SC-03 pod trasą `/reset-hasla` (już linkują tam SC-02 „zresetuj hasło” i SC-01). Każdy link do SC-03 (SC-01, komunikat o zajętym e-mailu na SC-02) przenosi wpisany e-mail i kontekst zaproszenia jak `EntryLink` (WCAG 3.3.7; T-028). Do tego czasu `/reset-hasla` nie istnieje.
 - S-02-02 Uczestnicy: podgląd, usunięcie, opuszczenie listy (F-13, SC-07; TH-04, TH-19)
 - S-02-03 Konto: zmiana imienia i usunięcie konta (F-04, F-16, SC-09; TH-17, TH-18)
 - S-02-04 Brak połączenia (F-15, pasek na SC-05–SC-09)
