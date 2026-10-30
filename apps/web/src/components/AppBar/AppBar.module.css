@@ -8,17 +8,38 @@
   background: var(--color-surface-brand);
 }
 
+/* Najwyżej 2 linie, potem wielokropek (design-system.md, AppBar); słowa łamane tylko, gdy się nie mieszczą. */
 .title {
+  display: -webkit-box;
   flex: 1;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: var(--typography-size-title);
   line-height: var(--typography-line-height-tight);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .actions {
   display: flex;
   gap: var(--spacing-sm);
+  margin-inline-start: auto;
+}
+
+/* Duży tekst przy wąskim ekranie (em w media query idzie za rozmiarem tekstu przeglądarki):
+   tytuł w osobnym wierszu pod przyciskami, żeby miał całą szerokość paska. */
+@media (max-width: 24em) {
+  .bar {
+    flex-wrap: wrap;
+  }
+
+  .title {
+    flex-basis: 100%;
+    order: 1;
+  }
 }
 
 .control {

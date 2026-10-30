@@ -39,6 +39,7 @@ related_tasks: [T-001]
 | 1 | `packages/tokens/test/build.test.ts` › writes typography sizes in rem so they follow the browser text size (T-016 AC1) | jednostkowy | Vitest | AC1 |
 | 2 | `packages/tokens/test/build.test.ts` › writes TypeScript constants for mobile with the same values (`TypographySizeBody = "16px"`) | jednostkowy | Vitest | AC1 (mobile bez zmian) |
 | 3 | `apps/web/e2e/rozmiar-tekstu.spec.ts` › SC-06 text scales with the browser text size | E2E | Playwright (CDP `Page.setFontSizes`, standard 20 px) | AC2 |
+| 4 | `apps/web/e2e/rozmiar-tekstu.spec.ts` › SC-06 AppBar title stays within 2 lines at 200% text on a phone | E2E | Playwright (390 px, standard 32 px) | AC3 (QA runda 1 #1) |
 
 **Run:** `pnpm vitest run --project tokens`; `pnpm test:e2e -- rozmiar-tekstu` (z `apps/web`: `npx playwright test rozmiar-tekstu` po buildzie)
 
@@ -54,6 +55,8 @@ Platforma `css` w `packages/tokens/src/build.ts` (T-001) używała samej grupy `
 
 **Dlaczego testy nie złapały:** test T-001 (`build.test.ts`) utrwalał błędną wartość (`--typography-size-body: 16px;`), a żaden test nie zmieniał rozmiaru tekstu przeglądarki. Skany axe nie sprawdzają WCAG 1.4.4.
 
+**QA runda 1 #1 (AppBar):** skalowanie tekstu odsłoniło błąd T-002 w `AppBar.module.css`: tytuł bez limitu 2 linii (wymóg `design-system.md`, AppBar) i z `overflow-wrap: anywhere`, a przy 200% tekstu „Wstecz” i ikony zostawiały mu 74 px szerokości (9 linii, słowa łamane w środku). Poprawka: `line-clamp: 2` z wielokropkiem, `overflow-wrap: break-word`, a przy `max-width: 24em` (em w media query idzie za rozmiarem tekstu przeglądarki) tytuł przechodzi do własnego wiersza pod przyciskami. Przy 100% na telefonie 390 px układ bez zmian (jeden wiersz). Red: wysokość tytułu 450 px przy limicie 100 px; po samym clampie „Zakupy” na 2 liniach.
+
 **Inne wystąpienia:** w `apps/web/src` wszystkie `font-size` biorą zmienne z tokenów (brak rozmiarów tekstu w `px` na sztywno); mobile (`tokens.ts`) zgodnie z AC1 bez zmian.
 
 ## Evidence
@@ -61,6 +64,7 @@ Platforma `css` w `packages/tokens/src/build.ts` (T-001) używała samej grupy `
 - Red (Vitest): `build.test.ts` › writes typography sizes in rem… — `expected [ '1.5rem', '1.25rem', '1.125rem', '1rem', '0.875rem' ]`, `received [ '24px', '20px', '18px', '16px', '14px' ]`.
 - Red (E2E, stare tokeny): `rozmiar-tekstu.spec.ts` (telefon i komputer) — po `Page.setFontSizes({ standard: 20 })` oczekiwane `[25, 22.5, 17.5]`, otrzymane `[20, 18, 14]` (tytuł, nazwa pozycji, notatka).
 - Green: oba testy przechodzą; `pnpm check` exit 0 (90 plików, 431 testów, w tym mobile); `pnpm test:e2e` 40 passed.
+- Runda 2: `pnpm check` exit 0 (431 testów), `pnpm test:e2e` 42 passed; zrzuty SC-06 i SC-05 przy 320/390/1280 px i 16/32 px sprawdzone ręcznie.
 - Diff `tokens.css`: zmieniły się tylko `--typography-size-*` (24/20/18/16/14 px → 1.5/1.25/1.125/1/0.875 rem); `tokens.ts` bez zmian.
 
 ## Prevention
