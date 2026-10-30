@@ -71,7 +71,7 @@ Poprawka: `LimitLogWindow` (wspólny dla trasy, zegar `Clock` z `app.ts`) przepu
 
 ## Prevention
 
-Co by zapobiegło: test limitu, który powtarza przekroczenie (N prób), a nie tylko jedno — wszystkie testy limitów T-033 / T-037 sprawdzały wpis po jednej próbie, więc liniowy przyrost logu był niewidoczny. Propozycja (czeka na decyzję użytkownika):
+Co by zapobiegło: test limitu, który powtarza przekroczenie (N prób), a nie tylko jedno — wszystkie testy limitów T-033 / T-037 sprawdzały wpis po jednej próbie, więc liniowy przyrost logu był niewidoczny. Decyzja użytkownika (2026-10-30): oba punkty i test dwóch sesji (uwaga QA) przechodzą do T-040 (AC2, AC3); licznik pominiętych prób odrzucony na razie (zmienia schemat zdarzenia z T-035, tylko identyfikatory):
 
 1. Test automatyczny w tabeli `limits.security.test.ts`: każdy scenariusz przekracza limit dwa razy (albo N razy) i sprawdza nadal jedno zdarzenie — gryzie każdy nowy limit bez deduplikacji (dziś czerwony dla limitów HTTP z T-040, więc wejdzie razem z T-040).
 2. Wpis w „Pułapkach” `docs/architecture/layers/backend.md`: zdarzenie limitu raz na podmiot i limit w oknie, nie raz na żądanie / połączenie.
