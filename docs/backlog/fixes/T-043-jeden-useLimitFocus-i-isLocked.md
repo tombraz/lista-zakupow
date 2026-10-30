@@ -4,7 +4,7 @@ title: "Jeden useLimitFocus w SC-06; stan zapisu na klucz z useGuardedMutation (
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07, F-08, F-11]
