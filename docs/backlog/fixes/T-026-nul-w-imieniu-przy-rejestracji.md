@@ -4,9 +4,9 @@ title: "Imię z NUL przy rejestracji daje 400, nie 500"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
-layers: [backend]
+layers: [backend, web]
 requirements: [F-01]
 threats: [TH-20]
 screens: [SC-02]
@@ -55,9 +55,23 @@ related_tasks: [T-004, T-005]
 
 ## Root cause
 
-<Wypełnia /fix. Sprawdzić inne schematy tekstu bez `withoutNul` w `packages/shared/src/api/`.>
+Schemat imienia w `account.ts` powstał w T-004 (`dbca17a`), zanim T-006 (`3f0c75c`) dodał `withoutNul` w `text.ts`. T-006 objął tym warunkiem tylko nazwy list i pozycji (`requiredName`), a imienia nie przepięto, więc NUL przechodzi walidację i dopiero INSERT w PostgreSQL go odrzuca: Better Auth zwraca 422, a most odpowiada 500. Istniejące testy nie wychwyciły błędu, bo przypadek NUL był sprawdzany tylko dla nazwy listy (`unexpected-error.test.ts`), a nie w testach walidacji rejestracji.
+
+Pozostałe pola tekstowe kont sprawdziła jednorazowa sonda HTTP (nie trafiła do repozytorium): e-mail z NUL przy rejestracji i przy logowaniu daje 400 (`z.email` / most logowania), hasło z NUL daje 401 (Better Auth haszuje je, nie zapisuje), a `invitationToken` z NUL daje 200 z `invitation_invalid`. Innych schematów tekstu bez `withoutNul` w `packages/shared/src/api/` nie ma (`live.ts`: `listId` nie dociera do bazy jako tekst, bo `requireListAccess` w `listy` najpierw sprawdza `isUuid`).
+
+Druga część tego samego błędu (AC2) dotyczyła web: `fieldMessages.name` na SC-02 nie miało tekstu dla kodu `invalid`, więc błąd pola pokazywał się bez komunikatu. Dodano „Wpisz imię”, tak jak `invalid` → ten sam tekst co `required` przy e-mailu i jak przy nazwach list i pozycji.
 
 ## Evidence
+
+Testy reprodukujące, czerwone przed poprawką:
+
+- `apps/api/test/sign-up.test.ts` › `answers 400 validation_failed and creates no account: name with NUL (T-026)` — `AssertionError: expected 500 to be 400`
+- `packages/shared/test/account.test.ts` › `rejects NUL anywhere in the name, which the database cannot store (T-026)` (NUL na początku, w środku, na końcu, samo NUL) — `AssertionError: expected {} to deeply equal { name: 'invalid' }`
+- `apps/web/src/screens/SC-02-rejestracja/SignUpScreen.test.tsx` › `explains under „Imię” that a pasted NUL character cannot be saved (T-026)` — czerwony już po poprawce schematu: podsumowanie błędów bez tekstu (`toHaveTextContent` „Popraw 1 pole” → pusty)
+
+Poprawka: `.refine(withoutNul, { error: "invalid" })` w schemacie imienia (`packages/shared/src/api/account.ts`) oraz `name.invalid` w `apps/web/src/screens/SC-02-rejestracja/messages.ts`. Po poprawce: `pnpm test` 91 plików / 464 testy zielone; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality`, `pnpm build` bez błędów.
+
+Regresja: J-01 (rejestracja) i T-004 — pełne pliki `sign-up*.test.ts`, `account.test.ts` i `SignUpScreen.test.tsx` zielone.
 
 ## Prevention
 
