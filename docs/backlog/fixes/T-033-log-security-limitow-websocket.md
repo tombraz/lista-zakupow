@@ -4,7 +4,7 @@ title: "Limity WebSocket zostawiają zdarzenie w logu security; limit linku z us
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12, N-06]
@@ -81,3 +81,35 @@ Inne wystąpienia: brak. Po T-027 i T-033 każdy limit z `RATE_LIMITS`, `BUSINES
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Logi / TH-21 | Wiadomość ponad `maxPayload` zapisuje też wpis `level: 50` (`RangeError: Max payload size exceeded`, ze stosem) przez domyślny `errorHandler` `@fastify/websocket`. Nadużycie klienta trafia do logu jako błąd serwera; bez treści wiadomości i ciasteczka. Istniało przed T-033. | test roboczy QA (usunięty): 1 wpis `security` `limit_reached`/`messageBytes` + 1 wpis `error` z tym samym `requestId` | ewentualnie własny `errorHandler` w `app.register(websocket, …)`, który dla `WS_ERR_UNSUPPORTED_MESSAGE_LENGTH` nie loguje na poziomie `error` |
+| 2 | note | Logi / TH-25 | Seria 100 wiadomości `subscribe` z niepoprawnym `listId` daje jedno `rate_limited`, ale ~20 wpisów `list_access_denied` (po jednym na wiadomość w budżecie; część zapisana po `rate_limited`, bo `handle` jest asynchroniczny). Log `security` rośnie liniowo z budżetem wiadomości. Istniało przed T-033, poza zakresem. | test roboczy QA: 21 wpisów `list_access_denied` z jednym `requestId` | do decyzji: limit wpisów `list_access_denied` na połączenie |
+| 3 | minor | Kod / duplikacja wiedzy | `limitLog` (`na-zywo/http/routes.ts`) powtarza kształt wpisu z `logSecurityEvent` (`event`, `route`, `limit`, identyfikatory). Dwa miejsca znają format zdarzenia `security`. | `apps/api/src/modules/na-zywo/http/routes.ts:100`, `apps/api/src/http/api-error.ts:41` | wspólna funkcja w `logging.ts`, np. `logSecurity(request, event, ids, limit?)` |
+| 4 | note | Zakres | Limit treści HTTP 16 kB (`bodyLimit`, 413) nadal bez zdarzenia `security`; autor wskazał to w „Root cause”. | `http/api-error.ts` (`isClientError`) | decyzja użytkownika: osobne zadanie |
+
+**Reproduce (od czystego stanu):** `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (0 klonów, 0 naruszeń depcruise), `pnpm test` → 91 plików / 476 testów passed.
+
+**Acceptance criteria:**
+
+- AC1 pass: `logs limit_reached when a session exceeds the connection limit` — prawdziwy klient `ws`, 1008 i dokładnie jedno zdarzenie z `limit: "connectionsPerSession"`, `userId`.
+- AC2 pass: `logs rate_limited when a connection exceeds the message rate` — 26 wiadomości, 1008, dokładnie jedno `rate_limited` (`toEqual([...])` łapie zalewanie). Test roboczy QA ze 100 wiadomościami: jedno `rate_limited`.
+- AC3 pass: `logs limit_reached when a message exceeds the size limit` — 1009 i `limit_reached`/`messageBytes` z `userId`.
+- AC4 pass: `invitations.limit.test.ts` sprawdza `userId: ania.id` (właściciel) obok `listId`.
+- AC5 pass: pełny zestaw (`live.*`, `invitations.*`) zielony.
+
+**Spot-checks (cofnięte, `git status` czysty):**
+
+1. `limitLog` nie loguje nic + `createInvitation` bez `userId` → 4 testy czerwone (`expected [] to deeply equal …` ×3, `expected [ { level: 40, …(10) } ] …` dla AC4). Zgadza się z czerwonym dowodem autora.
+2. Usunięta blokada „raz na połączenie” → `logs rate_limited…` czerwony (`expected [ …(6) ] to deeply equal [ ObjectContaining ]`). Test chroni przed zalewaniem logu.
+
+**Fix-task:** „Root cause” wyjaśnia, czemu testy nie złapały błędu (`live.limits.test.ts` sprawdzał tylko kody zamknięcia; ścieżka WS poza handlerem błędów HTTP). Testy odtwarzające są czerwone bez poprawki (spot-check 1).
+
+**Bezpieczeństwo (TH-21, TH-25), lokalnie (Testcontainers + prawdziwy serwer i klient `ws`):** w logach brak wartości ciasteczka sesji i treści wiadomości (znacznik `SECRETPAYLOAD` w wiadomości ponad limit i w serii nie pojawił się w żadnej linii logu); wpisy `security` niosą tylko `requestId`, `route`, `limit`, `userId`. Limity nadal egzekwowane (1008/1009). Drugie konto niepotrzebne: zmiana nie dotyczy autoryzacji.
+
+**Code review:** zmiana w zakresie, warstwy zgodne (log w warstwie `http`, domena dostaje `ownerId` jawnie), bez martwego kodu. Testy na uzgodnionym szwie (WebSocket + log pino), wartości oczekiwane literalne.
