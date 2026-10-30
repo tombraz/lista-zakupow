@@ -4,7 +4,7 @@ title: "Niestabilny test: zwolnienie slotu połączenia na żywo po zamknięciu"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -64,3 +64,26 @@ Poprawka: `LiveConnection.open` (`WsConnection`: `readyState === OPEN`); `attach
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Odtworzenie: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm --filter @lista/api build` — OK. `pnpm test` dwukrotnie: 92 pliki / 493 testy zielone. `pnpm vitest run --project api live.limits` 10/10.
+
+Kryteria:
+
+- AC1 — **pass.** Nowy test `frees a slot when the closing handshake ends, before TCP closes` deterministycznie utrwala okno wyścigu (ramka close w obie strony, bez FIN). Spot-check: przywrócenie starego filtra w `LiveHub.attach` → test czerwony (`promise resolved "1008" instead of rejecting`), po `git checkout` zielony. Pętla 15× `-t "frees a slot"`: 15/15.
+- AC2 — **pass.** Pełny zestaw dwukrotnie zielony, w tym `live.limits.test.ts` (limit 5 otwartych połączeń nadal egzekwowany) i `limits.security.test.ts`.
+
+Root cause wyjaśnia, dlaczego testy nie łapały błędu; test reprodukujący pada bez poprawki (spot-check wyżej).
+
+TH-25 (próba nadużycia, lokalnie, Testcontainers): jedna sesja, 200 połączeń `closeWithoutFin` pod rząd → 200 upgrade'ów przyjętych w ~2 s, serwer trzyma 200 gniazd TCP także po 5 s. Ten sam przebieg na kodzie sprzed poprawki: również 200 gniazd (odrzucone 1008 też czekają na FIN do `closeTimeout` 30 s), a dodatkowo prawidłowy klient dostaje 1008. Poprawka nie osłabia więc TH-25; limit otwartych połączeń działa. Plik próby usunięty.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | testy | Test #2 z planu TDD („frees a slot when a connection closes” 30×) nie jest w kodzie; powtórzenia wykonane tylko ręcznie. Ryzyko niskie: test #1 deterministycznie pokrywa wyścig. | `git show 2fca9a7 -- apps/api/test/live.limits.test.ts` | Plan zgodny z kodem albo zaktualizowany plan |
+| 2 | minor | dokumentacja | Sekcja `## Prevention` pusta. | plik zadania | Krótka notka (np. „nie dotyczy” albo przyczyna) |
+| 3 | note | bezpieczeństwo (TH-25) | Istniejąca wcześniej luka: gniazda w stanie zamykania (przyjęte albo odrzucone 1008) nie mają limitu na sesję; klient bez FIN trzyma je do 30 s (`closeTimeout` `ws`), ~100 upgrade'ów/s na sesję lokalnie. | próba opisana wyżej: 200/200 gniazd przed i po poprawce | Rozważyć krótszy `closeTimeout` albo `terminate` po wymianie ramek close / limit upgrade'ów na sesję |
+
+`git status` czysty poza plikiem zadania.
