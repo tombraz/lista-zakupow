@@ -1,0 +1,69 @@
+---
+id: T-027
+title: "Limity zaproszeń zostawiają zdarzenie w logu security; jeden helper limitu per IP"
+kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
+type: bug              # bug | small-change
+severity: normal       # incident | high | normal | low
+status: todo           # todo | in-progress | in-qa | done | blocked
+depends_on: []
+layers: [backend]
+requirements: [F-12]
+threats: [TH-06, TH-21]
+screens: []
+related_tasks: [T-008, T-001]
+---
+
+# T-027 Limity zaproszeń zostawiają zdarzenie w logu security; jeden helper limitu per IP
+
+## Report
+
+Źródło: przegląd `docs/reviews/E-01-2026-10-30-1.md`, S4 i C7.
+
+- **Actual:**
+  - Limit per IP na podgląd i przyjęcie zaproszenia (`apps/api/src/modules/zaproszenia/http/routes.ts:83-96`): `errorResponseBuilder` zwraca `ApiError(429, "rate_limited")`, a `ApiError` nie trafia do `logSecurityEvent` (`apps/api/src/http/api-error.ts:86`). Odgadywanie tokenu (TH-06) nie zostawia więc śladu.
+  - Limit 20 uczestników przy tworzeniu linku (`apps/api/src/modules/zaproszenia/domain/invitations.ts:71-73`) rzuca `DomainError("limit_reached")` bez `security`. Pozostałe `limit_reached` je mają (`apps/api/src/modules/listy/domain/lists.ts:74-77`, `pozycje/domain/items.ts:120-123`).
+  - Ta sama konfiguracja `@fastify/rate-limit` z `errorResponseBuilder` jest skopiowana w `apps/api/src/modules/health/http/routes.ts:14-22`.
+- **Expected:** każde przekroczenie limitu zapisuje zdarzenie w logu `security`. Źródło: `docs/architecture/architecture.md:267` („przekroczenie limitu”), TH-21. Limity logowania już to robią (`konta/http/auth-routes.ts`).
+- **Steps to reproduce:**
+  1. 31 razy `GET` podglądu zaproszenia z jednego IP.
+  2. Odpowiedź 429, w logu brak wpisu `security` z `event: "rate_limited"`.
+  3. `POST` tworzenia linku na liście z 20 uczestnikami: 409, w logu brak `limit_reached`.
+- **Environment:** lokalnie / CI; `0bd3f0a`.
+- **Evidence:** `invitations.logs.test.ts` sprawdza tylko redakcję tokenu.
+
+## Acceptance criteria
+
+- [ ] AC1: Given przekroczony limit per IP na trasach z tokenem zaproszenia, when API odpowie 429, then log `security` ma zdarzenie `rate_limited` z trasą i bez tokenu. — verified by: test integracyjny logów
+- [ ] AC2: Given lista z 20 uczestnikami, when właściciel tworzy link, then 409 `limit_reached` i zdarzenie `security` `limit_reached` z `listId`. — verified by: test integracyjny logów
+- [ ] AC3: Given trasa `/health/ready` przekroczy limit, when API odpowie 429, then także zostaje zdarzenie `rate_limited`. Obie trasy korzystają z jednego helpera limitu per IP w `apps/api/src/http/`. — verified by: test integracyjny
+- [ ] AC4: No regression in: J-04, `invitations.rate-limit.test.ts`, health checks.
+
+## TDD plan
+
+**Seam:** HTTP API (`fastify.inject`) z przechwyconym logiem pino
+
+| # | Test | Level | Framework | Proves |
+| --- | --- | --- | --- | --- |
+| 1 | `logs a security event when invitation lookups exceed the IP limit` | integracja | Vitest + Testcontainers | AC1 |
+| 2 | `logs limit_reached when creating a link on a full list` | integracja | Vitest + Testcontainers | AC2 |
+| 3 | `logs rate_limited on /health/ready` | integracja | Vitest + Testcontainers | AC3 |
+
+**Run:** `pnpm vitest run --project api invitations health`
+
+## QA plan
+
+- **Regression:** J-04; limity per IP (TH-06); readiness w deploy/smoke.
+- **Edge cases:** log bez tokenu w URL (TH-08) i bez IP w jawnej postaci, jeśli redakcja tego wymaga.
+- **Platforms:** API.
+
+## Root cause
+
+<Wypełnia /fix.>
+
+## Evidence
+
+## Prevention
+
+Przyjęte przez użytkownika (2026-10-30): reguła lint `no-restricted-imports` na `@fastify/rate-limit` poza `apps/api/src/http/`, czyli helper limitu per IP to jedyne miejsce rejestracji. Dodać ją w ramach tego zadania (dziś złamałaby lint w `health` i `zaproszenia`).
+
+## Incident note

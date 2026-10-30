@@ -68,6 +68,7 @@ Cel: WCAG 2.2 AA (`docs/design/design-decisions.md`).
 - E2E: api uruchomione na czystej bazie w kontenerze; użytkownicy zakładani przez API w `beforeEach`; mail resetu odczytywany z API Mailpit.
 - Zegar: wstrzykiwany `clock` w module domenowym (wygasanie zaproszeń 7 dni, resetu 1 h, aktywność dzienna). Sesje i limity Better Auth czytają `Date.now()` wewnątrz biblioteki, więc testy tego obszaru sterują czasem przez `vi.useFakeTimers({ toFake: ["Date"] })` (T-004).
 - Limity per IP w testach: fabryki i testy podają losowy `remoteAddress` (`randomIp()` w `apps/api/test/factories.ts`); E2E — losowy `X-Forwarded-For` per test przy `TRUSTED_PROXIES=127.0.0.1` (`apps/web/e2e/fixtures.ts`).
+- Testy limitów przypinają wartość z BRD lub threat-model liczbą (`expect(max).toBe(30)`, jak `lists.limit.test.ts`), zanim pętla użyje stałej z `packages/shared`: oczekiwana wartość nie może pochodzić tylko z implementacji, bo zła stała przeszłaby test (przegląd E-01 runda 2, S13).
 
 ## Pokrycie E2E
 
