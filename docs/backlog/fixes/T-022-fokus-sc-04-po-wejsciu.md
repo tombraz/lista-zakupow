@@ -4,7 +4,7 @@ title: "Fokus na nagłówku SC-04 po wejściu linkiem (web)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-014]
 layers: [web]
 requirements: [N-04]
@@ -74,3 +74,25 @@ Ten sam wzorzec gdzie indziej: wszystkie trasy sprawdzone (`routes.tsx`) — SC-
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Weryfikacja: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm quality` (jscpd, depcruise), `pnpm design-check` — OK. `pnpm test`: 90 plików, 435 testów zielone. `pnpm test:e2e`: 46 passed (w tym test T-022 na obu projektach).
+
+Kryteria akceptacji:
+
+- AC1 — pass. Test 1 (`routeFocus.test.tsx`) wchodzi z SC-09 klawiaturą (Enter na linku) i sprawdza `toHaveFocus()` na `h1`. W przeglądarce (Playwright, telefon i komputer, konto z `signUp`): SC-09 → Enter na linku → `h1` SC-04 ma fokus.
+- AC2 — pass. Test 2 i E2E J-01 (T-022): z SC-01 fokus na `h1`; „Wróć” wraca na SC-01 z fokusem w polu „E-mail”. W przeglądarce dodatkowo: „Wróć” z SC-04 do SC-09 daje fokus na `h1` „Konto” (AppBar, T-014); „Dalej” w historii z powrotem na SC-04 znów fokus na `h1`.
+- AC3 — pass. Test 4 i E2E: link spisu treści (klik i Enter z klawiatury, obie sekcje) zostawia fokus na `h2` sekcji, nie wraca na `h1`. SC-02 bez zmian (`target="_blank"`, link do `#polityka-prywatnosci`); wejście pod `/regulamin#polityka-prywatnosci` daje fokus na `h2` „Polityka prywatności”, strona nie jest przewinięta do góry (scrollY 571 na telefonie).
+
+Spot-checki (przywrócone, `git status` czysty): usunięcie wywołania `focus()` w `useEntryFocus` → 4 testy T-022 w `routeFocus.test.tsx` czerwone; E2E T-022 (z przebudowaniem `dist`) czerwone na obu projektach („Expected: focused, Received: inactive”).
+
+Inne: obwódka fokusu na `h1` widoczna (`:focus-visible`, solid 3px `rgb(11, 79, 191)`), axe bez naruszeń dla `/regulamin`; Tab z `h1` idzie do pierwszego linku spisu treści. Root cause wyjaśnia, dlaczego istniejące testy nie złapały błędu (start z `renderApp("/regulamin")`, `routeFocus` tylko dla ekranów z AppBar) i obejmuje przegląd wszystkich tras.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | TDD evidence | Evidence pokazuje czerwień tylko dla testów 1–4; brak czerwieni dla testu 5 (E2E). | Sekcja „Evidence”. QA potwierdziło spot-checkiem, że E2E pada bez poprawki. | Czerwień dla każdego planowanego testu, także E2E. |
+| 2 | note | Zachowanie (poza zakresem) | „Wróć” po kliknięciu w spisie treści prawdopodobnie cofa do `/regulamin` bez `#`, a nie na poprzedni ekran (zgłoszone przez autora; istniało przed T-022). | Sekcja „Evidence”, „Poza zakresem”. | Do decyzji: osobne zgłoszenie, jeśli „Wróć” ma zawsze wracać na poprzedni ekran. |
+| 3 | note | Proces | Sekcja „Prevention” nadal z szablonu (`<Uzupełnia /fix.>`). | Plik zadania. | Uzupełnić w kroku prevention /fix. |
