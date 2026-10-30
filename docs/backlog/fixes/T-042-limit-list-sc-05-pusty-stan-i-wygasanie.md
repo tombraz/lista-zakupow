@@ -73,7 +73,7 @@ Inne wystąpienia: SC-07 (limit uczestników) nie zapamiętuje odmowy API; poza 
 
 ## Prevention
 
-Co by zapobiegło: (1) jedna reguła wygasania odmowy limitu z API zamiast dwóch implementacji (teraz `useLimitRefusal`), (2) ostrzeżenie, które dostaje fokus, renderowane jednym elementem we wszystkich stanach ekranu, w których przycisk może dostać `disabled`, (3) testy 409 przy nieaktualnym ekranie (pusty stan, odświeżenie z tą samą liczbą). Propozycja: wpis w „Pułapki” `layers/web.md` (odmowa limitu tylko przez `useLimitRefusal`, nigdy przez tożsamość danych z cache; ostrzeżenie z fokusem poza gałęziami stanu ekranu). Czeka na decyzję użytkownika.
+Co by zapobiegło: (1) jedna reguła wygasania odmowy limitu z API zamiast dwóch implementacji (teraz `useLimitRefusal`), (2) ostrzeżenie, które dostaje fokus, renderowane jednym elementem we wszystkich stanach ekranu, w których przycisk może dostać `disabled`, (3) testy 409 przy nieaktualnym ekranie (pusty stan, odświeżenie z tą samą liczbą). Propozycja: wpis w „Pułapki” `layers/web.md` (odmowa limitu tylko przez `useLimitRefusal`, nigdy przez tożsamość danych z cache; ostrzeżenie z fokusem poza gałęziami stanu ekranu). Przyjęte przez użytkownika i dodane do „Pułapek” `docs/architecture/layers/web.md`.
 
 <!-- QA rounds are appended below by /qa-task -->
 
