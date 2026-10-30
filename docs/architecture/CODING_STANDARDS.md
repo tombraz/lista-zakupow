@@ -20,7 +20,7 @@ Konfigurowane w tasku walking skeleton; progi startowe, które szkielet przechod
 | Kierunek zależności | dependency-cruiser | `modules/*/domain` nie importuje `fastify`, `drizzle-orm`, `ws`, `better-auth` ani `*/http`, `*/infra`; moduły nie importują wnętrza innych modułów (tylko ich `index.ts`); `packages/shared` nie importuje aplikacji; brak cykli | `apps/api`, `packages` |
 | Typy | TypeScript | `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, `exactOptionalPropertyTypes` | całe repo |
 | Dostępność (lint) | `eslint-plugin-jsx-a11y` (recommended, strict), `eslint-plugin-react-native-a11y` | brak błędów | `apps/web`, `apps/mobile` |
-| Bezpieczne wzorce | ESLint `no-restricted-syntax` / `react/no-danger` | zakaz `dangerouslySetInnerHTML`, `sql.raw` (poza `sql.raw(String(STAŁA))` w CHECK w `apps/api/src/db/schema.ts`), `eval`, `localStorage` dla sesji | całe repo |
+| Bezpieczne wzorce | ESLint `no-restricted-syntax` / `react/no-danger` | zakaz `dangerouslySetInnerHTML`, `sql.raw` (poza `sql.raw(String(*_MAX_LENGTH))` w CHECK w `apps/api/src/db/schema.ts`), `eval`, `localStorage` dla sesji | całe repo |
 | Wyjątki od reguł z przeglądów | `eslint-comments/no-restricted-disable` | komentarz `eslint-disable` dla `no-restricted-imports` i `no-restricted-syntax` (także bez nazwy reguły) zakazany; wyjątek tylko w `eslint.config.js`: zawężony selektor albo `files` / `ignores` z komentarzem (T-030, T-044) | `apps/*/src`, `packages/*/src`, `apps/web/test` |
 | Kolory na sztywno, kontrasty | `node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated` | 0 błędów | UI |
 

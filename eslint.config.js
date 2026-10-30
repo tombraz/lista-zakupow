@@ -20,10 +20,10 @@ const NO_INNER_HTML = {
 const SAFE_SYNTAX = [{ selector: SQL_RAW, message: SQL_RAW_MESSAGE }, NO_INNER_HTML];
 
 // T-044: CHECK w DDL nie przyjmuje parametru ($1), więc schema.ts wkleja stałą liczbową z kodu
-// przez sql.raw(String(STAŁA)). Tylko w schema.ts i tylko w tej postaci; inne sql.raw zakazane.
+// przez sql.raw(String(*_MAX_LENGTH)). Tylko w schema.ts i tylko w tej postaci; inne sql.raw zakazane.
 const SAFE_SYNTAX_DDL = [
   {
-    selector: `${SQL_RAW}:not(CallExpression[arguments.length=1][arguments.0.callee.name='String'][arguments.0.arguments.0.name=/^[A-Z][A-Z0-9_]*$/] > MemberExpression.callee)`,
+    selector: `${SQL_RAW}:not(CallExpression[arguments.length=1][arguments.0.callee.name='String'][arguments.0.arguments.0.name=/^[A-Z][A-Z0-9_]*_MAX_LENGTH$/] > MemberExpression.callee)`,
     message: SQL_RAW_MESSAGE,
   },
   NO_INNER_HTML,
@@ -57,10 +57,10 @@ const WEB_TEST_SYNTAX = [
 
 // T-017: znaczniki czasu z wstrzykiwanego `Clock` (layers/db.md „Konwencje”), nie z zegara bazy —
 // klient porównuje wersje pozycji po `updatedAt` (api.md).
-// T-044: wyjątek `update(shoppingList).set({ updatedAt: sql`now()` })` — `updated_at` listy tylko
-// porządkuje SC-05, klient nie porównuje nim wersji.
+// T-044: wyjątek `update(shoppingList).set({ updatedAt: sql`now()` })` (dokładnie `now()`) —
+// `updated_at` listy tylko porządkuje SC-05, klient nie porównuje nim wersji.
 const LIST_UPDATED_AT_NOW =
-  "CallExpression[callee.property.name='set'][callee.object.callee.property.name='update'][callee.object.arguments.0.name='shoppingList'] > ObjectExpression > Property[key.name='updatedAt'] > TaggedTemplateExpression > TemplateLiteral > TemplateElement";
+  "CallExpression[callee.property.name='set'][callee.object.callee.property.name='update'][callee.object.arguments.0.name='shoppingList'] > ObjectExpression > Property[key.name='updatedAt'] > TaggedTemplateExpression > TemplateLiteral[quasis.length=1] > TemplateElement[value.raw='now()']";
 const API_CLOCK_SYNTAX = [
   {
     selector: `TaggedTemplateExpression[tag.name='sql'] TemplateElement[value.raw=/now\\(\\)/i]:not(${LIST_UPDATED_AT_NOW})`,
@@ -240,7 +240,11 @@ export default tseslint.config(
     // T-030, T-044: reguł z przeglądów nie wyłącza komentarz w kodzie (także `eslint-disable` bez
     // nazwy reguły). Wyjątek tylko w tej konfiguracji: zawężony selektor albo files / ignores
     // z komentarzem.
-    files: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.ts", "apps/web/test/**/*.{ts,tsx}"],
+    files: [
+      "apps/*/src/**/*.{ts,tsx}",
+      "packages/*/src/**/*.{ts,tsx}",
+      "apps/web/test/**/*.{ts,tsx}",
+    ],
     plugins: { "eslint-comments": eslintComments },
     rules: {
       "eslint-comments/no-restricted-disable": [

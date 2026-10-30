@@ -73,6 +73,8 @@ Uwaga: T-008 proponował „20 linków / h na właściciela”, stała i test li
 
 ## Prevention
 
+Co zapobiegłoby: sprawdzenie, które pada automatycznie — jest w tej poprawce. `toEqual` na całych obiektach stałych pada też przy nowym kluczu bez przypięcia, a zakaz `eslint-disable` obejmuje całą regułę `no-restricted-syntax`, więc i przyszłe tablice reguł. Po QA (zaakceptował właściciel, 2026-10-30): zakaz komentarzy także w `packages/*/src/**/*.tsx`; wyjątek DDL zawężony do `sql.raw(String(*_MAX_LENGTH))`; wyjątek `updatedAt` listy tylko dla dokładnie `sql`now()`` (próby: `String(SECRET_TOKEN)`, `now() - ${x}`, `NOW() + interval` → błąd). Poza zakresem (osobne zadanie przez `/plan-backlog`): wyłączenie reguły komentarzem konfiguracyjnym `/* eslint no-restricted-syntax: off */` — `eslint-comments` go nie łapie, a `noInlineConfig` zablokowałby też dozwolone `react-hooks/exhaustive-deps`.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-30)
