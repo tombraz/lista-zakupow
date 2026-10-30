@@ -4,7 +4,7 @@ title: "SC-05: ostrzeżenie limitu w pustym stanie i wygasanie odmowy 409 po lic
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-05]
@@ -58,7 +58,18 @@ related_tasks: [T-025, T-023, T-006]
 
 ## Root cause
 
+T-025 (`77eec15`) dodał ostrzeżenie o limicie tylko w gałęzi z kartami `ListsScreen`, więc przy 409 w pustym stanie `limitRef` był `null`, a gdy odświeżenie przełączało ekran na karty, ostrzeżenie montowało się jako nowy element bez zmiany `limitReached` i `useLimitFocus` już nie reagował. Ten sam commit zapamiętał odmowę jako referencję tablicy z cache (`refusedFor === lists`), więc o wygaśnięciu decydowała tożsamość tablicy (structural sharing TanStack), a nie liczba list, inaczej niż w SC-06 (`atCount`). Testy T-025 sprawdzały 409 tylko przy kartach na ekranie i tylko odświeżenia, które zmieniają liczbę list.
+
+Naprawa: wspólny hook `apps/web/src/api/useLimitRefusal.ts` (SC-05 i SC-06) pamięta liczbę z chwili odmowy, a gdy odświeżenie pokaże więcej, podnosi ją do nowej liczby. Bez tego odmowa przy nieaktualnym ekranie (0 albo 49 na ekranie, 50 na serwerze) nie wygasłaby po usunięciu listy (test T-025 „re-enables … following a refusal”). `ListsScreen` ma jedno ostrzeżenie za pustym stanem albo kartami, więc fokus zostaje na nim po odświeżeniu.
+
+Inne wystąpienia: SC-07 (limit uczestników) nie zapamiętuje odmowy API; poza zakresem.
+
 ## Evidence
+
+- Red (przed naprawą):
+  - `ListsScreen.test.tsx` › „moves focus to the limit warning when the first list is refused (409) (T-042)”: `Unable to find an element with the text: Masz już 50 list — to limit…` (brak ostrzeżenia w pustym stanie).
+  - `ListsScreen.live.test.tsx` › „keeps the refusal (409) until the number of own lists drops (T-042)”: `expect(element).toBeDisabled()` / `Received element is not disabled` (nowa tablica z 49 listami zdejmowała blokadę).
+- Green: `pnpm test` 92 pliki, 509 testów; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` bez błędów.
 
 ## Prevention
 
