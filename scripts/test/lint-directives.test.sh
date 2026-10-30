@@ -28,7 +28,9 @@ lint() {
   local file=$1 src=$2 out status=0
   # shellcheck disable=SC2086 # polecenie ze skryptu lint dzielone na słowa jak w pnpm run
   out=$(printf '%s\n' "$src" | $lint_cmd --stdin --stdin-filename "$file" 2>&1) || status=$?
-  echo "$status $(grep -oE 'eslint-comments/[a-z-]+' <<<"$out" | sort -u | tr '\n' ' ' || true)"
+  # Tylko kolumna reguły (ostatnia w wierszu zgłoszenia): treść komunikatu też zawiera nazwy reguł.
+  echo "$status $(tr -d '\r' <<<"$out" | awk '/ error | warning /{print $NF}' |
+    grep -E '^eslint-comments/' | sort -u | tr '\n' ' ' || true)"
 }
 
 # Obejście pada (exit 1) i zgłoszenie ma oczekiwaną regułę.

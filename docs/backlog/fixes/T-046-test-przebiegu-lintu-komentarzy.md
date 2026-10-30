@@ -79,6 +79,8 @@ T-045 zabezpieczył przebieg komentarzy tylko konfiguracją (`--no-inline-config
 
 ## Prevention
 
+Sam test jest zabezpieczeniem pierwszego rzędu (sprawdzenie, które pada automatycznie): osłabienie przebiegu komentarzy (flaga, lista reguł, `files`) wywraca CI w jobie `static`. Przy kolejnej bramce lintu, której w repo nic nie narusza, potrzebny jest taki sam test na znanych obejściach. Propozycja wpisu do „Pułapek” w `infra.md` czeka na decyzję właściciela.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-30)
@@ -101,3 +103,7 @@ Fix task: „Root cause” wyjaśnia, czemu nic nie łapało osłabienia (brak k
 | 2 | note | test | Polecenie ze skryptu dzielone na słowa bez obsługi cudzysłowów; argument w cudzysłowie w `scripts.lint` rozbije polecenie. Dziś brak takich argumentów, a awaria byłaby głośna (exit ≠ 1). | `$lint_cmd --stdin …` (SC2086) | ewentualnie `pnpm exec`/`sh -c` z dołożonymi argumentami |
 | 3 | note | testy web (poza zakresem) | Pełne `pnpm test` raz dało 6 porażek w `SignUpScreen`, `ListScreen(.edit)`, `ParticipantsScreen`; te pliki osobno 123/123, ponowny pełny przebieg 515/515. Niestabilność pod obciążeniem, niezwiązana z T-046. | `Test Files 4 failed | 89 passed (93)`, potem `93 passed` | osobny task na stabilność testów ekranów (timeouty / jsdom) |
 | 4 | note | narzędzia | actionlint i shellcheck niedostępne lokalnie; AC4 sprawdzone `workflow-check` i przeglądem. | `command -v actionlint` → brak | — |
+
+### Po QA round 1
+
+Uwaga #1 (minor) poprawiona w `lint()`: reguły brane tylko z ostatniej kolumny wiersza zgłoszenia (`awk '{print $NF}'`, bez ``). Czerwony: mutacja `no-use` z `allow: [..., "eslint"]` przy starej wersji → przypadek „2. … (apps/web/src/x.tsx)” `ok` (fałszywie); po poprawce `FAIL`. Bez mutacji 14× `ok`, exit 0. Uwagi #2 i #4 bez zmian (note). Uwaga #3: niestabilne testy ekranów web pod obciążeniem, propozycja osobnego tasku.
