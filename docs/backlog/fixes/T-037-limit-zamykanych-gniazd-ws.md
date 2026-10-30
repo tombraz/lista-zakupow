@@ -64,6 +64,13 @@ Poprawka (`routes.ts`): `SocketsPerSession` liczy gniazda sesji od upgrade'u do 
 
 ## Prevention
 
+Co by zapobiegło: limit TH-25 sprawdzany na zasobie, który naprawdę zużywa serwer (gniazda TCP), a nie na liczbie połączeń w hubie. Przyjęte przez użytkownika (2026-10-30):
+
+1. Test automatyczny `keeps at most the socket limit on the server for a client that never closes TCP` (`live.limits.test.ts`): 50 upgrade'ów jednej sesji bez ramek i bez FIN (`silentUpgrade`), po stronie serwera (`serverSockets` → `app.server.getConnections`) najwyżej `socketsPerSession` gniazd. Gryzie każdą ścieżkę, która zostawia gniazdo: spot-check bez `sockets.hold` → `expected 50 to be less than or equal to 10`; odrzucenie ponad limit przez `close(1008)` zamiast `terminate` → to samo. Pomocnik `rawUpgrade` wspólny z `closeWithoutFin`.
+2. Wpis w „Pułapkach” `docs/architecture/layers/backend.md` (limit liczy gniazda do zamknięcia TCP; ponad limit `terminate`) — dodany w QA round 1, zostaje.
+
+Pokrewne: zalew logu `security` próbami ponad limit → T-038.
+
 ## Incident note
 
 <Nie dotyczy.>

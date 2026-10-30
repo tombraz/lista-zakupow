@@ -174,24 +174,8 @@ export function pause(ms: number): Promise<void> {
  * Połączenie, które kończy zamknięcie WebSocket (ramka close w obie strony), ale nie zamyka TCP —
  * jak klient, którego FIN jeszcze nie dotarł do serwera (T-036). Zwraca zerwanie gniazda.
  */
-export async function closeWithoutFin(
-  url: string,
-  { cookie, origin = TEST_ORIGIN }: UpgradeOptions,
-): Promise<() => void> {
-  const { hostname, port, pathname } = new URL(url);
-  const socket = tcpConnect({ host: hostname, port: Number(port), allowHalfOpen: true });
-  const headers = [
-    `GET ${pathname} HTTP/1.1`,
-    `Host: ${hostname}:${port}`,
-    "Upgrade: websocket",
-    "Connection: Upgrade",
-    `Sec-WebSocket-Key: ${randomBytes(16).toString("base64")}`,
-    "Sec-WebSocket-Version: 13",
-    ...(origin ? [`Origin: ${origin}`] : []),
-    ...(cookie ? [`Cookie: ${cookie}`] : []),
-  ];
-  const end = "\r\n\r\n";
-  socket.write(`${headers.join("\r\n")}${end}`);
+export async function closeWithoutFin(url: string, options: UpgradeOptions): Promise<() => void> {
+  const { socket, end } = rawUpgrade(url, options);
   let received = Buffer.alloc(0);
   const until = (done: (data: Buffer) => boolean) =>
     new Promise<void>((resolve, reject) => {
@@ -218,4 +202,50 @@ export async function closeWithoutFin(
   socket.write(Buffer.from([0x88, 0x82, ...mask, ...code]));
   await until((data) => data[0] === 0x88);
   return () => socket.destroy();
+}
+
+/**
+ * Upgrade, po którym klient milczy i nie zamyka TCP (bez ramek, bez FIN) — próba nadużycia TH-25
+ * (T-037). Czeka na pierwszą odpowiedź serwera albo zerwanie; zwraca zerwanie gniazda.
+ */
+export async function silentUpgrade(url: string, options: UpgradeOptions): Promise<() => void> {
+  const { socket } = rawUpgrade(url, options);
+  await new Promise<void>((resolve, reject) => {
+    socket.once("data", () => {
+      resolve();
+    });
+    socket.once("close", () => {
+      resolve();
+    });
+    socket.once("error", reject);
+  });
+  return () => socket.destroy();
+}
+
+function rawUpgrade(url: string, { cookie, origin = TEST_ORIGIN }: UpgradeOptions) {
+  const { hostname, port, pathname } = new URL(url);
+  const socket = tcpConnect({ host: hostname, port: Number(port), allowHalfOpen: true });
+  const headers = [
+    `GET ${pathname} HTTP/1.1`,
+    `Host: ${hostname}:${port}`,
+    "Upgrade: websocket",
+    "Connection: Upgrade",
+    `Sec-WebSocket-Key: ${randomBytes(16).toString("base64")}`,
+    "Sec-WebSocket-Version: 13",
+    ...(origin ? [`Origin: ${origin}`] : []),
+    ...(cookie ? [`Cookie: ${cookie}`] : []),
+  ];
+  const end = "\r\n\r\n";
+  socket.write(`${headers.join("\r\n")}${end}`);
+  return { socket, end };
+}
+
+/** Gniazda TCP otwarte po stronie serwera aplikacji (także po upgrade WS). */
+export function serverSockets(app: FastifyInstance): Promise<number> {
+  return new Promise((resolve, reject) => {
+    app.server.getConnections((error, count) => {
+      if (error) reject(error);
+      else resolve(count);
+    });
+  });
 }

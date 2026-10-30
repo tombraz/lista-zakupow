@@ -4,7 +4,16 @@ import { LIVE_LIMITS } from "@lista/shared";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
-import { closeCode, closeWithoutFin, connectLive, liveUrl, pause, type LiveClient } from "./live";
+import {
+  closeCode,
+  closeWithoutFin,
+  connectLive,
+  liveUrl,
+  pause,
+  serverSockets,
+  silentUpgrade,
+  type LiveClient,
+} from "./live";
 import { captureLogs } from "./logs";
 
 describe("WebSocket limits (SEC6, TH-25)", () => {
@@ -22,15 +31,16 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
 
   async function connected() {
     const logs = captureLogs();
-    app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
-    const user = await createUser(app);
-    const url = await liveUrl(app);
+    const built = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+    app = built;
+    const user = await createUser(built);
+    const url = await liveUrl(built);
     const connect = async () => {
       const client = await connectLive(url, { cookie: user.cookie });
       clients.push(client);
       return client;
     };
-    return { user, url, connect, logs };
+    return { app: built, user, url, connect, logs };
   }
 
   // T-033 (TH-21, TH-25): przekroczenie limitu zostawia ślad w logu `security`, bez ciasteczka.
@@ -89,6 +99,16 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
         userId: user.id,
       }),
     ]);
+  });
+
+  // T-037 (prevention): niezależnie od ścieżki odrzucenia serwer trzyma najwyżej limit gniazd sesji.
+  it("keeps at most the socket limit on the server for a client that never closes TCP", async () => {
+    const { app: server, user, url } = await connected();
+    for (let i = 0; i < 5 * LIVE_LIMITS.socketsPerSession; i += 1)
+      sockets.push(await silentUpgrade(url, { cookie: user.cookie }));
+    await pause(100);
+
+    expect(await serverSockets(server)).toBeLessThanOrEqual(LIVE_LIMITS.socketsPerSession);
   });
 
   it("releases closing sockets after the close timeout", async () => {
