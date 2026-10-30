@@ -88,3 +88,9 @@ Fix: czerwony dowód w „Evidence” obecny; „Root cause” wyjaśnia, czemu 
 | 2 | minor | nazewnictwo | `neighbourOf` zwraca teraz listę kandydatów, nie sąsiada; komentarz „bez nich sekcja Kupione” opisuje zachowanie `useCheckboxFocus`, nie tej funkcji. | `useCheckItem.ts`, `neighbourOf` | Nazwa zgodna z wynikiem, np. `focusCandidates`. |
 | 3 | note | zachowanie | Kandydaci są zamrożeni w chwili kliknięcia: pozycja dodana na żywo (F-14) po kliknięciu nie jest kandydatem, więc gdy wszyscy kandydaci zostaną odhaczeni, fokus trafi na „Kupione (N)”, choć na liście jest nowa nieodhaczona pozycja. | analiza `neighbourOf` / `firstUnchecked` | Rzadki przypadek; do decyzji, czy wybierać też spośród aktualnych nieodhaczonych. |
 | 4 | note | dostępność | Ręczne sprawdzenie czytnikiem ekranu i dotykiem na telefonie (QA plan) nie wykonane w trybie automatycznym; wyścig odpowiedzi trudny do odtworzenia ręcznie. Pokrycie: testy komponentu + E2E J-03/J-05. | — | Sprawdzić przy UAT E-01. |
+
+Rozstrzygnięcia po QA (2026-10-30, decyzja użytkownika):
+- #1: „Prevention” uzupełnione; wpis w „Pułapkach” `layers/web.md` (`4e0d4d9`).
+- #2: `neighbourOf` → `focusCandidates`, komentarz opisuje tylko wynik funkcji (`f6fa4b4`).
+- #3: bez zmian i bez osobnego zadania — rzadki przypadek (pozycja dodana na żywo między kliknięciem a odpowiedzią, przy odhaczonych wszystkich kandydatach); fokus trafia wtedy na „Kupione (N)”, nie na `body`, więc WCAG 2.4.3 jest spełnione.
+- #4: zostaje do UAT E-01.
