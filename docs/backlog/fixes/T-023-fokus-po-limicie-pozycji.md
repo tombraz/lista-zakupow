@@ -4,7 +4,7 @@ title: "Fokus nie spada na body, gdy własne dodanie osiąga limit 500 pozycji"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07, N-04]
@@ -28,8 +28,8 @@ related_tasks: [T-006, T-015]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-06 z 499 pozycjami i fokusem w „Co kupić?”, when użytkownik doda pozycję, then fokus nie jest na `body`, a ostrzeżenie o limicie jest ogłaszane. — verified by: test komponentu SC-06 + E2E (jsdom nie zdejmuje fokusu z `disabled`, `layers/web.md` „Pułapki”)
-- [ ] AC2: No regression in: limit 500 po wczytaniu listy (AddBar nieaktywny, E2E `j03-pozycje.spec.ts` „500 items”), T-015, T-020.
+- [x] AC1: Given SC-06 z 499 pozycjami i fokusem w „Co kupić?”, when użytkownik doda pozycję, then fokus nie jest na `body`, a ostrzeżenie o limicie jest ogłaszane. — verified by: test komponentu SC-06 + E2E (jsdom nie zdejmuje fokusu z `disabled`, `layers/web.md` „Pułapki”)
+- [x] AC2: No regression in: limit 500 po wczytaniu listy (AddBar nieaktywny, E2E `j03-pozycje.spec.ts` „500 items”), T-015, T-020.
 
 ## TDD plan
 
@@ -73,3 +73,24 @@ Inne wystąpienie tej samej klasy (poza zakresem, inny ekran): SC-05 — odpowie
 <Nie dotyczy.>
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | a11y / zachowanie | Gałąź `focused === document.body` w `useLimitFocus` przenosi fokus na ostrzeżenie także wtedy, gdy fokus był „nigdzie” z innego powodu (np. klik w puste tło), a limit przyszedł z cudzej zmiany na żywo. Nieszkodliwe (fokus i tak był na `body`), ale to przeniesienie fokusu bez akcji użytkownika. | `AddItemBar.tsx` `useLimitFocus` | Do rozważenia; zgodne z decyzją użytkownika. |
+| 2 | note | ten sam błąd gdzie indziej | SC-05: 409 na 51. listę wyłącza „Nowa lista” (`disabled`) i zamyka formularz z fokusem — prawdopodobnie fokus na `body` (opisane w „Root cause”, niezweryfikowane). | `ListsScreen.tsx:26`, `useNewList.ts:20` | Osobne zadanie fix, decyzja użytkownika. |
+
+**Reprodukcja (QA):** `pnpm test` 449/449 zielone; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `design-check --scan SC-06-lista` OK (0 hard-coded). E2E `-g "T-023|500 items"`: 4/4 passed (telefon i komputer).
+
+**Kryteria:**
+- AC1 — pass. Testy 1, 2, 4 (komponent) i 6 (E2E) przechodzą i asertują fokus na `role="status"` z tekstem limitu. E2E w Chromium: fokus na ostrzeżeniu, pole `disabled`.
+- AC2 — pass. Test 3 (pełna lista przy wejściu → fokus na `h1`), istniejący E2E „500 items” zielony, pełny zestaw (T-006, T-015, T-020) zielony. Kolejność efektów sprawdzona w kodzie: `AppBar` (wcześniej w drzewie) ustawia fokus na `h1` w tym samym commicie, w którym wczytanie listy daje `limitReached`, więc hook widzi `h1` i nie kradnie fokusu.
+
+**Spot-checki (przywrócone, `git status` czysty):**
+- Usunięcie `ref.current?.focus()`: testy 1, 2, 4 czerwone; E2E T-023 [komputer] czerwony („Received: inactive”) — potwierdza, że w przeglądarce bez poprawki fokus spada.
+- Fokus zawsze przy limicie (bez warunku przejścia i bez warunku „w AddBar/body”): testy 3 i 5 czerwone.
+
+**Przegląd kodu:** zmiana ograniczona do `AddItemBar.tsx` (hook `useLimitFocus`, `ref` do istniejącego `InlineAlert` z `tabIndex={-1}`); bez scope creep. Ostrzeżenie ma `role="status"` i globalny `:focus-visible`. „Root cause” wyjaśnia, czemu testy nie złapały błędu (jsdom nie zdejmuje fokusu z `disabled`; jedyny E2E wchodził na listę już pełną). Threats: brak; dane użytkownika nietknięte.
