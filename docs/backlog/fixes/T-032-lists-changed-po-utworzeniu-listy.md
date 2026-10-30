@@ -4,7 +4,7 @@ title: "Utworzenie listy wysyła lists.changed do właściciela (inne karty i ur
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-05, F-14, N-06]
@@ -72,3 +72,23 @@ Poprawka: `live.notify([user.id], { type: "lists.changed" })` po `createList` �
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Reprodukcja (QA, czysty stan): `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `pnpm vitest run --project api -t T-032` → 3 passed; `pnpm test` → 91 plików / 469 testów passed; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm build`, `pnpm quality` (jscpd, depcruise) — bez błędów.
+
+Kryteria:
+
+- AC1 **pass** — test łączy się prawdziwym WebSocketem z nasłuchującym serwerem jako druga karta Ani i dostaje `{ type: "lists.changed" }` po 201. Spot-check: usunięcie `live.notify` z `POST /api/v1/lists` → test czerwony (`no "lists.changed" within 1000 ms; got []`), przywrócone.
+- AC2 **pass** — 409 przy 50 listach (49 wstawionych + „Dom” z `household()`) i 400 dla pustej nazwy, potem cisza na kanale. Spot-check: przeniesienie `live.notify` przed walidację → test „sends nothing when refused” czerwony, przywrócone.
+- AC3 **pass** — Tomek (uczestnik innej listy Ani) i Cecylia nie dostają nic po utworzeniu listy przez Anię.
+- AC4 **pass** — pełny przebieg zielony, w tym `lists.create.test.ts`, `live.*.test.ts`, `lists.limit.test.ts`, `ListsScreen.live.test.tsx`.
+
+Fix task: przyczyna wyjaśnia, dlaczego testy T-009 jej nie złapały; test reprodukujący pada bez poprawki (spot-check wyżej). Własna karta: `LiveProvider` odświeża SC-05 na `lists.changed`, a `useNewListAnnouncement` filtruje `role === "participant"`, więc lista własna nie jest ogłaszana — zgodne z opisem. Bezpieczeństwo: `requireUser` przed walidacją i zapisem, zdarzenie bez danych listy i tylko do kanału właściciela; `threats: []`.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Dokumentacja | Sekcja `## Prevention` jest pusta. | plik zadania | Jedno zdanie, co zapobiega powtórce (np. test „każda trasa zmieniająca SC-05 wysyła `lists.changed`”) albo „Nie dotyczy”. |
+| 2 | note | Testy ręczne | Ręczny test w dwóch kartach Chrome z planu QA nie został wykonany; zachowanie pokrywa test API z prawdziwym WebSocketem oraz istniejący `ListsScreen.live.test.tsx`. | — | Przy UAT E-01 sprawdzić dwie karty. |
