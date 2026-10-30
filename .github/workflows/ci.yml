@@ -43,6 +43,7 @@ jobs:
               - '.nvmrc'
               - 'tsconfig*.json'
               - 'eslint.config.js'
+              - 'eslint.directives.config.js'
               - 'vitest.config.ts'
               - '.dependency-cruiser.cjs'
               - '.jscpd.json'
