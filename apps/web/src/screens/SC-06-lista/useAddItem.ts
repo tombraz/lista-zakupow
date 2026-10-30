@@ -2,14 +2,15 @@ import {
   BUSINESS_LIMITS,
   createItemRequestSchema,
   fieldErrors,
+  type CreateItemRequest,
   type FieldErrorCode,
   type Item,
 } from "@lista/shared";
-// eslint-disable-next-line no-restricted-imports -- T-020: idempotentne `id` (T-006); wpisanie i Enter w trakcie zapisu wysyła nową treść.
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { addItem } from "../../api/items";
+import { useGuardedMutation } from "../../api/useGuardedMutation";
 import { upsertNewer } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 import { messages } from "./messages";
@@ -52,7 +53,6 @@ export function useAddItem(listId: string, items: Item[] = []) {
   const [warning, setWarning] = useState<AddWarning | null>(null);
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const mutation = useMutation({ mutationFn: addItem.bind(null, listId) });
   const limitReached =
     items.length >= BUSINESS_LIMITS.itemsPerList ||
     (warning?.kind === "limit" && items.length >= warning.atCount);
@@ -71,6 +71,17 @@ export function useAddItem(listId: string, items: Item[] = []) {
     else setFailure(code);
   };
 
+  // AddBar w czasie zapisu nic nie wysyła, więc zapis jest jeden naraz (T-029).
+  const mutation = useGuardedMutation({
+    mutationFn: ({ request }: Sending) => addItem(listId, request),
+    onSuccess: (item, { sent }) => {
+      added(item, sent);
+    },
+    onError: (error, { request }) => {
+      failed(error, request.name);
+    },
+  });
+
   const submit = () => {
     setWarning(null);
     setFailure(null);
@@ -82,17 +93,7 @@ export function useAddItem(listId: string, items: Item[] = []) {
       setWarning(duplicateOf(items, parsed.data.name));
       return;
     }
-    mutation.mutate(
-      { id: draft.idFor(sent), ...parsed.data },
-      {
-        onSuccess: (item) => {
-          added(item, sent);
-        },
-        onError: (error) => {
-          failed(error, parsed.data.name);
-        },
-      },
-    );
+    mutation.mutate({ request: { id: draft.idFor(sent), ...parsed.data }, sent });
   };
 
   return {
@@ -112,6 +113,12 @@ export type AddItemState = ReturnType<typeof useAddItem>;
 interface Draft {
   name: string;
   note: string;
+}
+
+/** Wysyłana pozycja i treść pól, z której powstała (czyszczenie po dodaniu). */
+interface Sending {
+  request: CreateItemRequest;
+  sent: Draft;
 }
 
 const EMPTY_DRAFT: Draft = { name: "", note: "" };

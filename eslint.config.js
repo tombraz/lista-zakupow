@@ -65,6 +65,16 @@ const WEB_SESSION_SYNTAX = [
     "Nie czyść QueryClient wprost: koniec sesji przez useSetSession(null) (T-018, layers/web.md „Pułapki”).",
 }));
 
+// T-029: wywołania zwrotne zapisu w opcjach `useMutation` / `useGuardedMutation`, nie w `mutate`.
+// Te z `mutate` TanStack Query wywołuje tylko dla ostatniego wywołania i nie po odmontowaniu.
+const WEB_MUTATE_SYNTAX = [
+  {
+    selector: "CallExpression[callee.property.name='mutate'][arguments.length>1]",
+    message:
+      "onSuccess / onError / onSettled w opcjach useGuardedMutation, nie w mutate(…): te z mutate przychodzą tylko dla ostatniego wywołania (T-029, layers/web.md „Pułapki”).",
+  },
+];
+
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
 // Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
 const SESSION_KEY = "/sess|token|auth|cookie|jwt/i";
@@ -212,7 +222,14 @@ export default tseslint.config(
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/web/src/**/*.{ts,tsx}"],
     ignores: [...TESTS, "apps/web/src/session/useSession.ts"],
-    rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...WEB_SESSION_SYNTAX] },
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...WEB_SESSION_SYNTAX,
+        ...WEB_MUTATE_SYNTAX,
+      ],
+    },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.

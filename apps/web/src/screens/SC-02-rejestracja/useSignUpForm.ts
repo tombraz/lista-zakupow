@@ -61,7 +61,6 @@ export function useSignUpForm() {
   // SC-02, „Accessibility”: po błędach fokus na podsumowaniu, polu e-mail albo komunikacie.
   const [focus, requestFocus] = useFocusRequest<"summary" | "email" | "alert">();
   const signedUp = useSignedUp();
-  const mutation = useGuardedMutation({ mutationFn: signUp });
 
   const showFieldErrors = (fields: FieldErrors) => {
     setErrors(fields);
@@ -82,6 +81,12 @@ export function useSignUpForm() {
     }
   };
 
+  const mutation = useGuardedMutation({
+    mutationFn: signUp,
+    onSuccess: (response) => void signedUp(response),
+    onError: handleFailure,
+  });
+
   const submit = () => {
     setErrors({});
     setShowSummary(false);
@@ -94,10 +99,7 @@ export function useSignUpForm() {
     const account = invitation
       ? { ...parsed.data, invitationToken: invitation.token }
       : parsed.data;
-    mutation.mutate(account, {
-      onSuccess: (response) => void signedUp(response),
-      onError: handleFailure,
-    });
+    mutation.mutate(account);
   };
 
   const setField = <K extends keyof SignUpValues>(field: K, value: SignUpValues[K]) => {

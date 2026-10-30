@@ -28,7 +28,15 @@ export function useListNameForm<T>(options: ListNameFormOptions<T>) {
   const { initial = "", save, onSaved, onFailure } = options;
   const [name, setName] = useState(initial);
   const [fieldError, setFieldError] = useState<FieldErrorCode | null>(null);
-  const mutation = useGuardedMutation({ mutationFn: save });
+  const mutation = useGuardedMutation({
+    mutationFn: save,
+    onSuccess: onSaved,
+    onError: (error) => {
+      const { code, fields } = asRequestError(error);
+      if (fields["name"]) setFieldError(fields["name"]);
+      else onFailure(code);
+    },
+  });
 
   const submit = () => {
     const parsed = listNameRequestSchema.safeParse({ name });
@@ -37,14 +45,7 @@ export function useListNameForm<T>(options: ListNameFormOptions<T>) {
       return;
     }
     setFieldError(null);
-    mutation.mutate(parsed.data.name, {
-      onSuccess: onSaved,
-      onError: (error) => {
-        const { code, fields } = asRequestError(error);
-        if (fields["name"]) setFieldError(fields["name"]);
-        else onFailure(code);
-      },
-    });
+    mutation.mutate(parsed.data.name);
   };
 
   return { name, setName, fieldError, submit, pending: mutation.isPending };

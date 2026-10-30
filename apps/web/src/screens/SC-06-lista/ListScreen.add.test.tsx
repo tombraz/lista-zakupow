@@ -305,6 +305,22 @@ describe("SC-06 AddBar while saving and after a failed save", () => {
     expect(requests[1]?.["id"]).not.toBe(requests[0]?.["id"]);
   });
 
+  it("sends nothing when Enter is pressed while the previous item is saving (T-029)", async () => {
+    const { user, list, name } = await openList();
+    const response = heldResponse();
+    const requests = addingSucceeds(list, response);
+
+    await user.type(name, "Mleko{Enter}");
+    await user.clear(name);
+    await user.type(name, "Chleb{Enter}");
+    response.release();
+
+    expect(await screen.findByRole("button", { name: "Edytuj Mleko" })).toBeVisible();
+    expect(screen.getByText("Dodano Mleko")).toHaveAttribute("role", "status");
+    expect(name).toHaveValue("Chleb");
+    expect(requests.map(({ name: sent }) => sent)).toEqual(["Mleko"]);
+  });
+
   it("sends a new id when the text changed after a lost response (QA round 1 #2)", async () => {
     const { user, list, name } = await openList();
     const saved = new Map<string, Item>();

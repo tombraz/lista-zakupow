@@ -15,8 +15,6 @@ export function useSignInForm(initialEmail = "") {
   const [formError, setFormError] = useState<RequestErrorCode | null>(null);
   const [focus, requestFocus] = useFocusRequest<Field | "alert">();
   const setSession = useSetSession();
-  const mutation = useGuardedMutation({ mutationFn: signIn });
-
   const handleFailure = (error: unknown) => {
     const { code } = asRequestError(error);
     setFormError(code);
@@ -24,6 +22,12 @@ export function useSignInForm(initialEmail = "") {
     if (code === "invalid_credentials") setValues((current) => ({ ...current, password: "" }));
     requestFocus("alert");
   };
+
+  const mutation = useGuardedMutation({
+    mutationFn: signIn,
+    onSuccess: setSession,
+    onError: handleFailure,
+  });
 
   const submit = () => {
     setFormError(null);
@@ -38,10 +42,7 @@ export function useSignInForm(initialEmail = "") {
       return;
     }
     setMissing({});
-    mutation.mutate(parsed.data, {
-      onSuccess: setSession,
-      onError: handleFailure,
-    });
+    mutation.mutate(parsed.data);
   };
 
   const setField = (field: Field, value: string) => {

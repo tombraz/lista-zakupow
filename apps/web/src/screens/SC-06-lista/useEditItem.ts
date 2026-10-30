@@ -43,9 +43,6 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   // F-14: usunięcie wygrywa z edycją; API odpowiada wtedy 404.
   const [deletedElsewhere, setDeletedElsewhere] = useState(false);
-  const saving = useGuardedMutation({
-    mutationFn: (changes: UpdateItemRequest) => updateItem(listId, item.id, changes),
-  });
   const removal = useRemoveItem(listId, item, callbacks.onRemoved);
 
   const saved = (updated: Item) => {
@@ -61,6 +58,15 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
     else setFailure(code);
   };
 
+  const saving = useGuardedMutation({
+    mutationFn: ({ changes }: { changes: UpdateItemRequest; typed: string }) =>
+      updateItem(listId, item.id, changes),
+    onSuccess: saved,
+    onError: (error, { typed }) => {
+      failed(error, typed);
+    },
+  });
+
   const save = () => {
     setDuplicate(null);
     setFailure(null);
@@ -73,12 +79,7 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
       setDuplicate(existing.name);
       return;
     }
-    saving.mutate(changesOf(item, { name: newName, note: newNote }), {
-      onSuccess: saved,
-      onError: (error) => {
-        failed(error, newName);
-      },
-    });
+    saving.mutate({ changes: changesOf(item, { name: newName, note: newNote }), typed: newName });
   };
 
   return {
@@ -105,24 +106,25 @@ export type EditItemState = ReturnType<typeof useEditItem>;
 function useRemoveItem(listId: string, item: Item, onRemoved: () => void) {
   const client = useQueryClient();
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
-  const mutation = useGuardedMutation({ mutationFn: () => deleteItem(listId, item.id) });
-
   const removed = () => {
     removeItems(client, listId, [item.id]);
     onRemoved();
   };
 
+  const mutation = useGuardedMutation({
+    mutationFn: () => deleteItem(listId, item.id),
+    onSuccess: removed,
+    onError: (error) => {
+      const { code } = asRequestError(error);
+      // Usunięta wcześniej przez kogoś innego: skutek ten sam, co zamierzony.
+      if (code === "not_found") removed();
+      else setFailure(code);
+    },
+  });
+
   const remove = () => {
     setFailure(null);
-    mutation.mutate(undefined, {
-      onSuccess: removed,
-      onError: (error) => {
-        const { code } = asRequestError(error);
-        // Usunięta wcześniej przez kogoś innego: skutek ten sam, co zamierzony.
-        if (code === "not_found") removed();
-        else setFailure(code);
-      },
-    });
+    mutation.mutate();
   };
 
   return { remove, removed, failure, removing: mutation.isPending };
