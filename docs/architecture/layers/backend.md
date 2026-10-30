@@ -84,6 +84,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 - Konta zakłada się wyłącznie przez most HTTP `POST /api/auth/sign-up/email` (`http/auth-routes.ts`), który waliduje zgody i 16+ schematem z `packages/shared`. Hook `databaseHooks.user.create.before` w `infra/auth.ts` stempluje znaczniki zgód bezwarunkowo, bo nie widzi pól `termsAccepted` / `ageConfirmed` (nie są polami Better Auth). Dlatego nie wołać `auth.api.signUpEmail` z kodu serwera (seed, skrypty, testy) — konto dostałoby zgody, których nikt nie udzielił; w testach używać fabryki `createUser`. (Odstępstwo od notatki T-004 „zgody weryfikowane w hooku”, QA T-004 runda 1.)
 - Better Auth zwraca przy kolizji unikalności e-maila (równoczesne rejestracje) ogólne `422 FAILED_TO_CREATE_USER`; most zamienia je na `409 email_taken`, gdy konto z tym e-mailem już istnieje. Inne nieznane statusy Better Auth → `500 internal`.
 - Nieznany wyjątek nie może dojść do domyślnego handlera Fastify — wysyła on klientowi `message` (np. SQL z parametrami z `DrizzleQueryError`, wartość pola z błędu pg). Dlatego `apiErrors` sam odpowiada `500 internal` i loguje `summarize(error)` zamiast `err`; nie logować surowego wyjątku z bazy. Wejście, którego baza nie przyjmie (NUL w tekście), odrzuca schemat w `packages/shared` (QA T-005 runda 1).
+- Każde pole tekstowe z żądania, które trafia do bazy, przechodzi przez `requiredName(max)` albo `.refine(withoutNul, { error: "invalid" })` z `packages/shared/src/api/text.ts`; nie przepisywać tej reguły ręcznie (`trim().min().max()` bez `withoutNul`). Imię przy rejestracji miało własną kopię bez `withoutNul` i NUL dawał 500 zamiast 400 (T-026).
 
 ## Skille i źródła
 
@@ -94,6 +95,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-30 | T-026: imię przez `requiredName`; „Pułapki”: tekst do bazy tylko przez `requiredName` / `withoutNul`. |
 | 2026-10-28 | T-008: moduł `zaproszenia`, `Lists.join` / `lockList`, redakcja tokenu w logu żądań, fabryka `createInvitation`. |
 | 2026-10-28 | T-007: moduł `statystyki`, `Clock`, odhaczanie i usuwanie kupionych w `pozycje`, `toBuyCounts`. |
 | 2026-10-28 | T-006: moduł `pozycje`, `ListItems` w `listy`, `ids.ts`, kod `duplicate_item` (409), fabryka `createItem`. |

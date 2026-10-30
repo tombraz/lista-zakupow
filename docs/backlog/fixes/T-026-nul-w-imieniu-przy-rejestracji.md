@@ -75,6 +75,15 @@ Regresja: J-01 (rejestracja) i T-004 — pełne pliki `sign-up*.test.ts`, `accou
 
 ## Prevention
 
+Co by zapobiegło: jedna definicja reguły „nazwa: trim, 1–max, bez NUL”. Imię miało własną kopię, która nie dostała `withoutNul`, gdy T-006 dodał ten warunek dla nazw list i pozycji.
+
+Przyjęte przez użytkownika (2026-10-30, także uwaga minor z QA runda 1):
+
+1. `const name = requiredName(NAME_MAX_LENGTH)` w `packages/shared/src/api/account.ts` zamiast ręcznej kopii (zachowanie bez zmian).
+2. Wpis w „Pułapkach” `docs/architecture/layers/backend.md`: każdy tekst z żądania, który trafia do bazy, przez `requiredName` albo `.refine(withoutNul)`.
+
+Odrzucone: reguła lint na goły `z.string()` w `packages/shared/src/api/`, bo dawałaby fałszywe alarmy dla haseł, identyfikatorów i tokenów.
+
 ## Incident note
 
 ## QA round 1 (2026-10-30)

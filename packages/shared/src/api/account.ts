@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { withoutNul } from "./text";
+import { requiredName } from "./text";
 
 export const NAME_MAX_LENGTH = 30;
 export const PASSWORD_MIN_LENGTH = 8;
@@ -14,12 +14,7 @@ export type FieldErrorCode = "required" | "invalid" | "too_short" | "too_long";
 
 const consent = z.literal(true, { error: "required" });
 
-const name = z
-  .string({ error: "required" })
-  .trim()
-  .min(1, { error: "required" })
-  .max(NAME_MAX_LENGTH, { error: "too_long" })
-  .refine(withoutNul, { error: "invalid" });
+const name = requiredName(NAME_MAX_LENGTH);
 
 const signUpEmail = z
   .string({ error: "required" })
