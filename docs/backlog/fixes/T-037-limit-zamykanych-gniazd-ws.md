@@ -4,7 +4,7 @@ title: "Gniazda WS w trakcie zamykania bez limitu na sesję"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -91,3 +91,18 @@ Verdict: fail
 **Fix task (Step 9):** Root cause wyjaśnia, czemu testy nie wyłapały błędu (brak klienta bez FIN do T-036); test reprodukujący gryzie bez poprawki (spot-check wyżej). Sekcja Prevention pusta (w poprzednich fixach uzupełniana po QA).
 
 **Do zmiany:** #1 (formatowanie), #2 (red dla testu #3 w Evidence); zalecane #3.
+
+## QA round 2 (2026-10-30)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | logi / TH-21 | Z rundy 1 (#4): każda próba ponad `socketsPerSession` to jedna linia `limit_reached` w logu `security`; zalew logu przy ~100 upgrade'ach/s. Poza zakresem taska. | `limitLog` w `routes.ts` | Do rozważenia osobno (deduplikacja / limit upgrade'ów). |
+| 2 | note | proces | Sekcja Prevention nadal pusta. | plik taska | Uzupełnić przy domykaniu fixa. |
+
+**Weryfikacja poprawek z rundy 1:** #1 — `pnpm format:check` zielony; bloby `HEAD` dla `apps/api/test/live.ts` i `apps/api/test/live.limits.test.ts` przechodzą `prettier --check`. #2 — red dla testu #3 dopisany w Evidence. #3 — `layers/backend.md` zgodny z kodem (`closeTimeout` 2 s, `SocketsPerSession`, „Pułapki”, historia). Runda poprawek zmieniła tylko formatowanie testów i dokumentację; asercje testów bez zmian względem `0a56026`.
+
+**Reprodukcja:** `pnpm format:check` OK, `pnpm lint` 0 ostrzeżeń, `pnpm typecheck` OK, `pnpm test` 92 pliki / 496 testów zielone.
+
+**Kryteria akceptacji:** AC1 — pass (spot-check powtórzony: wyłączenie `sockets.hold` → `drops a socket over the per-session socket limit, counting closing ones` i `socketsPerSession: exceeding the limit logs one security event` czerwone, `Error: connection still open`; cofnięte, `git status` czysty). AC2 — pass (pełny zestaw zielony). Exploit TH-25 z rundy 1 aktualny — kod produkcyjny bez zmian od rundy 1.
