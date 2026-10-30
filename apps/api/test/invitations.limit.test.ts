@@ -93,6 +93,7 @@ describe("participant limit 20", () => {
     const limited = logs.security().filter((entry) => entry["event"] === "limit_reached");
     expect(limited).toEqual([
       expect.objectContaining({
+        userId: ania.id,
         listId: list.id,
         limit: "participants",
         route: "/api/v1/lists/:listId/invitations",

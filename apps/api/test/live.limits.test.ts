@@ -5,6 +5,7 @@ import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
 import { connectLive, liveUrl, type LiveClient } from "./live";
+import { captureLogs } from "./logs";
 
 describe("WebSocket limits (SEC6, TH-25)", () => {
   const db = useTestDatabase();
@@ -18,7 +19,8 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
   });
 
   async function connected() {
-    app = buildTestApp(db.pool);
+    const logs = captureLogs();
+    app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
     const user = await createUser(app);
     const url = await liveUrl(app);
     const connect = async () => {
@@ -26,7 +28,15 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
       clients.push(client);
       return client;
     };
-    return { user, connect };
+    return { user, connect, logs };
+  }
+
+  // T-033 (TH-21, TH-25): przekroczenie limitu zostawia ślad w logu `security`, bez ciasteczka.
+  function limitEvents(logs: ReturnType<typeof captureLogs>, cookie: string) {
+    expect(logs.lines.join("\n")).not.toContain(cookie.split("=")[1] ?? cookie);
+    return logs
+      .security()
+      .filter((entry) => entry["event"] === "limit_reached" || entry["event"] === "rate_limited");
   }
 
   it("closes a connection over the per-session limit and keeps the others", async () => {
@@ -93,5 +103,49 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
     }
     await client.expectSilence();
     expect(client.received().map(({ type }) => type)).not.toContain("subscribed");
+  });
+
+  it("logs limit_reached when a session exceeds the connection limit", async () => {
+    const { user, connect, logs } = await connected();
+    for (let i = 0; i < LIVE_LIMITS.connectionsPerSession; i += 1) await connect();
+
+    const extra = await connect();
+
+    expect(await extra.closed()).toBe(1008);
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining({
+        event: "limit_reached",
+        limit: "connectionsPerSession",
+        userId: user.id,
+      }),
+    ]);
+  });
+
+  it("logs rate_limited when a connection exceeds the message rate", async () => {
+    const { user, connect, logs } = await connected();
+    const client = await connect();
+
+    for (let i = 0; i <= LIVE_LIMITS.messagesPerSecond + 5; i += 1) client.send({ type: "pong" });
+
+    expect(await client.closed()).toBe(1008);
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining({
+        event: "rate_limited",
+        limit: "messagesPerSecond",
+        userId: user.id,
+      }),
+    ]);
+  });
+
+  it("logs limit_reached when a message exceeds the size limit", async () => {
+    const { user, connect, logs } = await connected();
+    const client = await connect();
+
+    client.send({ type: "subscribe", listId: "x".repeat(LIVE_LIMITS.messageBytes) });
+
+    expect(await client.closed()).toBe(1009);
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining({ event: "limit_reached", limit: "messageBytes", userId: user.id }),
+    ]);
   });
 });

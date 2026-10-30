@@ -63,7 +63,8 @@ function ownerRoutes(app: FastifyInstance, deps: InvitationRoutesDeps): void {
   app.post<ListParams>("/api/v1/lists/:listId/invitations", async (request, reply) => {
     const user = await accounts.requireUser(request, reply);
     const access = await lists.requireListAccess(user.id, request.params.listId, "owner");
-    return reply.code(201).send(response(await createInvitation(invitations, access.listId)));
+    const created = await createInvitation(invitations, access.listId, user.id);
+    return reply.code(201).send(response(created));
   });
 
   app.delete<InvitationParams>(

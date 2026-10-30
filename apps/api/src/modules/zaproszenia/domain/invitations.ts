@@ -66,12 +66,13 @@ export interface InvitationsContext {
 export async function createInvitation(
   { repository, lists, clock, random }: InvitationsContext,
   listId: string,
+  ownerId: string,
 ): Promise<StoredInvitation> {
   // F-12: link, którym nikt nie mógłby dołączyć, nie powstaje.
   if ((await lists.participantCount(listId)) >= BUSINESS_LIMITS.participantsPerList) {
     throw new DomainError("limit_reached", {
       limit: "participants",
-      security: { event: "limit_reached", ids: { listId } },
+      security: { event: "limit_reached", ids: { userId: ownerId, listId } },
     });
   }
   const createdAt = clock.now();

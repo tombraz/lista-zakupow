@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type WebSocket from "ws";
 import { DomainError } from "../../../domain-error";
 import { ApiError, logSecurityEvent } from "../../../http/api-error";
+import { securityLog } from "../../../logging";
 import { POLICY_VIOLATION, type LiveConnection, type LiveHub } from "../domain/hub";
 import { MessageBudget } from "../domain/message-budget";
 import { heartbeat, WsConnection } from "../infra/ws-connection";
@@ -57,14 +58,22 @@ function serve(
 ) {
   const { hub } = deps;
   const connection = new WsConnection(socket, session.userId, session.sessionId);
+  const exceeded = limitLog(request, session.userId);
   if (!hub.attach(connection)) {
+    exceeded("limit_reached", "connectionsPerSession");
     socket.close(POLICY_VIOLATION);
     return;
   }
   const beat = heartbeat(socket, connection);
   const budget = new MessageBudget(() => Date.now());
+  // `ws` zamyka 1009 po wiadomości ponad `maxPayload` i zgłasza to jako błąd gniazda.
+  socket.on("error", (error: Error & { code?: string }) => {
+    if (error.code === "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH")
+      exceeded("limit_reached", "messageBytes");
+  });
   socket.on("message", (data: Buffer) => {
     if (!budget.take()) {
+      exceeded("rate_limited", "messagesPerSecond");
       socket.close(POLICY_VIOLATION);
       return;
     }
@@ -82,6 +91,20 @@ function serve(
     beat.stop();
     hub.detach(connection);
   });
+}
+
+/**
+ * TH-21, TH-25: przekroczenie limitu połączenia trafia do logu `security` z identyfikatorem
+ * osoby, raz na połączenie (kolejne wiadomości po zamknięciu nie zalewają logu; T-033).
+ */
+function limitLog(request: FastifyRequest, userId: string) {
+  let logged = false;
+  return (event: "limit_reached" | "rate_limited", limit: keyof typeof LIVE_LIMITS) => {
+    if (logged) return;
+    logged = true;
+    const route = request.routeOptions.url;
+    securityLog(request.log).warn({ event, route, limit, userId }, event);
+  };
 }
 
 async function handle(
