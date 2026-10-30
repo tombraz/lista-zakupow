@@ -50,6 +50,8 @@ export function listRoutes(
     const user = await accounts.requireUser(request, reply);
     const { name } = validate(listNameRequestSchema, request.body);
     const list = await createList(repository, user.id, name);
+    // F-05, F-14: nowa lista na SC-05 w innych kartach i urządzeniach właściciela (jedyna osoba z dostępem).
+    live.notify([user.id], { type: "lists.changed" });
     return reply.code(201).send(summary(list));
   });
 

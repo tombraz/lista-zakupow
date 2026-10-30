@@ -37,6 +37,47 @@ describe("list, invitation and user channel events (AC2, F-05, F-11, F-12)", () 
     return { app, list, ania, tomek, cecylia, connect };
   }
 
+  // T-032 (F-05, F-14): nowa lista pojawia się na SC-05 w innych kartach i urządzeniach właściciela.
+  it("T-032: POST /lists notifies the owner with lists.changed", async () => {
+    const { app, ania, connect } = await household();
+    const aniasOtherTab = await connect(ania, false);
+
+    const response = await requestsAs(app, ania)("POST", "/api/v1/lists", { name: "Działka" });
+
+    expect(response.statusCode).toBe(201);
+    expect(await aniasOtherTab.next("lists.changed")).toEqual({ type: "lists.changed" });
+  });
+
+  it("T-032: POST /lists sends nothing when refused", async () => {
+    const { app, ania, connect } = await household();
+    await db.pool.query(
+      `INSERT INTO shopping_list (id, owner_id, name)
+       SELECT gen_random_uuid(), $1, 'Lista ' || n FROM generate_series(1, 49) AS n`,
+      [ania.id],
+    );
+    const anias = await connect(ania, false);
+    const asAnia = requestsAs(app, ania);
+
+    const overLimit = await asAnia("POST", "/api/v1/lists", { name: "51." });
+    const invalid = await asAnia("POST", "/api/v1/lists", { name: "" });
+
+    expect(overLimit.statusCode).toBe(409);
+    expect(invalid.statusCode).toBe(400);
+    await anias.expectSilence();
+  });
+
+  it("T-032: POST /lists does not notify other users (TH-04)", async () => {
+    const { app, ania, tomek, cecylia, connect } = await household();
+    const tomeks = await connect(tomek, false);
+    const cecylias = await connect(cecylia, false);
+
+    const response = await requestsAs(app, ania)("POST", "/api/v1/lists", { name: "Prezenty" });
+
+    expect(response.statusCode).toBe(201);
+    await tomeks.expectSilence();
+    await cecylias.expectSilence();
+  });
+
   it("rename: list.updated to subscribers and lists.changed to everyone with access", async () => {
     const { app, list, ania, tomek, connect } = await household();
     const tomeks = await connect(tomek, true);
