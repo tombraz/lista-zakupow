@@ -4,7 +4,7 @@ title: "Blokada podwójnego odhaczenia przez useGuardedMutation z lockOf; test, 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-08]
@@ -73,3 +73,16 @@ Znalezisko poza zakresem (istniało przed zmianą): przy szybkim odhaczeniu dwó
 ## Prevention
 
 ## Incident note
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Kryteria: AC1 pass (test #1 w jednym `act`; czerwony po usunięciu `if (locked.current.has(lock)) return;` w `useGuardedMutation` — spot-check QA), AC2 pass (test #2 czerwony przy `lockOf` → `() => undefined` — spot-check QA; fokus nie sprawdzany, patrz #1), AC3 pass (`pnpm lint` czyste, `grep "eslint-disable.*no-restricted-imports" apps/web/src` pusty, `web.md:85` bez wyjątku), AC4 pass (`pnpm test` 498/498, E2E `j03` 14/14 na telefonie i komputerze; `ListScreen.check` 11/11).
+
+Sprawdzone też: `pnpm typecheck` czyste; `design-check` SC-06 bez `HARD-CODED`. Testy eksploracyjne (tymczasowy plik, usunięty): ponowienie po błędzie 500 wysyła nowe żądanie (blokada zwolniona w `onSettled`); trzy kliknięcia w jednym `act` + czwarte w trakcie zapisu → jedno żądanie; odhaczenie i odznaczenie tej samej pozycji po sobie → dwa żądania (`checked: true`, potem `false`). Root cause wyjaśnia, czemu stary test nie łapał błędu.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | a11y / poza zakresem | Opisane przez autora: przy szybkim odhaczeniu dwóch sąsiednich pozycji cel fokusu drugiej (`neighbourOf` w chwili kliknięcia) to pierwsza, już w zwiniętym „Kupione” — fokus spada na `body` (WCAG 2.4.3). Istniało przed T-030; brak zadania w backlogu. | `useCheckItem.ts:80,90-95`; sekcja „Root cause” | Osobne zadanie fix: cel fokusu liczony przy zapisie albo pominięcie pozycji w trakcie zapisu. |
+| 2 | note | proces | Sekcja „Prevention” pusta. | plik zadania | Uzupełnić po QA (jak T-037), jeśli proces tego wymaga. |
