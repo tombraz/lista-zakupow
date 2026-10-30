@@ -48,6 +48,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh`; `bash scripts/test/mobile.test.sh` | korzeń repo |
 | skan zależności | `pnpm audit --audit-level high` | korzeń repo |
 | testy skryptów wdrożenia (rung 2) | `bash scripts/test/deploy.test.sh`; `deploy-workflow`, `workflow-check`, `image`, `smoke`, `zap`, `staging-setup` analogicznie | korzeń repo |
+| test przebiegu komentarzy z `pnpm lint` (obejścia padają; job `static`, bo potrzebuje zależności) | `bash scripts/test/lint-directives.test.sh` | korzeń repo |
 | obraz lokalnie (build, migracje, smoke) | `bash scripts/test/image-run.test.sh` (Docker; baza z `pnpm services:up`) | korzeń repo |
 | skan obrazu (Trivy) | `bash scripts/image.sh scan <sha>` (po `bash scripts/image.sh build <sha>`) | korzeń repo |
 | smoke test / ZAP | `bash scripts/smoke.sh staging` lub `bash scripts/smoke.sh http://localhost:<port>`; `bash scripts/zap.sh staging` (raport w `zap-report/`) | korzeń repo |
@@ -102,3 +103,4 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | 2026-10-27 | T-002: CI i bezpieczeństwo — „Gdzie jest kod”, „Komendy”, „Pułapki” (uwagi z QA T-001). |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
 | 2026-10-29 | T-013: staging tylko z `main`; `workflow-check` odrzuca `TYMCZASOWE` w workflow. |
+| 2026-10-30 | T-046: `scripts/test/lint-directives.test.sh` w jobie `static` sprawdza, że przebieg komentarzy z `pnpm lint` odrzuca znane obejścia. |

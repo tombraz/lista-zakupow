@@ -44,6 +44,7 @@ jobs:
               - 'tsconfig*.json'
               - 'eslint.config.js'
               - 'eslint.directives.config.js'
+              - 'scripts/test/lint-directives.test.sh'
               - 'vitest.config.ts'
               - '.dependency-cruiser.cjs'
               - '.jscpd.json'
@@ -105,6 +106,8 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Lint (ESLint, złożoność, bezpieczne wzorce TH-15/TH-20)
         run: pnpm lint
+      - name: Lint komentarzy łapie obejścia (T-046)
+        run: bash scripts/test/lint-directives.test.sh
       - name: Typy
         run: pnpm typecheck
       - name: Jakość (jscpd, dependency-cruiser)
