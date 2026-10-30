@@ -48,24 +48,26 @@ export function ListsScreen() {
             }}
           />
         )}
-        {lists.data?.length === 0 && (
-          <EmptyState text={messages.empty.text} action={trigger(messages.empty.cta)} />
-        )}
-        {lists.data && lists.data.length > 0 && (
+        {lists.data && (
           <>
-            <ul className={styles.cards}>
-              {lists.data.map((list) => (
-                <li key={list.id}>
-                  <ListCard list={list} texts={messages.card} />
-                </li>
-              ))}
-            </ul>
+            {lists.data.length === 0 ? (
+              <EmptyState text={messages.empty.text} action={trigger(messages.empty.cta)} />
+            ) : (
+              <ul className={styles.cards}>
+                {lists.data.map((list) => (
+                  <li key={list.id}>
+                    <ListCard list={list} texts={messages.card} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {/* Jedno ostrzeżenie dla pustego stanu i kart: fokus zostaje na nim po odświeżeniu (T-042). */}
             {newList.limitReached && (
               <InlineAlert ref={limitRef} tone="warning">
                 {messages.limit}
               </InlineAlert>
             )}
-            {trigger(messages.new.open)}
+            {lists.data.length > 0 && trigger(messages.new.open)}
           </>
         )}
         <p className={styles.visuallyHidden} role="status">

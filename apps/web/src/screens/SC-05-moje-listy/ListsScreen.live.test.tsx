@@ -129,6 +129,37 @@ describe("SC-05 live changes", () => {
       });
       expect(screen.queryByText(LIMIT)).toBeNull();
     });
+
+    // T-042: odmowa trwa do spadku liczby własnych list, nie do nowej tablicy w cache.
+    it("keeps the refusal (409) until the number of own lists drops (T-042)", async () => {
+      const user = userEvent.setup();
+      const lists = own(49);
+      const { live, setLists } = await showLists(lists);
+      server.use(
+        http.post("*/api/v1/lists", () => apiError(409, { code: "limit_reached", limit: "lists" })),
+      );
+      await user.click(await screen.findByRole("button", { name: "+ Nowa lista" }));
+      await user.type(screen.getByRole("textbox", { name: "Nazwa listy" }), "Zakupy{Enter}");
+      await screen.findByText(LIMIT);
+
+      // Te same 49 list, ale w nowej tablicy (zmieniona nazwa jednej z nich).
+      setLists(lists.map((list, index) => (index === 0 ? { ...list, name: "Dom" } : list)));
+      act(() => {
+        live.send({ type: "lists.changed" });
+      });
+      await screen.findByRole("link", { name: /Dom/ });
+      expect(screen.getByRole("button", { name: "+ Nowa lista" })).toBeDisabled();
+
+      setLists(lists.slice(1));
+      act(() => {
+        live.send({ type: "lists.changed" });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "+ Nowa lista" })).toBeEnabled();
+      });
+      expect(screen.queryByText(LIMIT)).toBeNull();
+    });
   });
 
   it("shows the message about a list removed while it was open", async () => {

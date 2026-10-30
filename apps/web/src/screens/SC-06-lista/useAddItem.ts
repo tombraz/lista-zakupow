@@ -11,6 +11,7 @@ import { useRef, useState } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { addItem } from "../../api/items";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
+import { useLimitRefusal } from "../../api/useLimitRefusal";
 import { upsertNewer } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 import { messages } from "./messages";
@@ -18,16 +19,19 @@ import { messages } from "./messages";
 type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
 
 /**
- * Ostrzeżenie nad polami AddBar: duplikat (F-09) albo limit 500 pozycji (F-07). Limit z API
- * pamięta liczbę pozycji, przy której przyszedł: obowiązuje, dopóki ich nie ubędzie.
+ * Ostrzeżenie o duplikacie nad polami AddBar (F-09). Limit 500 pozycji (F-07) to `limitReached`:
+ * odmowa API obowiązuje, dopóki pozycji nie ubędzie (`useLimitRefusal`).
  */
-export type AddWarning =
-  /** `bought`: pozycja z listy, gdy jest odhaczona — jedyną drogą jest jej odznaczenie (F-09). */
-  { kind: "duplicate"; name: string; bought: Item | null } | { kind: "limit"; atCount: number };
+export interface AddWarning {
+  kind: "duplicate";
+  name: string;
+  /** Pozycja z listy, gdy jest odhaczona — jedyną drogą jest jej odznaczenie (F-09). */
+  bought: Item | null;
+}
 
 /** dup.bought wygasa, gdy tej pozycji już nie ma wśród kupionych (odznaczona, usunięta). */
 function stillValid(warning: AddWarning | null, items: Item[]): AddWarning | null {
-  if (warning?.kind !== "duplicate" || warning.bought === null) return warning;
+  if (!warning?.bought) return warning;
   const { id } = warning.bought;
   return items.some((item) => item.id === id && item.checked) ? warning : null;
 }
@@ -53,9 +57,8 @@ export function useAddItem(listId: string, items: Item[] = []) {
   const [warning, setWarning] = useState<AddWarning | null>(null);
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const limitReached =
-    items.length >= BUSINESS_LIMITS.itemsPerList ||
-    (warning?.kind === "limit" && items.length >= warning.atCount);
+  const refusal = useLimitRefusal(items.length);
+  const limitReached = items.length >= BUSINESS_LIMITS.itemsPerList || refusal.refused;
 
   const added = (item: Item, sent: Draft) => {
     upsertNewer(client, listId, item);
@@ -66,7 +69,7 @@ export function useAddItem(listId: string, items: Item[] = []) {
   const failed = (error: unknown, typed: string) => {
     const { code, fields: invalid } = asRequestError(error);
     if (code === "duplicate_item") setWarning(duplicateOf(items, typed));
-    else if (code === "limit_reached") setWarning({ kind: "limit", atCount: items.length });
+    else if (code === "limit_reached") refusal.refuse();
     else if (code === "validation_failed") setFields(invalid);
     else setFailure(code);
   };

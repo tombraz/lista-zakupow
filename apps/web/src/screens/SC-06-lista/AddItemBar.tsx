@@ -74,7 +74,7 @@ function AddAlert({
       </InlineAlert>
     );
   }
-  const bought = state.warning?.kind === "duplicate" && state.warning.bought;
+  const bought = state.warning?.bought;
   if (bought) {
     return (
       <InlineAlert tone="warning" urgent>
@@ -91,7 +91,7 @@ function AddAlert({
       </InlineAlert>
     );
   }
-  if (state.warning?.kind === "duplicate") {
+  if (state.warning) {
     return (
       <InlineAlert tone="warning" urgent>
         {messages.dupOpen(state.warning.name)}

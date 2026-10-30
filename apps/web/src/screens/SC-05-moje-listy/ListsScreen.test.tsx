@@ -287,6 +287,42 @@ describe("SC-05 Moje listy", () => {
       });
     });
 
+    // T-042: ekran nie zna list z innej karty (pusty stan), API odmawia, odświeżenie daje 50 list.
+    it("moves focus to the limit warning when the first list is refused (409) (T-042)", async () => {
+      const user = userEvent.setup();
+      const refresh = heldResponse();
+      let refused = false;
+      server.use(
+        http.get("*/api/v1/lists", async () => {
+          if (!refused) return HttpResponse.json([]);
+          await refresh.released;
+          return HttpResponse.json(Array.from({ length: 50 }, () => aList()));
+        }),
+        http.post("*/api/v1/lists", () => {
+          refused = true;
+          return apiError(409, { code: "limit_reached", limit: "lists" });
+        }),
+      );
+      renderApp("/listy");
+      await user.click(await screen.findByRole("button", { name: "Utwórz pierwszą listę" }));
+
+      await user.type(screen.getByRole("textbox", { name: "Nazwa listy" }), "Zakupy{Enter}");
+
+      // Odświeżenie list jeszcze trwa: ekran wciąż w pustym stanie.
+      const warning = () => screen.getByText(LIMIT).closest('[role="status"]');
+      await waitFor(() => {
+        expect(warning()).toHaveFocus();
+      });
+      expect(screen.getByRole("button", { name: "Utwórz pierwszą listę" })).toBeDisabled();
+
+      refresh.release();
+      await waitFor(() => {
+        expect(screen.getAllByRole("link", { name: /Lista/ })).toHaveLength(50);
+      });
+      expect(warning()).toHaveFocus();
+      expect(screen.getByRole("button", { name: "+ Nowa lista" })).toBeDisabled();
+    });
+
     it("leaves focus on the heading when the lists load already at the limit (T-025)", async () => {
       listsAre(Array.from({ length: 50 }, () => aList()));
 
