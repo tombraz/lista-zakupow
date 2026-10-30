@@ -4,7 +4,7 @@ title: "Stały test przebiegu lintu komentarzy (`eslint.directives.config.js`) n
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-045]
 layers: [infra]
 requirements: []
@@ -28,17 +28,17 @@ related_tasks: [T-030, T-044, T-045]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given każde obejście z listy poniżej, when test uruchomi przebieg komentarzy z ustawieniami `pnpm lint` (konfiguracja, `--no-inline-config`, `--max-warnings 0`) na pliku o ścieżce w zakresie (`apps/api/src`, `apps/web/src`, `apps/web/test`, `packages/shared/src`, także `.tsx`), then przebieg kończy się błędem z oczekiwaną regułą (`eslint-comments/no-use` albo `eslint-comments/no-restricted-disable`). Obejścia:
+- [x] AC1: Given każde obejście z listy poniżej, when test uruchomi przebieg komentarzy z ustawieniami `pnpm lint` (konfiguracja, `--no-inline-config`, `--max-warnings 0`) na pliku o ścieżce w zakresie (`apps/api/src`, `apps/web/src`, `apps/web/test`, `packages/shared/src`, także `.tsx`), then przebieg kończy się błędem z oczekiwaną regułą (`eslint-comments/no-use` albo `eslint-comments/no-restricted-disable`). Obejścia:
   1. `/* eslint eslint-comments/no-use: off, no-restricted-syntax: off */` nad ręcznym `log.warn({ event: "rate_limited" })`,
   2. `/* eslint-disable eslint-comments/no-use */` nad `/* eslint no-restricted-syntax: off */`,
   3. `/* eslint-disable */` bez nazwy reguły,
   4. `// eslint-disable-next-line no-restricted-syntax` (oraz `no-restricted-imports`),
   5. `// eslint-disable-next-line eslint-comments/no-restricted-disable`,
   6. `/* eslint no-restricted-syntax: ["error"] */`, `/* global foo */`, `/* globals bar */`, `/* eslint-env node */`, `/* exported baz */`. — verified by: test
-- [ ] AC2: Given dozwolony `// eslint-disable-next-line react-hooks/exhaustive-deps` (jak w `Modal.tsx`), when test uruchomi ten sam przebieg, then exit 0 bez ostrzeżeń. — verified by: test
-- [ ] AC3: Test bierze polecenie przebiegu ze skryptu `lint` w `package.json`, nie z własnej kopii. Usunięcie `--no-inline-config` ze skryptu albo `eslint-comments/*` z `no-restricted-disable` sprawia, że test pada. — verified by: QA (mutacja ręczna, cofnięta)
-- [ ] AC4: Test działa w CI w jobie, który ma zainstalowane zależności (`static`), i uruchamia się także przy zmianie samego testu lub `eslint.directives.config.js` (filtr ścieżek w `.github/workflows/ci.yml`). — verified by: `node scripts/workflow-check.mjs`, actionlint, przegląd diffu
-- [ ] AC5: No regression in: `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm quality`, `bash scripts/test/workflow-check.test.sh`.
+- [x] AC2: Given dozwolony `// eslint-disable-next-line react-hooks/exhaustive-deps` (jak w `Modal.tsx`), when test uruchomi ten sam przebieg, then exit 0 bez ostrzeżeń. — verified by: test
+- [x] AC3: Test bierze polecenie przebiegu ze skryptu `lint` w `package.json`, nie z własnej kopii. Usunięcie `--no-inline-config` ze skryptu albo `eslint-comments/*` z `no-restricted-disable` sprawia, że test pada. — verified by: QA (mutacja ręczna, cofnięta)
+- [x] AC4: Test działa w CI w jobie, który ma zainstalowane zależności (`static`), i uruchamia się także przy zmianie samego testu lub `eslint.directives.config.js` (filtr ścieżek w `.github/workflows/ci.yml`). — verified by: `node scripts/workflow-check.mjs`, actionlint, przegląd diffu
+- [x] AC5: No regression in: `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm quality`, `bash scripts/test/workflow-check.test.sh`.
 
 ## TDD plan
 
@@ -65,7 +65,17 @@ Wskazówki:
 
 ## Root cause
 
+T-045 zabezpieczył przebieg komentarzy tylko konfiguracją (`--no-inline-config` w skrypcie `lint`, lista w `no-restricted-disable`, `files`), a obejścia sprawdził na jednorazowych plikach, które potem usunął. W repo nie ma kodu z zakazanymi komentarzami, więc `pnpm lint` jest zielony niezależnie od tego, czy przebieg je łapie. Osłabienie przebiegu niczego nie wywraca. Ten sam wzorzec (sprawdzenie raz, bez stałego testu) wystąpił w T-030 → T-044 → T-045; innych przebiegów lintu bez testu nie ma (`eslint.config.js` jest pilnowany przez kod w repo).
+
 ## Evidence
+
+- **Test:** `bash scripts/test/lint-directives.test.sh`: 12 obejść z AC1 (wszystkie zakresy `files`, `.ts` i `.tsx`), dozwolony komentarz z AC2, kontrola, że skrypt `lint` ma przebieg `eslint.directives.config.js`. Polecenie pochodzi ze skryptu `lint` (część po ostatnim `&&`) + `--stdin --stdin-filename`.
+- **Czerwony** (skrypt `lint` bez `--no-inline-config`, mutacja z kroków reprodukcji, cofnięta): `FAIL 1. komentarz konfiguracyjny wyłącza no-use i no-restricted-syntax (apps/api/src/x.ts)`, oczekiwane `1 eslint-comments/no-use`, jest `0`; `FAIL dozwolony eslint-disable-next-line react-hooks/exhaustive-deps`, oczekiwane `0`, jest `1`; exit 2.
+- **Mutacje AC3 (cofnięte):** bez `"eslint-comments/*"` w `no-restricted-disable` → `FAIL 2. … (apps/api/src/x.ts)`; `files` bez `apps/web/test` i bez `.tsx` → 6× FAIL (przypadki `.tsx` i `apps/web/test`).
+- **Zielony:** 14× `ok`, exit 0 (~18 s lokalnie, Windows / Git Bash).
+- **CI:** krok „Lint komentarzy łapie obejścia (T-046)” w jobie `static`, `scripts/test/lint-directives.test.sh` w filtrze `all`. `node scripts/workflow-check.mjs` OK, actionlint 1.7.12 exit 0.
+- **Regresja:** `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality`, `bash scripts/test/workflow-check.test.sh` zielone; `pnpm test`: 93 pliki, 515 testów, wszystkie zielone. `shellcheck` niedostępny lokalnie (komentarz `SC2086` przy celowym dzieleniu polecenia na słowa).
+- **Uwaga dla QA:** dozwolony komentarz poza zakresem `files` daje exit 1 („File ignored”, `--max-warnings 0`), więc przypadek AC2 przy okazji potwierdza, że `apps/web/src/*.tsx` jest objęty.
 
 ## Prevention
 
