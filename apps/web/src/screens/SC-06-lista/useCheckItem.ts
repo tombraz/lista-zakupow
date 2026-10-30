@@ -81,7 +81,7 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
     // Kandydaci z kolejności w chwili kliknięcia: zdarzenie na żywo tej samej zmiany może
     // przenieść pozycję do „Kupione” przed odpowiedzią API (F-14). Wybór przy fokusie, bo sąsiad
     // mógł zostać odhaczony w międzyczasie (T-039).
-    const next = checked ? neighbourOf(items, item.id) : { itemId: item.id };
+    const next = checked ? focusCandidates(items, item.id) : { itemId: item.id };
     mutation.mutate({ itemId: item.id, checked, next });
   };
 
@@ -90,8 +90,8 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
 
 export type CheckItemState = ReturnType<typeof useCheckItem>;
 
-/** Nieodhaczone po `itemId`, potem przed nią od najbliższej; bez nich sekcja „Kupione”. */
-function neighbourOf(items: Item[], itemId: string): CheckFocus {
+/** Kandydaci fokusu: nieodhaczone po `itemId`, potem przed nią od najbliższej. */
+function focusCandidates(items: Item[], itemId: string): CheckFocus {
   const toBuy = items.filter((item) => !item.checked).map((item) => item.id);
   const index = toBuy.indexOf(itemId);
   return { unchecked: [...toBuy.slice(index + 1), ...toBuy.slice(0, index).reverse()] };
