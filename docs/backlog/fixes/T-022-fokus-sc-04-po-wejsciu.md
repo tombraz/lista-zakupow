@@ -74,6 +74,10 @@ Propozycje (decyduje użytkownik):
 2. (Pułapki w `web.md`) dopisać do wpisu o fokusie: „SC-04 robi to `useEntryFocus` (przy montowaniu; `#` w adresie → `h2` sekcji)”.
 3. Zadanie uzupełniające (poza zakresem): „Wróć” na SC-04 po kliknięciu w spisie treści prawdopodobnie cofa do `/regulamin` bez `#`, nie na poprzedni ekran.
 
+**Decyzja użytkownika (2026-10-30):** przyjęte 1 i 2; 3 — osobne zadanie później.
+- 1: `routeFocus.test.tsx`, `describe("focus after a route change, every route (T-022 prevention)")` — tabela `ROUTES` (każda trasa: skąd, dokąd, `h1`), test zgodności z `routes.tsx` (`*` jako trasa bez ekranu). Sprawdzone: z `TermsScreen` sprzed poprawki pada `/regulamin leaves focus off body`; z dopisaną trasą `/nowy` pada `lists every route of routes.tsx`.
+- 2: `web.md` „Pułapki” — fokus ekranów bez AppBar i wymóg wpisu w `ROUTES`; wpis w dzienniku zmian.
+
 ## Incident note
 
 <Nie dotyczy.>

@@ -2,11 +2,13 @@ import type { Item, ListSummary } from "@lista/shared";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
+import type { RouteObject } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
 import { aList, anItem, ANIA, detailsOf, listsAre } from "../test/lists";
 import { server } from "../test/msw-server";
 import { heldResponse } from "../test/held";
 import { renderApp, sessionIs } from "../test/render";
+import { routes } from "./routes";
 
 /** Lista „Dom” Ani na SC-05, jej SC-06 i SC-07. */
 function homeListIs(items: Item[] = [anItem({ name: "Chleb" })]): ListSummary {
@@ -188,6 +190,96 @@ describe("focus on SC-04 after a route change (T-022)", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 2, name: "Polityka prywatności" })).toHaveFocus();
+    });
+  });
+});
+
+const TOKEN = "t".repeat(43);
+
+/** Ścieżki z `routes.tsx` (także zagnieżdżone pod strażnikami). */
+function pathsOf(tree: RouteObject[]): string[] {
+  return tree.flatMap((route) => [
+    ...(route.path ? [route.path] : []),
+    ...pathsOf(route.children ?? []),
+  ]);
+}
+
+interface RouteCase {
+  signedIn: boolean;
+  from: (list: ListSummary) => string;
+  to: (list: ListSummary) => string;
+  heading: string;
+}
+
+/** Każda trasa ekranu: skąd do niej przechodzimy i jaki `h1` ma nowy ekran. */
+const ROUTES: Record<string, RouteCase> = {
+  "/logowanie": {
+    signedIn: false,
+    from: () => "/regulamin",
+    to: () => "/logowanie",
+    heading: "Zaloguj się",
+  },
+  "/rejestracja": {
+    signedIn: false,
+    from: () => "/logowanie",
+    to: () => "/rejestracja",
+    heading: "Załóż konto",
+  },
+  "/regulamin": {
+    signedIn: false,
+    from: () => "/logowanie",
+    to: () => "/regulamin",
+    heading: "Regulamin i polityka prywatności",
+  },
+  "/zaproszenie/:token": {
+    signedIn: false,
+    from: () => "/regulamin",
+    to: () => `/zaproszenie/${TOKEN}`,
+    heading: "Zaproszenie do listy",
+  },
+  "/listy": { signedIn: true, from: () => "/konto", to: () => "/listy", heading: "Moje listy" },
+  "/listy/:listId": {
+    signedIn: true,
+    from: () => "/listy",
+    to: (l) => `/listy/${l.id}`,
+    heading: "Dom",
+  },
+  "/listy/:listId/uczestnicy": {
+    signedIn: true,
+    from: (l) => `/listy/${l.id}`,
+    to: (l) => `/listy/${l.id}/uczestnicy`,
+    heading: "Uczestnicy",
+  },
+  "/konto": { signedIn: true, from: () => "/listy", to: () => "/konto", heading: "Konto" },
+};
+/** Trasy bez własnego ekranu (przekierowanie). */
+const NO_SCREEN = ["*"];
+
+// Kontrola z T-022: nowy ekran bez obsługi fokusu (jak SC-04 bez AppBar) albo nowa trasa bez wpisu
+// w ROUTES — test pada (web.md „Pułapki”).
+describe("focus after a route change, every route (T-022 prevention)", () => {
+  it("lists every route of routes.tsx", () => {
+    expect([...Object.keys(ROUTES), ...NO_SCREEN].sort()).toEqual(pathsOf(routes).sort());
+  });
+
+  it.each(Object.entries(ROUTES))("%s leaves focus off body", async (_, route) => {
+    sessionIs(route.signedIn ? ANIA : null);
+    const list = homeListIs();
+    server.use(
+      http.get(`*/api/v1/invitations/${TOKEN}`, () =>
+        HttpResponse.json({ listName: "Dom", ownerName: "Ania" }),
+      ),
+    );
+    const { router } = renderApp(route.from(list));
+    await screen.findByRole("heading", { level: 1 });
+
+    await act(() => router.navigate(route.to(list)));
+
+    await heading(route.heading);
+    await waitFor(() => {
+      const focused = document.activeElement;
+      expect(focused).not.toBe(document.body);
+      expect(document.body).toContainElement(focused as HTMLElement);
     });
   });
 });
