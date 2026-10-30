@@ -4,7 +4,7 @@ title: "Spójne zdarzenia logu security: userId przy limicie linków, każdy lim
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-02, F-11]
@@ -83,3 +83,29 @@ Po poprawce: `pnpm test` 92 pliki / 507 testów zielone; `pnpm typecheck`, `pnpm
 Zaakceptowane w przeglądzie: zdanie w `docs/architecture/layers/backend.md` „Pułapki” — każde zdarzenie `security` przez jedną funkcję w `logging.ts`.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Środowisko: lokalnie, Postgres i Mailpit z `docker compose` (działające). Commit implementacji `e3af22b`.
+
+**Reprodukcja:** `pnpm test` 92 pliki / 507 testów zielone; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd 0 klonów, depcruise bez naruszeń) bez błędów.
+
+**Kryteria akceptacji:**
+
+- AC1 — pass. `limits.security.test.ts` (`invitationsCreatedPerList`) oczekuje `userId: ania.id` i `listId`; spot-check: usunięcie `userId: ownerId` w `invitations.ts` → test czerwony.
+- AC2 — pass. `live.limits.test.ts` › `logs each limit a connection exceeds once`: po `messagesPerSecond` i dwóch wiadomościach ponad `messageBytes` dokładnie dwa wpisy (powtórzenie `messageBytes` stłumione). Spot-check: przywrócenie flagi `logged` w `limitLog` → test czerwony. Test `logs repeated attempts over the socket limit once per session` nadal zielony.
+- AC3 — pass. `securityEvent` w `src/logging.ts` jest jedynym wywołaniem `securityLog(...).warn` w `src/`; `logLimitEvent`, `sign_in_failed` i `list_access_denied` z niego korzystają; `route` ustawiane po `fields`, więc identyfikatory nie mogą go nadpisać. `security-log.test.ts` sprawdza `sign_in_failed` przy `?x=1`; spot-check: `route = request.url` → test czerwony. `UNKNOWN_ROUTE` pokrywa `body-limit.test.ts`. Sonda (tymczasowa, cofnięta): `GET /api/v1/lists/:id?x=1` jako obcy użytkownik → `list_access_denied` z `route: "/api/v1/lists/:listId"`.
+- AC4 — pass. Wymienione pliki zielone w pełnym przebiegu.
+
+**Fix task:** „Root cause” wyjaśnia, czemu testy nie wyłapały każdej z trzech przyczyn; czerwone dowody dla trzech testów są w Evidence i potwierdzone spot-checkami.
+
+**TH-21 (próba nadużycia):** usunięcie flagi `logged` nie otwiera zalewu logu — liczba wpisów na sesję jest ograniczona liczbą limitów WS w oknie `LimitLogWindow` (potwierdzają to testy okna). Brak danych osobowych w nowych polach (tylko identyfikatory).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | testy | AC3 mówi o każdym zdarzeniu `security`, a test `route` z query jest tylko dla `sign_in_failed`; `list_access_denied` nie ma asercji na `route` (zachowanie poprawne — sprawdzone sondą). | `lists.authz.test.ts:95-110` sprawdza tylko `userId`, `listId`, `requestId` | asercja `route: "/api/v1/lists/:listId"` przy adresie z query w teście autoryzacji |
+| 2 | note | kod | Komentarz `logLimitEvent` nadal mówi „jedyne miejsce kształtu zdarzenia przekroczenia limitu”, choć kształt składa teraz `securityEvent`. | `src/logging.ts`, JSDoc `logLimitEvent` | komentarz wskazuje `securityEvent` jako miejsce kształtu |
+
+Spot-checki cofnięte; `git status` czysty poza plikami backlogu.
