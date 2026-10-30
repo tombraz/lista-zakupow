@@ -67,7 +67,12 @@ Ten sam wzorzec gdzie indziej: wszystkie trasy sprawdzone (`routes.tsx`) — SC-
 
 ## Prevention
 
-<Uzupełnia /fix.>
+**Co by zapobiegło?** Test, który obejmuje każdą trasę, a nie tylko ekrany z AppBar. T-014 naprawił fokus w jednym komponencie i zostawił ekrany bez niego — pułapka w `web.md` mówi „ekran bez AppBar ustawia fokus sam”, ale nic tego nie sprawdza automatycznie.
+
+Propozycje (decyduje użytkownik):
+1. (automatyczna kontrola) test tablicy tras w `routeFocus.test.tsx`: dla każdej trasy z `routes.tsx` wejście nawigacją po stronie klienta i asercja, że fokus nie jest na `body`; nowa trasa bez wpisu w teście = test pada (propozycja QA r1).
+2. (Pułapki w `web.md`) dopisać do wpisu o fokusie: „SC-04 robi to `useEntryFocus` (przy montowaniu; `#` w adresie → `h2` sekcji)”.
+3. Zadanie uzupełniające (poza zakresem): „Wróć” na SC-04 po kliknięciu w spisie treści prawdopodobnie cofa do `/regulamin` bez `#`, nie na poprzedni ekran.
 
 ## Incident note
 
