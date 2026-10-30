@@ -4,7 +4,7 @@ title: "Odpowiedzi 429 w HTTP zalewają log security"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa               # todo | in-progress | in-qa | done | blocked
+status: done               # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -81,3 +81,34 @@ Poprawka: `LimitLogWindow` przeniesione do `src/logging.ts`, jedno na aplikację
 ## Incident note
 
 <Nie dotyczy.>
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Reprodukcja: `pnpm install --frozen-lockfile`, `pnpm test` (92 pliki / 505 testów zielone), `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm quality` (jscpd OK, depcruise 0 naruszeń). Testy zadania: `pnpm vitest run --project api health-rate-limit sign-in-rate-limit live.limits limits.security lists.limit items.limit` → 56/56 zielone.
+
+Kryteria:
+
+- AC1 — pass: tabela `limits.security.test.ts` przekracza każdy z 16 limitów `OVER` = 3 razy i oczekuje dokładnie jednego zdarzenia w kształcie `logLimitEvent` (`limit`, `route`, `requestId`); `health-rate-limit.test.ts` sprawdza 429, ograniczoną liczbę wpisów, ponowne zdarzenie dopiero po upływie okna (zegar testowy) i brak adresu IP w logu.
+- AC2 — pass: dwa IP → 2 wpisy (`health-rate-limit`), dwa konta → 2 wpisy z różnym `accountKey` (`sign-in-rate-limit`), dwie sesje tej samej osoby → 2 wpisy (`live.limits`).
+- AC3 — pass: tabela czerwona dla limitu bez deduplikacji (spot-check niżej); wpis w „Pułapkach” `docs/architecture/layers/backend.md` obecny.
+- AC4 — pass: pełny zestaw zielony; zmiana oczekiwań w `lists.limit` / `items.limit` (2 → 1 wpis) to zamierzona zmiana zachowania z AC1, opisana w Evidence; pozostałe asercje (identyfikatory, brak treści w logu) bez osłabienia.
+
+Spot-checki (każdy cofnięty, `git status` czysty):
+
+1. `logLimitEvent` bez `take(...)` (brak deduplikacji) → 21 testów czerwonych (wszystkie 16 wierszy tabeli, `lists.limit`, `items.limit`, testy okna WS i nowe testy AC1/AC2).
+2. Jeden klucz okna dla wszystkich podmiotów → 3 testy AC2 czerwone (dwa IP, dwa konta, dwie sesje).
+3. `signInPerIp` bez jawnego `subject: request.ip` (podmiot = `accountKey`) → wiersz `signInPerIp` tabeli czerwony.
+
+Red evidence w sekcji Evidence obecne dla planowanych testów; Root cause wyjaśnia, dlaczego istniejące testy nie złapały błędu (przekraczały limit raz albo oczekiwały wpisu na każde odrzucenie).
+
+Bezpieczeństwo (TH-21): próby zalewu wykonane lokalnie przez `app.inject` z `remoteAddress` na prawdziwej aplikacji z bazą Testcontainers — objętość logu `security` ograniczona, drugi atakujący (inne IP / konto / sesja) widoczny, adres IP tylko jako klucz w pamięci (asercja `not.toContain(ip)`). Brak sekretów i danych osobowych w nowych logach.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | Sekcja `## Prevention` w pliku zadania jest pusta, choć prewencja jest zrobiona (AC3: tabela + „Pułapki”). | plik zadania, `## Prevention` | Jedno zdanie odsyłające do AC3 / wpisu w `backend.md`. |
+| 2 | minor | code quality | `limitLogWindowSeconds` w `LIVE_LIMITS`, a dotyczy teraz wszystkich limitów (HTTP też) — spójność stałych; autor sam to odnotował. | `packages/shared/src/limits.ts` | Osobna stała (np. w `HTTP_LIMITS` / własnym obiekcie) przy następnej zmianie stałych. |
+| 3 | note | performance | `LimitLogWindow.take` przegląda całą mapę przy każdym zapisanym zdarzeniu; przy rotacji wielu IP ponad limitem koszt rośnie kwadratowo w oknie (ograniczony tym, że każdy IP musi najpierw przekroczyć limit). | `apps/api/src/logging.ts`, `take` | Sprzątanie okresowe lub co N zapisów, jeśli kiedyś wyjdzie w profilu. |
+| 4 | note | security | Okno per konto (`signInFailuresPerAccount`) jest wspólne dla wszystkich IP: drugi atakujący na to samo konto w ciągu 60 s nie dodaje wpisu (konto jest już w logu). Zgodne z AC2 (podmiot = konto). | `auth-routes.ts` | Bez zmian; do świadomej akceptacji. |
+
