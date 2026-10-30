@@ -134,6 +134,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       return {
         event: "rate_limited",
         route: "/api/v1/lists/:listId/invitations",
+        userId: ania.id,
         listId: list.id,
       };
     },

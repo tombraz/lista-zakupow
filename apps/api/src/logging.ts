@@ -100,6 +100,19 @@ export function securityLog(log: FastifyBaseLogger): FastifyBaseLogger {
 }
 
 /**
+ * TH-21: jedyne miejsce kształtu zdarzenia w logu `security` (T-041): `route` to wzorzec trasy
+ * (`UNKNOWN_ROUTE` dla nieznanej), nigdy surowy adres z query; `fields` tylko identyfikatory.
+ */
+export function securityEvent(
+  request: FastifyRequest,
+  event: string,
+  fields: Record<string, string> = {},
+): void {
+  const route = request.routeOptions.url ?? UNKNOWN_ROUTE;
+  securityLog(request.log).warn({ event, ...fields, route }, event);
+}
+
+/**
  * TH-21: najwyżej jedno zdarzenie na podmiot i limit w oknie `limitLogWindowSeconds` — kolejne
  * próby ponad limit nie zalewają logu `security` (T-038, T-040). Klucz (np. z adresem IP) zostaje
  * w pamięci; wygasłe okna sprząta przy zapisie, więc mapa ma najwyżej tyle wpisów, ile zdarzeń
@@ -139,6 +152,5 @@ export function logLimitEvent(
 ): void {
   subject ??= Object.values(ids).join(":") || request.ip;
   if (!request.server.limitLogWindow.take(subject, limit)) return;
-  const route = request.routeOptions.url ?? UNKNOWN_ROUTE;
-  securityLog(request.log).warn({ event, ...ids, route, limit }, event);
+  securityEvent(request, event, { ...ids, limit });
 }

@@ -99,6 +99,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-30 | T-041: `securityEvent` w `src/logging.ts` — jeden kształt każdego zdarzenia `security`, na nim `logLimitEvent`; `limitLog` (WS) bez flagi „raz na połączenie”. |
 | 2026-10-30 | Przegląd E-01 runda 3: „Pułapki”: każde zdarzenie `security` przez jedną funkcję w `logging.ts`; opis `perIp(key)`. |
 | 2026-10-30 | T-040: `LimitLogWindow` przeniesione z `na-zywo` do `src/logging.ts` (dekoracja `limitLogWindow` w `app.ts`), deduplikacja w `logLimitEvent` dla wszystkich limitów, opcja `subject`; „Pułapki”: zdarzenie raz na podmiot i limit w oknie. |
 | 2026-10-30 | T-038: `LimitLogWindow` w `na-zywo/http/routes.ts` (zalew logu `security` próbami WS ponad limit), `LIVE_LIMITS.limitLogWindowSeconds`. |

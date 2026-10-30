@@ -213,6 +213,22 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
     ]);
   });
 
+  // T-041 (TH-21): okno tłumi powtórzenia tego samego limitu, nie inne limity tego połączenia.
+  it("logs each limit a connection exceeds once", async () => {
+    const { user, connect, logs } = await connected();
+    const client = await connect();
+
+    for (let i = 0; i <= LIVE_LIMITS.messagesPerSecond + 5; i += 1) client.send({ type: "pong" });
+    client.send({ type: "subscribe", listId: "x".repeat(LIVE_LIMITS.messageBytes) });
+    client.send({ type: "subscribe", listId: "x".repeat(LIVE_LIMITS.messageBytes) });
+
+    await client.closed();
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining({ event: "rate_limited", limit: "messagesPerSecond" }),
+      expect.objectContaining({ event: "limit_reached", limit: "messageBytes", userId: user.id }),
+    ]);
+  });
+
   // T-038 (TH-21): próby ponad limit nie zalewają logu `security` — jedno zdarzenie na sesję i
   // limit w oknie `limitLogWindowSeconds`, niezależnie od liczby prób.
   it("logs repeated attempts over the socket limit once per session", async () => {

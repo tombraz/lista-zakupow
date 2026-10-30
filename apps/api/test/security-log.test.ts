@@ -68,4 +68,22 @@ describe("security log (SEC7)", () => {
     }
     await app.close();
   });
+
+  // T-041: `route` zdarzenia to wzorzec trasy, nie surowy adres z query.
+  it("logs the route pattern, not the raw URL, for a failed sign-in", async () => {
+    const logs = captureLogs();
+    const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+    await app.inject({
+      method: "POST",
+      url: "/api/auth/sign-in/email?x=1",
+      headers: { origin: TEST_ORIGIN },
+      remoteAddress: randomIp(),
+      payload: { email: EMAIL, password: PASSWORD },
+    });
+
+    expect(logs.security()).toEqual([
+      expect.objectContaining({ event: "sign_in_failed", route: "/api/auth/sign-in/email" }),
+    ]);
+    await app.close();
+  });
 });

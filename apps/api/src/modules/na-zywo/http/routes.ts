@@ -126,14 +126,12 @@ function serve(
 
 /**
  * TH-21, TH-25: przekroczenie limitu połączenia trafia do logu `security` z identyfikatorem
- * osoby, raz na połączenie (kolejne wiadomości po zamknięciu nie zalewają logu; T-033) i raz na
- * sesję i limit w oknie (`LimitLogWindow` w `logLimitEvent`, T-038).
+ * osoby, raz na sesję i limit w oknie (`LimitLogWindow` w `logLimitEvent`, T-038) — kolejne
+ * wiadomości po zamknięciu nie zalewają logu (T-033), a inny limit tego połączenia ma własny
+ * wpis (T-041).
  */
 function limitLog(request: FastifyRequest, session: LiveSession) {
-  let logged = false;
   return (event: "limit_reached" | "rate_limited", limit: keyof typeof LIVE_LIMITS) => {
-    if (logged) return;
-    logged = true;
     logLimitEvent(request, event, limit, {
       ids: { userId: session.userId },
       subject: session.sessionId,

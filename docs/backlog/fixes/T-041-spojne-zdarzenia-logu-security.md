@@ -4,7 +4,7 @@ title: "Spójne zdarzenia logu security: userId przy limicie linków, każdy lim
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-02, F-11]
@@ -58,7 +58,25 @@ related_tasks: [T-027, T-033, T-035, T-038, T-040]
 
 ## Root cause
 
+Trzy osobne przyczyny tego samego typu — kształt zdarzenia `security` składany poza jedną funkcją albo przypięty testem do stanu faktycznego:
+
+1. Limit tworzenia linków od początku rzucał `DomainError` z `ids: { listId }`; tabela `limits.security.test.ts` (T-035) przepisała ten kształt jako oczekiwany, zamiast wymagać `userId` z `backend.md`.
+2. Flaga `logged` w `limitLog` (T-033, „raz na połączenie”) powstała, zanim istniało okno `LimitLogWindow` (T-038/T-040). Po dodaniu okna flaga została i tłumiła także inne limity tego samego połączenia; testy przekraczały tylko jeden limit na połączenie.
+3. T-035 ujednolicił tylko zdarzenia limitów (`logLimitEvent`); `sign_in_failed` (`request.url`) i `list_access_denied` (`routeOptions.url` bez wartości zastępczej) składano ręcznie, a żaden test nie sprawdzał `route` tych zdarzeń.
+
+Inne wystąpienia: po poprawce `securityLog(...).warn` woła tylko `src/logging.ts` (`securityEvent`); `test/logging.test.ts` używa `securityLog` do testu redakcji — bez zmian.
+
 ## Evidence
+
+Testy odtwarzające (czerwone przed poprawką, `pnpm vitest run apps/api/test/...`):
+
+- `limits.security.test.ts` › `invitationsCreatedPerList: exceeding the limit repeatedly logs one security event` — `AssertionError`: brak `"userId"` w zdarzeniu `rate_limited`.
+- `live.limits.test.ts` › `logs each limit a connection exceeds once` — `expected [ { level: 40, …(10) } ] to deeply equal [ ObjectContaining{…}, …(1) ]`: brak wpisu `messageBytes`.
+- `security-log.test.ts` › `logs the route pattern, not the raw URL, for a failed sign-in` — `route: "/api/auth/sign-in/email?x=1"` zamiast `"/api/auth/sign-in/email"`.
+
+Poprawka: `securityEvent(request, event, fields)` w `src/logging.ts` (route `routeOptions.url ?? UNKNOWN_ROUTE`), na niej `logLimitEvent`, `sign_in_failed` i `list_access_denied`; `userId: ownerId` w `invitationsCreatedPerList`; usunięta flaga `logged` w `limitLog` (powtórzenia tłumi okno per sesja i limit).
+
+Po poprawce: `pnpm test` 92 pliki / 507 testów zielone; `pnpm typecheck`, `pnpm lint`, `pnpm build` bez błędów.
 
 ## Prevention
 

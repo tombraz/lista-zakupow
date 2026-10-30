@@ -91,7 +91,11 @@ export async function createInvitation(
   // TH-13: skrypt nie zapcha bazy linkami.
   if (!created) {
     throw new DomainError("rate_limited", {
-      security: { event: "rate_limited", limit: "invitationsCreatedPerList", ids: { listId } },
+      security: {
+        event: "rate_limited",
+        limit: "invitationsCreatedPerList",
+        ids: { userId: ownerId, listId },
+      },
     });
   }
   return created;

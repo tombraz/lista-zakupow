@@ -8,7 +8,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { validate } from "../../../http/validate";
-import { logLimitEvent, securityLog } from "../../../logging";
+import { logLimitEvent, securityEvent } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { SignInFailures } from "../infra/sign-in-failures";
@@ -99,7 +99,7 @@ function logSecurity(
   event: "sign_in_failed",
   ids: { accountKey: string },
 ) {
-  securityLog(request.log).warn({ event, route: request.url, ...ids }, event);
+  securityEvent(request, event, ids);
 }
 
 /**

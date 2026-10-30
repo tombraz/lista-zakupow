@@ -1,7 +1,7 @@
 import type { ApiErrorBody, DomainErrorCode, ErrorCode } from "@lista/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { DomainError } from "../domain-error";
-import { logLimitEvent, securityLog } from "../logging";
+import { logLimitEvent, securityEvent } from "../logging";
 
 /** Błąd z kodem z `packages/shared`; jeden handler zamienia go na odpowiedź HTTP. */
 export class ApiError extends Error {
@@ -41,13 +41,8 @@ export function domainErrorBody(error: DomainError): ApiErrorBody {
 export function logSecurityEvent(request: FastifyRequest, error: DomainError): void {
   const { security } = error.details;
   if (!security) return;
-  if (security.event === "list_access_denied") {
-    const route = request.routeOptions.url;
-    securityLog(request.log).warn(
-      { event: security.event, route, ...security.ids },
-      security.event,
-    );
-  } else logLimitEvent(request, security.event, security.limit, { ids: security.ids });
+  if (security.event === "list_access_denied") securityEvent(request, security.event, security.ids);
+  else logLimitEvent(request, security.event, security.limit, { ids: security.ids });
 }
 
 interface ErrorSummary {
