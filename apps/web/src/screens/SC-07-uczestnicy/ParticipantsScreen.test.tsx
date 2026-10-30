@@ -230,6 +230,45 @@ describe("SC-07 invitations of the owner", () => {
     expect(deletes.sort()).toEqual(["a", "b"]);
   });
 
+  // T-043: każdy link w stanie zapisu, dopóki trwa jego blokada, nie tylko ostatni unieważniany.
+  it("keeps both links saving while two revokes are held (T-043)", async () => {
+    const [a, b] = [anInvitation("a"), anInvitation("b")];
+    const { list, links } = await showParticipants({ links: [a, b] });
+    const held = { a: heldResponse(), b: heldResponse() };
+    server.use(
+      http.delete(`*/api/v1/lists/${list.id}/invitations/:id`, async ({ params }) => {
+        const id = String(params["id"]) as "a" | "b";
+        await held[id].released;
+        links.current = links.current.filter((link) => link.id !== id);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(2);
+    });
+    const revokeOf = (index: number) =>
+      within(linkBoxes()[index] as HTMLElement).getByRole("button", { name: "Unieważnij" });
+
+    fireEvent.click(revokeOf(0));
+    fireEvent.click(revokeOf(1));
+
+    await waitFor(() => {
+      expect(revokeOf(1)).toHaveAttribute("aria-disabled", "true");
+    });
+    expect(revokeOf(0)).toHaveAttribute("aria-disabled", "true");
+
+    held.b.release();
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(1);
+    });
+    expect(revokeOf(0)).toHaveAttribute("aria-disabled", "true");
+
+    held.a.release();
+    await waitFor(() => {
+      expect(linkBoxes()).toHaveLength(0);
+    });
+  });
+
   it("after a lost revoke response shows the server state and an error", async () => {
     const link = anInvitation("a");
     const { user, list, links } = await showParticipants({ links: [link] });

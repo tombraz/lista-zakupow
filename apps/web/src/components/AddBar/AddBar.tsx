@@ -14,6 +14,8 @@ export interface AddBarField {
 interface AddBarProps {
   /** Nazwa dostępna formularza (landmark) i przycisku. */
   label: string;
+  /** Formularz: obszar, z którego limit przenosi fokus na ostrzeżenie (`useLimitFocus`). */
+  formRef?: Ref<HTMLFormElement>;
   name: AddBarField & { ref: Ref<HTMLInputElement> };
   /** Pole ilości / notatki: pokazywane dopiero po wpisaniu nazwy (design-system.md, AddBar). */
   note: AddBarField;
@@ -27,10 +29,11 @@ interface AddBarProps {
 
 /** Pasek dodawania na dole SC-06: Enter lub „Dodaj” wysyła (design-system.md, AddBar). */
 export function AddBar(props: AddBarProps) {
-  const { label, name, note, submitText, alert, pending, disabled, onSubmit } = props;
+  const { label, formRef, name, note, submitText, alert, pending, disabled, onSubmit } = props;
   const showNote = name.value !== "" || note.value !== "";
   return (
     <form
+      ref={formRef}
       className={styles.bar}
       aria-label={label}
       noValidate

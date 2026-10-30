@@ -4,7 +4,7 @@ title: "Jeden useLimitFocus w SC-06; stan zapisu na klucz z useGuardedMutation (
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-07, F-08, F-11]
@@ -58,7 +58,18 @@ related_tasks: [T-023, T-025, T-020, T-030]
 
 ## Root cause
 
+Blokada na klucz w `useGuardedMutation` (T-020) żyła tylko w `useRef`, więc nie była reaktywna i ekrany musiały same wyprowadzić stan zapisu do renderu. SC-07 (T-008) liczył go z `revoke.isPending && revoke.variables`, a TanStack Query trzyma `variables` tylko ostatniego `mutate` — przy dwóch równoległych unieważnieniach pierwszy link tracił `loading`, choć `lockOf` dalej go blokował. SC-06 (T-007) zrobił to samo poprawnie, ale osobnym `Set`. Testy nie złapały tego, bo test T-020 sprawdzał tylko liczbę żądań (`delay(50)`), a nie stan przycisku pierwszego linku w trakcie zapisu drugiego.
+
+Ten sam wzorzec (stan na klucz obok `lockOf`): tylko SC-06 odhaczanie i SC-07 unieważnianie — oba poprawione tutaj (`isLocked(key)`). Duplikat `useLimitFocus` w `AddItemBar.tsx` (T-023) usunięty; AddBar dostał `formRef`, żeby wspólny hook obejmował cały formularz (pole, „Dodaj”, notatka), jak prywatna kopia.
+
 ## Evidence
+
+- Test reprodukujący: `ParticipantsScreen.test.tsx` › „keeps both links saving while two revokes are held (T-043)”.
+  - Red (przed poprawką): `expect(revokeOf(0)).toHaveAttribute("aria-disabled", "true")` → `Received: null` (linia 258).
+  - Green po poprawce.
+- `pnpm test`: 92 pliki, 510 testów — pass (w tym `ListScreen.check.test.tsx` i testy fokusu limitu 500 pozycji T-023).
+- `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm build`, `pnpm quality` (0 klonów, 0 naruszeń zależności) — pass.
+- E2E (J-03, J-04) nie uruchamiane w tej sesji.
 
 ## Prevention
 

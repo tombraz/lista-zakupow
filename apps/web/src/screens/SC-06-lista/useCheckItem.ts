@@ -35,12 +35,8 @@ interface CheckOptions {
  */
 export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
   const client = useQueryClient();
-  const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const settle = (itemId: string) => {
-    setSaving((current) => new Set([...current].filter((id) => id !== itemId)));
-  };
 
   const saved = (item: Item, { checked, next }: Toggle) => {
     if (checked) setAnnouncement(messages.checked(item.name));
@@ -60,17 +56,13 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
   const mutation = useGuardedMutation(
     {
       mutationFn: ({ itemId, checked }: Toggle) => checkItem(listId, itemId, checked),
-      onMutate: ({ itemId }) => {
+      onMutate: () => {
         setFailure(null);
-        setSaving((current) => new Set(current).add(itemId));
       },
       onSuccess: (updated, toggled) => {
         saved(updated, toggled);
       },
       onError: failed,
-      onSettled: (_data, _error, { itemId }) => {
-        settle(itemId);
-      },
     },
     // Różne pozycje można odhaczać naraz; tę samą tylko raz w czasie zapisu (T-030).
     ({ itemId }) => itemId,
@@ -85,7 +77,7 @@ export function useCheckItem(listId: string, { items, onFocus }: CheckOptions) {
     mutation.mutate({ itemId: item.id, checked, next });
   };
 
-  return { toggle, isSaving: (itemId: string) => saving.has(itemId), failure, announcement };
+  return { toggle, isSaving: (itemId: string) => mutation.isLocked(itemId), failure, announcement };
 }
 
 export type CheckItemState = ReturnType<typeof useCheckItem>;

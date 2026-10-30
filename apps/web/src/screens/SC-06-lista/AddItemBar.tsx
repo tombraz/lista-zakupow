@@ -1,7 +1,8 @@
 import { ITEM_NAME_MAX_LENGTH, ITEM_NOTE_MAX_LENGTH } from "@lista/shared";
-import { useEffect, useRef, type RefObject } from "react";
+import { useRef, type RefObject } from "react";
 import { AddBar } from "../../components/AddBar/AddBar";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
+import { useLimitFocus } from "../../components/useFocus";
 import { itemNameErrorText, itemNoteErrorText, messages, saveErrorText } from "./messages";
 import styles from "./ListScreen.module.css";
 import type { AddItemState } from "./useAddItem";
@@ -15,10 +16,13 @@ interface AddItemBarProps {
 }
 
 export function AddItemBar({ state, disabled, onShowBought }: AddItemBarProps) {
-  const limitRef = useLimitFocus(state);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Limit wyłącza pole i „Dodaj”, więc fokus z AddBar idzie na ostrzeżenie (T-023).
+  const limitRef = useLimitFocus(state.limitReached, formRef);
   return (
     <AddBar
       label={messages.add.submitName}
+      formRef={formRef}
       submitText={messages.add.submit}
       name={{
         ref: state.nameRef,
@@ -41,25 +45,6 @@ export function AddItemBar({ state, disabled, onShowBought }: AddItemBarProps) {
       onSubmit={state.submit}
     />
   );
-}
-
-/**
- * Limit wyłącza pole i „Dodaj” (`disabled`), więc fokus z nich spadłby na `body` (WCAG 2.4.3).
- * Gdy limit pojawia się, a fokus jest w AddBar (albo już spadł), przechodzi na ostrzeżenie;
- * wejście na pełną listę i fokus w innym miejscu ekranu zostają bez zmian (T-023).
- */
-function useLimitFocus(state: AddItemState) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reached = useRef(state.limitReached);
-  useEffect(() => {
-    const became = state.limitReached && !reached.current;
-    reached.current = state.limitReached;
-    if (!became) return;
-    const focused = document.activeElement;
-    const inBar = state.nameRef.current?.form?.contains(focused) ?? false;
-    if (focused === document.body || inBar) ref.current?.focus();
-  }, [state.limitReached, state.nameRef]);
-  return ref;
 }
 
 function AddAlert({

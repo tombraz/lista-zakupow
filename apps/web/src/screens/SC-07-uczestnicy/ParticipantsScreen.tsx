@@ -140,7 +140,7 @@ function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }
           manualCopyText={messages.copyManually}
           focusCopy={focusCopyOf === link.id}
           onCopy={copy}
-          revoking={changes.revoke.isPending && changes.revoke.variables === link.id}
+          revoking={changes.revoke.isLocked(link.id)}
           onRevoke={() => {
             setAnnouncement("");
             changes.revoke.mutate(link.id);
