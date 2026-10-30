@@ -1,12 +1,21 @@
 import { randomUUID } from "node:crypto";
-import type { LimitKey } from "@lista/shared";
+import { LIVE_LIMITS, type LimitKey } from "@lista/shared";
 import {
   LogController,
   type FastifyBaseLogger,
+  type FastifyInstance,
   type FastifyRequest,
   type FastifyServerOptions,
 } from "fastify";
 import type { DestinationStream } from "pino";
+import type { Clock } from "./clock";
+
+declare module "fastify" {
+  interface FastifyInstance {
+    /** Okno zdarzeń limitu w logu `security` (`limitLogWindow`), jedno na aplikację. */
+    limitLogWindow: LimitLogWindow;
+  }
+}
 
 export interface LogSettings {
   level: string;
@@ -91,15 +100,45 @@ export function securityLog(log: FastifyBaseLogger): FastifyBaseLogger {
 }
 
 /**
+ * TH-21: najwyżej jedno zdarzenie na podmiot i limit w oknie `limitLogWindowSeconds` — kolejne
+ * próby ponad limit nie zalewają logu `security` (T-038, T-040). Klucz (np. z adresem IP) zostaje
+ * w pamięci; wygasłe okna sprząta przy zapisie, więc mapa ma najwyżej tyle wpisów, ile zdarzeń
+ * zapisano w ostatnim oknie.
+ */
+export class LimitLogWindow {
+  private readonly until = new Map<string, number>();
+
+  constructor(private readonly clock: Clock) {}
+
+  /** `true`, gdy zdarzenie trzeba zapisać; wtedy otwiera okno dla podmiotu i limitu. */
+  take(subject: string, limit: LimitKey): boolean {
+    const now = this.clock.now().getTime();
+    const key = `${limit}:${subject}`;
+    if ((this.until.get(key) ?? 0) > now) return false;
+    for (const [open, end] of this.until) if (end <= now) this.until.delete(open);
+    this.until.set(key, now + LIVE_LIMITS.limitLogWindowSeconds * 1000);
+    return true;
+  }
+}
+
+export function limitLogWindow(app: FastifyInstance, clock: Clock): void {
+  app.decorate("limitLogWindow", new LimitLogWindow(clock));
+}
+
+/**
  * TH-21: jedyne miejsce kształtu zdarzenia przekroczenia limitu (T-035): `limit` to klucz
  * stałej z `packages/shared/src/limits.ts`, `route` jest zawsze, `ids` tylko identyfikatory.
+ * `subject` — kto przekracza limit (okno `LimitLogWindow`): domyślnie identyfikatory, bez nich
+ * adres IP; nie trafia do logu.
  */
 export function logLimitEvent(
   request: FastifyRequest,
   event: "limit_reached" | "rate_limited",
   limit: LimitKey,
-  ids: Record<string, string> = {},
+  { ids = {}, subject }: { ids?: Record<string, string>; subject?: string } = {},
 ): void {
+  subject ??= Object.values(ids).join(":") || request.ip;
+  if (!request.server.limitLogWindow.take(subject, limit)) return;
   const route = request.routeOptions.url ?? UNKNOWN_ROUTE;
   securityLog(request.log).warn({ event, ...ids, route, limit }, event);
 }

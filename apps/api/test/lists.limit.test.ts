@@ -109,7 +109,8 @@ describe("limit of 50 own lists", () => {
     expect(statuses.filter((status) => status === 201)).toHaveLength(50);
     expect(statuses.slice(50)).toEqual([409, 409]);
     const limited = logs.security().filter((entry) => entry["event"] === "limit_reached");
-    expect(limited).toHaveLength(2);
+    // T-040 (TH-21): jedno zdarzenie na osobę i limit w oknie, nie jedno na odrzucone żądanie.
+    expect(limited).toHaveLength(1);
     expect(limited[0]).toMatchObject({ userId: bot.id, limit: "listsPerOwner" });
     expect(logs.lines.join("\n")).not.toContain("Spam 51");
     await app.close();

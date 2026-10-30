@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { LIVE_LIMITS } from "@lista/shared";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
-import { createList, createUser } from "./factories";
+import { createList, createUser, signIn } from "./factories";
 import {
   closeCode,
   closeWithoutFin,
@@ -251,6 +251,28 @@ describe("WebSocket limits (SEC6, TH-25)", () => {
       limit: "connectionsPerSession",
       userId: user.id,
     };
+    expect(limitEvents(logs, user.cookie)).toEqual([
+      expect.objectContaining(event),
+      expect.objectContaining(event),
+    ]);
+  });
+
+  // T-040 (QA T-038): okno liczy się per sesja — druga sesja tej samej osoby ponad limitem
+  // zostawia własne zdarzenie.
+  it("logs the connection limit separately for two sessions of one person", async () => {
+    const { app: built, user, url, connect, logs } = await connected();
+    const otherCookie = await signIn(built, user);
+    const connectOther = async () => {
+      const client = await connectLive(url, { cookie: otherCookie });
+      clients.push(client);
+      return client;
+    };
+    for (const open of [connect, connectOther]) {
+      for (let i = 0; i < LIVE_LIMITS.connectionsPerSession; i += 1) await open();
+      for (let i = 0; i < 3; i += 1) expect(await (await open()).closed()).toBe(1008);
+    }
+
+    const event = { event: "limit_reached", limit: "connectionsPerSession", userId: user.id };
     expect(limitEvents(logs, user.cookie)).toEqual([
       expect.objectContaining(event),
       expect.objectContaining(event),

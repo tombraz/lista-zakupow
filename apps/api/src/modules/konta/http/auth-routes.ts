@@ -67,14 +67,20 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     const credentials = validate(signInRequestSchema, request.body);
     const accountKey = failures.accountKey(credentials.email);
     if (!(await failures.reserve(accountKey))) {
-      logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", { accountKey });
+      logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", {
+        ids: { accountKey },
+      });
       throw new ApiError(429, "rate_limited");
     }
     const response = await forward(auth, origin, request, credentials);
     if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
     else await failures.release(accountKey);
     if (response.status === 429) {
-      logLimitEvent(request, "rate_limited", "signInPerIp", { accountKey });
+      // Podmiot to IP, nie konto: seria kont z jednego IP to jedno zdarzenie w oknie.
+      logLimitEvent(request, "rate_limited", "signInPerIp", {
+        ids: { accountKey },
+        subject: request.ip,
+      });
     }
     return relay(response, reply);
   });

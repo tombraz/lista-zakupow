@@ -4,7 +4,7 @@ title: "Odpowiedzi 429 w HTTP zalewają log security"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress         # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -60,10 +60,22 @@ related_tasks: [T-027, T-034, T-035, T-038]
 
 ## Root cause
 
-<Wypełnia /fix.>
+`logLimitEvent` (`src/logging.ts`, T-035) zapisywał zdarzenie przy każdym wywołaniu, a wołające go ścieżki HTTP (`perIp` → `errorResponseBuilder`, most Better Auth, handler `DomainError` z `security`, `bodyBytes` w `apiErrors`) wołają go raz na odrzucone żądanie. Deduplikacja z T-038 (`LimitLogWindow`) żyła tylko w trasie WS, więc HTTP nie miał żadnej. Testy limitów (T-005, T-006, T-027, T-034, tabela `limits.security.test.ts`) przekraczały limit raz albo wręcz oczekiwały wpisu na każde odrzucone żądanie (`lists.limit`, `items.limit`: 2 odrzucenia → 2 wpisy).
+
+Zasięg szerszy niż w raporcie: poza `perIp`, mostem Better Auth i `invitationsCreatedPerList` to samo dotyczyło limitów biznesowych (`listsPerOwner`, `itemsPerList`, `participantsPerList`) i `bodyBytes` (wszystkie przez `logLimitEvent`) — tabela z AC3 była czerwona dla wszystkich 11 limitów HTTP.
+
+Poprawka: `LimitLogWindow` przeniesione do `src/logging.ts`, jedno na aplikację (dekoracja `limitLogWindow`, zegar `Clock` z `app.ts`), sprawdzane w samym `logLimitEvent` — każdy limit, obecny i nowy, jest deduplikowany bez zmian w wołających. Okno: `LIVE_LIMITS.limitLogWindowSeconds` (60 s, komentarz uogólniony). Podmiot (`subject`, tylko w pamięci, nie w logu): domyślnie identyfikatory zdarzenia (`userId`+`listId`, `listId`, `accountKey`), bez nich `request.ip` (z `trustProxy`, czyli adres klienta zza zaufanego proxy). Jawnie: `signInPerIp` → IP (zdarzenie niesie `accountKey`, ale limit liczy IP; seria kont z jednego IP to jedno zdarzenie), WS → `sessionId` (jak w T-038). Czwarty parametr `logLimitEvent` to teraz `{ ids, subject }` (reguła `max-params`). Nieużywane już `clock` w `LiveRouteDeps` usunięte. Kształt zdarzenia bez zmian.
+
+**Poza zakresem / inne wystąpienia:**
+
+- `limitLogWindowSeconds` zostaje w `LIVE_LIMITS`, choć dotyczy teraz wszystkich limitów — przeniesienie do osobnej stałej zmieniłoby `packages/shared` i tabelę `NOT_ABUSE_LIMITS` bez zmiany zachowania; do rozważenia przy następnej zmianie stałych.
+- `sign_in_failed` (`logSecurity` w `auth-routes.ts`) i `list_access_denied` nie są zdarzeniami limitu: zapisują się na każde żądanie, ale ich objętość ogranicza limit (`signInFailuresPerAccount` / `signInPerIp` dla logowania); `list_access_denied` bez limitu — osobna decyzja, nie naprawione tutaj.
 
 ## Evidence
 
+- Red: `pnpm vitest run --project api health-rate-limit sign-in-rate-limit live.limits limits.security` → 12 testów czerwonych: 11 wierszy tabeli `limits.security.test.ts` (wszystkie limity HTTP, np. `healthReadyPerIp: exceeding the limit repeatedly logs one security event` → `AssertionError: expected [ { level: 40, …(9) }, …(2) ] to deeply equal [ ObjectContaining{…} ]`), `logs repeated 429s once per IP and window, separately for each IP` → `expected [ … ] to have a length of 2 but got 20`, `logs repeated attempts over the account limit once per account` → `expected [ { level: 40, …(10) }, …(19) ] to deeply equal [ ObjectContaining{…}, …(1) ]`. Wiersze WS i nowy `logs the connection limit separately for two sessions of one person` zielone od początku (regresja T-038 / AC2).
+- Zmiana asercji w testach sprzed T-040: `lists.limit.test.ts` i `items.limit.test.ts` (`stops a bot … logs it with identifiers only`) oczekiwały 2 wpisów na 2 odrzucenia; po poprawce 1 (zamierzona zmiana zachowania, AC1).
+- Green: te same 4 pliki / 44 testy; `pnpm test` 92 pliki / 505 testów zielone; `pnpm typecheck`, `pnpm lint` (0 ostrzeżeń), `pnpm format:check`, `pnpm quality` (depcruise: 0 naruszeń), `pnpm --filter @lista/api build` OK.
 ## Prevention
 
 ## Incident note

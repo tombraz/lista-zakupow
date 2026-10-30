@@ -5,7 +5,7 @@ import { systemClock, type Clock } from "./clock";
 import { securityHeaders } from "./http/security-headers";
 import { trustedOrigin } from "./http/trusted-origin";
 import { webApp } from "./http/web-app";
-import { loggingOptions, type LogSettings } from "./logging";
+import { limitLogWindow, loggingOptions, type LogSettings } from "./logging";
 import { apiErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
 import { accountRoutes, type AuthSettings } from "./modules/konta";
@@ -31,7 +31,9 @@ export function buildApp(options: AppOptions): FastifyInstance {
     bodyLimit: HTTP_LIMITS.bodyBytes,
     ...(options.trustedProxies ? { trustProxy: options.trustedProxies } : {}),
   });
+  const clock = options.clock ?? systemClock;
   watchPool(app, options.pool);
+  limitLogWindow(app, clock);
   apiErrors(app);
   securityHeaders(app);
   trustedOrigin(app, options.auth.origin);
@@ -43,7 +45,6 @@ export function buildApp(options: AppOptions): FastifyInstance {
     items: createItems(options.pool),
     live,
   });
-  const clock = options.clock ?? systemClock;
   itemsModule(app, options.pool, { accounts, lists, clock, live });
   invitationsModule(app, options.pool, {
     accounts,
@@ -62,7 +63,6 @@ export function buildApp(options: AppOptions): FastifyInstance {
     requireListAccess: async (userId, listId) => {
       await lists.requireListAccess(userId, listId, "member");
     },
-    clock,
   });
   webApp(app, options.webDistDir);
   return app;

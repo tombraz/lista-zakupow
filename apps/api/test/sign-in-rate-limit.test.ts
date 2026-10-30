@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
 import { createUser, randomIp } from "./factories";
+import { captureLogs } from "./logs";
 
 const MINUTE_MS = 60 * 1000;
 
@@ -163,6 +164,34 @@ describe("sign-in rate limits (SEC1: TH-09)", () => {
     }
 
     expect(statuses).toEqual(Array.from({ length: 11 }, () => 401));
+    await app.close();
+  });
+
+  // T-040 (TH-21): powtarzane próby na zablokowane konto nie zalewają logu `security` — jedno
+  // zdarzenie na konto i limit w oknie, osobno dla każdego konta.
+  it("logs repeated attempts over the account limit once per account", async () => {
+    const logs = captureLogs();
+    const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
+    const accounts = [await createUser(app), await createUser(app)];
+
+    for (const user of accounts) {
+      for (let attempt = 1; attempt <= 5 + 10; attempt += 1) {
+        await signIn(app, { email: user.email, password: "zle-haslo-1" }, randomIp());
+      }
+    }
+
+    const limited = logs.security().filter((entry) => entry["event"] === "rate_limited");
+    expect(limited).toEqual([
+      expect.objectContaining({
+        limit: "signInFailuresPerAccount",
+        accountKey: expect.any(String) as unknown,
+      }),
+      expect.objectContaining({
+        limit: "signInFailuresPerAccount",
+        accountKey: expect.any(String) as unknown,
+      }),
+    ]);
+    expect(limited[0]?.["accountKey"]).not.toEqual(limited[1]?.["accountKey"]);
     await app.close();
   });
 });

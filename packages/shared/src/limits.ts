@@ -58,8 +58,9 @@ export const LIVE_LIMITS = {
   /** Serwer: po ramce close najdłużej tyle czeka, aż klient zamknie TCP (T-037). */
   closeTimeoutSeconds: 2,
   /**
-   * Log `security`: najwyżej jedno zdarzenie przekroczenia na sesję i limit w tym oknie — próby
-   * ponad limit nie zalewają logu (TH-21, T-038).
+   * Log `security`: najwyżej jedno zdarzenie przekroczenia na podmiot (sesja, IP, konto, lista)
+   * i limit w tym oknie, dla każdego limitu, także HTTP — próby ponad limit nie zalewają logu
+   * (TH-21, T-038, T-040).
    */
   limitLogWindowSeconds: 60,
 } as const;

@@ -110,7 +110,8 @@ describe("limit of 500 items per list", () => {
 
     expect(statuses).toEqual([201, 201, 201, 409, 409]);
     const limited = logs.security().filter((entry) => entry["event"] === "limit_reached");
-    expect(limited).toHaveLength(2);
+    // T-040 (TH-21): jedno zdarzenie na osobę i limit w oknie, nie jedno na odrzucone żądanie.
+    expect(limited).toHaveLength(1);
     expect(limited[0]).toMatchObject({ userId: bot.id, listId: list.id, limit: "itemsPerList" });
     expect(logs.lines.join("\n")).not.toContain("Spam 4");
     await app.close();

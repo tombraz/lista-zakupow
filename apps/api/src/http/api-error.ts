@@ -47,7 +47,7 @@ export function logSecurityEvent(request: FastifyRequest, error: DomainError): v
       { event: security.event, route, ...security.ids },
       security.event,
     );
-  } else logLimitEvent(request, security.event, security.limit, security.ids);
+  } else logLimitEvent(request, security.event, security.limit, { ids: security.ids });
 }
 
 interface ErrorSummary {
