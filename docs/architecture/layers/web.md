@@ -40,7 +40,6 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Cel | Komenda | Skąd |
 | --- | --- | --- |
-| 2026-10-30 | T-029: „Pułapki” — wywołania zwrotne zapisu tylko w opcjach hooka (lint na `mutate(vars, { … })`); dodawanie pozycji przez `useGuardedMutation`. |
 | install | `pnpm install`; tokeny ponownie: `pnpm --filter @lista/tokens build` | korzeń repo |
 | uruchom lokalnie | `pnpm dev` (Vite `http://localhost:5173`, proxy `/api` i `/health` do API) | korzeń repo |
 | type check / lint | `pnpm typecheck` / `pnpm lint`; kolory na sztywno `pnpm design-check` | korzeń repo |
@@ -100,6 +99,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-30 | T-029: „Pułapki” — wywołania zwrotne zapisu tylko w opcjach hooka (lint na `mutate(vars, { … })`); dodawanie pozycji przez `useGuardedMutation`. |
 | 2026-10-30 | T-031: „Pułapki” — dane E2E przez API: sprawdzone statusy, najwyżej 10 żądań naraz, czekanie na stan ekranu; `addViaApi` w `e2e/lists.ts`. |
 | 2026-10-30 | T-025: „Pułapki” — test na żywo wysyła tylko zdarzenia, które wysyła serwer; zmiana bez zdarzenia tylko w MSW. |
 | 2026-10-30 | Przegląd E-01 runda 2 (`docs/reviews/E-01-2026-10-30-1.md`): „Pułapki” — lista kontrolna testu fokusu dla `disabled` zależnego od API lub zdarzeń na żywo. |
