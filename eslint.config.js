@@ -73,6 +73,12 @@ const WEB_MUTATE_SYNTAX = [
     message:
       "onSuccess / onError / onSettled w opcjach useGuardedMutation, nie w mutate(…) / mutateAsync(…): te z mutate przychodzą tylko dla ostatniego wywołania (T-029, layers/web.md „Pułapki”).",
   },
+  {
+    selector:
+      "JSXOpeningElement[name.name='Link'] > JSXAttribute[name.name='to'][value.value=/^.(logowanie|rejestracja)$/]",
+    message:
+      "SC-01 ↔ SC-02 przez EntryLink (invitations/EntryLink.tsx): zwykły Link gubi wpisany e-mail i zaproszenie (T-028, layers/web.md „Pułapki”).",
+  },
 ];
 
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.

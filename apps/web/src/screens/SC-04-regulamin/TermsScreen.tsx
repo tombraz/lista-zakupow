@@ -78,6 +78,7 @@ function BackLink() {
   const navigate = useNavigate();
   return (
     <Link
+      // eslint-disable-next-line no-restricted-syntax -- „Wróć” cofa w historii; SC-01 tylko przy wejściu wprost, bez e-maila i zaproszenia.
       to="/logowanie"
       onClick={(event) => {
         if (location.key === "default") return;

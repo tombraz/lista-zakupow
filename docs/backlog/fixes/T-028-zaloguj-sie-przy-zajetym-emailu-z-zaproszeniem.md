@@ -74,6 +74,13 @@ Inne wystąpienia: brak. SC-01 → SC-02 idzie przez `EntryLink`; „Wróć” n
 
 ## Prevention
 
+Co by temu zapobiegło: jedno miejsce przejścia SC-01 ↔ SC-02 wymuszone automatycznie i test, który klika link, zamiast sprawdzać `href`. Przyjęte przez użytkownika (2026-10-30):
+
+- Lint `no-restricted-syntax` w `apps/web/src` (`eslint.config.js`, `WEB_MUTATE_SYNTAX`): zakaz `<Link to="/logowanie">` i `<Link to="/rejestracja">` — tylko `EntryLink`. Sprawdzone: na kodzie sprzed poprawki reguła zgłasza `SignUpScreen.tsx:127`. Wyjątek z uzasadnieniem: „Wróć” na SC-04 (`TermsScreen.tsx`).
+- Wpis w „Pułapkach” `docs/architecture/layers/web.md`.
+
+Do rozważenia poza tym zadaniem (uwagi QA, runda 1): komunikat `email_taken` zostaje po zmianie e-maila (`useSignUpForm.ts`); link „zresetuj hasło” → `/reset-hasla` nie istnieje do czasu SC-03 (F-03); Safari iOS nie sprawdzone ręcznie.
+
 ## Incident note
 
 ## QA round 1 (2026-10-30)
