@@ -4,7 +4,7 @@ title: "Stały test przebiegu lintu komentarzy (`eslint.directives.config.js`) n
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: [T-045]
 layers: [infra]
 requirements: []
@@ -80,3 +80,24 @@ T-045 zabezpieczył przebieg komentarzy tylko konfiguracją (`--no-inline-config
 ## Prevention
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-30)
+
+Verdict: pass
+
+Kryteria akceptacji:
+
+- **AC1 — pass.** `bash scripts/test/lint-directives.test.sh` (Git Bash, Windows): 14× `ok`, exit 0, ~47 s. Wszystkie 6 grup obejść, wszystkie zakresy `files`, `.ts` i `.tsx`. Ręcznie: plik `apps/api/src/qa-t046-probe.ts` z obejściem 1 → `pnpm lint` exit 1 (plik usunięty).
+- **AC2 — pass.** Przypadek dozwolonego `react-hooks/exhaustive-deps` w `apps/web/src/x.tsx` → `0 ` (exit 0, brak reguł).
+- **AC3 — pass.** Polecenie pochodzi z `scripts.lint` (`split('&&').pop()`). Mutacje (każda cofnięta, `git status` czysty): bez `--no-inline-config` → FAIL obejście 1 i AC2, exit 2; bez `"eslint-comments/*"` → FAIL obejście 2 (`apps/api/src`), exit 1; `packages/*/src` bez `.tsx` → FAIL obejście 5, exit 1; bez `"no-restricted-imports"` → FAIL obejście 4 (imports), exit 1.
+- **AC4 — pass.** Krok w jobie `static` po `./.github/actions/setup`; ścieżka testu w filtrze `all` (więc `static` rusza przy zmianie samego testu). `node scripts/workflow-check.mjs` OK. actionlint niedostępny lokalnie — sprawdzone przeglądem diffu (dwie linie `name`/`run`, poprawne YAML).
+- **AC5 — pass.** `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality`, `bash scripts/test/workflow-check.test.sh` zielone. `pnpm test`: 93 pliki, 515 testów zielone (jeden z trzech przebiegów miał 6 niestabilnych porażek w testach ekranów web, patrz #3).
+
+Fix task: „Root cause” wyjaśnia, czemu nic nie łapało osłabienia (brak kodu z zakazanymi komentarzami w repo). Test pada bez poprawki (mutacje wyżej), czerwony udokumentowany w Evidence.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test | `lint()` wyciąga nazwy reguł `grep -oE 'eslint-comments/[a-z-]+'` z całego wyjścia, także z treści komunikatu. Komunikat `no-restricted-disable` zawiera nazwę wyłączanej reguły, więc przypadek „2. … (apps/web/src/x.tsx)” (oczekiwane `no-use`) przeszedłby także bez zgłoszenia `no-use`. | `1:19 error Disabling 'eslint-comments/no-use' is not allowed eslint-comments/no-restricted-disable` | dopasowanie tylko do kolumny ruleId (koniec linii) albo `--format json` i `ruleId`; pozostałe przypadki (1, 6) i tak łapią wyłączenie `no-use`, stąd minor |
+| 2 | note | test | Polecenie ze skryptu dzielone na słowa bez obsługi cudzysłowów; argument w cudzysłowie w `scripts.lint` rozbije polecenie. Dziś brak takich argumentów, a awaria byłaby głośna (exit ≠ 1). | `$lint_cmd --stdin …` (SC2086) | ewentualnie `pnpm exec`/`sh -c` z dołożonymi argumentami |
+| 3 | note | testy web (poza zakresem) | Pełne `pnpm test` raz dało 6 porażek w `SignUpScreen`, `ListScreen(.edit)`, `ParticipantsScreen`; te pliki osobno 123/123, ponowny pełny przebieg 515/515. Niestabilność pod obciążeniem, niezwiązana z T-046. | `Test Files 4 failed | 89 passed (93)`, potem `93 passed` | osobny task na stabilność testów ekranów (timeouty / jsdom) |
+| 4 | note | narzędzia | actionlint i shellcheck niedostępne lokalnie; AC4 sprawdzone `workflow-check` i przeglądem. | `command -v actionlint` → brak | — |
