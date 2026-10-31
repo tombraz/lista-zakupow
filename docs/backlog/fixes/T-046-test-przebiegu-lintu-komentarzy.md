@@ -79,7 +79,7 @@ T-045 zabezpieczył przebieg komentarzy tylko konfiguracją (`--no-inline-config
 
 ## Prevention
 
-Sam test jest zabezpieczeniem pierwszego rzędu (sprawdzenie, które pada automatycznie): osłabienie przebiegu komentarzy (flaga, lista reguł, `files`) wywraca CI w jobie `static`. Przy kolejnej bramce lintu, której w repo nic nie narusza, potrzebny jest taki sam test na znanych obejściach. Propozycja wpisu do „Pułapek” w `infra.md` czeka na decyzję właściciela.
+Sam test jest zabezpieczeniem pierwszego rzędu (sprawdzenie, które pada automatycznie): osłabienie przebiegu komentarzy (flaga, lista reguł, `files`) wywraca CI w jobie `static`. Przy kolejnej bramce lintu, której w repo nic nie narusza, potrzebny jest taki sam test na znanych obejściach. Właściciel przyjął wpis do „Pułapek” w `infra.md` (2026-10-31).
 
 <!-- QA rounds are appended below by /qa-task -->
 

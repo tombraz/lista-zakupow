@@ -89,6 +89,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 - Porty hosta w Compose są stałe (5442, 1025, 8025): drugi klon repo na tej samej maszynie nie wystartuje `pnpm services:up`, dopóki działa pierwszy (`pnpm services:down` w pierwszym).
 - Przerwane przebiegi testów mogą zostawić kontenery Testcontainers. Sprząta je Ryuk (zostaw go włączonego, także w CI: nie ustawiaj `TESTCONTAINERS_RYUK_DISABLED`); ręcznie: `docker ps --filter label=org.testcontainers=true`, potem `docker rm -f <id>`.
 - Wymagane checki `ci-ok` i `codeql` muszą raportować na każdym PR: `security.yml` i job `ci-ok` nie mają filtra ścieżek (pominięty wymagany workflow blokowałby merge).
+- Bramka, której nic w repo nie narusza (np. przebieg komentarzy z `pnpm lint`), jest zielona także po osłabieniu: zmiana flagi, listy reguł albo `files` przechodzi po cichu (T-030 → T-044 → T-045). Każda taka bramka dostaje stały test na znanych obejściach, który bierze polecenie z miejsca, gdzie bramka działa (wzór: `scripts/test/lint-directives.test.sh`, T-046), a nie tylko jednorazowe pliki próbne.
 - Emulator Androida w CI wymaga KVM na runnerze Linux; build Gradle lokalnie w jobie, nie przez EAS (limit 15 buildów).
 
 ## Skille i źródła
@@ -104,3 +105,4 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
 | 2026-10-29 | T-013: staging tylko z `main`; `workflow-check` odrzuca `TYMCZASOWE` w workflow. |
 | 2026-10-30 | T-046: `scripts/test/lint-directives.test.sh` w jobie `static` sprawdza, że przebieg komentarzy z `pnpm lint` odrzuca znane obejścia. |
+| 2026-10-31 | T-046: „Pułapki” — bramka bez naruszeń w repo potrzebuje stałego testu na obejściach. |
