@@ -74,6 +74,11 @@ Poprawka: trasa logowania jest w zakresie `perIpRateLimit` z `perIp("signInPerIp
 
 Propozycja z przeglądu: reguła „limit przed zapisem” na trasach bez uwierzytelnienia w `backend.md` (TH-27) i szablon testu „liczba wierszy stała po przekroczeniu limitu”.
 
+Błędowi zapobiegłby test liczący wiersze po przekroczeniu limitu; dotychczasowe testy sprawdzały tylko status i log. Właściciel zaakceptował (2026-10-31):
+
+1. Automatyczna kontrola: w tabeli `apps/api/test/limits.security.test.ts` każdy scenariusz woła `atLimit()` po osiągnięciu limitu, a harness sprawdza, że potem żadna tabela w `public` nie przybrała wierszy. Na kodzie sprzed poprawki `signInPerIp` pada (`sign_in_failure` 10 → 13), z poprawką 15/15. Nowy limit bez `atLimit()` też pada.
+2. Pułapka w `docs/architecture/layers/backend.md`: limit per IP przed pierwszym zapisem na trasie bez uwierzytelnienia.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-31)

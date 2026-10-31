@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
+import type { Pool } from "pg";
 import { BUSINESS_LIMITS, HTTP_LIMITS, LIVE_LIMITS, RATE_LIMITS } from "@lista/shared";
 import { describe, expect, it } from "vitest";
 import { user } from "../src/db/schema";
@@ -33,6 +34,11 @@ interface Context {
   /** Adres `/api/v1/live`; gniazda `closeWithoutFin` zrywa sprzątanie testu. */
   liveUrl: () => Promise<string>;
   held: (() => void)[];
+  /**
+   * Scenariusz woła to po osiągnięciu limitu, przed próbami ponad limit. Od tej chwili żadna
+   * tabela nie może przybrać wierszy (TH-27: próba ponad limit nie pisze do bazy, T-048).
+   */
+  atLimit: () => Promise<void>;
 }
 
 /**
@@ -62,6 +68,26 @@ async function repeat(times: number, send: () => Promise<unknown>) {
   for (let attempt = 0; attempt < times; attempt += 1) await send();
 }
 
+/** `max` prób do limitu, potem `OVER` prób ponad limit. */
+async function exceed(max: number, atLimit: () => Promise<void>, send: () => Promise<unknown>) {
+  await repeat(max, send);
+  await atLimit();
+  await repeat(OVER, send);
+}
+
+/** Liczba wierszy każdej tabeli w schemacie public. */
+async function rowCounts(pool: Pool): Promise<Record<string, number>> {
+  const { rows } = await pool.query<{ name: string }>(
+    "SELECT format('%I.%I', schemaname, tablename) AS name FROM pg_tables WHERE schemaname = 'public' ORDER BY 1",
+  );
+  const counts: Record<string, number> = {};
+  for (const { name } of rows) {
+    const result = await pool.query<{ count: string }>(`SELECT count(*) FROM ${name}`);
+    counts[name] = Number(result.rows[0]?.count);
+  }
+  return counts;
+}
+
 // T-034 (TH-21, architecture.md „Obserwowalność”): każdy limit nadużyć ma tu scenariusz.
 // Nowy klucz w `RATE_LIMITS`, `BUSINESS_LIMITS`, `LIVE_LIMITS` lub `HTTP_LIMITS` bez scenariusza
 // → test czerwony.
@@ -69,23 +95,23 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
   const db = useTestDatabase();
 
   const SCENARIOS: Record<AbuseLimit, Scenario> = {
-    signInPerIp: async ({ app }) => {
+    signInPerIp: async ({ app, atLimit }) => {
       const ip = randomIp();
-      await repeat(RATE_LIMITS.signInPerIp.max + OVER, () =>
+      await exceed(RATE_LIMITS.signInPerIp.max, atLimit, () =>
         signIn(app, `nikt-${randomUUID()}@example.com`, ip),
       );
       return { event: "rate_limited", route: SIGN_IN };
     },
-    signInFailuresPerAccount: async ({ app }) => {
+    signInFailuresPerAccount: async ({ app, atLimit }) => {
       const { email } = await createUser(app);
-      await repeat(RATE_LIMITS.signInFailuresPerAccount.max + OVER, () =>
+      await exceed(RATE_LIMITS.signInFailuresPerAccount.max, atLimit, () =>
         signIn(app, email, randomIp()),
       );
       return { event: "rate_limited", route: SIGN_IN, accountKey: expect.any(String) };
     },
-    signUpPerIp: async ({ app }) => {
+    signUpPerIp: async ({ app, atLimit }) => {
       const ip = randomIp();
-      await repeat(RATE_LIMITS.signUpPerIp.max + OVER, () =>
+      await exceed(RATE_LIMITS.signUpPerIp.max, atLimit, () =>
         app.inject({
           method: "POST",
           url: SIGN_UP,
@@ -102,17 +128,17 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       );
       return { event: "rate_limited", route: SIGN_UP };
     },
-    healthReadyPerIp: async ({ app }) => {
+    healthReadyPerIp: async ({ app, atLimit }) => {
       const ip = randomIp();
-      await repeat(RATE_LIMITS.healthReadyPerIp.max + OVER, () =>
+      await exceed(RATE_LIMITS.healthReadyPerIp.max, atLimit, () =>
         app.inject({ method: "GET", url: "/health/ready", remoteAddress: ip }),
       );
       return { event: "rate_limited", route: "/health/ready" };
     },
-    invitationLookupPerIp: async ({ app }) => {
+    invitationLookupPerIp: async ({ app, atLimit }) => {
       const tomek = await createUser(app);
       const ip = randomIp();
-      await repeat(RATE_LIMITS.invitationLookupPerIp.max + OVER, () =>
+      await exceed(RATE_LIMITS.invitationLookupPerIp.max, atLimit, () =>
         app.inject({
           method: "GET",
           url: `/api/v1/invitations/${"A".repeat(43)}`,
@@ -122,12 +148,13 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       );
       return { event: "rate_limited", route: "/api/v1/invitations/:token" };
     },
-    invitationsCreatedPerList: async ({ app }) => {
+    invitationsCreatedPerList: async ({ app, atLimit }) => {
       const ania = await createUser(app);
       const list = await createList(db.pool, ania);
       await repeat(RATE_LIMITS.invitationsCreatedPerList.max, () =>
         createInvitation(db.pool, list),
       );
+      await atLimit();
       await repeat(OVER, () =>
         requestsAs(app, ania)("POST", `/api/v1/lists/${list.id}/invitations`),
       );
@@ -138,13 +165,14 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
         listId: list.id,
       };
     },
-    listsPerOwner: async ({ app }) => {
+    listsPerOwner: async ({ app, atLimit }) => {
       const ania = await createUser(app);
       await repeat(BUSINESS_LIMITS.listsPerOwner, () => createList(db.pool, ania));
+      await atLimit();
       await repeat(OVER, () => requestsAs(app, ania)("POST", "/api/v1/lists", { name: "Za dużo" }));
       return { event: "limit_reached", route: "/api/v1/lists", userId: ania.id };
     },
-    itemsPerList: async ({ app }) => {
+    itemsPerList: async ({ app, atLimit }) => {
       const ania = await createUser(app);
       const list = await createList(db.pool, ania);
       await db.pool.query(
@@ -153,6 +181,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
          FROM generate_series(1, $3::int) AS n`,
         [list.id, ania.id, BUSINESS_LIMITS.itemsPerList],
       );
+      await atLimit();
       await repeat(OVER, () =>
         requestsAs(app, ania)("POST", `/api/v1/lists/${list.id}/items`, { name: "Za dużo" }),
       );
@@ -163,7 +192,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
         listId: list.id,
       };
     },
-    participantsPerList: async ({ app }) => {
+    participantsPerList: async ({ app, atLimit }) => {
       const ania = await createUser(app);
       const list = await createList(db.pool, ania);
       const people = Array.from({ length: BUSINESS_LIMITS.participantsPerList }, () => {
@@ -172,6 +201,7 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       });
       await drizzle(db.pool).insert(user).values(people);
       for (const person of people) await addMember(db.pool, list, person);
+      await atLimit();
       await repeat(OVER, () =>
         requestsAs(app, ania)("POST", `/api/v1/lists/${list.id}/invitations`),
       );
@@ -182,23 +212,26 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
         listId: list.id,
       };
     },
-    connectionsPerSession: async ({ app, live }) => {
+    connectionsPerSession: async ({ app, live, atLimit }) => {
       const ania = await createUser(app);
       await repeat(LIVE_LIMITS.connectionsPerSession, () => live(ania.cookie));
+      await atLimit();
       await repeat(OVER, async () => (await live(ania.cookie)).closed());
       return { event: "limit_reached", userId: ania.id };
     },
-    socketsPerSession: async ({ app, liveUrl, held }) => {
+    socketsPerSession: async ({ app, liveUrl, held, atLimit }) => {
       const ania = await createUser(app);
       const url = await liveUrl();
       await repeat(LIVE_LIMITS.socketsPerSession, async () => {
         held.push(await closeWithoutFin(url, { cookie: ania.cookie }));
       });
+      await atLimit();
       await repeat(OVER, () => closeCode(url, { cookie: ania.cookie }));
       return { event: "limit_reached", userId: ania.id };
     },
-    messagesPerSecond: async ({ app, live }) => {
+    messagesPerSecond: async ({ app, live, atLimit }) => {
       const ania = await createUser(app);
+      await atLimit();
       await repeat(OVER, async () => {
         const client = await live(ania.cookie);
         for (let i = 0; i <= LIVE_LIMITS.messagesPerSecond; i += 1) client.send({ type: "pong" });
@@ -206,8 +239,9 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       });
       return { event: "rate_limited", userId: ania.id };
     },
-    messageBytes: async ({ app, live }) => {
+    messageBytes: async ({ app, live, atLimit }) => {
       const ania = await createUser(app);
+      await atLimit();
       await repeat(OVER, async () => {
         const client = await live(ania.cookie);
         client.send({ type: "subscribe", listId: "x".repeat(LIVE_LIMITS.messageBytes) });
@@ -215,7 +249,8 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       });
       return { event: "limit_reached", userId: ania.id };
     },
-    bodyBytes: async ({ app }) => {
+    bodyBytes: async ({ app, atLimit }) => {
+      await atLimit();
       await repeat(OVER, () =>
         app.inject({
           method: "POST",
@@ -258,8 +293,17 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
         return client;
       };
 
+      let countsAtLimit: Record<string, number> | undefined;
+      const atLimit = async () => {
+        countsAtLimit = await rowCounts(db.pool);
+      };
+
       try {
-        const expected = await scenario({ app, live, liveUrl: appUrl, held });
+        const expected = await scenario({ app, live, liveUrl: appUrl, held, atLimit });
+
+        // T-048 (TH-27): próby ponad limit nie dokładają wierszy w żadnej tabeli.
+        expect(countsAtLimit, "scenario must call atLimit() before exceeding").toBeDefined();
+        expect(await rowCounts(db.pool)).toEqual(countsAtLimit);
 
         const events = logs
           .security()
