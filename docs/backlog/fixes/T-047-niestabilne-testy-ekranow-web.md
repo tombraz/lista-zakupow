@@ -4,7 +4,8 @@ title: "Niestabilne testy ekranów web pod obciążeniem pełnego `pnpm test`"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: blocked        # todo | in-progress | in-qa | done | blocked
+blocked_reason: "Nie odtworzono (11 przebiegów, także pod obciążeniem); czeka na kolejną porażkę z zapisanym test-results/vitest-junit.xml"
 depends_on: []
 layers: [web]
 requirements: []
@@ -51,8 +52,29 @@ related_tasks: [T-021, T-036]
 
 ## Root cause
 
+Nieustalona — porażka się nie odtworzyła, a jej komunikaty nie zostały zapisane (Evidence). Kandydat bez dowodu: zastój pętli zdarzeń workera > 1 s w trakcie `findBy*`/`waitFor`. Decyzja właściciela 2026-10-31: zadanie `blocked`; Vitest zapisuje teraz raport porażek ostatniego przebiegu do `test-results/vitest-junit.xml` (`vitest.config.ts`, reporter `junit`), żeby przy kolejnym wystąpieniu był komunikat do analizy. Bez poprawki w testach i kodzie ekranów (AC2: nie podnosimy limitów na ślepo).
+
+**Wznowienie:** gdy pełny `pnpm test` znów da porażkę w testach ekranów web — skopiować `test-results/vitest-junit.xml` (nadpisywany przy każdym przebiegu) do tego zadania i wrócić do kroku „Reproduce” przez `/fix T-047`.
+
 ## Evidence
 
+Próby odtworzenia (2026-10-31, Windows 11 / Git Bash, 8 rdzeni, 64 GB, commit `21280b1`) — wszystkie zielone, porażka się nie odtworzyła:
+
+| Warunek | Przebiegi | Wynik | Czas |
+| --- | --- | --- | --- |
+| pełny `pnpm test` | 5 | 93/93 plików, 515/515 | 48–64 s |
+| `vitest run --project web src/screens` + 8 procesów `node` z pętlą zajmującą CPU | 3 | 18/18, 185/185 | 62–65 s (ok. 3× wolniej) |
+| pełny `pnpm test` równolegle z pętlami `pnpm lint`, `pnpm typecheck`, `lint-directives.test.sh` (scenariusz QA T-046) | 3 | 93/93, 515/515 | 92–111 s |
+
+Ustalenia bez potwierdzenia porażką:
+
+- `waitFor`/`findBy*` w `@testing-library/dom` 10.4.2 po upływie limitu (domyślnie 1000 ms) nie sprawdza warunku ostatni raz (`handleTimeout` → `onDone(lastError)`). Zastój pętli zdarzeń workera > 1 s (GC, stronicowanie, planista Windows przy maszynie WSL2 Dockera) kończy oczekiwanie porażką, nawet gdy ekran jest już poprawny. Samo obciążenie CPU (wyżej) tego nie wywołało.
+- `lint-directives.test.sh` podaje kod przez `--stdin`, nie tworzy plików w drzewie — współdzielenie plików z testami web odpada.
+- W plikach `SignUpScreen`, `ListScreen`, `ListScreen.edit`, `ParticipantsScreen` brak fake timerów, `localStorage`, `vi.mock`/`vi.spyOn`, własnych limitów; izolacja Vitest per plik.
+- Komunikaty błędów z porażki w QA T-046 nie zostały zapisane — bez nich nie da się rozróżnić „limit czasu” od „asercja na złym stanie”.
+
 ## Prevention
+
+Co zapobiegłoby utracie śladu: komunikaty porażek zapisywane do pliku przy każdym przebiegu — wprowadzone (reporter `junit` w `vitest.config.ts`). Sprawdzone tymczasowym czerwonym testem w `packages/shared/test/`: `<failure message="expected 1 to be 2 …" type="AssertionError">` w `test-results/vitest-junit.xml` (plik usunięty). Po zmianie: `pnpm test` 93/93, 515/515; `pnpm format:check`, `pnpm lint`, `pnpm typecheck` zielone.
 
 <!-- QA rounds are appended below by /qa-task -->
