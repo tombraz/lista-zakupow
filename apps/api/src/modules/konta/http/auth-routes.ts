@@ -7,6 +7,7 @@ import {
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
+import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
 import { logLimitEvent, securityEvent } from "../../../logging";
 import { passCookies } from "./cookies";
@@ -63,26 +64,31 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     }));
   });
 
-  app.post("/api/auth/sign-in/email", async (request, reply) => {
-    const credentials = validate(signInRequestSchema, request.body);
-    const accountKey = failures.accountKey(credentials.email);
-    if (!(await failures.reserve(accountKey))) {
-      logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", {
-        ids: { accountKey },
-      });
-      throw new ApiError(429, "rate_limited");
-    }
-    const response = await forward(auth, origin, request, credentials);
-    if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
-    else await failures.release(accountKey);
-    if (response.status === 429) {
-      // Podmiot to IP, nie konto: seria kont z jednego IP to jedno zdarzenie w oknie.
-      logLimitEvent(request, "rate_limited", "signInPerIp", {
-        ids: { accountKey },
-        subject: request.ip,
-      });
-    }
-    return relay(response, reply);
+  // TH-27: limit per IP przed licznikiem konta, bo `reserve()` pisze do bazy. Limit Better Auth
+  // (w bazie) zostaje za nim jako druga linia, np. po restarcie API (licznik Fastify w pamięci).
+  void app.register(async (scope) => {
+    await perIpRateLimit(scope);
+    scope.post("/api/auth/sign-in/email", perIp("signInPerIp"), async (request, reply) => {
+      const credentials = validate(signInRequestSchema, request.body);
+      const accountKey = failures.accountKey(credentials.email);
+      if (!(await failures.reserve(accountKey))) {
+        logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", {
+          ids: { accountKey },
+        });
+        throw new ApiError(429, "rate_limited");
+      }
+      const response = await forward(auth, origin, request, credentials);
+      if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
+      else await failures.release(accountKey);
+      if (response.status === 429) {
+        // Podmiot to IP, nie konto: seria kont z jednego IP to jedno zdarzenie w oknie.
+        logLimitEvent(request, "rate_limited", "signInPerIp", {
+          ids: { accountKey },
+          subject: request.ip,
+        });
+      }
+      return relay(response, reply);
+    });
   });
 
   app.post("/api/auth/sign-out", async (request, reply) => {

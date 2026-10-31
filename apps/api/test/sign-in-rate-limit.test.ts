@@ -52,6 +52,43 @@ describe("sign-in rate limits (SEC1: TH-09)", () => {
     await app.close();
   });
 
+  async function failureRows(): Promise<number> {
+    const { rows } = await db.pool.query<{ count: string }>("SELECT count(*) FROM sign_in_failure");
+    return Number(rows[0]?.count);
+  }
+
+  // T-048 (TH-27): limit per IP działa przed licznikiem konta, więc seria nowych e-maili z
+  // jednego IP nie zapycha `sign_in_failure`.
+  it("does not write sign-in failure rows once the IP limit is exceeded", async () => {
+    const app = buildTestApp(db.pool);
+    const ip = randomIp();
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      await signIn(app, { email: `nikt-${String(attempt)}@example.com`, password: "x" }, ip);
+    }
+    const before = await failureRows();
+
+    const statuses: number[] = [];
+    for (let attempt = 11; attempt <= 30; attempt += 1) {
+      const email = `nikt-${String(attempt)}@example.com`;
+      statuses.push((await signIn(app, { email, password: "x" }, ip)).statusCode);
+    }
+
+    expect(statuses).toEqual(Array.from({ length: 20 }, () => 429));
+    expect(await failureRows()).toBe(before);
+    await app.close();
+  });
+
+  it("removes the account counter when it returns to zero", async () => {
+    const app = buildTestApp(db.pool);
+    const user = await createUser(app);
+
+    const right = await signIn(app, { email: user.email, password: user.password }, randomIp());
+
+    expect(right.statusCode).toBe(200);
+    expect(await failureRows()).toBe(0);
+    await app.close();
+  });
+
   it("blocks an account after 5 failed attempts from different IPs, even with the right password", async () => {
     const app = buildTestApp(db.pool);
     const user = await createUser(app);

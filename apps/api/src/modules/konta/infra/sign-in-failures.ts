@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { RATE_LIMITS } from "@lista/shared";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { signInFailure } from "../../../db/schema";
 
@@ -44,11 +44,17 @@ export class SignInFailures {
     return (row?.failures ?? 0) <= max;
   }
 
-  /** Oddaje zarezerwowaną próbę, która nie była porażką (np. poprawne hasło). */
+  /**
+   * Oddaje zarezerwowaną próbę, która nie była porażką (np. poprawne hasło). Licznik na zerze
+   * znika, żeby tabela trzymała tylko konta z porażkami (TH-27). Równoległa rezerwacja między
+   * zapytaniami podnosi licznik ponad zero, więc `DELETE` jej wiersza nie usunie.
+   */
   async release(accountKey: string): Promise<void> {
+    const account = eq(signInFailure.accountKey, accountKey);
     await this.db
       .update(signInFailure)
       .set({ failures: sql`GREATEST(${signInFailure.failures} - 1, 0)` })
-      .where(eq(signInFailure.accountKey, accountKey));
+      .where(account);
+    await this.db.delete(signInFailure).where(and(account, eq(signInFailure.failures, 0)));
   }
 }
