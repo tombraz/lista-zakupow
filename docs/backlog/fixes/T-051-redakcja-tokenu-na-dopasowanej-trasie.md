@@ -4,7 +4,7 @@ title: "Redakcja tokenu zaproszenia w logu obejmuje każdy zapis ścieżki"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12]
@@ -73,3 +73,26 @@ Inne wystąpienia wzorca: `API_PATH` w `http/web-app.ts` (handler 404, udokument
 Reguła lintu TH-26 z T-049 (`API_RAW_URL_SYNTAX`) nie obejmuje serializera logu (`raw.url` w `logging.ts`). Po poprawce rozważyć jej rozszerzenie na serializer albo test wariantów zapisu dla każdej ścieżki z tokenem.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-31)
+
+Verdict: pass
+
+Reprodukcja: `pnpm install --frozen-lockfile`, `pnpm build` — OK; `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` — bez błędów; `pnpm test` — 524 testy, 0 błędów (JUnit); `pnpm vitest run --project api logs` — 7/7.
+
+Kryteria akceptacji:
+
+- AC1 — pass: test `redacts the invitation token whatever the path spelling` sprawdza całe linie logu (także kanał `security`) i kształt `req.url` dla każdego zapisu (zakodowany segment prefiksu, zakodowany pierwszy znak tokenu, `//`, query, `%zz`).
+- AC2 — pass: test SC-08 analogicznie, z fallbackiem SPA.
+- AC3 — pass: redakcja na ścieżce ze zdekodowanymi znakami ASCII i zwiniętymi `//`, nie na prefiksie surowego adresu (przegląd `apps/api/src/logging.ts`).
+- AC4 — pass: dotychczasowe testy `invitations.logs.test.ts`, `logging.test.ts`, J-04 i redakcja `?token=` zielone w pełnym zestawie.
+
+Spot-check: przywrócenie `logging.ts` z `fe95363^` — oba nowe testy czerwone (2 failed / 4 passed), stare zielone; plik przywrócony, `git status` czysty. Dowód red w Evidence obecny dla obu testów.
+
+Eksploracja (sonda `redactedUrl` i sonda routera Fastify, lokalnie): `/%61pi/v1/invitations/T`, `%E2%82T`, `%zzT`, `T%`, `///zaproszenie/T#frag`, `/zaproszenie/T/`, `?token=` — zredagowane, bez wyjątku. `/API/...` nie trafia w trasę (router rozróżnia wielkość liter), więc brak redakcji nie jest wyciekiem tokenu z trasy. Żądanie z nieprawidłowym `%` w ścieżce — 400 przed routerem, nielogowane.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security / TH-26 | Dekodowanie `%2F` w `decodedAscii` daje inną postać ścieżki niż router: find-my-way nie dekoduje `%2F` przy dopasowaniu, więc `POST /api/v1/invitations/A%2FTOKEN123/accept` trafia w `/:token/accept` z `token = "A/TOKEN123"`, a w logu jest `/api/v1/invitations/[redacted]/TOKEN123/accept`. Część parametru trasy zostaje w logu. Ryzyko pomijalne: taki parametr nie może być prawdziwym tokenem (base64url bez `/`) i pochodzi od samego żądającego. | sonda `redactedUrl` i sonda Fastify `inject` (status 200, `routeOptions.url = /api/v1/invitations/:token/accept`) | nie dekodować `%2F` (`ASCII_ESCAPE` bez `2f`) albo redagować według `routeOptions.url` i `params.token`, gdy trasa jest dopasowana |
+| 2 | minor | test quality / duplikacja | `loggedUrls()` powtarza wyciąganie `req.url` z dwóch starszych testów w tym samym pliku, które z niej nie korzystają. | `apps/api/test/invitations.logs.test.ts` | starsze testy używają `loggedUrls()` |
+| 3 | note | test quality | Asercja `status < 500` nie pokazuje, że każdy wariant faktycznie trafił w trasę zaproszenia (część idzie do fallbacku SPA lub 404). AC tego nie wymaga, bo badany jest log. | ten sam plik | opcjonalnie sprawdzić `routeOptions.url` / status dla wariantów API |
