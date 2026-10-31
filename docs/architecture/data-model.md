@@ -109,7 +109,7 @@ erDiagram
 | Usunięcie wygrywa z równoczesną edycją (F-14) | `UPDATE … WHERE id = $1 AND list_id = $2`; 0 wierszy = `404` |
 | Kolejność (SC-05, SC-06) | listy: `updated_at DESC`; nieodhaczone: `created_at DESC`; odhaczone: `checked_at DESC` |
 
-Licznik nieudanych logowań per konto (TH-09, T-004): tabela `sign_in_failure (account_key PK, failures, window_started_at)`; `account_key` to HMAC-SHA256 znormalizowanego e-maila z `BETTER_AUTH_SECRET`, więc tabela nie powiela adresu. Okno 15 min liczone od pierwszej porażki. Próba jest rezerwowana przed sprawdzeniem hasła jednym zapytaniem `INSERT … ON CONFLICT DO UPDATE … RETURNING failures` (odmowa, gdy wynik > 5), a próba zakończona inaczej niż 401 jest oddawana — równoległe żądania nie obejdą limitu (QA T-004 runda 1).
+Licznik nieudanych logowań per konto (TH-09, T-004): tabela `sign_in_failure (account_key PK, failures, window_started_at)`; `account_key` to HMAC-SHA256 znormalizowanego e-maila z `BETTER_AUTH_SECRET`, więc tabela nie powiela adresu. Okno 15 min liczone od pierwszej porażki. Próba jest rezerwowana przed sprawdzeniem hasła jednym zapytaniem `INSERT … ON CONFLICT DO UPDATE … RETURNING failures` (odmowa, gdy wynik > 5), a próba zakończona inaczej niż 401 jest oddawana — równoległe żądania nie obejdą limitu (QA T-004 runda 1). Licznik, który po oddaniu próby wraca do 0, jest usuwany, a limit per IP działa przed rezerwacją, więc próby ponad limit IP nie piszą do tabeli (TH-27, T-048).
 
 Indeksy: `list_member (user_id)`, `item (list_id)`, `invitation (list_id)`, `shopping_list (owner_id)`, `session (user_id)`. Dla `item` rolę indeksu po `list_id` pełni unikalny `item_list_id_name_key_unique (list_id, name_key)` (pierwsza kolumna), więc osobnego indeksu nie ma (T-006).
 
