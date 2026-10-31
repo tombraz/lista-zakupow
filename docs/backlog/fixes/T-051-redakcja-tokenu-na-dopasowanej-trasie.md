@@ -4,7 +4,7 @@ title: "Redakcja tokenu zaproszenia w logu obejmuje każdy zapis ścieżki"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12]
@@ -27,10 +27,10 @@ related_tasks: [T-008, T-049]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given żądanie do trasy zaproszenia (podgląd, przyjęcie) w wariancie zapisu ścieżki, when API je loguje, then w logu (także w kanale `security`) nie ma tokenu, a ścieżka ma `[redacted]` w miejscu tokenu. — verified by: test integracyjny w `invitations.logs.test.ts`
-- [ ] AC2: Given strona SC-08 `/zaproszenie/:token` w wariancie zapisu, when API ją loguje, then token jest zredagowany. — verified by: test integracyjny
-- [ ] AC3: Redakcja opiera się na dopasowanej trasie (`request.routeOptions.url` z parametrem `:token`) albo na zdekodowanej ścieżce, nie na prefiksie surowego adresu (TH-26, `backend.md` „Zasady bezpieczeństwa”). — verified by: przegląd kodu w QA
-- [ ] AC4: No regression in: `invitations.logs.test.ts`, `logging.test.ts`, J-04, redakcja `?token=` w query.
+- [x] AC1: Given żądanie do trasy zaproszenia (podgląd, przyjęcie) w wariancie zapisu ścieżki, when API je loguje, then w logu (także w kanale `security`) nie ma tokenu, a ścieżka ma `[redacted]` w miejscu tokenu. — verified by: test integracyjny w `invitations.logs.test.ts`
+- [x] AC2: Given strona SC-08 `/zaproszenie/:token` w wariancie zapisu, when API ją loguje, then token jest zredagowany. — verified by: test integracyjny
+- [x] AC3: Redakcja opiera się na dopasowanej trasie (`request.routeOptions.url` z parametrem `:token`) albo na zdekodowanej ścieżce, nie na prefiksie surowego adresu (TH-26, `backend.md` „Zasady bezpieczeństwa”). — verified by: przegląd kodu w QA
+- [x] AC4: No regression in: `invitations.logs.test.ts`, `logging.test.ts`, J-04, redakcja `?token=` w query.
 
 ## TDD plan
 
@@ -55,11 +55,18 @@ related_tasks: [T-008, T-049]
 
 ## Root cause
 
-<Uzupełnia /fix.>
+`redactedUrl` (T-008, commit `0f997f6`) dopasowywał `INVITATION_TOKEN_PATH` do surowego `request.url`, a router Fastify (find-my-way) dopasowuje trasę po zdekodowanej ścieżce: `/%61pi/v1/invitations/<token>` trafia do podglądu (410/200), a strona SC-08 jest serwowana z fallbacku SPA dla `/%7aaproszenie/<token>` i `//zaproszenie/<token>` (403 z `@fastify/static`, wciąż logowane). Testy z T-008 sprawdzały tylko kanoniczny zapis ścieżki, a reguła lintu z T-049 (`API_RAW_URL_SYNTAX`) pomija `logging.ts` (wyłączony z bloku reguł API), więc serializer logu nie przeszedł przeglądu wariantów zapisu.
+
+Poprawka: rozpoznanie ścieżki z tokenem na ścieżce ze zdekodowanymi znakami ASCII (`%XX` < `0x80`, bez wyjątku przy nieprawidłowej sekwencji `%`) i ze zwiniętymi `//`; taka ścieżka trafia do logu zdekodowana, z `[redacted]` w miejscu tokenu. Query bez zmian (redakcja `?token=`).
+
+Inne wystąpienia wzorca: `API_PATH` w `http/web-app.ts` (handler 404, udokumentowany wyjątek w lincie) wybiera SPA albo JSON po surowym adresie — `GET /%61pi/v1/nieznana` dostaje `index.html` zamiast `404 not_found`. To nie decyzja bezpieczeństwa (trasa i tak nie istnieje) i inny skutek; bez zmian w tym zadaniu. Żądanie z nieprawidłową sekwencją `%` w ścieżce Fastify odrzuca 400 przed routerem (`onBadUrl` bez `frameworkErrors`) i w ogóle go nie loguje.
 
 ## Evidence
 
-<Uzupełnia /fix.>
+- Red (przed poprawką): `invitation token in logs > redacts the invitation token whatever the path spelling` — `AssertionError: expected '{"level":30,…' not to contain 'RMdsT-s7…'`; w logu `"url":"/api/%761/invitations/YRMdsT-…/accept"`, `"/api/v1/%69nvitations/…"`, `"//api/v1/invitations/…"`.
+- Red: `redacts the token of the SC-08 page whatever the path spelling` — w logu `"url":"/%7aaproszenie/pAdVYVz4…"`, `"//zaproszenie/pAdVYVz4…"`.
+- Green: `pnpm vitest run --project api logs` — 7/7.
+- Pełny zestaw `pnpm test` — 96 plików, 524 testy, wszystkie zielone; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm quality` — bez błędów.
 
 ## Prevention
 
