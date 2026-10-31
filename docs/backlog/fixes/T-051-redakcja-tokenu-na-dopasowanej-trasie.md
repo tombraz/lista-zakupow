@@ -4,7 +4,7 @@ title: "Redakcja tokenu zaproszenia w logu obejmuje każdy zapis ścieżki"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12]
@@ -136,3 +136,24 @@ Spot-check: przywrócenie `ASCII_ESCAPE = /%([0-7][0-9a-f])/gi` → 3 testy czer
 
 - #1 (blocker): red — `pnpm vitest run --project api --sequence.shuffle --sequence.seed=1|2|4` → `logs.token-paths.test.ts` pada (`expected [] to …`). Poprawka: trasy z `app.printRoutes({ commonPrefix: false })` po `ready()` (`registeredRoutes`), bez `vi.mock("fastify")`; asercja na znaną trasę `/api/v1/lists/:listId/items/:itemId` wywraca test przy zmianie formatu drzewa. Green: seedy 1, 2, 4, 5, 6 (pełny projekt `api`, 255/255) i reprodukcja z QA (`health.test.ts` + test pokrycia, `--maxWorkers=1 --sequence.shuffle.files`, seedy 1 i 3); `pnpm test` 97 plików, 525 testów.
 - #2 (minor): `webTokenPaths()` sprawdza, że regex znalazł każde `path:` w `routes.tsx`; inny zapis ścieżki zawodzi test.
+
+## QA round 3 (2026-10-31)
+
+Verdict: pass
+
+Zakres: poprawka po rundzie 2 (`6b93199`): trasy w teście pokrycia z `app.printRoutes({ commonPrefix: false })` zamiast `vi.mock("fastify")`, kontrola kompletności `path:` w `webTokenPaths()`.
+
+Reprodukcja: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` — bez błędów; `pnpm test` — 97 plików, 525 testów, 0 błędów (JUnit). Reprodukcja z rundy 2 (`health.test.ts` + `logs.token-paths.test.ts`, `--maxWorkers=1 --no-file-parallelism --sequence.shuffle.files`, seedy 1–6) — 5/5 dla każdego seeda; pełny projekt `api` z `--sequence.shuffle.files`, seedy 7 i 11 — 255/255.
+
+Kryteria akceptacji:
+
+- AC1 — pass (bez zmian w kodzie produkcyjnym od rundy 2; testy zielone).
+- AC2 — pass (jw.).
+- AC3 — pass (jw.).
+- AC4 — pass: pełny zestaw zielony, test pokrycia już nie zależy od kolejności plików.
+
+Spot-check: (1) sonda porównująca surowe drzewo `printRoutes` z wynikiem parsera — wszystkie 16 tras odtworzone poprawnie, w tym obie trasy z `:token`; jedyna niedopasowana linia to pusta linia końcowa. (2) Mutacja `INVITATION_TOKEN_PATH` bez `/api/v1/invitations/` i przebieg z `health.test.ts` jako pierwszym plikiem w tym samym wątku — test pokrycia czerwony (1 failed / 4 passed). Plik przywrócony, `git status` czysty.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | test quality | `registeredRoutes()` po cichu pomija linie drzewa, których nie dopasuje wyrażenie (np. parametr z wyrażeniem regularnym zawierającym spację). Asercja na znaną trasę `/api/v1/lists/:listId/items/:itemId` łapie zmianę formatu całego drzewa, ale nie pojedynczy nietypowy węzeł. | `apps/api/test/logs.token-paths.test.ts`, `registeredRoutes()` | opcjonalnie: asercja, że każda niepusta linia drzewa została dopasowana |
