@@ -4,7 +4,7 @@ title: "Logowanie: limit per IP przed zapisem licznika nieudanych prób"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-02]
@@ -75,3 +75,32 @@ Poprawka: trasa logowania jest w zakresie `perIpRateLimit` z `perIp("signInPerIp
 Propozycja z przeglądu: reguła „limit przed zapisem” na trasach bez uwierzytelnienia w `backend.md` (TH-27) i szablon testu „liczba wierszy stała po przekroczeniu limitu”.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-31)
+
+Verdict: pass
+
+Odtworzenie (`99177fc`, czysty stan): `pnpm install --frozen-lockfile`, `pnpm test` 93 pliki / 517 testów zielone, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality`, `pnpm build` bez błędów. `git status` czysty po instalacji i buildzie.
+
+Kryteria akceptacji:
+
+- AC1 pass: `does not write sign-in failure rows once the IP limit is exceeded` liczy wiersze przed i po 20 próbach z 429. Spot-check: usunięcie `perIp("signInPerIp")` z trasy → `expected 30 to be 10`.
+- AC2 pass: `removes the account counter when it returns to zero`. Spot-check: usunięcie `DELETE` w `release()` → `expected 1 to be +0`. Ścieżkę „429 z Better Auth” sprawdziłem osobno (niżej): wiersz nie zostaje.
+- AC3 pass: `checks at most 5 passwords per account when attempts arrive in parallel` i pozostałe testy limitu per konto zielone.
+- AC4 pass: `limits.security.test.ts` (scenariusz `signInPerIp`, 13 prób) wymaga dokładnie jednego zdarzenia `rate_limited`; `perIp` loguje z podmiotem `request.ip` i bez e-maila; `security-log.test.ts` zielony.
+- AC5 pass: `sign-in.test.ts`, `sign-in-rate-limit.test.ts`, `security-log.test.ts`, J-01 (pełny suite) zielone.
+
+Testy eksploracyjne (tymczasowe pliki w `apps/api/test/`, usunięte):
+
+- nieprawidłowe ciało (`password: 1`, e-mail 5000 znaków) po wyczerpaniu limitu → 429 `rate_limited` przed walidacją, liczba wierszy bez zmian;
+- „restart API” (nowa instancja, ten sam bazowy licznik Better Auth) → 429 z drugiej linii, `reserve()` + `release()` zostawiają liczbę wierszy bez zmian;
+- równoległe żądania z jednego IP: 5 i 10 → same 401 (5 i 10 wierszy); 12 i 40 → wszystkie 429, 0 wierszy, jedno zdarzenie `signInPerIp`; inne IP dalej 401;
+- warianty e-maila i `TRUSTED_PROXIES` / `X-Forwarded-For`: istniejące testy zielone, teraz przez limiter Fastify.
+
+Root cause wyjaśnia, czemu testy nie złapały błędu (nie liczyły wierszy). Red evidence dla obu nowych testów w Evidence, zgodne z moim spot-checkiem.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | backend / limity | Równoległa seria ponad limit z jednego IP dostaje 429 na wszystkie żądania, także pierwsze 10 (zachowanie magazynu w pamięci `@fastify/rate-limit`; dotyczy każdej trasy z `perIp`). Fail-closed, więc nie luka, ale różni się od sekwencyjnego „10 przechodzi, 11. odmowa”. | 12 równoległych → `{"429":12}`, 0 wierszy; 10 równoległych → `{"401":10}` | Udokumentować w `backend.md` albo zaakceptować jako zamierzone. |
+| 2 | minor | dokumentacja | `data-model.md:112` opisuje `reserve`/oddanie próby, ale nie mówi, że `release()` usuwa wiersz z licznikiem 0. | `docs/architecture/data-model.md:112` | Dopisać zdanie o usuwaniu wiersza na zerze (TH-27). |
+| 3 | note | baza / TH-27 | Wiersze z porażkami (`failures > 0`) nadal rosną przy rotacji IP (10 na IP na minutę) do czasu sprzątania z `data-model.md:134` (E-02, S-02-05). Zgodne z zakresem tej poprawki. | analiza kodu | Sprzątanie w S-02-05. |
