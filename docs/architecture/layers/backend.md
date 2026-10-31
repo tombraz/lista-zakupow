@@ -69,6 +69,8 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 - Decyzje bezpieczeństwa w hookach (`Origin`, limity, wybór trasy do przekazania dalej) na dopasowanej trasie `request.routeOptions.url`, nigdy na prefiksie surowego `request.url`: router dekoduje ścieżkę, więc `/api/%761/lists` trafia do trasy `/api/v1/lists` (TH-26). Każdy chroniony prefiks ma test wariantów zapisu ścieżki (`origin.test.ts`, `spellings`). Lint (`API_RAW_URL_SYNTAX`) zakazuje `request.url` w `apps/api/src`; wyjątek tylko handler 404 w `http/web-app.ts`.
 - API serwuje też zbudowany web (`@fastify/static` z `apps/web/dist`, fallback na `index.html` dla ścieżek spoza `/api`, `/health`) pod jednym originem; `@fastify/helmet` (CSP, HSTS, `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`) dla wszystkich odpowiedzi; CORS wyłączony (ADR 0006).
 - Logger z redakcją `authorization`, `cookie`, `password`, `token`, ścieżek `/invitations/:token`; zdarzenia bezpieczeństwa w logu `security` z samymi identyfikatorami (TH-08, TH-21).
+- Weryfikacja zagrożenia z modelu (TH-xx) sprawdza odmowę i brak danych na wszystkich trasach, które je niosą, nie na jednej: treść i dane osób poza logiem (`logs.content.test.ts`: znaczniki w nazwach, notatkach, imionach, e-mailach i tokenach), e-mail poza odpowiedziami i zdarzeniami dla uczestnika (`participant-emails.test.ts`), `Secure`, `HttpOnly`, `SameSite=Lax` na https (`session-cookie.test.ts`). Nowa trasa z treścią albo danymi osób trafia do tych testów (TH-16, TH-19, TH-21).
+- Każda reguła lintu bezpieczeństwa (`SAFE_SYNTAX` i reguły z TH-xx w `eslint.config.js`) ma fixture naruszenia i bezpiecznego odpowiednika w `scripts/test/lint-security.test.mjs`; ten sam skrypt sprawdza, że każdy blok nadpisujący `no-restricted-syntax` powtarza `SAFE_SYNTAX` (T-050).
 - Kryptografia i hasła wyłącznie przez Better Auth; tokeny zaproszeń z `crypto.randomBytes(32)` (TH-06, TH-09).
 
 ## Konwencje
@@ -101,6 +103,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-31 | T-050: „Zasady bezpieczeństwa”: weryfikacje TH-16/TH-19/TH-21 na wszystkich trasach z treścią; fixture dla każdej reguły lintu bezpieczeństwa (`lint-security.test.mjs`). |
 | 2026-10-31 | T-048: logowanie z `perIp("signInPerIp")` przed licznikiem konta; „Pułapki”: limit przed pierwszym zapisem, `atLimit()` w `limits.security.test.ts`. |
 | 2026-10-30 | T-041: `securityEvent` w `src/logging.ts` — jeden kształt każdego zdarzenia `security`, na nim `logLimitEvent`; `limitLog` (WS) bez flagi „raz na połączenie”. |
 | 2026-10-30 | Przegląd E-01 runda 3: „Pułapki”: każde zdarzenie `security` przez jedną funkcję w `logging.ts`; opis `perIp(key)`. |

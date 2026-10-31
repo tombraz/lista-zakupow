@@ -5,6 +5,7 @@
 // buduje program TypeScript raz.
 import { fileURLToPath } from "node:url";
 import { ESLint } from "eslint";
+import config, { SAFE_SYNTAX, SAFE_SYNTAX_DDL } from "../../eslint.config.js";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const eslint = new ESLint({ cwd: root });
@@ -32,6 +33,31 @@ const rejected = [
   ["przypisanie innerHTML przez indeks", web, syntax, "TH-15", show('el["innerHTML"] += name;')],
   ["przypisanie outerHTML", web, syntax, "TH-15", show("el.outerHTML = name;")],
   ["insertAdjacentHTML", web, syntax, "TH-15", show('el.insertAdjacentHTML("beforeend", name);')],
+  ["przypisanie innerHTML przez szablon", web, syntax, "TH-15", show("el[`innerHTML`] = name;")],
+  [
+    "Object.assign z innerHTML",
+    web,
+    syntax,
+    "TH-15",
+    show("Object.assign(el, { innerHTML: name });"),
+  ],
+  ["setHTMLUnsafe", web, syntax, "TH-15", show("el.setHTMLUnsafe(name);")],
+  [
+    "createContextualFragment",
+    web,
+    syntax,
+    "TH-15",
+    show("el.append(document.createRange().createContextualFragment(name));"),
+  ],
+  ["document.write", web, syntax, "TH-15", show("document.write(name);")],
+  ["przypisanie srcdoc", web, syntax, "TH-15", show("(el as HTMLIFrameElement).srcdoc = name;")],
+  [
+    "srcDoc w JSX",
+    web,
+    syntax,
+    "TH-15",
+    'export const A = ({ html }: { html: string }) => <iframe title="x" srcDoc={html} />;',
+  ],
   [
     "insertAdjacentHTML",
     shared,
@@ -108,6 +134,20 @@ for (const [name, file, rule, threat, source] of rejected) {
 for (const [name, file, source] of accepted) {
   const found = (await errors(file, source)).filter((m) => SECURITY_RULES.includes(m.ruleId));
   check(`${name} (${file})`, found.length === 0, `nieoczekiwane: ${JSON.stringify(found)}`);
+}
+
+// Blok, który nadpisuje no-restricted-syntax, zastępuje listę: każdy musi powtórzyć SAFE_SYNTAX
+// (albo SAFE_SYNTAX_DDL w schema.ts), inaczej reguły bezpieczeństwa po cichu znikają w jego plikach.
+const selectors = (entries) => entries.map((entry) => entry.selector);
+for (const block of config) {
+  const setting = block.rules?.["no-restricted-syntax"];
+  if (!Array.isArray(setting)) continue;
+  const present = new Set(selectors(setting.slice(1)));
+  const complete = [SAFE_SYNTAX, SAFE_SYNTAX_DDL].some((safe) =>
+    selectors(safe).every((selector) => present.has(selector)),
+  );
+  const files = JSON.stringify(block.files ?? "wszystkie pliki");
+  check(`no-restricted-syntax z SAFE_SYNTAX (${files})`, complete, "brak selektorów SAFE_SYNTAX");
 }
 
 process.exit(failures);

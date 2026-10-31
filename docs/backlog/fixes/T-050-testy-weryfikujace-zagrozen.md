@@ -78,6 +78,13 @@ Testy (zachowanie było poprawne, więc „czerwone” to mutacja kodu, cofnięt
 
 Propozycja z przeglądu: każda nowa reguła lintu bezpieczeństwa dostaje plik-fixture; weryfikacja w modelu zagrożeń zawsze z asercją braku danych.
 
+**Co by temu zapobiegło:** kontrola, która sama pada, gdy zabezpieczenie z modelu zagrożeń przestaje działać albo nie obejmuje części kodu. Zaakceptowane przez właściciela (po QA round 1) i wdrożone:
+
+- `scripts/test/lint-security.test.mjs` sprawdza też, że każdy blok `eslint.config.js` nadpisujący `no-restricted-syntax` zawiera wszystkie selektory `SAFE_SYNTAX` (albo `SAFE_SYNTAX_DDL` w `schema.ts`), eksportowane z konfiguracji (QA #2). Mutacja: usunięcie `...SAFE_SYNTAX` z bloku `TermsScreen.tsx` → `FAIL`, kod wyjścia 1;
+- szerszy zakaz HTML w DOM (`NO_DOM_HTML`, QA #1): zapis `innerHTML`/`outerHTML`/`srcdoc` także przez szablon i literał obiektu (`Object.assign`), `setHTMLUnsafe`, `createContextualFragment`, `document.write(ln)`, `srcDoc` w JSX — każdy z fixture (22 fixtures + 11 bloków, 0 błędów; przed zmianą skrypt nie startował, bo `SAFE_SYNTAX` nie był eksportowany, a nowe fixtures nie miały reguły);
+- `logs.content.test.ts` sprawdza też brak tokenu sesji (z rejestracji właściciela i gościa oraz z logowania, podpisana wartość i sam token) i tokenu zaproszenia (QA #3). Mutacje: `request.log.info({ c: request.headers.cookie })` w `POST /api/v1/lists` → `not to contain '<token sesji>'`; `request.log.info({ t: request.params.token })` w podglądzie zaproszenia → `not to contain '<token>'`;
+- reguły w `backend.md` i `web.md` „Zasady bezpieczeństwa”: weryfikacja zagrożenia na wszystkich trasach z treścią i asercja braku danych; fixture dla każdej reguły lintu bezpieczeństwa.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-31)

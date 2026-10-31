@@ -16,16 +16,23 @@ const NO_INNER_HTML = {
   selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
   message: "dangerouslySetInnerHTML jest zakazany (TH-15): renderuj treść jako tekst.",
 };
-// T-050: wstawianie HTML z pominięciem Reacta (przypisanie innerHTML / outerHTML, insertAdjacentHTML).
+// T-050: wstawianie HTML z pominięciem Reacta: zapis właściwości z HTML (kropka, indeks, szablon,
+// literał obiektu np. w Object.assign), wywołania parsujące HTML do DOM, document.write, srcDoc.
+const HTML_PROPERTY = "/^(innerHTML|outerHTML|srcdoc)$/";
 const NO_DOM_HTML = [
-  "AssignmentExpression > MemberExpression.left[property.name=/^(innerHTML|outerHTML)$/]",
-  "AssignmentExpression > MemberExpression.left[property.value=/^(innerHTML|outerHTML)$/]",
-  "CallExpression > MemberExpression.callee[property.name='insertAdjacentHTML']",
+  `AssignmentExpression > MemberExpression.left[property.name=${HTML_PROPERTY}]`,
+  `AssignmentExpression > MemberExpression.left[property.value=${HTML_PROPERTY}]`,
+  `AssignmentExpression > MemberExpression.left[property.quasis.0.value.raw=${HTML_PROPERTY}]`,
+  `ObjectExpression > Property[key.name=${HTML_PROPERTY}]`,
+  `ObjectExpression > Property[key.value=${HTML_PROPERTY}]`,
+  "CallExpression > MemberExpression.callee[property.name=/^(insertAdjacentHTML|setHTMLUnsafe|createContextualFragment)$/]",
+  "CallExpression > MemberExpression.callee[object.name='document'][property.name=/^(write|writeln)$/]",
+  "JSXAttribute[name.name='srcDoc']",
 ].map((selector) => ({
   selector,
   message: "Wstawianie HTML do DOM jest zakazane (TH-15): renderuj treść jako tekst.",
 }));
-const SAFE_SYNTAX = [
+export const SAFE_SYNTAX = [
   { selector: SQL_RAW, message: SQL_RAW_MESSAGE },
   NO_INNER_HTML,
   ...NO_DOM_HTML,
@@ -33,7 +40,7 @@ const SAFE_SYNTAX = [
 
 // T-044: CHECK w DDL nie przyjmuje parametru ($1), więc schema.ts wkleja stałą liczbową z kodu
 // przez sql.raw(String(*_MAX_LENGTH)). Tylko w schema.ts i tylko w tej postaci; inne sql.raw zakazane.
-const SAFE_SYNTAX_DDL = [
+export const SAFE_SYNTAX_DDL = [
   {
     selector: `${SQL_RAW}:not(CallExpression[arguments.length=1][arguments.0.callee.name='String'][arguments.0.arguments.0.name=/^[A-Z][A-Z0-9_]*_MAX_LENGTH$/] > MemberExpression.callee)`,
     message: SQL_RAW_MESSAGE,

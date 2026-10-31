@@ -60,7 +60,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 ## Zasady bezpieczeństwa
 
-- Zakaz `dangerouslySetInnerHTML` (lint); treść innych osób zawsze jako tekst (TH-15).
+- Zakaz `dangerouslySetInnerHTML` i wstawiania HTML do DOM z pominięciem Reacta (`innerHTML`/`outerHTML`/`srcdoc`, `insertAdjacentHTML`, `setHTMLUnsafe`, `createContextualFragment`, `document.write`, `srcDoc`) — lint `SAFE_SYNTAX`, fixtures w `scripts/test/lint-security.test.mjs`; treść innych osób zawsze jako tekst (TH-15).
 - Sesja wyłącznie w ciasteczku `HttpOnly` ustawianym przez API; nic o sesji w `localStorage` ani `sessionStorage` (TH-16).
 - Żądania z `credentials: "include"` tylko do adresu API z konfiguracji (TH-14).
 - Token zaproszenia czytany ze ścieżki `/zaproszenie/:token`; po przyjęciu przekierowanie usuwa go z historii (`replace`); brak zasobów z zewnętrznych domen (TH-08).
@@ -103,6 +103,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-31 | T-050: „Zasady bezpieczeństwa” — lint zakazuje też wstawiania HTML do DOM poza Reactem (TH-15), z fixtures. |
 | 2026-10-31 | T-047: „Testy w tej warstwie” — przy niestabilnej porażce zachować `test-results/vitest-junit.xml` przed kolejnym przebiegiem. |
 | 2026-10-30 | T-042: „Pułapki” — odmowa limitu z API tylko przez `useLimitRefusal` (liczba, nie tożsamość danych z cache); ostrzeżenie z fokusem poza gałęziami stanu ekranu. |
 | 2026-10-30 | T-039: „Pułapki” — cel fokusu po zapisach równoległych wybierany przy fokusie z listy kandydatów; test fokusu dla dwóch zapisów naraz. |

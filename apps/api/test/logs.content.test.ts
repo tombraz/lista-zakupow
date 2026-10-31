@@ -57,7 +57,7 @@ describe("content in logs (TH-21)", () => {
       (await auth("/api/auth/sign-in/email", { email: owner.email, password: "zle-haslo-1" }))
         .statusCode,
     ).toBe(401);
-    await signIn(app, owner);
+    const ownerSession = await signIn(app, owner);
 
     const list = (await asOwner("POST", "/api/v1/lists", { name: m.list })).json<{ id: string }>();
     const invitation = (
@@ -100,9 +100,19 @@ describe("content in logs (TH-21)", () => {
     expect(logs.lines.length).toBeGreaterThan(0);
     const all = logs.lines.join("\n").toLowerCase();
     for (const value of Object.values(m)) expect(all).not.toContain(value.toLowerCase());
+    // TH-16, TH-08: ani token sesji (z rejestracji i logowania), ani token zaproszenia.
+    const secrets = [owner.cookie, ownerSession, guest.cookie].flatMap(sessionToken);
+    for (const value of [...secrets, tokenOf(invitation)])
+      expect(all).not.toContain(value.toLowerCase());
     await app.close();
   });
 });
+
+/** Podpisana wartość ciasteczka `nazwa=wartość` i sam token przed podpisem. */
+function sessionToken(cookie: string): string[] {
+  const signed = decodeURIComponent(cookie.slice(cookie.indexOf("=") + 1));
+  return [signed, signed.split(".")[0] ?? signed];
+}
 
 function consents() {
   return { termsAccepted: true, ageConfirmed: true };
