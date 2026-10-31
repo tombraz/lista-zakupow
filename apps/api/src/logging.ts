@@ -43,7 +43,8 @@ const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/|\/zaproszenie\/)[^/]+/
 
 // Tylko znaki ASCII: wystarczą do rozpoznania prefiksu, a dekodowanie nie rzuca wyjątku
 // przy nieprawidłowej sekwencji `%` (serializer logu działa też dla żądań odrzuconych przez router).
-const ASCII_ESCAPE = /%([0-7][0-9a-f])/gi;
+// Bez `%2F`: router nie dzieli po nim ścieżki, więc `A%2F<token>` to jeden segment z tokenem.
+const ASCII_ESCAPE = /%(?!2f)([0-7][0-9a-f])/gi;
 
 // TH-16: token sesji nigdy nie jest czytany z adresu, ale klient może go tam dopisać
 // (np. `/api/v1/live?token=…`); wartość parametru z „token” w nazwie nie trafia do logu.

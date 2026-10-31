@@ -82,6 +82,7 @@ describe("invitation token in logs", () => {
       }),
       `${prefix}${encodedToken}${suffix}`,
       `${prefix}${token}%zz${suffix}`,
+      `${prefix}A%2F${token}${suffix}`,
       `${prefix}${token}${suffix}?x=1`,
       `${prefix}${token}${suffix}?x=%zz`,
       `/${prefix}${token}${suffix}`,
