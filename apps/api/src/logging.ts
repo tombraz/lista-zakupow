@@ -37,20 +37,38 @@ const REDACTED_PATHS = [
 
 // TH-08: token zaproszenia w ścieżce to uprawnienie do listy; do logu tylko jego miejsce.
 // Dwie ścieżki niosą token: API (podgląd, przyjęcie) i strona SC-08 serwowana przez API (ADR 0006).
-const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/|\/zaproszenie\/)[^/?#]+/;
+// Dopasowanie na zdekodowanej ścieżce, nie na surowej: router dekoduje ścieżkę, więc
+// `/%61pi/v1/invitations/<token>` trafia do trasy z tokenem (TH-26, T-051).
+const INVITATION_TOKEN_PATH = /^(\/api\/v1\/invitations\/|\/zaproszenie\/)[^/]+/;
+
+// Tylko znaki ASCII: wystarczą do rozpoznania prefiksu, a dekodowanie nie rzuca wyjątku
+// przy nieprawidłowej sekwencji `%` (serializer logu działa też dla żądań odrzuconych przez router).
+const ASCII_ESCAPE = /%([0-7][0-9a-f])/gi;
 
 // TH-16: token sesji nigdy nie jest czytany z adresu, ale klient może go tam dopisać
 // (np. `/api/v1/live?token=…`); wartość parametru z „token” w nazwie nie trafia do logu.
 const TOKEN_QUERY_PARAMETER = /([?&][^=&#]*token[^=&#]*=)[^&#]*/gi;
 
+function decodedAscii(text: string): string {
+  return text.replace(ASCII_ESCAPE, (_escape, hex: string) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  );
+}
+
 /**
  * Ścieżka żądania bez tokenu zaproszenia (`/api/v1/invitations/[redacted]/accept`,
  * `/zaproszenie/[redacted]`) i bez wartości parametrów z tokenem (`?token=[redacted]`).
+ * Ścieżka z tokenem trafia do logu zdekodowana, w każdym zapisie w tej samej postaci.
  */
 export function redactedUrl(url: string): string {
-  return url
-    .replace(INVITATION_TOKEN_PATH, "$1[redacted]")
-    .replace(TOKEN_QUERY_PARAMETER, "$1[redacted]");
+  const queryStart = url.search(/[?#]/);
+  const path = queryStart === -1 ? url : url.slice(0, queryStart);
+  const query = queryStart === -1 ? "" : url.slice(queryStart);
+  const decoded = decodedAscii(path).replace(/\/{2,}/g, "/");
+  const loggedPath = INVITATION_TOKEN_PATH.test(decoded)
+    ? decoded.replace(INVITATION_TOKEN_PATH, "$1[redacted]")
+    : path;
+  return loggedPath + query.replace(TOKEN_QUERY_PARAMETER, "$1[redacted]");
 }
 
 interface LoggedRequest {
