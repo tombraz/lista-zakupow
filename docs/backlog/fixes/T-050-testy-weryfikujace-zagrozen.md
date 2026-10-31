@@ -4,7 +4,7 @@ title: "Testy weryfikujące TH-15, TH-16, TH-19, TH-21: logi treści, fixtures l
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web, infra]
 requirements: [F-10]
@@ -79,3 +79,25 @@ Testy (zachowanie było poprawne, więc „czerwone” to mutacja kodu, cofnięt
 Propozycja z przeglądu: każda nowa reguła lintu bezpieczeństwa dostaje plik-fixture; weryfikacja w modelu zagrożeń zawsze z asercją braku danych.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-31)
+
+Verdict: pass
+
+Reprodukcja (świeży `pnpm install --frozen-lockfile`): `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality`, `lint-directives.test.sh`, `backlog-check` bez błędów; `pnpm test` 96 plików / 522 testy zielone; `pnpm test:mobile` 10/10; `node scripts/test/lint-security.test.mjs` 15/15 ok. Testy zadania (`logs.content`, `participant-emails`, `session-cookie`) 3/3.
+
+Kryteria:
+
+- AC1 pass — test przechodzi przez rejestrację (w tym z zaproszeniem i z zajętym e-mailem), logowanie złe/dobre, listę, zmianę nazwy, pozycję z notatką, podgląd zaproszenia, WS, `GET /me|/lists|/lists/:id`, 400 i 500; znaczniki w imieniu, e-mailu, nazwie, notatce i komunikacie wyjątku. Mutacja `request.log.info(request.body)` w `POST /api/v1/lists` → `not to contain 'lista…'` (cofnięta).
+- AC2 pass — 13 fixtures odrzuconych z właściwą regułą i identyfikatorem zagrożenia, 2 kontrole przechodzą. Usunięcie `...NO_DOM_HTML` z `SAFE_SYNTAX` → 5× FAIL, kod wyjścia 5 (cofnięte). Krok w CI w jobie `static` i w filtrze ścieżek.
+- AC3 pass — uczestnik (Tomek) nie widzi e-maili Ani, Tomka ani Oli w podglądzie/przyjęciu zaproszenia, `POST items`, `GET /lists`, `GET /lists/:id` i dwóch `item.upserted`. Mutacja `name: user.email` w `membersOf` → `not to contain 'user-…'` (cofnięta).
+- AC4 pass — rejestracja i logowanie na `https://lista.example`. Mutacje `defaultCookieAttributes: { httpOnly: false }` → `to match /HttpOnly/`, `{ sameSite: "strict" }` → `to match /SameSite=Lax/` (obie cofnięte). Usunięty test w `sign-up.test.ts` jest w całości pokryty nowym.
+- AC5 pass — jak w reprodukcji.
+
+Zadanie fix: „Root cause” wyjaśnia, czemu istniejące testy nie łapały regresji; testy reprodukujące padają bez zabezpieczenia (mutacje wyżej). Czerwone dowody w Evidence obecne (mutacje).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security / lint (TH-15) | Inne ujścia HTML w DOM nie są zakazane: `Object.assign(el, { innerHTML })`, `el.setHTMLUnsafe(…)`, `range.createContextualFragment(…)`, `el[\`innerHTML\`] =` (szablon). `document.write` łapie tylko `no-deprecated`. Dziś w repo brak użyć. | `eslint --stdin` na `AddBar.tsx`: brak błędu `no-restricted-syntax` dla tych wywołań | rozszerzyć `NO_DOM_HTML` i fixtures, jeśli projekt chce pełnego zakazu |
+| 2 | minor | test / lint | Fixtures sprawdzają po jednym pliku na grupę (web AddBar, mobile, api, schema, shared). Nadpisania `no-restricted-syntax` dla `TermsScreen.tsx`, `useSession.ts`, `web-app.ts`, testów web i e2e ręcznie powtarzają `SAFE_SYNTAX`; zgubienie go w jednym nie zostanie wykryte. | `eslint.config.js` bloki z komentarzem „Nadpisanie … powtarza SAFE_SYNTAX” | fixture na każdy blok nadpisania albo test, że każda konfiguracja `no-restricted-syntax` zawiera wszystkie selektory `SAFE_SYNTAX` |
+| 3 | note | test (TH-16/TH-21) | `logs.content.test.ts` nie dodaje do znaczników wartości ciasteczka sesji ani tokenu zaproszenia (TH-16 „token w logach”). Token zaproszenia ma osobny test (T-051), sesja nie. | przegląd testu | dopisać `session_token` i token zaproszenia do sprawdzanych wartości |
