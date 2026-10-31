@@ -72,6 +72,13 @@ Inne wystąpienia wzorca: `API_PATH` w `http/web-app.ts` (handler 404, udokument
 
 Reguła lintu TH-26 z T-049 (`API_RAW_URL_SYNTAX`) nie obejmuje serializera logu (`raw.url` w `logging.ts`). Po poprawce rozważyć jej rozszerzenie na serializer albo test wariantów zapisu dla każdej ścieżki z tokenem.
 
+**Co by temu zapobiegło (/fix, krok 8):** test wariantów zapisu ścieżki dla redakcji w logu, tak jak `spellings` w `origin.test.ts` dla `Origin`. Rozszerzenie `API_RAW_URL_SYNTAX` na `logging.ts` nie pomoże: serializer z definicji czyta surowy adres. Propozycje (do akceptacji użytkownika):
+
+1. Test automatyczny: zbierać trasy z parametrem `:token` (hook `onRoute` w teście) i dla każdej sprawdzać `redactedUrl` na wariantach zapisu; nowa trasa z tokenem bez redakcji zawiedzie test bez ręcznego dopisywania.
+2. „Pułapki” w `layers/backend.md`: redakcja w logu działa na zdekodowanej ścieżce (jak router), każda ścieżka z tokenem ma test wariantów zapisu w `invitations.logs.test.ts`.
+
+Decyzja użytkownika: <oczekuje>.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-31)
