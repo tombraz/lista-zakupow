@@ -28,10 +28,13 @@ Domownik odzyskuje dostęp do konta resetem hasła, zmienia imię i usuwa konto;
 
 Zarys; taski planowane, gdy E-02 stanie się następny (krok 1 `/plan-backlog` od nowa).
 
-- S-02-01 Reset hasła mailem (F-03, SC-01, SC-03; TH-10, TH-11; Brevo na staging)
+- S-02-01 Reset hasła mailem (F-03, SC-01, SC-03; TH-10, TH-11, TH-28; Brevo na staging)
+  - TH-28: reset unieważnia sesje i zamyka ich połączenia na żywo (`closeSession`); ponowna kontrola sesji przy `subscribe` obejmuje też wygaśnięcie sesji (przegląd bezpieczeństwa E-01, #6 rundy 1).
   - SC-03 pod trasą `/reset-hasla` (już linkują tam SC-02 „zresetuj hasło” i SC-01). Każdy link do SC-03 (SC-01, komunikat o zajętym e-mailu na SC-02) przenosi wpisany e-mail i kontekst zaproszenia jak `EntryLink` (WCAG 3.3.7; T-028). Do tego czasu `/reset-hasla` nie istnieje.
 - S-02-02 Uczestnicy: podgląd, usunięcie, opuszczenie listy (F-13, SC-07; TH-04, TH-19)
-- S-02-03 Konto: zmiana imienia i usunięcie konta (F-04, F-16, SC-09; TH-17, TH-18)
+- S-02-03 Konto: zmiana imienia i usunięcie konta (F-04, F-16, SC-09; TH-17, TH-18, TH-28, TH-29)
+  - TH-28: usunięcie konta zamyka połączenia na żywo każdej jego sesji.
+  - TH-29: walidacja w `packages/shared/src/api/text.ts` odrzuca znaki Cc/Cf i bidi i wymaga widocznego znaku. Obejmuje imię, a przy okazji też nazwy list i pozycji oraz notatki (jedna reguła). Normalizacja duplikatu (F-09) przechodzi na NFKC z usuwaniem znaków ignorowalnych, z migracją istniejących danych (przegląd bezpieczeństwa E-01, #7 rundy 1).
 - S-02-04 Brak połączenia (F-15, pasek na SC-05–SC-09)
 - S-02-05 Sprzątanie danych i miary sukcesu (N-02, BRD §10: codzienne sprzątanie wg `data-model.md`, `apps/api/scripts/metrics.sql`)
 
@@ -44,6 +47,7 @@ Zarys; taski planowane, gdy E-02 stanie się następny (krok 1 `/plan-backlog` o
 - Mail resetu dochodzi na staging; link działa raz i wygasa po 1 h.
 - Usunięty uczestnik z otwartą listą natychmiast traci dostęp (MC-03).
 - Usunięcie konta działa zgodnie z F-04; logowanie na usunięte konto się nie udaje.
+- Po resecie hasła, usunięciu konta i wygaśnięciu sesji otwarte połączenie na żywo przestaje dostawać zdarzenia (TH-28).
 - Tryb samolotowy pokazuje „Brak połączenia” i blokuje zapisy; po powrocie lista jest aktualna.
 
 ## UAT
