@@ -57,9 +57,9 @@ flowchart LR
   api -->|API key| mail
 ```
 
-## Zagrożenia
+## Threats
 
-| ID | Ścieżka / granica | STRIDE | Zagrożenie | P × wpływ | Mitygacja | Weryfikacja | Pokrycie | ASVS |
+| ID | Ścieżka / granica | STRIDE | Zagrożenie | P × wpływ | Mitygacja | Weryfikacja | Covered by | ASVS |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | TH-01 | J-02, J-03, J-04 / API | E, I | **MC-01:** inny domownik czyta lub zmienia cudzą listę, pozycje, uczestników albo linki, podmieniając identyfikator | wysokie | `requireListAccess` przy każdej operacji, domyślnie odmowa, 404 bez zdradzania istnienia; zapytania zawsze z `list_id` | negatywne testy integracyjne każdej trasy listy (inny domownik, anonim) | task | Authorization |
 | TH-02 | J-02, J-04 / API | E | uczestnik wykonuje akcje właściciela (zmiana nazwy, usunięcie listy, zaproszenia, usuwanie uczestników) | średnie | rola sprawdzana w `requireListAccess(…, "owner")` | testy integracyjne 403 dla uczestnika | task | Authorization |
@@ -75,7 +75,7 @@ flowchart LR
 | TH-12 | J-01 / API | I | wyliczanie kont przez rejestrację („e-mail już użyty”, wymóg F-01) | średnie | limit rejestracji per IP | test 429 | accepted | Authentication |
 | TH-13 | J-01 / API | D | **MC-05:** masowe zakładanie kont i zapychanie danych | średnie | limit rejestracji per IP; limity biznesowe 50 / 500 / 20; limit tworzenia linków; limit rozmiaru treści żądania (Fastify `bodyLimit`) i wiadomości WS | testy integracyjne 429 i `limit_reached` | task | Business Logic |
 | TH-14 | wszystkie / web | S, T | CSRF: obca strona wysyła żądanie z ciasteczkiem domownika; przejęcie WebSocket z obcego originu (CSWSH) | średnie | `SameSite=Lax`; sprawdzenie `Origin` (zaufane originy) dla żądań zmieniających stan i upgrade WS; brak zmian stanu przez `GET` | testy integracyjne: obcy `Origin` odrzucony dla POST i WS | task | Session Management |
-| TH-15 | wszystkie / web | I, T | XSS przez nazwę listy, pozycji, notatkę lub imię (treść innych osób) | średnie | renderowanie przez React bez `dangerouslySetInnerHTML`; CSP bez `unsafe-inline` dla skryptów; walidacja długości | lint zakazujący `dangerouslySetInnerHTML`; test nagłówków CSP; skan DAST | ci | Encoding and Sanitization |
+| TH-15 | wszystkie / web | I, T | XSS przez nazwę listy, pozycji, notatkę lub imię (treść innych osób) | średnie | renderowanie przez React bez `dangerouslySetInnerHTML`; CSP bez `unsafe-inline` dla skryptów; walidacja długości | lint zakazujący `dangerouslySetInnerHTML` i wstawiania HTML do DOM poza Reactem (`innerHTML`/`outerHTML`/`srcdoc`, `insertAdjacentHTML`, `setHTMLUnsafe`, `createContextualFragment`, `document.write`, `srcDoc`), z fixtures w `scripts/test/lint-security.test.mjs`; test nagłówków CSP; skan DAST | ci | Encoding and Sanitization |
 | TH-16 | wszystkie / web, mobile | I | kradzież sesji: token w `localStorage`, AsyncStorage, logach lub URL | średnie | web: ciasteczko `HttpOnly`, `Secure`; mobile: `expo-secure-store`; nigdy token w URL (także WS); redakcja logów | przegląd w QA; test, że WS nie przyjmuje tokenu z query | task | Session Management |
 | TH-17 | J-01 / API | S | sesja nie wygasa lub działa po wylogowaniu / usunięciu konta | średnie | sesje w bazie, wygasanie 30 dni, wylogowanie usuwa sesję i zamyka WS, usunięcie konta kasuje sesje | testy integracyjne: po wylogowaniu 401 i zamknięte WS | task | Session Management |
 | TH-18 | J-01 / API | I | usunięcie konta zostawia dane (listy, sesje) albo usuwa cudze pozycje | średnie | jedna transakcja usunięcia wg `data-model.md` (kaskady i `SET NULL`) | test integracyjny F-04 | task | Data Protection |
@@ -86,6 +86,10 @@ flowchart LR
 | TH-23 | mobile | I | sekret w paczce aplikacji; logi debug w buildzie | niskie | aplikacja zawiera tylko publiczny adres API; brak kluczy; build bez logów debug | skan sekretów w CI; przegląd w QA | ci | Configuration |
 | TH-24 | wszystkie / transport | I, T | podsłuch lub modyfikacja ruchu | niskie | HTTPS i WSS wszędzie, HSTS na web; bez ruchu czystym HTTP na produkcji | test nagłówków w CI; DAST | ci | Secure Communication |
 | TH-25 | J-05 / WebSocket | D | zalewanie serwera połączeniami lub wiadomościami WS | niskie | połączenie tylko z ważną sesją; limit połączeń na sesję i wiadomości na sekundę; limit rozmiaru wiadomości | test integracyjny limitów WS | task | Business Logic |
+| TH-26 | wszystkie / API | S, T | kontrola bezpieczeństwa w hooku (np. `Origin`, redakcja) działa na innej postaci ścieżki niż router, więc część żądań do chronionej trasy ją omija | średnie | decyzje na dopasowanej trasie (`request.routeOptions.url`) albo dla każdej metody zmieniającej stan; nigdy na prefiksie surowego `request.url` | testy integracyjne wariantów zapisu ścieżki dla każdego chronionego prefiksu | task | Configuration |
+| TH-27 | J-01 / API, baza | D | **MC-05:** zapychanie bazy zapisami bez uwierzytelnienia, które dzieją się przed limitem (`sign_in_failure`, przyszłe tabele przed logowaniem) | średnie | limit per IP przed pierwszym zapisem; retencja wg `data-model.md` | test: po przekroczeniu limitu liczba wierszy się nie zmienia | task | Business Logic |
+| TH-28 | J-05 / WebSocket | I, S | połączenie WS żyje po końcu sesji innym niż wylogowanie (wygaśnięcie, usunięcie sesji, reset hasła, usunięcie konta) | średnie | `closeSession` na każdej ścieżce końca sesji; ponowna kontrola sesji przy `subscribe` i okresowo | test: usunięcie sesji zamyka gniazdo, kolejny `subscribe` odrzucony | task | Session Management |
+| TH-29 | wszystkie / web | S | podszywanie się przez znaki bidi, sterujące i zero-width w imionach i nazwach widocznych dla innych (SC-08, wspólne listy); obejście blokady duplikatu (F-09) | niskie | odrzucanie Cc/Cf i znaków bidi, wymóg widocznego znaku; NFKC i usuwanie znaków ignorowalnych w normalizacji duplikatu | testy walidacji dla każdej klasy znaków | task | Validation and Business Logic |
 
 ## Decyzje bazowe bezpieczeństwa
 
@@ -118,4 +122,7 @@ Domena nie jest wysokiego ryzyka (BRD §8b): bez płatności, danych zdrowotnych
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-31 | T-050: TH-15 „Weryfikacja” — lint obejmuje też wstawianie HTML do DOM poza Reactem, każda reguła z fixture (`lint-security.test.mjs`). |
+| 2026-10-31 | `/security-review E-01`: dodane TH-26 (rozjazd ścieżki w kontrolach), TH-27 (zapisy przed limitem), TH-28 (WS po końcu sesji), TH-29 (podszywanie Unicode); `docs/security/reviews/E-01-2026-10-31-1.md`. |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |
+| 2026-10-26 | `/plan-backlog`: nagłówek sekcji zagrożeń i kolumna pokrycia przywrócone do etykiet z szablonu (`## Threats`, `Covered by`), które czyta `scripts/backlog-check.mjs`; treść bez zmian. |

@@ -1,0 +1,286 @@
+---
+id: T-004
+title: Rejestracja, logowanie i wylogowanie (web)
+epic: E-01
+story: S-01-02
+status: done           # todo | in-progress | in-qa | done | blocked
+blocked_reason:        # filled only when status is blocked
+depends_on: [T-001]
+size: M                # S | M (L must be split)
+layers: [db, backend, web]
+requirements: [F-01, F-02, N-02, N-04, N-05]
+threats: [TH-09, TH-11, TH-13, TH-14, TH-16, TH-17, TH-21]
+screens: [SC-01, SC-02, SC-04, SC-09]
+---
+
+# T-004 Rejestracja, logowanie i wylogowanie (web)
+
+## Goal
+
+Domownik zakłada konto (imię, e-mail, hasło, zgody, 16+), loguje się i wylogowuje w przeglądarce. Sesja żyje w ciasteczku `HttpOnly` w bazie (Better Auth), trasy aplikacji wymagają zalogowania, a próby logowania i rejestracji są ograniczane.
+
+## Demo
+
+1. Na SC-01 „Załóż konto” → SC-02: wysłanie pustego formularza pokazuje podsumowanie „Popraw N pól” i błędy przy polach; poprawne dane → konto założone, przejście do „Moje listy” (ekran-szkielet z AppBar; treść list w T-005).
+2. Ikona „Konto” → SC-09 z e-mailem i imieniem; „Wyloguj się” → SC-01; wejście na adres „Moje listy” przekierowuje na SC-01, a po zalogowaniu wraca tam.
+3. Złe hasło → „Nieprawidłowy e-mail lub hasło.” (ten sam komunikat dla nieistniejącego e-maila); kilka kolejnych prób → „Zbyt wiele prób logowania…”.
+4. Link „Regulamin i polityka prywatności” na SC-01 i SC-02 otwiera SC-04 bez logowania.
+
+## Context
+
+- BRD: F-01 — „imię 1–30, hasło ≥ 8, akceptacja regulaminu i polityki prywatności, potwierdzenie 16+; e-mail użyty — czytelny komunikat”; F-02 — „komunikat nie zdradza, czy konto istnieje; próby ograniczane (MC-04)”; MC-05 — masowe zakładanie kont ograniczane.
+- Architektura: „Uwierzytelnianie i autoryzacja”, ADR 0002 (Better Auth, sesje w Postgresie, 30 dni), `api.md` „Konta”, `data-model.md` (`user` z `terms_accepted_at`, `terms_version`, `age_confirmed_at`).
+- Design: SC-01, SC-02, SC-04, SC-09 (tylko e-mail, imię jako tekst, „Wyloguj się”, link do SC-04 — zmiana imienia i usunięcie konta w E-02); komponenty TextField, PasswordField, ConsentCheckbox, Button, InlineAlert, AppBar.
+- Depends on: T-001 — harness integracyjny, migracje, logger z redakcją i logiem `security`, web serwowany pod jednym originem.
+
+## Acceptance criteria
+
+Each criterion must fail before the work and pass after it.
+
+- [x] AC1: Given osoba bez konta, when wyśle poprawne imię, e-mail, hasło, `termsAccepted` i `ageConfirmed`, then powstaje konto ze znacznikami zgód i wersją dokumentów, odpowiedź ustawia ciasteczko sesji `HttpOnly`, `SameSite=Lax` (`Secure` poza lokalnym HTTP), a `GET /api/v1/me` zwraca `{ id, name, email }`. — verified by: test integracyjny `sign-up.test`
+- [x] AC2: Given istniejące konto z e-mailem `a@x.pl`, when ktoś rejestruje `A@x.pl`, then 409 `email_taken`; SC-02 pokazuje komunikat pod polem e-mail z linkami do logowania i resetu. — verified by: test integracyjny + test komponentu SC-02
+- [x] AC3: Given brak którejkolwiek zgody, hasło 7 znaków, imię puste lub 31 znaków, when ktoś się rejestruje, then 400 `validation_failed` z `fields`, konto nie powstaje; SC-02 pokazuje wszystkie błędy naraz, podsumowanie „Popraw N pól” z fokusem i powiązanie `aria-describedby`. — verified by: testy integracyjne (każdy przypadek) + test komponentu SC-02
+- [x] AC4: Given istniejące konto, when domownik zaloguje się poprawnie, then dostaje sesję i trafia na „Moje listy” albo na adres, z którego przyszedł. — verified by: test integracyjny `sign-in.test` + E2E J-01
+- [x] AC5: Given zalogowany domownik, when kliknie „Wyloguj się” na SC-09, then sesja jest usunięta z bazy, `GET /api/v1/me` ze starym ciasteczkiem zwraca 401, a web pokazuje SC-01. — verified by: test integracyjny `sign-out.test` + E2E J-01
+- [x] AC6: Given niezalogowany, when otworzy adres chronionego ekranu, then trafia na SC-01; SC-01–SC-04 są dostępne bez logowania; zalogowany na SC-01 / SC-02 jest przekierowany na „Moje listy”. — verified by: test komponentu routera + E2E
+- [x] AC7: Given ekrany SC-01, SC-02 (pusty, błędy walidacji, e-mail zajęty), SC-04 i SC-09, when E2E je odwiedza, then skan axe nie znajduje naruszeń; po błędzie logowania fokus jest na komunikacie (`role="alert"`), pole hasła wyczyszczone, e-mail zostaje; fokus startowy SC-01 na „E-mail”, SC-02 na „Imię”. — verified by: E2E Playwright + axe, test komponentu
+- [x] AC8: Given SC-04, when ktoś go otworzy, then widzi spis treści i oba dokumenty z co najmniej: zakres danych (imię, e-mail, treść list), kto je widzi, brak zewnętrznej analityki, usunięcie konta, kopie 7 dni. — verified by: test komponentu (nagłówki `h2`) + akceptacja treści przez właściciela w QA
+- [x] SEC1 (TH-09): Given limit prób logowania per IP, when z jednego IP przyjdzie o jedną próbę więcej niż próg, then 429 `rate_limited`; given limit per konto, when z różnych IP przyjdzie zbyt wiele nieudanych prób na ten sam e-mail, then 429 także dla poprawnego hasła do czasu wygaśnięcia okna; SC-01 pokazuje komunikat o limicie. — verified by: testy integracyjne `sign-in-rate-limit.test` (zegar wstrzyknięty)
+- [x] SEC2 (TH-11): Given nieistniejący e-mail i istniejący e-mail ze złym hasłem, when ktoś się loguje, then status i treść odpowiedzi są identyczne (401 `invalid_credentials`). — verified by: test integracyjny porównujący odpowiedzi
+- [x] SEC3 (TH-13): Given limit rejestracji per IP, when z jednego IP przyjdzie zbyt wiele rejestracji, then 429; treść > 16 kB → 413. — verified by: test integracyjny
+- [x] SEC4 (TH-14): Given żądanie rejestracji, logowania lub wylogowania z nagłówkiem `Origin` spoza zaufanych, when trafi do API, then jest odrzucone (403) i nie powstaje ani nie znika sesja. — verified by: test integracyjny `origin.test`
+- [x] SEC5 (TH-16): Given zalogowany domownik w przeglądarce, when sprawdzę `localStorage`, `sessionStorage` i dostęp `document.cookie`, then nie ma w nich tokenu sesji (ciasteczko niedostępne dla JS). — verified by: E2E Playwright (asercja na storage i `document.cookie`)
+- [x] SEC6 (TH-17): Given nowa sesja, when sprawdzę jej `expires_at`, then to 30 dni od użycia, przedłużane przy użyciu; po wylogowaniu stara sesja nie działa (AC5). — verified by: test integracyjny ze wstrzykniętym zegarem
+- [x] SEC8 (CodeQL `js/missing-rate-limiting`): Given `GET /health/ready` (odpytuje bazę), when z jednego IP przyjdzie o jedno żądanie więcej niż próg, then 429 `rate_limited`; `GET /health` (healthcheck Fly, bez bazy) nie jest limitowany; alert CodeQL dla `apps/api/src/modules/health/http/routes.ts` zamknięty po merge'u. — verified by: test integracyjny `health-rate-limit.test` + check „CodeQL” zielony na PR epiku
+- [x] SEC7 (TH-21): Given nieudane logowanie i przekroczenie limitu, when sprawdzę logi, then w logu `security` jest zdarzenie z identyfikatorem (bez e-maila i hasła), a żaden wpis nie zawiera hasła ani ciasteczka. — verified by: test integracyjny z przechwyconym strumieniem logów
+
+## TDD plan
+
+**Test seams** (public boundaries tested from outside; agreed during planning):
+
+- HTTP API: `/api/auth/*` (Better Auth) i `GET /api/v1/me` przez `fastify.inject`
+- ekrany SC-01, SC-02, SC-09 z API podstawionym przez MSW
+- przeglądarka (Playwright) dla J-01
+
+**Tests in order** (write one, see it fail, make it pass, then the next):
+
+| # | Test | Level | Framework | Proves |
+| --- | --- | --- | --- | --- |
+| 1 | schemat rejestracji (zod, `packages/shared`): imię, e-mail, hasło, zgody | unit | Vitest | AC3 |
+| 2 | rejestracja poprawna: konto, zgody, ciasteczko, `/me` | integration | Vitest + Testcontainers | AC1 |
+| 3 | rejestracja: e-mail zajęty (inna wielkość liter) | integration | Vitest + Testcontainers | AC2 |
+| 4 | rejestracja: każdy błąd walidacji = 400, brak konta | integration | Vitest + Testcontainers | AC3 |
+| 5 | logowanie poprawne i identyczna odpowiedź dla złych danych | integration | Vitest + Testcontainers | AC4, SEC2 |
+| 6 | wylogowanie: sesja usunięta, `/me` 401 | integration | Vitest + Testcontainers | AC5 |
+| 7 | wygasanie sesji 30 dni (zegar) | integration | Vitest + Testcontainers | SEC6 |
+| 8 | limity: logowanie per IP, per konto; rejestracja per IP; 413 | integration | Vitest + Testcontainers | SEC1, SEC3 |
+| 9 | limit `GET /health/ready` per IP (429 po progu), `GET /health` bez limitu | integration | Vitest + Testcontainers | SEC8 |
+| 10 | obcy `Origin` odrzucony | integration | Vitest | SEC4 |
+| 11 | log `security` i brak danych osobowych w logach | integration | Vitest | SEC7 |
+| 12 | SC-02: walidacja wszystkich pól, podsumowanie, e-mail zajęty | component | Vitest + RTL + MSW | AC2, AC3 |
+| 13 | SC-01: błąd logowania (fokus, czyszczenie hasła), limit, przekierowanie po zalogowaniu | component | Vitest + RTL + MSW | AC4, AC7 |
+| 14 | router: chronione trasy → SC-01, powrót po zalogowaniu | component | Vitest + RTL + MSW | AC6 |
+| 15 | SC-04: spis treści i sekcje | component | Vitest + RTL | AC8 |
+| 16 | E2E J-01: rejestracja → listy → konto → wyloguj → logowanie; storage bez tokenu; axe na każdym stanie | E2E | Playwright + axe | AC4–AC7, SEC5 |
+
+**Run:** komendy „wszystkie testy warstwy” z przewodników backend i web oraz E2E web (z T-001)
+
+**Mocks:** zegar (wygasanie sesji, okna limitów); API tylko w testach komponentów. Better Auth i baza prawdziwe.
+
+## QA plan
+
+What an independent tester checks beyond the automated tests:
+
+- **Edge cases:** e-mail z wielkimi literami i spacjami na brzegach; imię z polskimi znakami i emoji, dokładnie 30 znaków; hasło dokładnie 8 znaków i bardzo długie; wklejanie hasła i menedżer haseł; podwójne kliknięcie „Załóż konto”; logowanie na dwóch urządzeniach jednocześnie (oba działają).
+- **Design states:** SC-01: pusty, ładowanie, błąd, limit, walidacja, sieć; SC-02: pusty, ładowanie, walidacja, e-mail zajęty, limit, sieć; SC-09 (część z tego taska).
+- **Platforms / devices:** Chrome i Firefox na komputerze, Safari i Chrome na telefonie; 320 px i 200 %.
+- **Accessibility:** cała ścieżka samą klawiaturą; czytnik ekranu (NVDA lub VoiceOver) ogłasza błędy i podsumowanie; etykiety widoczne; checkboxy zgód klikalne całą etykietą, ≥ 48 px.
+- **Security / privacy:** TH-09 / TH-11 — porównać odpowiedzi i czasy dla istniejącego i nieistniejącego e-maila; TH-14 — żądanie z innego originu (np. `curl -H "Origin: https://evil.example"`); ciasteczko w DevTools ma `HttpOnly`, `SameSite=Lax`; logi bez e-maili i haseł.
+- **Regression:** strona startowa i nagłówki z T-001.
+
+## Implementation notes
+
+- Nazwy tras i opcji Better Auth sprawdzić w dokumentacji przypiętej wersji (przewodnik backend, „Pułapki”).
+- Zgody i 16+ weryfikowane w hooku rejestracji Better Auth; `terms_version` jako stała w `packages/shared`.
+- Progi limitów (proponowane: logowanie 10/min per IP, 5 nieudanych w 15 min per konto, rejestracja 5/h per IP) ustalić w tasku i zapisać w jednym miejscu (`packages/shared` lub konfiguracja API); Better Auth `rateLimit` przechowywany w bazie.
+- Z T-002 (decyzja właściciela 2026-10-27): CodeQL zgłosił alert high `js/missing-rate-limiting` dla `/health/ready` (kod T-001). Limit dla tej trasy dodać razem z limitami MC-04. Better Auth `rateLimit` obejmuje tylko trasy `/api/auth/*`, więc limit dla tras Fastify wymaga osobnego mechanizmu (np. `@fastify/rate-limit` — nowa zależność, zapytać właściciela, Step 4). Próg ustalić tak, by smoke test (`scripts/smoke.sh`, jedno wywołanie) i ręczne sprawdzenia mieściły się z zapasem (propozycja: 30/min per IP).
+- Fabryki `createUser()` i `signIn(user)` w `apps/api/test/factories.ts` — używane przez wszystkie kolejne taski.
+- Funkcja `requireUser()` modułu `konta` dla tras `/api/v1/*`.
+- Treść SC-04: szkic agenta z wymaganymi punktami; ostateczną treść akceptuje właściciel (pytanie do użytkownika, jeśli treść nie jest dostarczona).
+- Mapowanie kodów błędów API na polskie komunikaty w jednym miejscu klienta web.
+
+## Definition of done
+
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] Handed to QA (`status: in-qa`)
+
+Only a QA verdict "pass" from `/qa-task` sets `status: done`.
+
+## Evidence
+
+Przebieg z 2026-10-27 (Windows, Docker): `pnpm check` (Prettier, ESLint `--max-warnings 0`, typecheck, jscpd 0 klonów, dependency-cruiser 0 naruszeń, design-check 0 błędów, backlog-check, Vitest **87/87**), `pnpm build` OK, `pnpm test:e2e` **8/8** (telefon + komputer).
+
+Decyzje właściciela (2026-10-27, Step 4): zależności `better-auth` 1.7.13, `@fastify/rate-limit`, `react-router` 8; progi limitów jak w propozycji (`packages/shared/src/limits.ts`); treść SC-04 — szkic agenta do akceptacji w QA.
+
+### TDD — red → green
+
+| # | Test (plik) | Red: komunikat przed implementacją | Teraz |
+| --- | --- | --- | --- |
+| 1 | `packages/shared/test/account.test.ts` (8) | `expected {} to deeply equal { name: 'required', …(4) }` (stub schematu) | pass |
+| 1a | „counts emoji as one character each” — dopisany w pętli (QA: imię z emoji) | przeszedł od razu: zod 4 liczy punkty kodowe jak `char_length`; zostaje jako zabezpieczenie | pass |
+| 2 | `apps/api/test/sign-up.test.ts` AC1 (4) | `expected 501 to be 200` (stub trasy) | pass |
+| 2a | TH-16 „never exposes the session token” | sprawdzony odwrotnie: przy przepuszczeniu całej odpowiedzi Better Auth `expected '{"token":"eeve…' not to contain 'eeve…'` | pass |
+| 3 | sign-up AC2 `409 email_taken` (inna wielkość liter) | mapowanie powstało w kroku 2; bez niego `expected 422 to be 409` | pass |
+| 4 | sign-up AC3 — 5 przypadków `400 validation_failed`, brak konta | bez walidacji: `expected 200 to be 400` (×5) | pass |
+| 5 | `sign-in.test.ts` AC4, SEC2, pusty formularz (3) | `expected 404 to be 200/401/400` | pass |
+| 6 | `sign-out.test.ts` AC5 (2) | `expected 404 to be 200` | pass |
+| 7 | `session-expiry.test.ts` SEC6 (3) | konfiguracja powstała w kroku 2; bez niej `expected 1794218400000 to be 1796205600000` (7 zamiast 30 dni) | pass |
+| 8 | `sign-in-rate-limit.test.ts` SEC1 (6), `sign-up-rate-limit.test.ts` SEC3 (2) | `expected 401 to be 429`, `expected 200 to be 429` (×3); 413 przechodził już (limit treści z T-001) | pass |
+| 8a | dopisane: klient nie obchodzi limitu własnym `X-Forwarded-For`; za zaufanym proxy liczy się adres klienta | drugi: `[…401, 429]` zamiast 11× 401 | pass |
+| 9 | `health-rate-limit.test.ts` SEC8 (2) | `expected 200 to be 429` | pass |
+| 10 | `origin.test.ts` SEC4 (3) | przechodził od razu (Better Auth sprawdza `Origin` przy każdym żądaniu z tym nagłówkiem); bez `disableOriginCheck: false` (Better Auth pomija sprawdzanie w testach) `expected 200 to be 403` ×3 | pass |
+| 11 | `security-log.test.ts` SEC7 | `expected [] to have a length of 5 but got +0`; przy logerze Better Auth na `info`: `…not to contain 'tajny.adres@example.com'` | pass |
+| 12 | `SC-02-rejestracja/SignUpScreen.test.tsx` (7) | `Unable to find role="heading" and name "Załóż konto"` | pass |
+| 13 | `SC-01-logowanie/SignInScreen.test.tsx` (6) | `Unable to find role="heading" and name "Zaloguj się"` | pass |
+| 14 | `src/routes.test.tsx` (10) | `Unable to find role="heading" and name "Zaloguj się" / "Moje listy"` (8 z 10) | pass |
+| 15 | `SC-04-regulamin/TermsScreen.test.tsx` (4) | `Unable to find role="heading" and name "Regulamin i polityka prywatności"` | pass |
+| 16 | `e2e/j01-konto.spec.ts` (2×2), `e2e/start.spec.ts` (2×2) | E2E po zachowaniu na szybszych seamach; SEC5 sprawdzony odwrotnie: ciasteczko bez `HttpOnly` → `Expected: true, Received: false` | pass |
+
+### Kryteria akceptacji
+
+- **AC1** — `sign-up.test.ts`: konto ze znacznikami `terms_accepted_at`, `age_confirmed_at`, `terms_version = TERMS_VERSION`; `Set-Cookie` z `HttpOnly`, `SameSite=Lax`, bez `Secure` na `http://`, z `Secure` przy originie `https://`; `/api/v1/me` → `{ id, name, email }`. Komponent: `SignUpScreen.test` „sends trimmed data… opens Moje listy”.
+- **AC2** — `sign-up.test.ts` „409 email_taken… different letter case”; `SignUpScreen.test` „explains under the e-mail field…” (linki „Zaloguj się” → `/logowanie`, „zresetuj hasło” → `/reset-hasla`); E2E drugi test.
+- **AC3** — integracja: 5 przypadków (brak zgody regulaminu, brak 16+, hasło 7 znaków, puste imię, 31 znaków) = 400 z `fields`, 0 kont; komponent: wszystkie błędy naraz, „Popraw 5 pól” z fokusem, `aria-describedby` (sprawdzane przez `toHaveAccessibleDescription`), linki z podsumowania do pól, poprawna odmiana („2 pola”, „1 pole”).
+- **AC4** — `sign-in.test.ts` (sesja; e-mail wielkimi literami działa); `SignInScreen.test` „opens Moje listy”, „returns to the address the person came from”; `routes.test` „brings the person back…”; E2E J-01.
+- **AC5** — `sign-out.test.ts`: wiersz `session` usunięty, stare ciasteczko → 401 `unauthenticated`; E2E: „Wyloguj się” → SC-01, `/listy` → SC-01.
+- **AC6** — `routes.test.tsx`: `/listy`, `/konto`, `/`, nieznany adres → SC-01; `/logowanie`, `/rejestracja`, `/regulamin` publiczne; zalogowany na SC-01 / SC-02 → `/listy`; E2E `/listy` → `/logowanie`.
+- **AC7** — E2E axe (WCAG 2.2 AA, 0 naruszeń) na: SC-01 pusty, SC-02 pusty, SC-02 błędy walidacji, SC-09, SC-01 po błędzie logowania, SC-02 e-mail zajęty, SC-04 — w obu widokach (390 × 844, 1280 × 800); fokus startowy SC-01 „E-mail”, SC-02 „Imię”; po błędzie logowania fokus na `role="alert"`, hasło puste, e-mail zostaje (komponent + E2E).
+- **AC8** — `TermsScreen.test`: spis treści (`nav` „Spis treści”) z linkami do `#regulamin` i `#polityka-prywatnosci`, dwa `h2`, `h3` „Jakie dane zbieramy”, „Kto widzi Twoje dane”, „Bez zewnętrznej analityki”, „Usunięcie konta”, „Kopie zapasowe”; fokus przenoszony do sekcji; „Wróć”. **Treść (`apps/web/src/screens/SC-04-regulamin/documents.tsx`) to szkic — do akceptacji właściciela w QA** (bez danych kontaktowych administratora; do uzupełnienia przez właściciela).
+- **SEC1** — `sign-in-rate-limit.test.ts`: 11. próba z IP → 429 `rate_limited`, inne IP dalej 401; 5 nieudanych z różnych IP → 429 także dla poprawnego hasła, bez ciasteczka; licznik niezależny od wielkości liter i spacji; po 15 min znów 200. SC-01 pokazuje komunikat limitu (`SignInScreen.test`).
+- **SEC2** — `sign-in.test.ts`: identyczny status i treść (`401 {"error":{"code":"invalid_credentials"}}`) dla nieznanego e-maila i złego hasła, w obu brak `Set-Cookie`. Better Auth liczy hash także dla nieznanego konta.
+- **SEC3** — `sign-up-rate-limit.test.ts`: 6. rejestracja z IP → 429, powstało 5 kont; treść > 16 kB → 413.
+- **SEC4** — `origin.test.ts`: `Origin: https://evil.example` → 403 `invalid_origin` dla rejestracji (0 kont), logowania (0 nowych sesji), wylogowania (sesja zostaje).
+- **SEC5** — E2E J-01: ciasteczko `httpOnly: true`, `sameSite: Lax`; `document.cookie` bez `session_token`; `localStorage` i `sessionStorage` puste; treść odpowiedzi rejestracji/logowania bez tokenu (`sign-up.test`, TH-16).
+- **SEC6** — `session-expiry.test.ts` (zegar `vi.useFakeTimers({ toFake: ["Date"] })`): `expires_at` = start + 30 dni; użycie po 2 dniach → start + 32 dni; po 30 dniach bez użycia → 401; po wylogowaniu stara sesja nie działa (AC5).
+- **SEC7** — `security-log.test.ts`: 5 × `sign_in_failed` i 1 × `rate_limited` w kanale `security` z `accountKey` (HMAC e-maila) i `requestId`; w całym strumieniu logów brak e-maila, hasła i wartości ciasteczka. Better Auth loguje tylko błędy (na `info` wypisuje e-mail przy zajętym adresie).
+- **SEC8** — `health-rate-limit.test.ts`: 31. `GET /health/ready` z IP → 429 `rate_limited`, inne IP 200; 40 × `GET /health` → 200. **Do sprawdzenia w QA:** check „CodeQL” na PR epiku (alert `js/missing-rate-limiting` dla `modules/health/http/routes.ts`) — rozstrzygnie się po pushu.
+
+### Decyzje i odstępstwa (do przejrzenia w QA)
+
+- Most `/api/auth/*` udostępnia tylko trzy trasy (rejestracja, logowanie, wylogowanie); reszta Better Auth (np. `update-user` bez naszej walidacji imienia) zwraca 404. Reset hasła doda E-02.
+- Adres klienta dla limitów per IP: most nadpisuje `X-Forwarded-For` adresem z Fastify (`request.ip`), więc klient nie obejdzie limitu własnym nagłówkiem. Za proxy: `TRUSTED_PROXIES` (adresy/CIDR; Fastify 5.12 nie ufa samej liczbie hopów). **Wartość dla Fly trzeba ustawić przy wdrożeniu**, inaczej wszyscy dzielą limit adresu proxy (`deployment.md`).
+- Nowe zmienne: `BETTER_AUTH_SECRET` (wymagany), `APP_ORIGIN`, `TRUSTED_PROXIES` (`.env.example`, `deployment.md`). `db:migrate` czyta tylko `DATABASE_URL` (job CI „migrations” nie ma sekretu) — sprawdzone uruchomieniem bez sekretu: błąd połączenia, nie konfiguracji.
+- Przekierowanie po zalogowaniu/rejestracji robi strażnik `PublicOnly` (jedno miejsce; formularz tylko ustawia sesję); powrót tylko na ścieżki aplikacji (odrzuca `//host`).
+- SC-01 bez linku „Nie pamiętasz hasła?” (SC-03 to E-02). SC-02 ma link „zresetuj hasło” → `/reset-hasla`, bo wymaga go AC2; do E-02 ta ścieżka prowadzi anonima na SC-01.
+- Ekran startowy szkieletu (T-001, stan API) usunięty — `/` prowadzi na „Moje listy” / SC-01. Test E2E T-001 (`start.spec.ts`) zmieniony: SPA pod `/` i dowolną ścieżką pokazuje SC-01 (`lang="pl"`, axe).
+- Zmiany istniejących testów: `database.test.ts` przypinał „dokładnie 1 migracja” → „co najmniej 1” (zastosowane = w dzienniku zostaje); testy T-001 budują aplikację przez `buildTestApp` (wymagana opcja `auth`), asercje bez zmian.
+- `eslint.config.js`: progi rozmiaru funkcji i plików nie obejmują już `*.test.{ts,tsx}` — zgodnie z `CODING_STANDARDS.md` („kod źródłowy (bez testów)”); wcześniej konfiguracja obejmowała testy w `src/`.
+- Komunikat „Hasło może mieć najwyżej 128 znaków” (limit Better Auth) i błąd wylogowania (tekst braku sieci) nie są w tabelach „Copy” — teksty agenta.
+- Licznik znaków imienia (od 24/30) jest `aria-hidden`; błąd długości ogłasza się przez `aria-describedby`.
+- Wygasłe wiersze `sign_in_failure` nie są jeszcze sprzątane (sprzątanie dzienne z `data-model.md` nie ma taska w E-01).
+
+### Zrzuty
+
+Telefon 390 px (lokalnie, poza repo): SC-01, SC-02 z błędami walidacji, SC-05 szkielet, SC-09, SC-04 — jedna kolumna, nic nie obcięte; obejrzane przy implementacji.
+
+### Przewodniki warstw (Step 8b)
+
+Uzupełnione „Gdzie jest kod” i „Komendy” w `layers/backend.md`, `layers/db.md`, `layers/web.md` (fakty). Propozycji zmian „Konwencji” brak.
+
+### Poprawki po QA round 1 (2026-10-27)
+
+Zakres: #1 (blocker), #2 (major) i — na prośbę właściciela — minors #3–#9. Uwagi #10–#14 (note) nie były ruszane. Przebieg końcowy: `pnpm check` zielony (Vitest **98/98**, jscpd 0 klonów, depcruise 0 naruszeń), `pnpm build` OK, `pnpm test:e2e` **8/8**.
+
+| QA # | Test (plik) | Red: komunikat przed poprawką | Poprawka | Teraz |
+| --- | --- | --- | --- | --- |
+| 1 | `sign-in-rate-limit.test.ts` „checks at most 5 passwords per account when attempts arrive in parallel” (30 równoległych złych haseł z różnych IP → 5 × 401, 25 × 429, potem poprawne hasło → 429) | `expected [ 401, 401, …(24) ] to have a length of 5 but got 30` | `SignInFailures.reserve()` — próba rezerwowana przed sprawdzeniem hasła jednym `INSERT … ON CONFLICT DO UPDATE … RETURNING failures`; odmowa, gdy wynik > próg. `release()` oddaje próbę zakończoną inaczej niż 401 (`isBlocked`/`record` usunięte) | pass |
+| 1a | `sign-in-rate-limit.test.ts` „does not count successful sign-ins toward the account limit” (6 poprawnych logowań → 6 × 200) | strażnik zachowania `release()`: przechodził na starym kodzie; sprawdzony mutacją (bez `release`) → `expected 429 to be 200` | — | pass |
+| 2 | `session-expiry.test.ts` „renews the session cookie for another 30 days when the session is used” (`/me` po 2 dniach → `Set-Cookie` sesji z `Max-Age=2592000`, `HttpOnly`) | `Error: no session cookie in undefined` (brak `Set-Cookie` w odpowiedzi `/me`) | `requireUser(auth, request, reply)` woła `getSession({ returnHeaders: true })` i przekazuje `Set-Cookie`; wspólna `passCookies()` (`http/cookies.ts`) zamiast dwóch pętli | pass |
+
+SEC1 i SEC6 — dowody jak wyżej plus nowe testy. Dokumenty: `data-model.md` (opis rezerwacji próby), `layers/backend.md` („Gdzie jest kod”: `http/cookies.ts`, rola `require-user.ts`).
+
+Do uwagi QA: zablokowane żądania też podbijają licznik (nie są oddawane) — okno liczy się od pierwszej porażki, więc nie wydłużają blokady. Próba, przy której Better Auth zwróci 429 z limitu IP, jest oddawana (hasło nie było sprawdzone).
+
+#### Minors #3–#9
+
+| QA # | Test (plik) | Red: komunikat przed poprawką | Poprawka | Teraz |
+| --- | --- | --- | --- | --- |
+| 3 | `sign-up.test.ts` „answers 409 email_taken to the second of two simultaneous sign-ups” | `expected [ 200, 422 ] to deeply equal [ 200, 409 ]` (powtarzalnie, 3/3) | most: przy `422 FAILED_TO_CREATE_USER` sprawdza `internalAdapter.findUserByEmail` → `409 email_taken` | pass |
+| 3a | `sign-up.test.ts` „…when the database rejects the account › answers 500 internal” (trigger w bazie odrzuca `INSERT`) | `expected 422 to be 500` | `relay`: nieznany status Better Auth → `500 internal` | pass |
+| 4 | `SC-09-konto/AccountScreen.test.tsx` (2): brak sieci → „Brak połączenia…”; `500` → „Nie udało się wylogować. Spróbuj ponownie.” | `Unable to find an element with the text: Nie udało się wylogować…` (drugi test; pierwszy przechodził) | `src/errorText.ts` — wspólne kody (`network`) w jednym miejscu, ekrany SC-01/02/09 podają swoje teksty i domyślny; `asRequestError()` w `api/client.ts` zamiast trzech kopii `instanceof` | pass |
+| 5 | `require-user.test.ts` (2): trasa innego modułu z `accounts.requireUser` — anonim → 401 `unauthenticated`, zalogowany → dane domownika | stub `not implemented`: `expected 500 to be 401`, `expected 500 to be 200` | `accountRoutes()` zwraca `Accounts { requireUser(request, reply) }` | pass |
+| 6 | refaktor bez zmiany zachowania | `drizzle-kit generate` → „No schema changes” (SQL `CHECK` identyczny z migracją `0001`) | `NAME_MAX_LENGTH` w `CHECK` przez `sql.raw(String(…))` | — |
+| 7 | dokumentacja | — | `layers/backend.md` „Pułapki”: konta tylko przez most HTTP, hook stempluje zgody bezwarunkowo, nie wołać `auth.api.signUpEmail` z serwera | — |
+| 8 | dokumentacja | — | `deployment.md`: akapit o zmiennych pod tabelą sekretów, wiersz `EXPO_TOKEN` z powrotem w tabeli | — |
+| 9 | `config.test.ts` (2): bez `APP_ORIGIN` (brak / pusty) `readConfig` rzuca błąd z nazwą zmiennej | `expected [Function] to throw an error` | `APP_ORIGIN` wymagany (bez domyślnego `http://localhost:5173`); E2E i `.env.example` już go ustawiają | pass |
+
+Do uwagi QA:
+
+- #6: reguła lint `no-restricted-syntax` (zakaz `sql.raw`, TH-20) wyłączona w jednej linii `schema.ts` z uzasadnieniem — stała liczbowa z kodu, nie dane wejściowe; zwykła interpolacja daje w DDL parametr (`BETWEEN 1 AND $1`, sprawdzone wygenerowaniem migracji, którą usunąłem). Alternatywa: zostawić literał 30.
+- #9: zmiana zachowania dla lokalnego dev — `pnpm dev` wymaga `APP_ORIGIN` w `.env` (wcześniej działał domyślny adres).
+- #4: wspólny jest tylko `network`; `rate_limited` i tekst domyślny (`internal`) różnią się treścią między ekranami (tabele „Copy”), więc zostają przy ekranach — ale mapowanie idzie przez jedną funkcję. Tekst „Nie udało się wylogować. Spróbuj ponownie.” to tekst agenta (brak w „Copy” SC-09).
+- #3: przy kolizji Better Auth loguje `Failed to create user` z obiektem błędu Postgresa (zawiera e-mail w `detail`); nasz adapter logera przekazuje tylko `message`, więc e-mail nie trafia do logów (TH-21).
+
+<!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-27)
+
+Verdict: fail
+
+Odtworzenie (czysty stan, Windows, Docker): `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych, `db:migrate` OK, `pnpm check` zielony (Prettier, ESLint, typecheck, jscpd 0 klonów, depcruise 0 naruszeń, design-check OK, backlog-check OK, Vitest **87/87**), `pnpm build` OK, `pnpm test:e2e` **8/8** (telefon + komputer, axe 0 naruszeń). Spot-checki mutacyjne: wyłączenie `isBlocked` w moście → 2 testy `sign-in-rate-limit` czerwone; pominięcie walidacji rejestracji → 5 testów AC3 czerwonych (przywrócone, `git status` czysty). Dowody red w Evidence są dla wszystkich 16 pozycji planu.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | security (TH-09, SEC1) | Limit nieudanych logowań per konto da się obejść równoległymi żądaniami: `isBlocked` i `record` to osobne zapytania bez blokady (TOCTOU), więc każde żądanie w locie przechodzi sprawdzenie. Atakujący z kilku IP dostaje dowolnie wiele prób w jednej serii co 15 min zamiast 5. | Tymczasowy test (`fastify.inject`, różne `remoteAddress`): 30 równoległych złych haseł → 30 × 401, licznik w `sign_in_failure` = 30; seria 19 złych + poprawne hasło równolegle → `401 ×19, 200` (zalogowany mimo 19 porażek), dopiero kolejne żądanie → 429. `sign-in-failures.ts:27`, `:41`, `auth-routes.ts:54-62`. | Sprawdzenie i zliczenie atomowe (np. rezerwacja próby `INSERT … ON CONFLICT … RETURNING failures` przed przekazaniem do Better Auth i odmowa, gdy wynik > próg; albo blokada wiersza / advisory lock per `accountKey`). Test integracyjny: N równoległych prób na jedno konto z różnych IP → co najwyżej 5 trafia do sprawdzenia hasła, poprawne hasło w serii po progu → 429. |
+| 2 | major | security (TH-17, SEC6) | Sesja przedłuża się tylko w bazie, nie w przeglądarce: `requireUser` woła `auth.api.getSession` bez `returnHeaders`, więc odnowione `Set-Cookie` (nowe `Max-Age`) przepada. Ciasteczko ma `Max-Age` 30 dni od logowania, więc codziennie używana sesja wygasa w przeglądarce po 30 dniach — wbrew ADR 0002 i SEC6 („przedłużane przy użyciu”). Test `session-expiry` sprawdza tylko wiersz w bazie, a `inject` ignoruje `Max-Age`. | Tymczasowy test: rejestracja 2026-11-02, `GET /api/v1/me` 2026-11-05 → 200, `set-cookie` brak, `session.expires_at` = 2026-12-05. `require-user.ts:8`. | Przekazać nagłówki `Set-Cookie` z `getSession` do odpowiedzi (`returnHeaders: true` + `reply.header`). Test: użycie sesji po ≥ 1 dniu zwraca `Set-Cookie` z ciasteczkiem sesji i `Max-Age` 30 dni. |
+| 3 | minor | backend (błędy) | Podwójne wysłanie rejestracji (wyścig na unikalnym e-mailu) daje `422 {"error":{"code":"internal"}}` zamiast `409 email_taken`; status 422 z kodem `internal` nie występuje w `api.md`. | Dwa równoległe `POST /api/auth/sign-up/email` z tymi samymi danymi → `200` i `422 internal`; powstało 1 konto (OK). `auth-routes.ts` `relay`/`STATUS_CODES`. | Kolizja unikalności → `409 email_taken`; nieznane statusy Better Auth → `500 internal`, nie 422. |
+| 4 | minor | web (duplikacja wiedzy) | Tekst „Brak połączenia…” i mapowanie wspólnych kodów (`network`, `internal`, `rate_limited`) są w trzech plikach `messages.ts`, wbrew notatce „mapowanie kodów błędów API na polskie komunikaty w jednym miejscu klienta web”. SC-09 pokazuje „Brak połączenia” przy każdym błędzie wylogowania (także 403/500). | `SC-01-logowanie/messages.ts:21`, `SC-02-rejestracja/messages.ts:24`, `SC-09-konto/messages.ts:10`, `AccountScreen.tsx:27`. | Jedna mapa wspólnych kodów; ekrany nadpisują tylko swoje; SC-09 dobiera tekst do kodu błędu. |
+| 5 | minor | backend (granice modułów) | `requireUser` (notatka: „funkcja modułu `konta` dla tras `/api/v1/*`”) nie jest dostępny poza modułem — wymaga instancji `Auth`, która nie wychodzi z `accountRoutes`; T-005 nie ma jak go użyć. | `modules/konta/index.ts:11-16`. | Publiczne API modułu daje `requireUser` (np. zwracane z `accountRoutes` albo preHandler / dekorator Fastify). |
+| 6 | minor | db (duplikacja wiedzy) | Limit imienia `BETWEEN 1 AND 30` wpisany na sztywno obok `NAME_MAX_LENGTH`. | `apps/api/src/db/schema.ts:31` vs `packages/shared/src/api/account.ts:3`. | Interpolacja stałej w `sql` w schemacie. |
+| 7 | minor | dokumentacja / architektura | Odstępstwo od notatki „zgody i 16+ weryfikowane w hooku rejestracji”: hook bezwarunkowo stempluje zgody, walidacja jest w moście HTTP. Każde serwerowe `auth.api.signUpEmail` (seed, test) założy konto z nieudzielonymi zgodami. Odstępstwo nie jest zapisane w `layers/backend.md`. | `infra/auth.ts:46-58`, `auth-routes.ts:46`. | Zapisać decyzję w `layers/backend.md` („Pułapki” / konwencja: konta tylko przez most) albo przenieść sprawdzenie do hooka. |
+| 8 | minor | dokumentacja | Akapit o `APP_ORIGIN` / `TRUSTED_PROXIES` wstawiony w środek tabeli sekretów — wiersz `EXPO_TOKEN` odcięty od tabeli. | `docs/architecture/deployment.md:64-66`. | Akapit pod tabelą. |
+| 9 | minor | konfiguracja | Brak `APP_ORIGIN` w produkcji przechodzi po cichu (domyślne `http://localhost:5173`); skutek bezpieczny (403 na POST), ale bez czytelnego błędu startu. | `apps/api/src/config.ts:11`. | `APP_ORIGIN` wymagany poza dev (lub błąd przy `NODE_ENV=production` bez `https://`). |
+| 10 | note | threat model | Blokada per konto pozwala obcemu zablokować cudze konto na 15 min (5 złych haseł). Ryzyko z projektu, niezapisane. | `sign-in-failures.ts`. | Wpis w `threat-model.md` (zaakceptowane ryzyko lub mitygacja). |
+| 11 | note | testy | Test zaufanego proxy dowodzi tylko „brak 429” przy losowym XFF; nie sprawdza łańcucha `fałszywy, prawdziwy` od klienta przed proxy. | `sign-in-rate-limit.test.ts:120-137`. | Przypadek z łańcuchem XFF i 429 po progu dla prawdziwego adresu. |
+| 12 | note | API | Odpowiedź 415 (np. `application/x-www-form-urlencoded`) jest w formacie Fastify (`{"statusCode":415,"code":"FST_ERR_CTP_INVALID_MEDIA_TYPE",…}`), nie `{ error: { code } }` z `api.md`. Prawdopodobnie od T-001. | `POST /api/auth/sign-out` z formularzem → 415. | Ujednolicić w globalnym handlerze błędów (osobny task, jeśli spoza T-004). |
+| 13 | note | AC8 | Treść SC-04 to szkic agenta bez danych kontaktowych administratora — wymaga akceptacji właściciela; nie oceniam merytorycznie. | `SC-04-regulamin/documents.tsx`. | Akceptacja właściciela w rundzie 2. |
+| 14 | note | QA — zakres | Nie wykonano w tej rundzie (wobec blokera): ręczne sprawdzenia dostępności (czytnik ekranu, sama klawiatura, 320 px / 200 %), Safari/Firefox, check CodeQL na PR (SEC8). Do zrobienia w rundzie 2. | — | — |
+
+Kryteria: AC1–AC7 **pass** (testy przeczytane, E2E J-01 uruchomione); AC8 **not verifiable** (akceptacja treści przez właściciela); SEC1 **fail** (#1); SEC2 **pass** (identyczne 401, czasy odpowiedzi ~90–100 ms dla obu przypadków); SEC3, SEC4, SEC5, SEC7 **pass**; SEC6 **fail** (#2); SEC8 **pass** lokalnie, część CodeQL **not verifiable** przed PR. Inne sprawdzone bez zastrzeżeń: nadpisanie `X-Forwarded-For` przez most, `Origin: null` → 403, pozostałe trasy Better Auth → 404, nadmiarowe pola (`emailVerified`, `termsVersion`, `image`) ignorowane, imię 30 znaków / polskie znaki / emoji OK, dwie sesje jednocześnie działają, brak open redirect w `returnPath`.
+
+**Do poprawy przed rundą 2:** #1 i #2 (każdy z testem, który jest czerwony przed poprawką); minors #3–#9 w miarę możliwości w tej samej rundzie.
+
+## QA round 2 (2026-10-27)
+
+Verdict: pass
+
+Odtworzenie (czysty stan, Windows, Docker): `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych, `pnpm check` zielony (Prettier, ESLint, typecheck, jscpd, depcruise, design-check 0 zakodowanych kolorów, backlog-check, Vitest **98/98**), `pnpm build` OK, `pnpm test:e2e` **8/8**. Przejrzany diff `6bfadc9`, `eae969e` względem `85b79a0`; testy z rundy 1 nie zostały osłabione (zmiany w testach to tylko nowe przypadki).
+
+Spot-checki mutacyjne (przywrócone, `git status` czysty):
+
+- `reserve()` zamienione na nieatomowe „sprawdź, potem zapisz” → „checks at most 5 passwords… in parallel” czerwony (`got 30`) — test łapie TOCTOU z #1.
+- usunięte `passCookies` w `requireUser` → „renews the session cookie…” czerwony (#2).
+- usunięte `release()` → „does not count successful sign-ins…” czerwony (`expected 429 to be 200`).
+
+Na działającym serwerze (zbudowane API + web, `X-Forwarded-For` przez zaufane proxy):
+
+- #1: 19 złych haseł + poprawne, równolegle, z różnych IP → dokładnie 5 × 401, reszta 429 (poprawne hasło też 429); kolejne poprawne → 429. 10 żądań z `Origin: https://evil.example` → 403 `invalid_origin` i nie zjadają limitu konta (poprawne hasło potem → 200).
+- #3: dwie równoległe rejestracje → `200` i `409 email_taken`, jedno konto.
+- Inne: imię 30 znaków / polskie znaki / emoji, e-mail z wielkimi literami i spacjami → 200; hasło 128 → 200, 129 → 400 `too_long`; > 16 kB → 413; `update-user` → 404; nieznany e-mail → 401 `invalid_credentials` (identyczna treść jak złe hasło). Log API: 6 × `sign_in_failed`, 17 × `rate_limited` w `security`; 0 wystąpień e-maili, haseł i `session_token`.
+- Przeglądarki (Playwright: Chromium, Firefox, WebKit; 320 × 640, `reduced-motion`): SC-01, SC-02 (pusty i błędy), SC-05, SC-09, SC-04 bez przewijania w poziomie, także SC-02 przy `zoom: 2`; rejestracja samą klawiaturą (Tab / Spacja / Enter) → `/listy`; po pustym wysłaniu fokus na „Popraw 5 pól”; etykiety zgód 288 × 48 px; ciasteczko `HttpOnly`, `document.cookie` puste; axe SC-04 przy 320 px — 0 naruszeń.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | AC8 / prywatność | Polityka prywatności nie podaje administratora danych ani kontaktu (RODO art. 13). Właściciel zaakceptował treść SC-04 w tej rundzie pod warunkiem uzupełnienia danych przed publicznym startem. | `SC-04-regulamin/documents.tsx`; decyzja właściciela 2026-10-27. | Dane administratora i kontakt w polityce przed udostępnieniem aplikacji poza pilotażem. |
+| 2 | note | threat model | (Z rundy 1, #10, nadal otwarte) Obcy może zablokować cudze konto na 15 min pięcioma złymi hasłami; ryzyko niezapisane w `threat-model.md`. | `grep` w `threat-model.md` — brak wpisu. | Wpis: zaakceptowane ryzyko lub mitygacja. |
+| 3 | note | testy | (Z rundy 1, #11) Test zaufanego proxy nie sprawdza łańcucha `X-Forwarded-For: fałszywy, prawdziwy`. | `sign-in-rate-limit.test.ts`. | Przypadek z łańcuchem i 429 po progu. |
+| 4 | note | API | (Z rundy 1, #12) 415 dla `application/x-www-form-urlencoded` w formacie Fastify, nie `{ error: { code } }`. | `POST /api/auth/sign-out` z formularzem → `{"statusCode":415,"code":"FST_ERR_CTP_INVALID_MEDIA_TYPE",…}`. | Ujednolicenie w globalnym handlerze (osobny task). |
+| 5 | note | SEC8 / CI | Check „CodeQL” na PR #1 nie jest jeszcze możliwy do sprawdzenia: commity T-004 nie są wypchnięte (`origin/epic/E-01…` = `1480bbe`). | `git log origin/…` | Sprawdzić zamknięcie alertu `js/missing-rate-limiting` w `/review-change E-01` / `/security-review E-01` po pushu. |
+| 6 | note | dostępność | Czytnik ekranu (NVDA / VoiceOver) i prawdziwe Safari na iPhonie nie były dostępne w tym środowisku; zamiast tego WebKit w Playwright oraz testy komponentów (`role="alert"`, fokus, `aria-describedby`). | — | Sprawdzić czytnikiem w UAT epiku. |
+| 7 | note | kod | `sql.raw` w `CHECK` imienia z wyłączoną regułą lint i uzasadnieniem (stała z kodu, DDL bez parametrów) — dopuszczalne; `drizzle-kit generate` bez zmian schematu według Evidence. | `apps/api/src/db/schema.ts:33-37`. | — |
+
+Kryteria: AC1–AC7 **pass**; AC8 **pass** (test komponentu + akceptacja treści przez właściciela 2026-10-27, z uwagą #1); SEC1 **pass** (#1 z rundy 1 naprawiony, sprawdzony atakiem równoległym); SEC2–SEC5, SEC7 **pass**; SEC6 **pass** (odnowione `Set-Cookie` z `Max-Age=2592000` przy użyciu; test bije); SEC8 **pass** lokalnie, część CodeQL **not verifiable** przed pushem (#5). Minors #3–#9 z rundy 1 sprawdzone i zamknięte.

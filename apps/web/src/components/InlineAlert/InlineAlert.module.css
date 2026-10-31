@@ -1,0 +1,35 @@
+.alert {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.alert p,
+.alert ul {
+  margin: 0;
+}
+
+.alert a {
+  color: inherit;
+}
+
+.error {
+  color: var(--color-status-error-text);
+  background: var(--color-status-error-bg);
+}
+
+.warning {
+  color: var(--color-status-warning-text);
+  background: var(--color-status-warning-bg);
+}
+
+.success {
+  color: var(--color-status-success-text);
+  background: var(--color-status-success-bg);
+}
+
+.info {
+  color: var(--color-text-primary);
+  background: var(--color-bg-subtle);
+}

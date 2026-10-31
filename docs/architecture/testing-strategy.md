@@ -16,6 +16,14 @@ approved: 2026-10-26
 | E2E web | Playwright + `@axe-core/playwright` | krytyczne ścieżki na prawdziwym api + bazie, viewport telefonu i komputera, skan dostępności każdego stanu ekranu | przypadki brzegowe (są w integracji) | całość < 5 min |
 | E2E mobile | Maestro (emulator Androida w CI; iOS ręcznie w QA) | krytyczne ścieżki w aplikacji natywnej | przypadki brzegowe | całość < 10 min |
 
+Pomiar celów (T-021): „całość” to pełny przebieg projektu (`pnpm vitest run --project <projekt>`) z domyślną liczbą workerów; „plik < 5 s” w integracji — czas pliku przy jednym workerze (`--maxWorkers=1`), bo w przebiegu równoległym pliki czekają na wspólny kontener PostgreSQL. Testy komponentów web przechodzą także przy dwóch przebiegach naraz, bez podnoszenia limitów Vitest i Testing Library.
+
+Wyjątki od „plik < 5 s” (integracja; plik sprawdza limit, więc z założenia wysyła dziesiątki żądań):
+
+| Plik | Czas (1 worker, 2026-10-29) | Dlaczego |
+| --- | --- | --- |
+| `apps/api/test/sign-in-rate-limit.test.ts` | ~7–8 s | każda próba logowania haszuje hasło (scrypt, także dla nieistniejącego konta) |
+
 Mobile używa Jest zamiast Vitest, bo preset Expo i React Native Testing Library działają na Jest; reszta monorepo na Vitest.
 
 ## Domyślne miejsca testów (seams)
@@ -55,10 +63,12 @@ Cel: WCAG 2.2 AA (`docs/design/design-decisions.md`).
 
 ## Dane testowe
 
-- Integracja: jeden kontener PostgreSQL na przebieg (Testcontainers), migracje uruchamiane raz; każdy test w osobnej bazie-szablonie (`CREATE DATABASE … TEMPLATE`) albo z czyszczeniem tabel (`TRUNCATE … CASCADE`) przed testem — wybór w walking skeleton.
+- Integracja (decyzja T-001, 2026-10-26): jeden kontener PostgreSQL na przebieg (Testcontainers, `globalSetup`), migracje uruchamiane raz do bazy-szablonu; każdy plik testów dostaje własną bazę `CREATE DATABASE … TEMPLATE` (pliki mogą biec równolegle), a przed każdym testem `DELETE` ze wszystkich tabel aplikacji (bez tabeli migracji). Zmiana T-021: kontener bez trwałości zapisu (`fsync`, `synchronous_commit`, `full_page_writes` = `off`), `DELETE` zamiast `TRUNCATE` (kilka wierszy na test), pula testowa z limitem połączenia 20 s zamiast produkcyjnych 3 s, projekt `api` z `isolate: false` (izolację daje baza pliku, nie świeży import modułów).
 - Fabryki w `apps/api/test/factories.ts`: `createUser()`, `signIn(user)` (zwraca ciasteczko), `createList(owner)`, `addMember(list, user)`, `createItem(list, by)`, `createInvitation(list)`. Nazwy i e-maile losowe, bez prawdziwych danych.
 - E2E: api uruchomione na czystej bazie w kontenerze; użytkownicy zakładani przez API w `beforeEach`; mail resetu odczytywany z API Mailpit.
-- Zegar: wstrzykiwany `clock` w module domenowym (wygasanie zaproszeń 7 dni, resetu 1 h, aktywność dzienna).
+- Zegar: wstrzykiwany `clock` w module domenowym (wygasanie zaproszeń 7 dni, resetu 1 h, aktywność dzienna). Sesje i limity Better Auth czytają `Date.now()` wewnątrz biblioteki, więc testy tego obszaru sterują czasem przez `vi.useFakeTimers({ toFake: ["Date"] })` (T-004).
+- Limity per IP w testach: fabryki i testy podają losowy `remoteAddress` (`randomIp()` w `apps/api/test/factories.ts`); E2E — losowy `X-Forwarded-For` per test przy `TRUSTED_PROXIES=127.0.0.1` (`apps/web/e2e/fixtures.ts`).
+- Testy limitów przypinają wartość z BRD lub threat-model liczbą (`expect(max).toBe(30)`, jak `lists.limit.test.ts`), zanim pętla użyje stałej z `packages/shared`: oczekiwana wartość nie może pochodzić tylko z implementacji, bo zła stała przeszłaby test (przegląd E-01 runda 2, S13).
 
 ## Pokrycie E2E
 

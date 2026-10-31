@@ -1,0 +1,11 @@
+# Baza i migracje
+pnpm services:up
+pnpm --filter @lista/api db:migrate
+# Lokalne api (http://127.0.0.1:3000; emulator widzi je pod 10.0.2.2)
+pnpm --filter @lista/api exec tsx src/server.ts
+curl --silent --fail http://127.0.0.1:3000/health
+# Build wydania z API_URL=http://10.0.2.2:3000, instalacja i start na emulatorze
+pnpm --filter @lista/mobile exec expo run:android --variant release --no-bundler
+# Flowy Maestro
+mkdir -p apps/mobile/e2e/results
+maestro test --format junit --output apps/mobile/e2e/results/report.xml apps/mobile/e2e

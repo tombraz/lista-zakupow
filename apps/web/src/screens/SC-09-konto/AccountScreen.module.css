@@ -1,0 +1,24 @@
+.page {
+  composes: column from "../../styles/page.module.css";
+}
+
+.section h2 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--typography-size-title);
+}
+
+.data {
+  display: grid;
+  gap: var(--spacing-xs);
+  margin: 0;
+}
+
+.data dt {
+  font-size: var(--typography-size-small);
+  color: var(--color-text-secondary);
+}
+
+.data dd {
+  margin: 0 0 var(--spacing-sm);
+  overflow-wrap: anywhere;
+}

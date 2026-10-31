@@ -48,7 +48,20 @@ Ceny w USD, tak jak publikują dostawcy; przeliczenie na € niezweryfikowane. S
 | staging | security review, DAST i UAT epika przed produkcją | `https://lista-staging.fly.dev` (aplikacja Fly `lista-staging`), Neon projekt `lista-staging` (Free) | po każdym merge do `main` | tylko dane testowe |
 | produkcja | domownicy | `https://lista-prod.fly.dev` (aplikacja Fly `lista-prod`), Neon projekt `lista-prod` (Launch) | po akceptacji właściciela (środowisko GitHub `production`) | prawdziwe dane |
 
-Nazwy aplikacji Fly są globalne; jeśli `lista-staging` / `lista-prod` są zajęte, task staging wybiera wolne i aktualizuje ten plik. Link zaproszenia i resetu hasła prowadzą do tego samego adresu (SC-08, SC-03).
+Nazwy aplikacji Fly są globalne; jeśli `lista-staging` / `lista-prod` są zajęte, task staging wybiera wolne i aktualizuje ten plik.
+
+Staging (T-010, potwierdzone przez właściciela 2026-10-29): aplikacja Fly `lista-staging` (org `personal`) utworzona przez `scripts/staging-setup.sh`; Neon `lista-staging`, plan Free, AWS Europe Central 1 (Frankfurt), gałąź `production`, połączenie bezpośrednie (bez `-pooler`), `sslmode=require`; ograniczenie dostępu po IP: brak (niedostępne na Free — ochroną jest hasło + TLS).
+
+Pierwsze wdrożenia staging (T-010, 2026-10-29): [przebieg 40882296349](https://github.com/tombraz/lista-zakupow/actions/runs/40882296349) (obraz `:813ad14…`, `release_command` z migracjami, smoke, ZAP — zielone); [przebieg 40882953706](https://github.com/tombraz/lista-zakupow/actions/runs/40882953706) z celowo błędną migracją przerwany na `release_command`, poprzednia wersja działała dalej. Ustalenia:
+
+- **Nazwy aplikacji:** `lista-staging` wolna i użyta (adres `https://lista-staging.fly.dev`); `lista-prod` — sprawdzić w tasku produkcji.
+- **Jedna maszyna:** `flyctl deploy` bez `--ha=false` tworzy przy pierwszym wdrożeniu drugą maszynę (wysoka dostępność); hub zmian na żywo jest w pamięci procesu (ADR 0003), więc `scripts/deploy.sh` wdraża z `--ha=false`. Nadmiarową maszynę ze staging usunięto `flyctl scale count 1` (2026-10-29).
+- **Limit bezczynności WebSocket na Fly:** proxy Fly zamyka połączenie TCP po 60 s bez ruchu (odpowiedź zespołu Fly, [community.fly.io/t/2373](https://community.fly.io/t/does-the-tls-handler-close-idle-tcp-connections-after-60s/2373), otwarte 2026-10-29). Bicie serca aplikacji (ping co 25 s) mieści się w limicie: połączenie `wss://lista-staging.fly.dev/api/v1/live` trwało 240 s bez zerwania (9 × ping/pong, test 2026-10-29).
+- **`TRUSTED_PROXIES`:** proxy Fly łączy się z maszyną z adresów `172.16.x.x` (`remoteAddress` w logach Fly; healthchecki z `172.19.x.x`) i ustawia `X-Forwarded-For` → `TRUSTED_PROXIES = "172.16.0.0/16"` w `apps/api/fly.staging.toml`.
+- **Uśpiona baza przy wdrożeniu:** pierwsze połączenie z uśpioną bazą Neon przekraczało 3 s puli API i `release_command` padał; migracje mają własny limit połączenia 30 s (`MIGRATION_CONNECTION_TIMEOUT_MS`).
+- **Szyfrowanie w spoczynku (TH-07):** Neon szyfruje dane na dyskach NVMe (XTS-AES-256, sprzętowo) — [neon.com/docs/security/security-overview](https://neon.com/docs/security/security-overview), otwarte 2026-10-29; region projektu `lista-staging`: AWS Europe Central 1 (Frankfurt) — zrzut panelu Neon od właściciela 2026-10-29.
+
+**Wyzwalacz wdrożenia staging:** push do `main` i ręczny `workflow_dispatch` (T-013; sprawdza `scripts/test/deploy-workflow.test.sh`). Tymczasowy wyzwalacz `deploy-test/**` z T-010 usunięty; znacznik `TYMCZASOWE` w `.github/workflows/` odrzuca `scripts/workflow-check.mjs` (`pnpm check`, CI). Do zrobienia przez właściciela przed zamknięciem E-01: usunięcie gałęzi `deploy-test/*` i obrazu `:91c62fd…` z GHCR. Link zaproszenia i resetu hasła prowadzą do tego samego adresu (SC-08, SC-03).
 
 Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 
@@ -63,6 +76,8 @@ Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 | `BREVO_API_KEY` | API (mail resetu) | sekrety Fly per aplikacja | raz w roku |
 | `EXPO_TOKEN` | `mobile.yml` | sekret repozytorium | raz w roku |
 
+Zmienne API (nie sekrety, T-004): `APP_ORIGIN` — publiczny adres aplikacji (zaufany `Origin`, `Secure` ciasteczka przy `https://`), wymagany — bez niego API nie wystartuje; `TRUSTED_PROXIES` — adresy / CIDR proxy Fly przed API (Fastify `trustProxy`), bez nich limity per IP liczą adres proxy dla wszystkich; na Fly `172.16.0.0/16` (ustalone 2026-10-29, „Środowiska”). Migracje (`db:migrate`) potrzebują tylko `DATABASE_URL`.
+
 OIDC (krótkotrwałe poświadczenia) dla Fly: niezweryfikowane — używamy tokenów o najwęższym zakresie (deploy jednej aplikacji). Wrócić, jeśli dostawca udostępni OIDC.
 
 Kto akceptuje wdrożenia produkcji: Tomasz Brążkiewicz (jedyny wymagany akceptujący środowiska `production`).
@@ -71,7 +86,7 @@ Kto akceptuje wdrożenia produkcji: Tomasz Brążkiewicz (jedyny wymagany akcept
 
 Wszystkie strony otwarte 2026-10-26 (subagenci w `/ci-cd`).
 
-**Backend.** Fly.io (prod ~2,5 $, staging z auto-stop, region `fra`, dowolny obraz, `auto_stop_machines = "off"` na produkcji) — wybrany. Drugie miejsce: Northflank Sandbox (0 $, Frankfurt, ale sam dostawca pisze, że plan darmowy „should not be used for production”, wymaga karty). Odrzucone: Render (prod 7 $ za 512 MB + baza → ponad budżet), Railway Hobby (5 $ + nadwyżki), Koyeb (Pro 29 $), Scaleway Serverless Containers (maks. 60 min na żądanie — zrywa WebSocket). Źródła: docs.fly.io/about/pricing, docs.fly.io/reference/regions, docs.fly.io/launch/autostop-autostart, docs.fly.io/launch/continuous-deployment-with-github-actions, northflank.com/pricing, northflank.com/docs/v1/application/billing/pricing-on-northflank, render.com/pricing, render.com/docs/websocket, render.com/docs/free, railway.com/pricing, koyeb.com/pricing, scaleway.com/en/docs/serverless-containers/reference-content/containers-limitations/. Niezweryfikowane: limit bezczynności WebSocket na Fly, OIDC.
+**Backend.** Fly.io (prod ~2,5 $, staging z auto-stop, region `fra`, dowolny obraz, `auto_stop_machines = "off"` na produkcji) — wybrany. Drugie miejsce: Northflank Sandbox (0 $, Frankfurt, ale sam dostawca pisze, że plan darmowy „should not be used for production”, wymaga karty). Odrzucone: Render (prod 7 $ za 512 MB + baza → ponad budżet), Railway Hobby (5 $ + nadwyżki), Koyeb (Pro 29 $), Scaleway Serverless Containers (maks. 60 min na żądanie — zrywa WebSocket). Źródła: docs.fly.io/about/pricing, docs.fly.io/reference/regions, docs.fly.io/launch/autostop-autostart, docs.fly.io/launch/continuous-deployment-with-github-actions, northflank.com/pricing, northflank.com/docs/v1/application/billing/pricing-on-northflank, render.com/pricing, render.com/docs/websocket, render.com/docs/free, railway.com/pricing, koyeb.com/pricing, scaleway.com/en/docs/serverless-containers/reference-content/containers-limitations/. Niezweryfikowane: OIDC (limit bezczynności WebSocket: 60 s, zob. „Środowiska”).
 
 **Baza.** Neon (Frankfurt, DPA, Free dla staging; Launch z przywracaniem do 7 dni dla produkcji) — wybrany. Drugie miejsce: dodatek Postgres w Northflank (kopie dzienne z dowolną retencją, ale jeden dodatek w planie darmowym). Odrzucone: Render Postgres (darmowa baza wygasa po 30 dniach; 7 dni przywracania tylko w płatnym workspace Pro), Supabase (Free pauzuje i bez kopii; Pro 25 $), Aiven (brak wyboru regionu), Scaleway Managed DB (~11 €), Fly Managed Postgres (38 $), Railway (kopie dzienne 6 dni). Źródła: neon.com/pricing, neon.com/docs/introduction/regions, neon.com/dpa, render.com/docs/postgresql-backups, supabase.com/pricing, aiven.io/pricing, scaleway.com/en/pricing/managed-databases/, docs.railway.com/reference/backups.
 
@@ -95,4 +110,5 @@ Wszystkie strony otwarte 2026-10-26 (subagenci w `/ci-cd`).
 
 ## Otwarte pytania
 
-- [ ] Ceny w €, limit bezczynności WebSocket na Fly i wysyłka Brevo bez własnej domeny — potwierdzić przy pierwszym wdrożeniu staging (task infra 3).
+- [x] Limit bezczynności WebSocket na Fly i nazwy aplikacji (staging) — rozstrzygnięte 2026-10-29 (T-010, „Środowiska”).
+- [ ] Ceny w € — potwierdzić przy pierwszym rachunku. Wysyłka Brevo bez własnej domeny — w E-02 (reset hasła).

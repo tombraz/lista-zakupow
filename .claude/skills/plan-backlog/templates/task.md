@@ -34,6 +34,8 @@ screens: []            # e.g. [SC-02]
 
 Each criterion must fail before the work and pass after it.
 
+UI tasks: every row of the "States" table of each touched screen that this task makes reachable is covered by a criterion, including the focus and announcements the row names (an axe scan alone does not cover it). Rows left for a later task are named in "Implementation notes".
+
 - [ ] AC1: Given <context>, when <action>, then <result>. — verified by: <test name or manual check>
 - [ ] AC2: …
 - [ ] SEC1 (for each threat in `threats:`): Given <attacker context, e.g. another user>, when <attempt>, then <refused, no data>. — verified by: <negative test>
@@ -60,6 +62,8 @@ Each criterion must fail before the work and pass after it.
 
 **Mocks:** only at system boundaries (<external service, clock>). Never mock own modules.
 
+**Client state during writes** (UI tasks that save through the API): for each write, a component test with a delayed response (the user keeps acting meanwhile; nothing is lost silently), a lost response after the server saved (retry does not duplicate, changed input does not return the old result, the screen matches the server), and data changing meanwhile (a warning from the API expires when its cause is gone). See "Pitfalls" in the layer guide.
+
 ## QA plan
 
 What an independent tester checks beyond the automated tests:
@@ -81,6 +85,7 @@ What an independent tester checks beyond the automated tests:
 - [ ] Full test suite, type check and lint pass
 - [ ] Every acceptance criterion checked, with evidence below
 - [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
 - [ ] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.

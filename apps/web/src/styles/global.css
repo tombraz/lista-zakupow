@@ -1,0 +1,15 @@
+@import "@lista/tokens/tokens.css";
+
+body {
+  margin: 0;
+  font-family: var(--typography-family-base);
+  font-size: var(--typography-size-body);
+  line-height: var(--typography-line-height-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-default);
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-offset);
+}

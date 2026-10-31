@@ -1,0 +1,13 @@
+.error {
+  margin: 0;
+  font-size: var(--typography-size-small);
+  color: var(--color-status-error-text);
+}
+
+.error::before {
+  content: "⚠ ";
+}
+
+.error a {
+  color: var(--color-status-error-text);
+}

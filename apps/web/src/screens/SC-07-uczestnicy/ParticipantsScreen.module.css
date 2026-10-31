@@ -1,0 +1,47 @@
+.page {
+  composes: column from "../../styles/page.module.css";
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--typography-size-body);
+}
+
+.people {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.person {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  min-height: var(--size-target-min);
+}
+
+.name {
+  display: block;
+}
+
+.role,
+.hint,
+.empty {
+  margin: 0;
+  font-size: var(--typography-size-small);
+  color: var(--color-text-secondary);
+}
+
+.role {
+  display: block;
+}
+
+.visuallyHidden {
+  composes: visuallyHidden from "../../styles/page.module.css";
+}

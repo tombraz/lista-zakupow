@@ -1,0 +1,20 @@
+.page {
+  composes: column from "../../styles/page.module.css";
+}
+
+.product {
+  margin: 0;
+  font-size: var(--typography-size-title-lg);
+  font-weight: var(--typography-weight-bold);
+  line-height: var(--typography-line-height-tight);
+  color: var(--color-action-primary);
+}
+
+.title {
+  composes: title from "../../styles/page.module.css";
+}
+
+.footer {
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border-default);
+}

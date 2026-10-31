@@ -1,0 +1,11 @@
+{
+  "site": [
+    {
+      "@name": "https://lista-staging.fly.dev",
+      "alerts": [
+        { "pluginid": "10049", "alert": "Storable and Cacheable Content", "riskcode": "0" },
+        { "pluginid": "40012", "alert": "Cross Site Scripting (Reflected)", "riskcode": "3" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.register {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.register p {
+  margin: 0;
+}
+
+/* Przycisk drugorzędny jako link (nawigacja do SC-02). */
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--size-target-min);
+  font-weight: var(--typography-weight-semibold);
+  text-decoration: none;
+  border: 2px solid var(--color-action-primary);
+  border-radius: var(--radius-md);
+}

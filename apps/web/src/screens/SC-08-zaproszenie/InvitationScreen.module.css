@@ -1,0 +1,32 @@
+.page {
+  composes: column from "../../styles/page.module.css";
+}
+
+.page p {
+  margin: 0;
+}
+
+.title {
+  composes: title from "../../styles/page.module.css";
+}
+
+/* Link w roli przycisku głównego / drugorzędnego: cel ≥ 48 px. */
+.primaryLink,
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--size-target-min);
+  font-weight: var(--typography-weight-semibold);
+  border-radius: var(--radius-md);
+}
+
+.primaryLink {
+  color: var(--color-text-on-brand);
+  text-decoration: none;
+  background: var(--color-action-primary);
+}
+
+.page a.primaryLink {
+  color: var(--color-text-on-brand);
+}

@@ -1,0 +1,9 @@
+# Środowisko GitHub staging (sekret FLY_API_TOKEN tylko tam)
+gh api --method PUT repos/tombraz/lista-zakupow/environments/staging
+# Aplikacja Fly lista-staging (region fra z apps/api/fly.staging.toml)
+flyctl apps create lista-staging --org personal
+# Sekrety Fly ze stdin, bez wartości w argumentach: DATABASE_URL (Neon lista-staging, sslmode=require), BETTER_AUTH_SECRET (losowy)
+flyctl secrets import --app lista-staging --stage
+# Token wdrożeń tylko dla lista-staging (rok) prosto do sekretu środowiska staging
+flyctl tokens create deploy --app lista-staging --expiry 8760h | gh secret set FLY_API_TOKEN --env staging --repo tombraz/lista-zakupow
+# Ręcznie po pierwszym przebiegu deploy.yml: pakiet ghcr.io/tombraz/lista-zakupow → Package settings → Change visibility → Public (Fly pobiera obraz bez logowania)

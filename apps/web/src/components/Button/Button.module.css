@@ -1,0 +1,76 @@
+.button {
+  display: inline-flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--size-target-min);
+  padding: 0 var(--spacing-lg);
+  font: inherit;
+  font-weight: var(--typography-weight-semibold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.primary {
+  color: var(--color-text-on-brand);
+  background: var(--color-action-primary);
+  border: 0;
+}
+
+.primary:hover {
+  background: var(--color-action-primary-hover);
+}
+
+.secondary {
+  color: var(--color-action-primary);
+  background: var(--color-bg-default);
+  border: 2px solid var(--color-action-primary);
+}
+
+/* Akcentowy „Dodaj” na pasku marki. */
+.accent {
+  color: var(--color-text-on-accent);
+  background: var(--color-action-accent);
+  border: 0;
+}
+
+.accent:hover {
+  background: var(--color-action-accent-hover);
+}
+
+/* Niebezpieczny-tekstowy: `action.danger` bez tła. */
+.danger {
+  color: var(--color-action-danger);
+  background: none;
+  border: 0;
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  color: var(--color-text-secondary);
+  background: var(--color-action-disabled);
+  border-color: var(--color-action-disabled);
+  cursor: default;
+}
+
+.spinner {
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,39 @@
+# Fly.io, staging (T-010; deployment.md, ADR 0006). Obraz podaje scripts/deploy.sh (--image
+# ghcr.io/tombraz/lista-zakupow:<sha>), więc ten plik nie buduje niczego.
+# Sekrety (fly secrets, nie tutaj): DATABASE_URL (Neon lista-staging, sslmode=require), BETTER_AUTH_SECRET.
+app = "lista-staging"
+primary_region = "fra"
+
+[deploy]
+  # Przed startem nowej wersji, na osobnej maszynie z tym samym obrazem i sekretami. Nieudana
+  # migracja przerywa wdrożenie; poprzednia wersja działa dalej (pipeline.md, etap 5).
+  release_command = "node apps/api/dist/db/migrate.js"
+
+[env]
+  APP_ORIGIN = "https://lista-staging.fly.dev"
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  LOG_LEVEL = "info"
+  # Proxy Fly łączy się z maszyną z adresów 172.16.x.x (remoteAddress w logach staging, 2026-10-29)
+  # i ustawia X-Forwarded-For; bez tego limity per IP liczyłyby adres proxy dla wszystkich.
+  TRUSTED_PROXIES = "172.16.0.0/16"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Staging usypia bez ruchu; pierwsze żądanie budzi maszynę (deployment.md, „Środowiska”).
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  # Bez bazy: healthcheck nie może budzić Neon (deployment.md, „Ryzyka”).
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

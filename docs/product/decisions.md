@@ -42,3 +42,4 @@
 | 2026-10-26 | Hasło: co najmniej 8 znaków, bez wymogu cyfr i znaków specjalnych. |
 | 2026-10-26 | Link resetu hasła ważny 1 godzinę. |
 | 2026-10-26 | Nazwa listy: 1–100 znaków (F-05). |
+| 2026-10-26 | Dostarczanie MVP w czterech epikach (zakres wydania bez zmian): E-01 szkielet i pierwsza wspólna lista (epik pilotażu), E-02 konto i zarządzanie udostępnianiem, E-03 produkcja i operacje, E-04 aplikacja mobilna. Powód: pełne MVP to ~24 taski mieszczące się w jednej sesji agenta, a pilotaż zakłada epik 5–8 tasków (`/plan-backlog`). |

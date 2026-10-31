@@ -1,0 +1,326 @@
+# Bramki CI (pipeline.md, etapy 1–2; testing-strategy.md, „Bramki CI”). Jedyny wymagany check z tego
+# workflow: ci-ok. Komendy pochodzą z przewodników warstw (docs/architecture/layers/).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      db: ${{ steps.filter.outputs.db }}
+      backend: ${{ steps.filter.outputs.backend }}
+      web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          # Tabela „Joby CI per warstwa” w pipeline.md. Zmiana .github/** lub wspólnej konfiguracji
+          # (zależności, TypeScript, lint) uruchamia wszystkie warstwy.
+          filters: |
+            all: &all
+              - '.github/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.nvmrc'
+              - 'tsconfig*.json'
+              - 'eslint.config.js'
+              - 'eslint.directives.config.js'
+              - 'scripts/test/lint-directives.test.sh'
+              - 'scripts/test/lint-security.test.mjs'
+              - 'vitest.config.ts'
+              - '.dependency-cruiser.cjs'
+              - '.jscpd.json'
+            db:
+              - *all
+              - 'apps/api/src/db/**'
+              - 'apps/api/drizzle/**'
+              - 'docker-compose.yml'
+            backend:
+              - *all
+              - 'apps/api/**'
+              - 'packages/shared/**'
+              - 'docker-compose.yml'
+            web:
+              - *all
+              - 'apps/web/**'
+              - 'packages/shared/**'
+              - 'packages/tokens/**'
+              - 'docs/design/tokens.json'
+            mobile:
+              - *all
+              - 'apps/mobile/**'
+              - 'packages/shared/**'
+              - 'packages/tokens/**'
+            infra:
+              - '.github/**'
+              - 'scripts/**'
+              - 'docker-compose.yml'
+              - 'Dockerfile'
+              - '.dockerignore'
+              - '**/fly*.toml'
+              - '.zap/**'
+
+  # Zawsze, także dla zmian tylko w docs/.
+  always:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Format (Prettier)
+        run: pnpm format:check
+      - name: Backlog check
+        run: node scripts/backlog-check.mjs
+      - name: Workflow check (bez tymczasowych obejść, T-013)
+        run: node scripts/workflow-check.mjs
+      - name: Design check (kontrasty, kolory na sztywno)
+        run: node scripts/design-check.mjs --scan apps/web/src apps/mobile/src --allow generated
+      - name: Skan zależności (TH-22, próg high)
+        run: pnpm audit --audit-level high
+
+  static:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.mobile == 'true' || needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Lint (ESLint, złożoność, bezpieczne wzorce TH-15/TH-20)
+        run: pnpm lint
+      - name: Lint komentarzy łapie obejścia (T-046)
+        run: bash scripts/test/lint-directives.test.sh
+      - name: Reguły bezpieczeństwa lintu łapią naruszenia (T-050)
+        run: node scripts/test/lint-security.test.mjs
+      - name: Typy
+        run: pnpm typecheck
+      - name: Jakość (jscpd, dependency-cruiser)
+        run: pnpm quality
+
+  tests:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Unit, komponenty i integracja (Testcontainers)
+        run: pnpm test:coverage
+      - name: Raport pokrycia (bez progu)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  migrations:
+    needs: changes
+    if: needs.changes.outputs.db == 'true' || needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Baza z docker-compose.yml (jedno źródło obrazu Postgresa).
+      DATABASE_URL: postgres://lista:lista@localhost:5442/lista
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Pusta baza
+        run: docker compose up -d --wait postgres
+      - name: Migracje na pustej bazie
+        run: pnpm --filter @lista/api db:migrate
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+
+  e2e-web:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Przeglądarka Playwright
+        run: pnpm --filter @lista/web exec playwright install --with-deps chromium
+      - name: E2E web z axe (API serwuje build web, baza w kontenerze)
+        run: pnpm test:e2e
+      - name: Ślady i log API
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-web-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+
+  # Warstwa mobile (T-003): lint i typy apps/mobile są w jobie `static`; tu testy ekranów i design
+  # check, E2E Android (Maestro) i build iOS na symulator. Komendy: docs/architecture/layers/mobile.md.
+  mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Testy ekranów (Jest + RNTL + MSW)
+        run: pnpm test:mobile
+      - name: Design check (apps/mobile/src)
+        run: node scripts/design-check.mjs --scan apps/mobile/src --allow generated
+
+  mobile-android:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Maestro z wydania GitHub, przypięty wersją i sumą SHA-256 (TH-22).
+      MAESTRO_VERSION: 2.11.0
+      MAESTRO_SHA256: 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: KVM dla emulatora
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: JDK 17 i narzędzia Android SDK w PATH
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          {
+            echo "$ANDROID_HOME/cmdline-tools/latest/bin"
+            echo "$ANDROID_HOME/platform-tools"
+            echo "$ANDROID_HOME/emulator"
+          } >> "$GITHUB_PATH"
+      - name: Maestro
+        run: |
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/maestro.zip" \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+          echo "$MAESTRO_SHA256  $RUNNER_TEMP/maestro.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      # Limity kroków: zawieszony krok kończy się błędem z logami, a nie dopiero limitem joba.
+      - name: Emulator Androida
+        timeout-minutes: 12
+        run: bash scripts/android-emulator.sh
+      - name: E2E Android (lokalne api, build wydania, Maestro)
+        timeout-minutes: 35
+        run: bash scripts/mobile-e2e.sh
+      - name: Raport Maestro i logi
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-mobile-android
+          path: |
+            apps/mobile/e2e/results/
+            ~/.maestro/tests/
+            ${{ runner.temp }}/*.log
+          retention-days: 7
+
+  mobile-ios:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Build iOS na symulator (ADR 0008)
+        run: bash scripts/ios-simulator-build.sh
+
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
+      - name: Testy skryptów (--dry-run)
+        run: |
+          bash scripts/test/protect-main.test.sh
+          bash scripts/test/mobile.test.sh
+          bash scripts/test/deploy.test.sh
+          bash scripts/test/deploy-workflow.test.sh
+          bash scripts/test/workflow-check.test.sh
+          bash scripts/test/image.test.sh
+          bash scripts/test/smoke.test.sh
+          bash scripts/test/zap.test.sh
+          bash scripts/test/staging-setup.test.sh
+
+  # Obraz z deploy.yml (T-010) budowany i sprawdzany na PR, bez publikacji: migracje z obrazu, api i web
+  # pod jednym portem przechodzą smoke test, Trivy blokuje high/critical z poprawką (TH-22).
+  image:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build obrazu
+        run: bash scripts/image.sh build "$GITHUB_SHA"
+      - name: Obraz uruchomiony lokalnie (migracje, smoke test)
+        run: bash scripts/test/image-run.test.sh "$GITHUB_SHA"
+      - name: Trivy
+        run: bash scripts/image.sh scan "$GITHUB_SHA"
+
+  # Jedyny wymagany check tego workflow: zielony, gdy każdy uruchomiony job przeszedł (pominięty = OK).
+  ci-ok:
+    if: always()
+    needs:
+      - changes
+      - always
+      - static
+      - tests
+      - migrations
+      - build
+      - e2e-web
+      - mobile
+      - mobile-android
+      - mobile-ios
+      - infra
+      - image
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Wynik jobów
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -Eq '"(failure|cancelled)"'; then
+            echo "Co najmniej jeden job nie przeszedł lub został anulowany."
+            exit 1
+          fi

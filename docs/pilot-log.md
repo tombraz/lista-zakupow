@@ -8,6 +8,8 @@ Waga: `wysoka` (zła jakość mogła przejść dalej) · `średnia` (strata czas
 
 | Data | Skill / krok | Co się stało | Oczekiwane | Typ | Waga |
 | --- | --- | --- | --- | --- | --- |
+| 2026-10-26 | /tech-architecture (threat-model) | Model zagrożeń przetłumaczony na polski razem z etykietami `## Threats` i `Covered by`; `backlog-check` nie znalazł żadnego zagrożenia (40 błędów „not found”) | Etykiety czytane przez skrypty zostają po angielsku; skill mówi to wprost | instrukcja | wysoka |
+| 2026-10-26 | /plan-backlog (epiki) | Pełne MVP (16 F-xx, web + mobile, infra) to ~24 taski na jedną sesję; PILOT.md i BRD zakładały jeden epik 5–8 tasków. Podzielone na 4 epiki, E-01 ma 10 tasków | PILOT.md / /concept-to-brd ograniczają zakres MVP do rozmiaru jednego epiku pilotażu | proces | średnia |
 
 
 ## Pomiary

@@ -1,0 +1,13 @@
+# Ochrona main: tylko przez PR, wymagane checki ci-ok i codeql, bez force push i usuwania
+gh api --method PUT repos/tombraz/lista-zakupow/branches/main/protection --input -
+{"required_status_checks":{"strict":false,"checks":[{"context":"ci-ok"},{"context":"codeql"}]},"enforce_admins":true,"required_pull_request_reviews":{"required_approving_review_count":0},"restrictions":null,"allow_force_pushes":false,"allow_deletions":false}
+# Secret scanning z push protection (TH-22, TH-23)
+gh api --method PATCH repos/tombraz/lista-zakupow --input -
+{"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}
+# Private vulnerability reporting (SECURITY.md)
+gh api --method PUT repos/tombraz/lista-zakupow/private-vulnerability-reporting
+# Alerty Dependabot (TH-22)
+gh api --method PUT repos/tombraz/lista-zakupow/vulnerability-alerts
+# CodeQL default setup wyłączony: skanuje workflow security.yml (advanced setup)
+gh api --method PATCH repos/tombraz/lista-zakupow/code-scanning/default-setup --input -
+{"state":"not-configured"}

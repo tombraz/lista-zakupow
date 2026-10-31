@@ -20,6 +20,9 @@
 //   4. --scan: colour literals (#hex, rgb(), hsl(), 0xFFxxxxxx) in UI source files. Code must use
 //      tokens. Files whose path contains an --allow value are skipped (generated token output);
 //      a line containing "design-check-ignore" is skipped.
+//   5. --scan: font sizes in px (CSS `font-size: 16px`, `font: … 16px`, JS `fontSize: "16px"`). Text must
+//      follow the user's text size (WCAG 1.4.4): use the typography tokens (rem). Unitless sizes
+//      (React Native `fontSize: 16`) are fine. Same --allow and "design-check-ignore" rules as 4.
 //
 // Exit code 1 on errors or hard-coded colours. No dependencies: plain Node 18+.
 
@@ -181,7 +184,8 @@ if (existsSync(iaFile)) {
 const UI_EXT = new Set([".css", ".scss", ".sass", ".less", ".js", ".jsx", ".ts", ".tsx", ".vue", ".svelte", ".astro", ".html", ".kt", ".swift", ".dart", ".xml"]);
 const SKIP_DIR = new Set(["node_modules", ".git", "dist", "build", ".next", ".nuxt", "out", "coverage", "Pods", ".gradle", "vendor"]);
 const COLOUR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\b(?:rgba?|hsla?)\(\s*\d|\b0x[fF]{2}[0-9a-fA-F]{6}\b/;
-let hits = 0;
+const PX_FONT = /\bfont-size\s*:\s*-?[\d.]+px\b|\bfont\s*:[^;]*?[\d.]+px\b|\bfontSize\s*:\s*["'`][\d.]+px/;
+let hits = 0, pxFonts = 0;
 function scan(dir) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
@@ -193,6 +197,8 @@ function scan(dir) {
       if (line.includes("design-check-ignore")) return;
       const code = line.replace(/\/\/.*$|\/\*.*?\*\//g, "");
       // "#abc" in a URL fragment or an id selector is not a colour; require a colour-like context
+      const px = code.match(PX_FONT);
+      if (px) { pxFonts++; console.log(`PX-FONT ${rel}:${i + 1}  ${px[0]}  → use a typography token (rem)`); }
       const m = code.match(COLOUR);
       if (!m) return;
       if (m[0].startsWith("#") && /href|url\(|id=|getElementById|querySelector/.test(code)) return;
@@ -204,8 +210,8 @@ function scan(dir) {
 for (const d of scanDirs) existsSync(d) ? scan(d) : warnings.push(`--scan: ${d} not found`);
 if (hits > 200) console.log(`… and ${hits - 200} more`);
 
-console.log(`Tokens: ${tokens.length}  Contrast checks: ${pairsChecked} (${contrastFails} failing, WCAG ${aaa ? "AAA" : "AA"})${scanDirs.length ? `  Hard-coded colours: ${hits}` : ""}`);
+console.log(`Tokens: ${tokens.length}  Contrast checks: ${pairsChecked} (${contrastFails} failing, WCAG ${aaa ? "AAA" : "AA"})${scanDirs.length ? `  Hard-coded colours: ${hits}  Font sizes in px: ${pxFonts}` : ""}`);
 for (const w of warnings) console.log(`WARN  ${w}`);
 for (const e of errors) console.log(`ERROR ${e}`);
-if (!errors.length && !hits) console.log("OK: no errors");
-process.exit(errors.length || hits ? 1 : 0);
+if (!errors.length && !hits && !pxFonts) console.log("OK: no errors");
+process.exit(errors.length || hits || pxFonts ? 1 : 0);

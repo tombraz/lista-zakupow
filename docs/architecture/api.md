@@ -21,6 +21,8 @@ Nazwy tras Better Auth sprawdzić w dokumentacji wersji użytej w walking skelet
 
 Zgody i 16+ są weryfikowane w hooku rejestracji Better Auth (brak = 400) i zapisywane w `user`.
 
+Stan po T-004: API udostępnia z Better Auth tylko trasy z tabeli, które już mają klienta (rejestracja, logowanie, wylogowanie); pozostałe ścieżki `/api/auth/*` zwracają 404. Most w `modules/konta/http/auth-routes.ts` waliduje treść schematami z `packages/shared` (400 przed Better Auth), zwraca `{ user: { id, name, email } }` bez tokenu sesji w treści (TH-16) i tłumaczy błędy Better Auth na kody API. Obcy `Origin` = 403 `invalid_origin` (TH-14). Limity (`RATE_LIMITS` w `packages/shared`): logowanie 10/min per IP i 5 nieudanych w 15 min per konto (429 także dla poprawnego hasła), rejestracja 5/h per IP, `GET /health/ready` 30/min per IP.
+
 ## Konto (`konta`)
 
 | Operacja | Trasa | Żądanie | Odpowiedź | Błędy |
@@ -35,12 +37,14 @@ Zgody i 16+ są weryfikowane w hooku rejestracji Better Auth (brak = 400) i zapi
 | --- | --- | --- | --- | --- |
 | Moje listy (F-06) | `GET /api/v1/lists` | — | `[{ id, name, role: "owner" \| "participant", owner: { id, name }, toBuyCount, members: [{ id, name }], updatedAt }]` (od ostatnio zmienionej) | — |
 | Utwórz (F-05) | `POST /api/v1/lists` | `{ name }` | 201 lista | 400, 409 `limit_reached` (`lists`) |
-| Szczegóły z pozycjami | `GET /api/v1/lists/:listId` | — | `{ id, name, role, owner, items: [Item] }` | 404 |
+| Szczegóły z pozycjami | `GET /api/v1/lists/:listId` | — | `{ id, name, role, owner, members: [{ id, name }], items: [Item] }` (`members` — liczba uczestników w oknie usunięcia, SC-06) | 404 |
 | Zmień nazwę (F-05) | `PATCH /api/v1/lists/:listId` | `{ name }` | 200 lista | 400, 403 `owner_only`, 404 |
 | Usuń (F-05) | `DELETE /api/v1/lists/:listId` | — | 204 | 403 `owner_only`, 404 |
 | Uczestnicy (F-13) | `GET /api/v1/lists/:listId/members` | — | `{ owner: Person, participants: [Person] }`; `Person = { id, name, email? }` — `email` tylko gdy pyta właściciel | 404 |
 | Usuń uczestnika (F-13) | `DELETE /api/v1/lists/:listId/members/:userId` | — | 204; `access.revoked` do usuniętego | 403 `owner_only`, 404 |
 | Opuść listę (F-13) | `POST /api/v1/lists/:listId/leave` | — | 204 | 403 `owner_cannot_leave`, 404 |
+
+Stan po T-005: trasy listy (bez uczestników F-13) działają; typy `ListSummary`, `ListDetails`, `Person` i schemat `listNameRequestSchema` w `packages/shared/src/api/lists.ts`. Odpowiedź utworzenia i zmiany nazwy to `ListSummary` (kształt elementu `GET /api/v1/lists`). `members` to uczestnicy bez właściciela, w kolejności dołączenia; `toBuyCount` = 0 do czasu pozycji (T-006). Niepoprawny `listId` (nie UUID) daje ten sam 404 `not_found`. Żądania `POST` / `PATCH` / `DELETE` pod `/api/v1/*` z `Origin` innym niż `APP_ORIGIN` (także bez `Origin`) dostają 403 `invalid_origin` (TH-14, `http/trusted-origin.ts`). Odmowy dostępu (`list_access_denied`) i limit (`limit_reached`) trafiają do logu `security` z identyfikatorami.
 
 ## Pozycje (`pozycje`)
 
@@ -53,6 +57,8 @@ Zgody i 16+ są weryfikowane w hooku rejestracji Better Auth (brak = 400) i zapi
 | Odhacz / odznacz (F-08) | `PATCH /api/v1/lists/:listId/items/:itemId` | `{ checked: boolean }` | 200 Item | 404 |
 | Usuń (F-07) | `DELETE /api/v1/lists/:listId/items/:itemId` | — | 204 | 404 |
 | Usuń odhaczone (F-08) | `POST /api/v1/lists/:listId/items/clear-checked` | — | 200 `{ deletedIds: [uuid] }` | 404 |
+
+Stan po T-006: dodawanie, edycja nazwy i notatki oraz usuwanie działają (odhaczanie i „usuń odhaczone” — T-007); typ `Item`, schematy `createItemRequestSchema` / `updateItemRequestSchema` i `normalizeItemName` w `packages/shared/src/api/items.ts`. Pusta notatka (także `""` w `PATCH`) = `null`. `PATCH` zmienia tylko podane pola; web wysyła tylko zmienione. `id` klienta należące do pozycji innej listy daje 404 `not_found` (nie zdradza jej istnienia). Niepoprawny `itemId` (nie UUID) = 404. Limit sprawdzany przed duplikatem: przy 500 pozycjach odpowiedź to `limit_reached`. Każda zmiana pozycji przesuwa listę na początek `GET /api/v1/lists` (`updated_at`). `GET /api/v1/lists/:listId` zwraca `items` od najnowszej. Przekroczenie limitu 500 trafia do logu `security` (`userId`, `listId`).
 
 ## Zaproszenia (`zaproszenia`)
 
