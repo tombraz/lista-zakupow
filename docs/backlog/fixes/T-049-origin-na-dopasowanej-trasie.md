@@ -4,7 +4,7 @@ title: "Sprawdzenie Origin obejmuje każde żądanie zmieniające stan w /api/v1
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -76,3 +76,28 @@ Hook `trustedOrigin` (T-005, `9fc8fd1`) wybierał żądania do sprawdzenia po pr
 Propozycja z przeglądu: reguła w `backend.md` „decyzje bezpieczeństwa na `routeOptions.url`, nie na prefiksie `request.url`” oraz reguła lintu zakazująca `request.url.startsWith` w `apps/api/src/http/**` (TH-26). Sprawdzić też `redactedUrl` w `apps/api/src/logging.ts`.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-10-31)
+
+Verdict: pass
+
+Zakres: commit `7608de5` (`trusted-origin.ts`, `auth-routes.ts` `forward()`, `origin.test.ts`, `backend.md`). Spot-checki i testy eksploracyjne w odłączonym worktree na `7608de5`, bo w głównym katalogu w trakcie QA pojawiały się niezacommitowane zmiany innego procesu (lint `API_RAW_URL_SYNTAX`, T-051).
+
+**Reprodukcja:** `pnpm vitest run --project api origin` 6/6; `pnpm test` 93 plików / 520 testów zielonych; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` bez błędów (na `7608de5`); `pnpm build` + `pnpm test:e2e` 50/50.
+
+**Kryteria akceptacji:**
+- AC1 pass: test 1 sprawdza POST/PATCH/DELETE na 6 trasach list, pozycji i zaproszeń × 5 zapisów ścieżki × (obcy / brak `Origin`) → 403 `invalid_origin`, potem stan bazy (1 lista „Dom”, 1 pozycja, 0 zaproszeń). Ręcznie: `PUT`, `#fragment`, `;x`, `%2F`, `%2561`, `//`, `/API/` → 403 albo 404, nigdy 2xx.
+- AC2 pass: warianty `/api/%61uth/…` i `/%61pi/auth/…` z obcym `Origin` → 403, bez ciasteczka, sesji i konta. Ręcznie: wariant `sign-out` z obcym `Origin` → 403.
+- AC3 pass: hook decyduje na `request.routeOptions.url`; most Better Auth przekazuje wzorzec trasy; `backend.md` „Zasady bezpieczeństwa” ma regułę TH-26.
+- AC4 pass: pełny zestaw testów, `origin.test.ts`, `live.upgrade.test.ts`, E2E (J-01–J-05) zielone.
+
+**Spot-checki (fix task):** przywrócenie `request.url.startsWith` w hooku → testy 1 i 3 czerwone (`expected 403 to be 404`, wariant ścieżki 2xx); przywrócenie `new URL(request.url, origin)` w `forward()` → test 2 czerwony. Oba testy gryzą. Sekcja „Root cause” wyjaśnia, czemu testy nie złapały błędu (tylko kanoniczne ścieżki). Dowody red w Evidence obecne dla obu planowanych testów.
+
+**Eksploracja:** zaufany `Origin` na wariancie (`/api/%761/lists`, `?x=1`, `/api/%61uth/sign-in/email`) → 201/200, czyli brak regresji; nieznana trasa pod prefiksem (`/api/v1/nope`, `/api/%761/nope`) → 404; GET na wariancie → 200 bez `Origin`.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | testy | Test AC2 nie obejmuje wariantu ścieżki dla `sign-out` (jedyna trasa `/api/auth/*` z ciasteczkiem, więc najbardziej istotna dla CSRF). Zachowanie poprawne. | ręcznie: `POST /%61pi/auth/sign-out` z obcym `Origin` i ciasteczkiem → 403 | wariant `sign-out` w teście 2 |
+| 2 | note | kod | `forward()`: fallback `?? request.url` jest martwy (handler wywołuje się tylko na dopasowanej trasie) i zostawia surowy adres w kodzie. | `auth-routes.ts:133` | usunąć fallback (niezacommitowana prewencja z lintem `API_RAW_URL_SYNTAX` to robi) |
+| 3 | note | zachowanie | `PATCH`/`DELETE /api/v1/lists/` (pusty `:listId`) daje 403 przy obcym `Origin`, a 404 przy zaufanym; to zgodne z regułą „dopasowana trasa”, nie wyciek. | eksploracja | bez zmian |
+| 4 | note | proces | W trakcie QA inny proces zmieniał drzewo robocze (bez commitu). Przywracając plik po własnym spot-checku, QA cofnęło niezacommitowaną zmianę w `auth-routes.ts` (usunięcie fallbacku `?? request.url`). Teraz `eslint` z nową regułą `API_RAW_URL_SYNTAX` zgłasza `auth-routes.ts:133`. | `npx eslint apps/api/src/modules/konta/http/auth-routes.ts` → 1 błąd | autor prewencji ponawia tę jedną zmianę |
