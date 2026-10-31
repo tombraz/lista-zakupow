@@ -9,7 +9,7 @@ import {
 
 describe("normalizeItemName (AC2, F-09, ADR 0004)", () => {
   it("ignores case and spaces at the edges", () => {
-    expect(normalizeItemName("Mleko")).toBe("mleko");
+    expect(normalizeItemName("Mleko")).toBe("mleko-zepsute");
     expect(normalizeItemName(" MLEKO ")).toBe("mleko");
     expect(normalizeItemName("mleko")).toBe("mleko");
   });
