@@ -4,7 +4,7 @@ title: "Redakcja tokenu zaproszenia w logu obejmuje każdy zapis ścieżki"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12]
@@ -107,3 +107,27 @@ Eksploracja (sonda `redactedUrl` i sonda routera Fastify, lokalnie): `/%61pi/v1/
 | 1 | minor | security / TH-26 | Dekodowanie `%2F` w `decodedAscii` daje inną postać ścieżki niż router: find-my-way nie dekoduje `%2F` przy dopasowaniu, więc `POST /api/v1/invitations/A%2FTOKEN123/accept` trafia w `/:token/accept` z `token = "A/TOKEN123"`, a w logu jest `/api/v1/invitations/[redacted]/TOKEN123/accept`. Część parametru trasy zostaje w logu. Ryzyko pomijalne: taki parametr nie może być prawdziwym tokenem (base64url bez `/`) i pochodzi od samego żądającego. | sonda `redactedUrl` i sonda Fastify `inject` (status 200, `routeOptions.url = /api/v1/invitations/:token/accept`) | nie dekodować `%2F` (`ASCII_ESCAPE` bez `2f`) albo redagować według `routeOptions.url` i `params.token`, gdy trasa jest dopasowana |
 | 2 | minor | test quality / duplikacja | `loggedUrls()` powtarza wyciąganie `req.url` z dwóch starszych testów w tym samym pliku, które z niej nie korzystają. | `apps/api/test/invitations.logs.test.ts` | starsze testy używają `loggedUrls()` |
 | 3 | note | test quality | Asercja `status < 500` nie pokazuje, że każdy wariant faktycznie trafił w trasę zaproszenia (część idzie do fallbacku SPA lub 404). AC tego nie wymaga, bo badany jest log. | ten sam plik | opcjonalnie sprawdzić `routeOptions.url` / status dla wariantów API |
+
+## QA round 2 (2026-10-31)
+
+Verdict: fail
+
+Zakres: zmiany po rundzie 1 (`207270f`, `a450cba`, `9620582`): `ASCII_ESCAPE` bez `%2F`, wariant `A%2F<token>` w `invitations.logs.test.ts`, nowy test pokrycia `apps/api/test/logs.token-paths.test.ts`, „Pułapki” w `layers/backend.md`.
+
+Reprodukcja: `pnpm install --frozen-lockfile`, `pnpm build` — OK; `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` — bez błędów; `pnpm vitest run --project api logs` — 8/8; `pnpm vitest run --project api` — 255/255 (kolejność plików tym razem korzystna). **`pnpm test` — 525 testów, 1 błąd**: `logs.token-paths.test.ts > redacts the token of every API route and web page with :token, whatever the spelling` — `AssertionError: expected [] to deeply equal ArrayContaining{…}` (`test/logs.token-paths.test.ts:62`, z `test-results/vitest-junit.xml`).
+
+Przyczyna (potwierdzona): projekt `api` ma `isolate: false` (`apps/api/vitest.config.ts`, T-021), więc moduł `fastify` jest wspólny dla plików w jednym workerze. `vi.mock("fastify")` działa tylko wtedy, gdy plik testu pokrycia jest pierwszym, który ładuje Fastify w swoim workerze; w przeciwnym razie `buildTestApp` używa niezamockowanej fabryki, hook `onRoute` nie jest dodany i `registered` zostaje puste. Reprodukcja deterministyczna: `pnpm vitest run --project api --maxWorkers=1 --no-file-parallelism --sequence.shuffle.files --sequence.seed=<s> test/health.test.ts test/logs.token-paths.test.ts` — seedy 1, 2, 4, 5, 6 (najpierw `health.test.ts`) → błąd; seed 3 (najpierw test pokrycia) → zielony.
+
+Kryteria akceptacji:
+
+- AC1 — pass: wariant `A%2F<token>` dla podglądu i przyjęcia daje w logu `[redacted]` bez reszty tokenu (uwaga 1 z rundy 1 usunięta).
+- AC2 — pass: jak wyżej dla SC-08.
+- AC3 — pass: redakcja na zdekodowanej ścieżce, `%2F` pozostaje jak w routerze (przegląd `apps/api/src/logging.ts`).
+- AC4 — **fail**: pełny zestaw testów czerwony (nowy test zależny od kolejności plików).
+
+Spot-check: przywrócenie `ASCII_ESCAPE = /%([0-7][0-9a-f])/gi` → 3 testy czerwone (oba integracyjne z wariantami zapisu i test pokrycia), 5 zielonych; plik przywrócony, `git status` czysty. Test pokrycia gryzie, gdy działa — problemem jest tylko mechanizm zbierania tras.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | test suite / niestabilny test | `logs.token-paths.test.ts` zbiera trasy przez `vi.mock("fastify")`, co przy `isolate: false` w projekcie `api` nie działa, jeśli inny plik w tym samym workerze załadował Fastify wcześniej. `pnpm test` czerwony; Evidence („97 plików, 525 testów” zielonych) nie powtarza się. | JUnit z `pnpm test`; powtarzalna reprodukcja seedami (wyżej) | lista tras bez mockowania modułu współdzielonego między plikami, np. z `app.printRoutes({ commonPrefix: false })` po `ready()`, z hooka `onRoute` dodanego przez opcję/plugin w `buildTestApp`, albo test w osobnym projekcie z `isolate: true`; do tego potwierdzenie przebiegiem z najpierw innym plikiem (`--sequence.shuffle.files`) |
+| 2 | minor | test quality | Ścieżki web z `:token` są wyciągane regexem ze źródła `apps/web/src/routes.tsx` (`path:\s*"…"`); zmiana zapisu (apostrofy, stała, szablon) po cichu zgubi stronę. Asercja `toContain("/zaproszenie/:token")` łapie tylko tę jedną znaną stronę. | `apps/api/test/logs.token-paths.test.ts`, `webTokenPaths()` | akceptowalne; opcjonalnie eksport tablicy ścieżek z `routes.tsx` albo asercja, że regex znalazł wszystkie `path:` w pliku |
