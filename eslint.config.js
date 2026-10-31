@@ -84,6 +84,17 @@ const API_LIMIT_LOG_SYNTAX = [
   },
 ];
 
+// TH-26 (T-049): router dopasowuje trasę po zdekodowanej ścieżce, więc decyzje na surowym adresie
+// rozjeżdżają się z trasą. Wyjątek: handler 404 w `http/web-app.ts` (brak dopasowanej trasy).
+const API_RAW_URL_SYNTAX = [
+  "MemberExpression[object.name=/^(request|req)$/][property.name='url']",
+  "MemberExpression[object.property.name='raw'][property.name='url']",
+].map((selector) => ({
+  selector,
+  message:
+    "Surowy request.url jest zakazany w API (TH-26): decyzje na dopasowanej trasie request.routeOptions.url (layers/backend.md, „Zasady bezpieczeństwa”).",
+}));
+
 // T-018: koniec sesji tylko przez `endSession` (session/useSession.ts). `clear()` usuwa też zapytanie
 // sesji obserwowane przez `RequireSession`, więc strażnik nie widzi `null` i nie prowadzi na SC-01.
 const WEB_SESSION_SYNTAX = [
@@ -286,12 +297,27 @@ export default tseslint.config(
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX.
     files: ["apps/api/src/**/*.ts"],
-    rules: { "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...API_CLOCK_SYNTAX] },
+    rules: {
+      "no-restricted-syntax": ["error", ...SAFE_SYNTAX, ...API_CLOCK_SYNTAX, ...API_RAW_URL_SYNTAX],
+    },
   },
   {
     // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza SAFE_SYNTAX i API_CLOCK_SYNTAX.
     files: ["apps/api/src/**/*.ts"],
     ignores: ["apps/api/src/logging.ts", "apps/api/src/http/rate-limit.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...API_CLOCK_SYNTAX,
+        ...API_LIMIT_LOG_SYNTAX,
+        ...API_RAW_URL_SYNTAX,
+      ],
+    },
+  },
+  {
+    // Handler 404 nie ma dopasowanej trasy: tylko surowy adres wybiera SPA albo JSON (bez API_RAW_URL_SYNTAX).
+    files: ["apps/api/src/http/web-app.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -310,6 +336,7 @@ export default tseslint.config(
         ...SAFE_SYNTAX_DDL,
         ...API_CLOCK_SYNTAX,
         ...API_LIMIT_LOG_SYNTAX,
+        ...API_RAW_URL_SYNTAX,
       ],
     },
   },

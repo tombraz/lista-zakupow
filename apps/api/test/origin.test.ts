@@ -146,6 +146,13 @@ describe("untrusted Origin (SEC4)", () => {
     });
 
     expect(signUp.statusCode).toBe(403);
+    const signOut = await app.inject({
+      method: "POST",
+      url: "/api/%61uth/sign-out",
+      headers: { origin: EVIL, cookie: user.cookie },
+    });
+
+    expect(signOut.statusCode).toBe(403);
     expect(await sessionCount()).toBe(before);
     const { rows } = await db.pool.query(`SELECT 1 FROM "user" WHERE email = 'ania@example.com'`);
     expect(rows).toEqual([]);

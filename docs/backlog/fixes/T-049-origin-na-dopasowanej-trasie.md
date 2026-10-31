@@ -75,6 +75,11 @@ Hook `trustedOrigin` (T-005, `9fc8fd1`) wybierał żądania do sprawdzenia po pr
 
 Propozycja z przeglądu: reguła w `backend.md` „decyzje bezpieczeństwa na `routeOptions.url`, nie na prefiksie `request.url`” oraz reguła lintu zakazująca `request.url.startsWith` w `apps/api/src/http/**` (TH-26). Sprawdzić też `redactedUrl` w `apps/api/src/logging.ts`.
 
+**Co by temu zapobiegło:** kontrola, która sama blokuje decyzje na surowym adresie. Zaakceptowane przez właściciela i wdrożone:
+- reguła lintu `API_RAW_URL_SYNTAX` (`eslint.config.js`): zakaz `request.url` / `req.url` / `*.raw.url` w `apps/api/src/**`; wyjątek tylko `http/web-app.ts` (handler 404 nie ma dopasowanej trasy). `forward()` w moście Better Auth nie ma już fallbacku na `request.url`;
+- reguła w `backend.md` „Zasady bezpieczeństwa” (TH-26) i test wariantów zapisu (`spellings()` w `origin.test.ts`);
+- `redactedUrl` → osobne zadanie T-051.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-10-31)

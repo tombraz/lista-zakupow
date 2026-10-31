@@ -130,7 +130,7 @@ function forward(auth: Auth, origin: string, request: FastifyRequest, body: obje
   headers.set("x-forwarded-for", request.ip);
   // TH-26: Better Auth dostaje wzorzec dopasowanej trasy, nie surowy zapis ścieżki od klienta.
   return auth.handler(
-    new Request(new URL(request.routeOptions.url ?? request.url, origin), {
+    new Request(new URL(request.routeOptions.url ?? "", origin), {
       method: request.method,
       headers,
       body: JSON.stringify(body),
