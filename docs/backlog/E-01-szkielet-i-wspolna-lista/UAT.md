@@ -36,6 +36,7 @@ Przygotuj trzy adresy e-mail testowe (A, B, C), komputer z przeglądarką i tele
 - SC-06: pusty `h1` w stanach ładowania i błędu; SC-05 pokazuje „Wszystko kupione” na pustej liście.
 - SC-07 pokazuje „Na liście (N z 20)”, ale wiersz ma tylko właściciel; pełna lista uczestników jest w E-02.
 - Otwarte zadania naprawcze z przeglądu E-01 runda 3 (T-041–T-044, wszystkie niskiej wagi): spójność logu `security`, limit list w pustym stanie SC-05, stan zapisu przy równoległym unieważnianiu linków, przypięcie stałych limitów i lint.
+- T-047 (zablokowane, waga low): testy ekranów web `SignUpScreen`, `ListScreen*`, `ParticipantsScreen*` sporadycznie padają pod obciążeniem pełnego `pnpm test` lokalnie na Windows; w CI nie zaobserwowano, nie odtworzono w 11 przebiegach. Czeka na kolejną porażkę z zapisanym `test-results/vitest-junit.xml`.
 - Ręczne sprawdzenia dostępności (czytnik ekranu, tylko klawiatura, powiększenie 200 %) i Safari na iPhonie nie były wykonane przez QA — sprawdź przy krokach 5–7 na telefonie.
 - Poza zakresem epiku: reset hasła, usuwanie konta, uczestnicy, pasek „brak połączenia” (E-02); produkcja, monitoring, kopie (E-03); ekrany mobile (E-04).
 
