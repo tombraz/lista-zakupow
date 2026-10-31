@@ -56,6 +56,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - **Mocki dozwolone dla:** API (tylko w testach komponentów), schowka, zegara.
 - Elementy wyszukiwane po roli i nazwie dostępnej (`getByRole`); test ID tylko, gdy rola nie istnieje.
 - Stan „w trakcie” (ładowanie, zapis, kliknięcia w czasie zapisu): odpowiedź MSW wstrzymana przez `heldResponse()` (`test/held.ts`) i zwalniana po asercjach, nie `delay(ms)` — pod obciążeniem odpowiedź z `delay` przychodzi przed drugim kliknięciem (lint: `no-restricted-syntax` na `delay(ms)` w testach `apps/web/src`). Pola wejścia (imię, e-mail, hasło) wypełnia `fillIn` (`test/user.ts`, wklejenie, jedno przerysowanie); `user.type` tam, gdzie test sprawdza pisanie. Zimny start workera płaci `warmUp()` w `test/setup.ts`, nie pierwszy test pliku (T-021).
+- Niestabilna porażka (przechodzi przy ponownym uruchomieniu): zanim odpalisz testy jeszcze raz, skopiuj `test-results/vitest-junit.xml` (komunikaty porażek ostatniego przebiegu, nadpisywany przy każdym `pnpm test`) do zadania. Bez komunikatu nie da się odróżnić limitu czasu od złego stanu ekranu (T-047).
 
 ## Zasady bezpieczeństwa
 
@@ -102,6 +103,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-31 | T-047: „Testy w tej warstwie” — przy niestabilnej porażce zachować `test-results/vitest-junit.xml` przed kolejnym przebiegiem. |
 | 2026-10-30 | T-042: „Pułapki” — odmowa limitu z API tylko przez `useLimitRefusal` (liczba, nie tożsamość danych z cache); ostrzeżenie z fokusem poza gałęziami stanu ekranu. |
 | 2026-10-30 | T-039: „Pułapki” — cel fokusu po zapisach równoległych wybierany przy fokusie z listy kandydatów; test fokusu dla dwóch zapisów naraz. |
 | 2026-10-30 | T-030: „Pułapki” — checkbox przez `useGuardedMutation` z `lockOf` (bez wyjątku od lintu, zakaz `eslint-disable` dla `no-restricted-imports`); test blokady przy stanie ustawianym przed `mutate`: dwa kliknięcia w jednym `act`. |

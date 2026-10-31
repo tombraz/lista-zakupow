@@ -77,4 +77,6 @@ Ustalenia bez potwierdzenia porażką:
 
 Co zapobiegłoby utracie śladu: komunikaty porażek zapisywane do pliku przy każdym przebiegu — wprowadzone (reporter `junit` w `vitest.config.ts`). Sprawdzone tymczasowym czerwonym testem w `packages/shared/test/`: `<failure message="expected 1 to be 2 …" type="AssertionError">` w `test-results/vitest-junit.xml` (plik usunięty). Po zmianie: `pnpm test` 93/93, 515/515; `pnpm format:check`, `pnpm lint`, `pnpm typecheck` zielone.
 
+Przyjęte przez właściciela 2026-10-31: wpis w `docs/architecture/layers/web.md` („Testy w tej warstwie”) — przy niestabilnej porażce skopiować `test-results/vitest-junit.xml` do zadania przed kolejnym przebiegiem.
+
 <!-- QA rounds are appended below by /qa-task -->
