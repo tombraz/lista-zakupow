@@ -106,4 +106,4 @@ Fix task: „Root cause” wyjaśnia, czemu nic nie łapało osłabienia (brak k
 
 ### Po QA round 1
 
-Uwaga #1 (minor) poprawiona w `lint()`: reguły brane tylko z ostatniej kolumny wiersza zgłoszenia (`awk '{print $NF}'`, bez ``). Czerwony: mutacja `no-use` z `allow: [..., "eslint"]` przy starej wersji → przypadek „2. … (apps/web/src/x.tsx)” `ok` (fałszywie); po poprawce `FAIL`. Bez mutacji 14× `ok`, exit 0. Uwagi #2 i #4 bez zmian (note). Uwaga #3: niestabilne testy ekranów web pod obciążeniem, propozycja osobnego tasku.
+Uwaga #1 (minor) poprawiona w `lint()`: reguły brane tylko z ostatniej kolumny wiersza zgłoszenia (`awk '{print $NF}'`, bez ``). Czerwony: mutacja `no-use` z `allow: [..., "eslint"]` przy starej wersji → przypadek „2. … (apps/web/src/x.tsx)” `ok` (fałszywie); po poprawce `FAIL`. Bez mutacji 14× `ok`, exit 0. Uwagi #2 i #4 bez zmian (note). Uwaga #3: niestabilne testy ekranów web pod obciążeniem → T-047.
