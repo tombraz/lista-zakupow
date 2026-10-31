@@ -4,7 +4,7 @@ title: "Redakcja tokenu zaproszenia w logu obejmuje każdy zapis ścieżki"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: done           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-12]
@@ -77,7 +77,11 @@ Reguła lintu TH-26 z T-049 (`API_RAW_URL_SYNTAX`) nie obejmuje serializera logu
 1. Test automatyczny: zbierać trasy z parametrem `:token` (hook `onRoute` w teście) i dla każdej sprawdzać `redactedUrl` na wariantach zapisu; nowa trasa z tokenem bez redakcji zawiedzie test bez ręcznego dopisywania.
 2. „Pułapki” w `layers/backend.md`: redakcja w logu działa na zdekodowanej ścieżce (jak router), każda ścieżka z tokenem ma test wariantów zapisu w `invitations.logs.test.ts`.
 
-Decyzja użytkownika: <oczekuje>.
+Decyzja użytkownika (2026-10-31): oba przyjęte, razem z poprawką `%2F` z QA rundy 1 (uwaga minor).
+
+- Test pokrycia `apps/api/test/logs.token-paths.test.ts`: trasy API z `onRoute` (opakowana fabryka Fastify przez `vi.mock`, hook przed trasami z `buildApp`) i strony z `apps/web/src/routes.tsx` z `:token`; dla każdej warianty zapisu (zakodowany pierwszy znak każdego segmentu, `A%2F<token>`, `//`, query) i `redactedUrl` bez tokenu. Sprawdzony mutacją: wyrażenie bez `/zaproszenie/` → test pada na `/zaproszenie/<token>`.
+- `%2F`: red — `A%2F<token>` logowane jako `[redacted]/<token>` (oba testy integracyjne i test pokrycia); poprawka: `ASCII_ESCAPE` pomija `%2F`, jak router. Green: `pnpm vitest run --project api logs` 8/8; `pnpm test` 97 plików, 525 testów; typecheck, lint, format, build, quality bez błędów.
+- „Pułapki” w `layers/backend.md` z wierszem w historii zmian.
 
 <!-- QA rounds are appended below by /qa-task -->
 
