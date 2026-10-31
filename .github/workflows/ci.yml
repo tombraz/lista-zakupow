@@ -45,6 +45,7 @@ jobs:
               - 'eslint.config.js'
               - 'eslint.directives.config.js'
               - 'scripts/test/lint-directives.test.sh'
+              - 'scripts/test/lint-security.test.mjs'
               - 'vitest.config.ts'
               - '.dependency-cruiser.cjs'
               - '.jscpd.json'
@@ -108,6 +109,8 @@ jobs:
         run: pnpm lint
       - name: Lint komentarzy łapie obejścia (T-046)
         run: bash scripts/test/lint-directives.test.sh
+      - name: Reguły bezpieczeństwa lintu łapią naruszenia (T-050)
+        run: node scripts/test/lint-security.test.mjs
       - name: Typy
         run: pnpm typecheck
       - name: Jakość (jscpd, dependency-cruiser)

@@ -85,15 +85,7 @@ describe("POST /api/auth/sign-up/email (AC1)", () => {
     expect(response.body).not.toContain(token);
   });
 
-  it("marks the session cookie Secure when the app is served over HTTPS", async () => {
-    const origin = "https://lista.example";
-    app = buildTestApp(db.pool, { auth: { secret: "x".repeat(48), origin } });
-
-    const response = await signUp(newAccount, origin);
-
-    expect(response.statusCode).toBe(200);
-    expect(sessionCookie(response.headers["set-cookie"])).toMatch(/;\s*Secure/i);
-  });
+  // Secure na originie https: session-cookie.test.ts (T-050).
 });
 
 describe("POST /api/auth/sign-up/email with a used e-mail (AC2)", () => {

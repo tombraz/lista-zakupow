@@ -16,7 +16,20 @@ const NO_INNER_HTML = {
   selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
   message: "dangerouslySetInnerHTML jest zakazany (TH-15): renderuj treść jako tekst.",
 };
-const SAFE_SYNTAX = [{ selector: SQL_RAW, message: SQL_RAW_MESSAGE }, NO_INNER_HTML];
+// T-050: wstawianie HTML z pominięciem Reacta (przypisanie innerHTML / outerHTML, insertAdjacentHTML).
+const NO_DOM_HTML = [
+  "AssignmentExpression > MemberExpression.left[property.name=/^(innerHTML|outerHTML)$/]",
+  "AssignmentExpression > MemberExpression.left[property.value=/^(innerHTML|outerHTML)$/]",
+  "CallExpression > MemberExpression.callee[property.name='insertAdjacentHTML']",
+].map((selector) => ({
+  selector,
+  message: "Wstawianie HTML do DOM jest zakazane (TH-15): renderuj treść jako tekst.",
+}));
+const SAFE_SYNTAX = [
+  { selector: SQL_RAW, message: SQL_RAW_MESSAGE },
+  NO_INNER_HTML,
+  ...NO_DOM_HTML,
+];
 
 // T-044: CHECK w DDL nie przyjmuje parametru ($1), więc schema.ts wkleja stałą liczbową z kodu
 // przez sql.raw(String(*_MAX_LENGTH)). Tylko w schema.ts i tylko w tej postaci; inne sql.raw zakazane.
@@ -26,6 +39,7 @@ const SAFE_SYNTAX_DDL = [
     message: SQL_RAW_MESSAGE,
   },
   NO_INNER_HTML,
+  ...NO_DOM_HTML,
 ];
 
 // T-012: limity per IP (MC-04 / MC-05) łączą klientów z tym samym adresem; adres nadaje tylko fixtures.ts.
