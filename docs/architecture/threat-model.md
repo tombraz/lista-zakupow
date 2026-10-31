@@ -86,6 +86,10 @@ flowchart LR
 | TH-23 | mobile | I | sekret w paczce aplikacji; logi debug w buildzie | niskie | aplikacja zawiera tylko publiczny adres API; brak kluczy; build bez logów debug | skan sekretów w CI; przegląd w QA | ci | Configuration |
 | TH-24 | wszystkie / transport | I, T | podsłuch lub modyfikacja ruchu | niskie | HTTPS i WSS wszędzie, HSTS na web; bez ruchu czystym HTTP na produkcji | test nagłówków w CI; DAST | ci | Secure Communication |
 | TH-25 | J-05 / WebSocket | D | zalewanie serwera połączeniami lub wiadomościami WS | niskie | połączenie tylko z ważną sesją; limit połączeń na sesję i wiadomości na sekundę; limit rozmiaru wiadomości | test integracyjny limitów WS | task | Business Logic |
+| TH-26 | wszystkie / API | S, T | kontrola bezpieczeństwa w hooku (np. `Origin`, redakcja) działa na innej postaci ścieżki niż router, więc część żądań do chronionej trasy ją omija | średnie | decyzje na dopasowanej trasie (`request.routeOptions.url`) albo dla każdej metody zmieniającej stan; nigdy na prefiksie surowego `request.url` | testy integracyjne wariantów zapisu ścieżki dla każdego chronionego prefiksu | task | Configuration |
+| TH-27 | J-01 / API, baza | D | **MC-05:** zapychanie bazy zapisami bez uwierzytelnienia, które dzieją się przed limitem (`sign_in_failure`, przyszłe tabele przed logowaniem) | średnie | limit per IP przed pierwszym zapisem; retencja wg `data-model.md` | test: po przekroczeniu limitu liczba wierszy się nie zmienia | task | Business Logic |
+| TH-28 | J-05 / WebSocket | I, S | połączenie WS żyje po końcu sesji innym niż wylogowanie (wygaśnięcie, usunięcie sesji, reset hasła, usunięcie konta) | średnie | `closeSession` na każdej ścieżce końca sesji; ponowna kontrola sesji przy `subscribe` i okresowo | test: usunięcie sesji zamyka gniazdo, kolejny `subscribe` odrzucony | task | Session Management |
+| TH-29 | wszystkie / web | S | podszywanie się przez znaki bidi, sterujące i zero-width w imionach i nazwach widocznych dla innych (SC-08, wspólne listy); obejście blokady duplikatu (F-09) | niskie | odrzucanie Cc/Cf i znaków bidi, wymóg widocznego znaku; NFKC i usuwanie znaków ignorowalnych w normalizacji duplikatu | testy walidacji dla każdej klasy znaków | task | Validation and Business Logic |
 
 ## Decyzje bazowe bezpieczeństwa
 
@@ -118,5 +122,6 @@ Domena nie jest wysokiego ryzyka (BRD §8b): bez płatności, danych zdrowotnych
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-10-31 | `/security-review E-01`: dodane TH-26 (rozjazd ścieżki w kontrolach), TH-27 (zapisy przed limitem), TH-28 (WS po końcu sesji), TH-29 (podszywanie Unicode); `docs/security/reviews/E-01-2026-10-31-1.md`. |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |
 | 2026-10-26 | `/plan-backlog`: nagłówek sekcji zagrożeń i kolumna pokrycia przywrócone do etykiet z szablonu (`## Threats`, `Covered by`), które czyta `scripts/backlog-check.mjs`; treść bez zmian. |
