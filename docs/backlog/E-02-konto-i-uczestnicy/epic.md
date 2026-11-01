@@ -56,3 +56,5 @@ Jak w `docs/architecture/tech-stack.md`, potwierdzone przez właściciela 2026-1
 ## Out of scope for this epic
 
 - Aplikacja mobilna (E-04), produkcja (E-03).
+
+- 2026-11-01: limit prośby o reset hasła per IP 3/min (domyślny Better Auth) zatwierdzony przez właściciela (T-053).
