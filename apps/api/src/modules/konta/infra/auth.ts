@@ -92,6 +92,8 @@ function emailAndPassword(onPasswordResetToken: OnPasswordResetToken) {
   return {
     enabled: true,
     resetPasswordTokenExpiresIn: PASSWORD_RESET_VALIDITY_SECONDS,
+    // TH-10: reset kończy wszystkie sesje konta (w tej samej transakcji co zmiana hasła).
+    revokeSessionsOnPasswordReset: true,
     // Link budujemy sami z originu aplikacji i tokenu (`url` Better Auth prowadzi do API).
     sendResetPassword: ({ user, token }: { user: { email: string }; token: string }) => {
       onPasswordResetToken(user.email, token);

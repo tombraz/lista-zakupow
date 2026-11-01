@@ -15,6 +15,8 @@ export interface EntryState {
   invitation?: InvitationContext;
   email?: string;
   joinedListId?: string;
+  /** SC-01 po zapisie nowego hasła na SC-03 (komunikat „Info — po resecie”). */
+  passwordChanged?: true;
 }
 
 /**
@@ -44,6 +46,11 @@ export interface JoinedState {
 }
 
 export const invitationPath = (token: string) => `/zaproszenie/${encodeURIComponent(token)}`;
+
+/** SC-01 otwarte po udanym resecie hasła (SC-03 krok 2). */
+export function passwordChangedOf(state: unknown): boolean {
+  return isRecord(state) && state["passwordChanged"] === true;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

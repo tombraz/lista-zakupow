@@ -1,5 +1,6 @@
 import {
   passwordResetRequestSchema,
+  passwordResetSchema,
   signInRequestSchema,
   signUpRequestSchema,
   type ErrorCode,
@@ -26,6 +27,8 @@ interface AuthDeps {
   invitationOnSignUp: () => InvitationOnSignUp | undefined;
   /** TH-17: po wylogowaniu zamyka połączenia na żywo tej sesji (`na-zywo.closeSession`). */
   onSignedOut: (sessionId: string) => void;
+  /** TH-28: reset usunął wszystkie sesje konta; zamyka ich połączenia na żywo (`na-zywo`). */
+  onPasswordReset: (userId: string) => void;
 }
 
 /** Przyjmuje zaproszenie dla nowego konta; błąd zaproszenia wraca w treści, nie jako status. */
@@ -36,6 +39,9 @@ const AUTH_ERRORS: Record<string, [status: number, code: ErrorCode]> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: [409, "email_taken"],
   // F-02, TH-11: ten sam kod dla nieznanego e-maila i złego hasła.
   INVALID_EMAIL_OR_PASSWORD: [401, "invalid_credentials"],
+  // F-03: link resetu użyty, wygasły, nieznany albo konta usuniętego w międzyczasie.
+  INVALID_TOKEN: [400, "invalid_token"],
+  USER_NOT_FOUND: [400, "invalid_token"],
 };
 
 const STATUS_CODES: Record<number, ErrorCode> = {
@@ -114,6 +120,8 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     );
   });
 
+  newPasswordRoute(app, deps, origin);
+
   app.post("/api/auth/sign-out", async (request, reply) => {
     const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
     const response = await forward(auth, origin, request, {});
@@ -122,11 +130,27 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
   });
 }
 
+/** F-03: nowe hasło z linku resetu; TH-10 / TH-28: koniec sesji konta i ich połączeń na żywo. */
+function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string): void {
+  const { auth } = deps;
+  app.post("/api/auth/reset-password", async (request, reply) => {
+    const body = validate(passwordResetSchema, request.body);
+    // Właściciel tokenu przed jego zużyciem: po sukcesie wiadomo, czyje sesje usunął Better Auth.
+    const userId = await resetTokenOwner(auth, body.token);
+    const response = await forward(auth, origin, request, body);
+    if (response.ok && userId) {
+      logSecurity(request, "password_reset", { userId });
+      deps.onPasswordReset(userId);
+    }
+    return relay(response, reply);
+  });
+}
+
 // architecture.md, „Obserwowalność”: zdarzenia bezpieczeństwa tylko z identyfikatorami.
 function logSecurity(
   request: FastifyRequest,
-  event: "sign_in_failed",
-  ids: { accountKey: string },
+  event: "sign_in_failed" | "password_reset",
+  ids: { accountKey: string } | { userId: string },
 ) {
   securityEvent(request, event, ids);
 }
@@ -141,6 +165,13 @@ async function lostEmailRace(auth: Auth, response: Response, email: string): Pro
   if (body.code !== "FAILED_TO_CREATE_USER") return false;
   const { internalAdapter } = await auth.$context;
   return (await internalAdapter.findUserByEmail(email.toLowerCase())) !== null;
+}
+
+/** Konto, dla którego wydano token resetu (`verification` Better Auth), albo `null`. */
+async function resetTokenOwner(auth: Auth, token: string): Promise<string | null> {
+  const { internalAdapter } = await auth.$context;
+  const verification = await internalAdapter.findVerificationValue(`reset-password:${token}`);
+  return verification?.value ?? null;
 }
 
 function forward(auth: Auth, origin: string, request: FastifyRequest, body: object) {

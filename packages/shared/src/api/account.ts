@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requiredName } from "./text";
+import { requiredName, withoutNul } from "./text";
 
 export const NAME_MAX_LENGTH = 30;
 export const PASSWORD_MIN_LENGTH = 8;
@@ -53,6 +53,17 @@ export type SignInRequest = z.input<typeof signInRequestSchema>;
 export const passwordResetRequestSchema = z.object({ email: accountEmail });
 
 export type PasswordResetRequest = z.input<typeof passwordResetRequestSchema>;
+
+// F-03: nowe hasło z linku resetu; token z adresu strony `/reset-hasla?token=`.
+export const passwordResetSchema = z.object({
+  token: z
+    .string({ error: "required" })
+    .min(1, { error: "required" })
+    .refine(withoutNul, { error: "invalid" }),
+  newPassword,
+});
+
+export type PasswordReset = z.input<typeof passwordResetSchema>;
 
 export const meResponseSchema = z.object({
   id: z.string(),

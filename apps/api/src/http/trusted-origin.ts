@@ -4,8 +4,11 @@ import { ApiError } from "./api-error";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // Better Auth sprawdza `Origin` tylko przy żądaniu z ciasteczkiem; te trasy działają bez sesji,
-// a zapisują (token, licznik limitu), więc sprawdza je ten hook — przed limitem i zapisem.
-const PUBLIC_AUTH_ROUTES = new Set(["/api/auth/request-password-reset"]);
+// a zapisują (token, licznik limitu, nowe hasło), więc sprawdza je ten hook — przed limitem i zapisem.
+const PUBLIC_AUTH_ROUTES = new Set([
+  "/api/auth/request-password-reset",
+  "/api/auth/reset-password",
+]);
 
 /**
  * TH-14: żądanie zmieniające stan w `/api/v1/*` tylko z originu aplikacji (CSRF). Trasy

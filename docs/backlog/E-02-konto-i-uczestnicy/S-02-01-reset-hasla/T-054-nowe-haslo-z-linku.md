@@ -3,7 +3,7 @@ id: T-054
 title: "Nowe hasło z linku; reset kończy wszystkie sesje"
 epic: E-02
 story: S-02-01
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-053]
 size: M                # S | M (L must be split)
@@ -38,14 +38,14 @@ Link z maila otwiera SC-03 krok 2; domownik ustawia nowe hasło i loguje się ni
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given ważny token, when `POST /api/auth/reset-password { token, newPassword }` z hasłem ≥ 8 znaków, then 200; logowanie starym hasłem daje 401 `invalid_credentials`, nowym — 200. — verified by: test integracyjny
-- [ ] AC2: Given hasło krótsze niż 8 znaków, then 400 `validation_failed`, hasło bez zmian, token dalej ważny; SC-03 pokazuje błąd pod polem (powiązany z polem, fokus na polu). — verified by: test integracyjny + test komponentu
-- [ ] AC3: Given SC-03 z `?token=`, when strona się otwiera, then krok 2 z fokusem w polu „Nowe hasło” (`autocomplete="new-password"`, „Pokaż”); po zapisie przejście na SC-01 (`replace`, token nie zostaje w historii) z komunikatem sukcesu `role="status"`. — verified by: test komponentu (MSW)
-- [ ] AC4: Given token użyty albo starszy niż 1 h (zegar), when wysyłam nowe hasło, then 400 `invalid_token`; SC-03 zamiast formularza pokazuje „Ten link wygasł albo został już użyty.” + „Wyślij nowy link” (→ krok 1, fokus na nagłówku). — verified by: test integracyjny + test komponentu
-- [ ] AC5: Given SC-03 krok 2 w każdym stanie (formularz, walidacja, link nieważny, sieć) i SC-01 z komunikatem sukcesu, when E2E je odwiedza, then axe bez naruszeń. — verified by: E2E Playwright + axe (pełna ścieżka z mailem z Mailpit)
-- [ ] SEC1 (TH-10): Given konto z dwiema sesjami, when reset się udaje, then obie sesje są usunięte (żądanie z każdą daje 401), a dwa równoległe resety tym samym tokenem kończą się jednym sukcesem. — verified by: test integracyjny
-- [ ] SEC2 (TH-28): Given otwarte połączenie WS sesji tego konta (subskrypcja listy), when reset się udaje, then gniazdo jest zamknięte (1008), kolejne zdarzenie listy do niego nie dociera, a nowe połączenie z tą sesją jest odrzucone. — verified by: test integracyjny WS (`live.*`)
-- [ ] SEC3 (TH-21): Given reset, when API loguje żądanie, then ścieżka i treść nie zawierają tokenu ani hasła (token zredagowany także w `?token=` adresu strony serwowanej przez API); udany reset zostawia zdarzenie `password_reset` w logu `security` z `userId`, bez e-maila. — verified by: test logów
+- [x] AC1: Given ważny token, when `POST /api/auth/reset-password { token, newPassword }` z hasłem ≥ 8 znaków, then 200; logowanie starym hasłem daje 401 `invalid_credentials`, nowym — 200. — verified by: test integracyjny
+- [x] AC2: Given hasło krótsze niż 8 znaków, then 400 `validation_failed`, hasło bez zmian, token dalej ważny; SC-03 pokazuje błąd pod polem (powiązany z polem, fokus na polu). — verified by: test integracyjny + test komponentu
+- [x] AC3: Given SC-03 z `?token=`, when strona się otwiera, then krok 2 z fokusem w polu „Nowe hasło” (`autocomplete="new-password"`, „Pokaż”); po zapisie przejście na SC-01 (`replace`, token nie zostaje w historii) z komunikatem sukcesu `role="status"`. — verified by: test komponentu (MSW)
+- [x] AC4: Given token użyty albo starszy niż 1 h (zegar), when wysyłam nowe hasło, then 400 `invalid_token`; SC-03 zamiast formularza pokazuje „Ten link wygasł albo został już użyty.” + „Wyślij nowy link” (→ krok 1, fokus na nagłówku). — verified by: test integracyjny + test komponentu
+- [x] AC5: Given SC-03 krok 2 w każdym stanie (formularz, walidacja, link nieważny, sieć) i SC-01 z komunikatem sukcesu, when E2E je odwiedza, then axe bez naruszeń. — verified by: E2E Playwright + axe (pełna ścieżka z mailem z Mailpit)
+- [x] SEC1 (TH-10): Given konto z dwiema sesjami, when reset się udaje, then obie sesje są usunięte (żądanie z każdą daje 401), a dwa równoległe resety tym samym tokenem kończą się jednym sukcesem. — verified by: test integracyjny
+- [x] SEC2 (TH-28): Given otwarte połączenie WS sesji tego konta (subskrypcja listy), when reset się udaje, then gniazdo jest zamknięte (1008), kolejne zdarzenie listy do niego nie dociera, a nowe połączenie z tą sesją jest odrzucone. — verified by: test integracyjny WS (`live.*`)
+- [x] SEC3 (TH-21): Given reset, when API loguje żądanie, then ścieżka i treść nie zawierają tokenu ani hasła (token zredagowany także w `?token=` adresu strony serwowanej przez API); udany reset zostawia zdarzenie `password_reset` w logu `security` z `userId`, bez e-maila. — verified by: test logów
 
 ## TDD plan
 
@@ -94,15 +94,65 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
 - [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+Przebieg 2026-11-01 (`/implement-task T-054`, tryb autonomiczny).
+
+### Testy z planu (czerwony → zielony)
+
+| # | Plik / test | Czerwony (przed kodem) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `apps/api/test/password-reset.new-password.test.ts` › „sets the new password: the old one is refused, the new one signs in (AC1)” | `expected 404 to be 200` (trasy nie było) | zielony |
+| 2 | ten sam plik › „refuses a password shorter than 8 characters and keeps the token valid (AC2)” | przeszedł od razu (walidacja schematem weszła z testem 1); sprawdzone, że gryzie: bez `validate(passwordResetSchema, …)` → `expected { status: 400, …(1) } to deeply equal { status: 400, …(1) }` (Better Auth daje 400 bez `fields`); przywrócone | zielony |
+| 3 | ten sam plik › „a used or expired link (AC4)”: użyty, starszy niż 1 h (zegar `10:00` → `11:00:01`), nieznany, dwa równoległe resety | wszystkie 4: `expected { status: 400, …(1) } to deeply equal { status: 400, …(1) }` (kod `validation_failed` zamiast `invalid_token`). Równoległe użycie: po mapowaniu `INVALID_TOKEN` jeden sukces — Better Auth zużywa token atomowo (`consumeVerificationValue` w transakcji zmiany hasła) | zielony |
+| 3a | ten sam plik › „refuses the token of an account deleted in the meantime” (dopisany: przypadek z planu QA) | `expected { status: 400, …(1) } to deeply equal …` (Better Auth `USER_NOT_FOUND` → `validation_failed`) | zielony |
+| 4 | ten sam plik › „deletes every session of the account” | `expected 200 to be 401` | zielony |
+| 5 | `apps/api/test/live.password-reset.test.ts` › „closes every socket of the account's sessions, stops list events and refuses reconnecting” | `Error: connection still open` | zielony |
+| 6 | `apps/api/test/password-reset.logs.test.ts` › „keeps the token and the password out of logs and records password_reset with userId” | `expected [] to deeply equal [ ObjectContaining{…} ]` (brak zdarzenia). Część „bez tokenu” przeszła od razu (redakcja `?…token…=` z T-051); sprawdzone, że gryzie: bez `TOKEN_QUERY_PARAMETER` → `expected '{"level":30,…' not to contain 'pudfM2EP…'`; przywrócone | zielony |
+| 6a | `password-reset.new-password.test.ts` › „refuses a foreign or missing Origin with 403 and keeps the token valid” (dopisany: TH-14, trasa bez sesji, Better Auth nie sprawdza `Origin`) | `expected { …(4) } to deeply equal { …(4) }` (nie 403) | zielony |
+| 6b | ten sam plik › „answers hostile input with 400 validation_failed, never 500” (`{}`, `""`, NUL, tablica, liczba) | przeszedł od razu; sprawdzone, że gryzie: bez `.refine(withoutNul)` na tokenie → porażka asercji (NUL nie daje 400); przywrócone | zielony |
+| 7 | `apps/web/src/screens/SC-03-reset-hasla/NewPasswordStep.test.tsx` (13 testów) | wejście z linku: `Unable to find role="heading" and name "Ustaw nowe hasło"`; za krótkie: puste `toHaveAccessibleDescription()`; sukces: brak `aria-disabled` (brak zapisu); link nieważny i sieć: `Unable to find role="alert"`; błąd pola z API i > 128 znaków: puste `toHaveAccessibleDescription()`; kropka po tokenie: wysłany token z kropką; pusty token: `Unable to find role="alert"`. Przeszły od razu: podwójne kliknięcie (`useGuardedMutation`), przeładowanie (token w stanie nawigacji), zalogowana przeglądarka — ten sprawdzony: bez `setSession(null)` → brak komunikatu na SC-01 (`PublicOnly` przekierowuje); przywrócone | zielony |
+| 8 | `apps/web/e2e/j01-nowe-haslo.spec.ts` (telefon, komputer): prośba w UI → mail z Mailpit (API Mailpita) → krok 2 (fokus, adres bez tokenu) → walidacja → brak sieci → zapis → SC-01 z komunikatem → stare hasło odrzucone, nowe loguje → ten sam link: „link nieważny” → „Wyślij nowy link” → krok 1 z fokusem na nagłówku; axe w każdym stanie | napisany po zachowaniu na szybszych seamach (E2E na końcu); przeszedł za pierwszym razem | zielony |
+
+### Kryteria akceptacji
+
+- **AC1:** test 1 — 200; logowanie starym hasłem 401 `{ error: { code: "invalid_credentials" } }`, nowym (polskie znaki i spacje) 200. E2E 8 to samo w przeglądarce.
+- **AC2:** test 2 — 400 `{ code: "validation_failed", fields: { newPassword: "too_short" } }`, stare hasło dalej działa, ten sam token potem ustawia hasło (200). Test 7: błąd pod polem (`aria-describedby` = opis + błąd, `aria-invalid`), fokus na polu, bez żądania; błąd pola z API też pod polem. E2E 8.
+- **AC3:** test 7 — wejście `/reset-hasla?token=…` → krok 2, fokus w „Nowe hasło” (`type="password"`, `autocomplete="new-password"`, opis „Co najmniej 8 znaków.”, „Pokaż”), adres bez tokenu (`search === ""`); zapis → Loading (`aria-disabled`, fokus na przycisku) → SC-01 z `role="status"` „Hasło zmienione. Zaloguj się nowym hasłem.”; `replace` — wstecz nie wraca do strony z tokenem. E2E 8 (`toHaveURL(/\/reset-hasla$/)`).
+- **AC4:** test 3 (użyty, wygasły 1 h + 1 s, nieznany, konta usuniętego → 400 `invalid_token`) + test 7: zamiast formularza `role="alert"` „Ten link wygasł albo został już użyty.” z fokusem (formularz z fokusem znika) + „Wyślij nowy link” → krok 1, fokus na `h1` „Reset hasła”, pole e-mail puste. E2E 8.
+- **AC5:** E2E 8 — axe bez naruszeń: krok 2 formularz, walidacja, sieć, link nieważny, SC-01 z komunikatem (oba viewporty).
+- **SEC1 (TH-10):** test 4 — obie sesje konta (rejestracja + drugie logowanie) → 401 na `GET /api/v1/me`, sesja innego konta 200 (`revokeSessionsOnPasswordReset: true`, w transakcji zmiany hasła). Test 3 — dwa równoległe resety tym samym tokenem: dokładnie jeden 200, drugi 400 `invalid_token`, działa hasło zwycięzcy.
+- **SEC2 (TH-28):** test 5 — dwa gniazda dwóch sesji konta z subskrypcją listy → oba zamknięte 1008; zdarzenie listy (właściciel dodaje pozycję, 201) do nich nie dociera; nowe połączenie z każdą z tych sesji → 401; gniazdo właściciela zostaje otwarte. `Live.closeUser(userId)` (hub: wspólne `closeWhere` z `closeSession`).
+- **SEC3 (TH-21):** test 6 — `GET /reset-hasla?token=…` i `POST /api/auth/reset-password?token=…` z tokenem i hasłem w treści: w logu brak tokenu, hasła i e-maila; jedno zdarzenie `security` `{ event: "password_reset", userId, route: "/api/auth/reset-password" }`, bez e-maila. Log API z pełnego przebiegu E2E: `reset-hasla?token=[redacted]` (4×), 0 adresów `@example.com`, 2 zdarzenia `password_reset`.
+
+### Przebieg całości (ten przebieg)
+
+- `pnpm test`: 106 plików, 575 testów, zielone. `pnpm vitest run --project api --sequence.shuffle` z seedami 11 i 202: 72 pliki, 285 testów, zielone. `pnpm test:mobile`: 10/10.
+- `pnpm test:e2e`: 54 passed (4,3 min, Windows, 1 worker).
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd 0 klonów, depcruise bez naruszeń), `pnpm design-check`, `pnpm workflow-check`: zielone.
+
+### Decyzje i uwagi dla QA
+
+- **Właściciel tokenu:** most czyta `verification` (`reset-password:<token>`) przed przekazaniem do Better Auth; po 200 wie, czyje sesje usunięto (log `security`, `live.closeUser`). Token zużywa atomowo Better Auth, więc wynik należy do tego konta.
+- **`closeUser` zamiast `closeSession` dla każdej usuniętej sesji:** reset usuwa wszystkie sesje konta, więc zamykamy wszystkie połączenia domownika; nie trzeba listy sesji sprzed usunięcia (wyścig). Przyda się w T-062 (usunięcie konta).
+- **`Origin` na `/api/auth/reset-password`:** dopisany do `PUBLIC_AUTH_ROUTES` (`trusted-origin.ts`) jak prośba o reset (TH-14; trasa bez sesji zmienia hasło). Brak `Origin` = 403 — web zawsze go wysyła.
+- **Konto usunięte w międzyczasie:** Better Auth `USER_NOT_FOUND` → 400 `invalid_token` (ekran „link nieważny”).
+- **Token w stanie nawigacji:** web zdejmuje `?token=` z adresu (`replace`) do `history.state`, więc przeładowanie zostaje na kroku 2; po zapisie `replace` na SC-01 nadpisuje ten wpis. Token nie trafia do `Referer` (zdjęty z adresu; `Referrer-Policy: no-referrer` z helmeta).
+- **Kropka po linku (QA T-053 #2):** web ucina końcowe `.,;:!?)` z tokenu (token Better Auth to litery i cyfry). Pusty token w adresie → „link nieważny” po wysłaniu.
+- **Sesja w tej przeglądarce:** po udanym resecie `useSetSession(null)` — reset usunął sesje konta (także tej przeglądarki, jeśli to to konto); inaczej `PublicOnly` przeniósłby z SC-01 na SC-05. Jeśli link otwarto w przeglądarce zalogowanej na **inne** konto, klient też kończy u siebie sesję (ciasteczko zostaje ważne; po odświeżeniu `GET /me` ją przywraca). Akceptowalne: celem ekranu jest SC-01 z komunikatem.
+- **Utracona odpowiedź po zapisie** (plan, „Client state during writes”): ponowienie dostaje `invalid_token` i ekran pokazuje „link nieważny” z „Wyślij nowy link” — zgodnie z propozycją planu; QA ocenia, czy wystarcza.
+- **Copy spoza tabeli SC-03:** „Hasło może mieć najwyżej 128 znaków” (jak SC-02), „Nie udało się zapisać hasła. Spróbuj ponownie.” (inne błędy zapisu) — propozycja do `docs/design/screens/SC-03-reset-hasla.md`.
+- **E2E i Mailpit:** Mailpit serwera E2E na stałym porcie (`E2E_MAILPIT_PORT`, domyślnie 3125, `startMailpit(hostPort)`), bo maile czyta proces testów (`e2e/mailpit.ts`). Zajęty port 3125 = błąd startu serwera E2E.
+- **Zagrożenie spoza threat-model (do oceny):** Better Auth z `rateLimit.storage: "database"` zapisuje wiersz `rate_limit` na każdą parę IP + ścieżka także dla `/reset-password` (bez `perIp` przed nim) — to samo co TH-27 dla innych publicznych tras; ten task nie dodaje limitu (brak zatwierdzonego progu).
+- **Przewodniki warstw (8b, fakty):** backend — `reset-password` w moście, `Live.closeUser`, helper `test/reset-token.ts`, `startMailpit(hostPort?)`; web — pliki SC-03 kroku 2, `e2e/mailpit.ts`, port Mailpita E2E.
+- **Do aktualizacji przez właściciela (nie edytuję `docs/architecture/` poza przewodnikami):** `architecture.md` tabela błędów — `400 invalid_token` (jest w `api.md`); `api.md` „Stan po T-004” — most udostępnia też `reset-password` (Origin 403, reset kończy sesje i połączenia na żywo); `testing-strategy.md` — E2E czyta maile przez API Mailpita na porcie `E2E_MAILPIT_PORT`.
+

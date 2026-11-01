@@ -19,6 +19,7 @@ export type ErrorCode =
   | "invalid_credentials"
   | "invalid_origin"
   | "email_taken"
+  | "invalid_token"
   | "internal";
 
 /** Który limit biznesowy został osiągnięty (`limit_reached`). */

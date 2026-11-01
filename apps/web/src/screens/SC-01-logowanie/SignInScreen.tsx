@@ -8,7 +8,7 @@ import { PasswordField } from "../../components/PasswordField/PasswordField";
 import { TextField } from "../../components/TextField/TextField";
 import { useFocusTargets } from "../../components/useFocus";
 import { EntryLink } from "../../invitations/EntryLink";
-import { emailOf, invitationOf } from "../../invitations/invitationContext";
+import { emailOf, invitationOf, passwordChangedOf } from "../../invitations/invitationContext";
 import { formErrorText, messages } from "./messages";
 import styles from "./SignInScreen.module.css";
 import { useSignInForm } from "./useSignInForm";
@@ -28,6 +28,9 @@ export function SignInScreen() {
 
   return (
     <AuthPage title={messages.title}>
+      {passwordChangedOf(state) && (
+        <InlineAlert tone="success">{messages.passwordChanged}</InlineAlert>
+      )}
       {invitation && (
         <InlineAlert tone="info">{messages.invitation(invitation.listName)}</InlineAlert>
       )}

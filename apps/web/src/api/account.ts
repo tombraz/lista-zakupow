@@ -1,5 +1,6 @@
 import type {
   Me,
+  PasswordReset,
   PasswordResetRequest,
   SignInRequest,
   SignUpRequest,
@@ -22,6 +23,11 @@ export async function signIn(credentials: SignInRequest): Promise<Me> {
 /** F-03: zawsze 200, także dla nieistniejącego konta (TH-11); 429 przy limicie. */
 export async function requestPasswordReset(request: PasswordResetRequest): Promise<void> {
   await apiRequest("/api/auth/request-password-reset", { body: request });
+}
+
+/** F-03: nowe hasło z linku; 400 `invalid_token` dla użytego lub wygasłego linku. */
+export async function resetPassword(reset: PasswordReset): Promise<void> {
+  await apiRequest("/api/auth/reset-password", { body: reset });
 }
 
 export async function signOut(): Promise<void> {

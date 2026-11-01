@@ -6,13 +6,14 @@ import { fileURLToPath } from "node:url";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { POSTGRES_IMAGE } from "../../api/test/database-constants";
 import { startMailpit } from "../../api/test/mailpit";
+import { MAILPIT_PORT } from "./mailpit";
 
 const apiDir = fileURLToPath(new URL("../../api", import.meta.url));
 const port = process.env["E2E_PORT"] ?? "3100";
 
 const container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-// Mail resetu hasła (F-03) trafia do Mailpita, jak lokalnie.
-const mailpit = await startMailpit();
+// Mail resetu hasła (F-03) trafia do Mailpita, jak lokalnie; testy czytają go przez API Mailpita.
+const mailpit = await startMailpit(MAILPIT_PORT);
 const env = {
   ...process.env,
   DATABASE_URL: container.getConnectionUri(),

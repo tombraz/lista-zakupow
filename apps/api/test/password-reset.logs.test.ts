@@ -6,6 +6,7 @@ import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
 import { createUser, randomIp } from "./factories";
 import { captureLogs } from "./logs";
+import { resetTokenFor } from "./reset-token";
 
 function requestReset(app: FastifyInstance, email: string) {
   return app.inject({
@@ -72,6 +73,45 @@ describe("password reset in logs (SEC4)", () => {
       }),
     ]);
     expect(logs.lines.join("\n")).not.toContain(local);
+    await app.close();
+  });
+});
+
+// SEC3 (TH-21): token i nowe hasło nie trafiają do logu; udany reset — do `security`.
+describe("new password in logs (SEC3)", () => {
+  const db = useTestDatabase();
+
+  it("keeps the token and the password out of logs and records password_reset with userId", async () => {
+    const logs = captureLogs();
+    const { app, user, token } = await resetTokenFor(db.pool, {
+      logger: { level: "info", stream: logs.stream },
+    });
+    const newPassword = `nowe-${randomUUID()}`;
+    const before = logs.security().length;
+
+    // Strona kroku 2 z tokenem w adresie (serwuje ją API, ADR 0006), potem zapis hasła.
+    await app.inject({ method: "GET", url: `/reset-hasla?token=${token}` });
+    const response = await app.inject({
+      method: "POST",
+      url: `/api/auth/reset-password?token=${token}`,
+      headers: { origin: TEST_ORIGIN },
+      remoteAddress: randomIp(),
+      payload: { token, newPassword },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const text = logs.lines.join("\n");
+    for (const secret of [token, newPassword, user.email]) {
+      expect(text).not.toContain(secret);
+    }
+    expect(logs.security().slice(before)).toEqual([
+      expect.objectContaining({
+        event: "password_reset",
+        userId: user.id,
+        route: "/api/auth/reset-password",
+      }),
+    ]);
+    expect(JSON.stringify(logs.security())).not.toContain("@example.com");
     await app.close();
   });
 });

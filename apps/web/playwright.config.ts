@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { MAILPIT_PORT } from "./e2e/mailpit";
 
 const port = process.env["E2E_PORT"] ?? "3100";
 
@@ -26,6 +27,6 @@ export default defineConfig({
     url: `http://127.0.0.1:${port}/health/ready`,
     timeout: 120_000,
     reuseExistingServer: false,
-    env: { E2E_PORT: port },
+    env: { E2E_PORT: port, E2E_MAILPIT_PORT: String(MAILPIT_PORT) },
   },
 });

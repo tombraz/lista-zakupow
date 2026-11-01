@@ -21,6 +21,8 @@ export interface Live {
   revoke(userId: string, listId: string): void;
   /** TH-17: wylogowanie zamyka połączenia sesji. */
   closeSession(sessionId: string): void;
+  /** TH-28: koniec wszystkich sesji domownika (reset hasła) zamyka wszystkie jego połączenia. */
+  closeUser(userId: string): void;
 }
 
 /** Kod zamknięcia WebSocket: naruszenie zasad (limit, wylogowanie). */
@@ -81,8 +83,16 @@ export class LiveHub implements Live {
   }
 
   closeSession(sessionId: string): void {
+    this.closeWhere((connection) => connection.sessionId === sessionId);
+  }
+
+  closeUser(userId: string): void {
+    this.closeWhere((connection) => connection.userId === userId);
+  }
+
+  private closeWhere(matches: (connection: LiveConnection) => boolean): void {
     for (const connection of [...this.connections.keys()]) {
-      if (connection.sessionId !== sessionId) continue;
+      if (!matches(connection)) continue;
       this.detach(connection);
       connection.close(POLICY_VIOLATION);
     }

@@ -11,6 +11,7 @@ export const messages = {
   noAccount: "Nie masz konta?",
   register: "Załóż konto",
   invitation: (list: string) => `Zaloguj się, żeby dołączyć do listy „${list}”.`,
+  passwordChanged: "Hasło zmienione. Zaloguj się nowym hasłem.",
 };
 
 /** Kod błędu API → komunikat nad formularzem (F-02: bez wskazania, co było złe). */

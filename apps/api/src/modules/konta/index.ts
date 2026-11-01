@@ -42,7 +42,7 @@ export function accountRoutes(
   app: FastifyInstance,
   pool: Pool,
   settings: AuthSettings,
-  { live, mailer }: { live: Pick<Live, "closeSession">; mailer: Mailer },
+  { live, mailer }: { live: Pick<Live, "closeSession" | "closeUser">; mailer: Mailer },
 ): Accounts {
   const db = drizzle(pool);
   const auth = createAuth(db, settings, app.log, (email, token) => {
@@ -66,6 +66,9 @@ export function accountRoutes(
       invitationOnSignUp: () => invitationOnSignUp,
       onSignedOut: (sessionId) => {
         live.closeSession(sessionId);
+      },
+      onPasswordReset: (userId) => {
+        live.closeUser(userId);
       },
     },
     settings.origin,
