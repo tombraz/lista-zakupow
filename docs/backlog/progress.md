@@ -22,3 +22,4 @@
 2026-11-01 19:18 | T-053 | qa | PASS | 0/0/2 minor; stary komunikat SC-03 po błędzie walidacji, kropka po linku w mailu; flaky j02 SEC3
 2026-11-01 19:49 | T-054 | implementer | IN_QA | nowe hasło z linku SC-03 krok 2; reset usuwa sesje i zamyka WS 1008; testy zielone
 2026-11-01 19:58 | T-054 | qa | PASS | 0/0/3 minor; stare linki resetu działają po udanym resecie, passwordChanged w invitationContext, brak aktualizacji docs architektury
+2026-11-01 20:16 | T-055 | implementer | NEEDS_USER | BrevoMailer gotowy; pyta o sekrety staging (BREVO_API_KEY, MAIL_FROM) i sposób sprawdzenia AC4
