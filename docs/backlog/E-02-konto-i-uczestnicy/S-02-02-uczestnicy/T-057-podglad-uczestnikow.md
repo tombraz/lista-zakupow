@@ -3,7 +3,7 @@ id: T-057
 title: "Uczestnicy na SC-07: podgląd, e-maile tylko dla właściciela"
 epic: E-02
 story: S-02-02
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)
@@ -37,13 +37,13 @@ SC-07 pokazuje sekcję „Na liście (N z 20)” z właścicielem i wszystkimi u
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given właściciel listy z uczestnikami, when `GET /api/v1/lists/:listId/members`, then 200 `{ owner: { id, name }, participants: [{ id, name, email }] }` w kolejności dołączenia. — verified by: test integracyjny
-- [ ] AC2: Given SC-07 właściciela, then nagłówek „Na liście (N z 20)” (N = liczba uczestników), wiersz właściciela „właściciel”, wiersze uczestników z e-mailem; given SC-07 uczestnika, then jego wiersz „Ty”, pozostali bez e-maila, bez sekcji „Zaproszenia”. — verified by: test komponentu (MSW)
-- [ ] AC3: Given właściciel bez uczestników, then tylko jego wiersz + „Nikt jeszcze nie dołączył. Utwórz link i wyślij go domownikowi.”; Loading — szkielet 3 wierszy; Error — „Nie udało się wczytać uczestników.” + „Spróbuj ponownie” (ponawia, fokus zostaje na przycisku). — verified by: test komponentu
-- [ ] AC4: Given otwarte SC-07 u właściciela i uczestnika, when ktoś dołącza linkiem, then `members.changed` odświeża sekcję w ≤ 5 s u obu. — verified by: test komponentu (zdarzenie na żywo) + E2E dwa konteksty
-- [ ] AC5: Given SC-07 (właściciel, uczestnik, pusty, błąd), when E2E je odwiedza, then axe bez naruszeń; `h2` „Na liście”. — verified by: E2E Playwright + axe
-- [ ] SEC1 (TH-19): Given uczestnik listy, when `GET …/members`, then żaden `Person` nie ma pola `email` (także właściciela i jego własny wiersz bez cudzych danych); given `GET /api/v1/lists/:listId` i `GET /api/v1/lists`, then nadal bez e-maili. — verified by: test integracyjny kształtu odpowiedzi (rozszerzenie `participant-emails.test.ts`)
-- [ ] SEC2 (TH-01): Given domownik bez dostępu do listy A, when `GET /api/v1/lists/<A>/members`, then 404 `not_found` bez treści; anonim 401; niepoprawny `listId` 404. — verified by: test integracyjny autoryzacji
+- [x] AC1: Given właściciel listy z uczestnikami, when `GET /api/v1/lists/:listId/members`, then 200 `{ owner: { id, name }, participants: [{ id, name, email }] }` w kolejności dołączenia. — verified by: test integracyjny
+- [x] AC2: Given SC-07 właściciela, then nagłówek „Na liście (N z 20)” (N = liczba uczestników), wiersz właściciela „właściciel”, wiersze uczestników z e-mailem; given SC-07 uczestnika, then jego wiersz „Ty”, pozostali bez e-maila, bez sekcji „Zaproszenia”. — verified by: test komponentu (MSW)
+- [x] AC3: Given właściciel bez uczestników, then tylko jego wiersz + „Nikt jeszcze nie dołączył. Utwórz link i wyślij go domownikowi.”; Loading — szkielet 3 wierszy; Error — „Nie udało się wczytać uczestników.” + „Spróbuj ponownie” (ponawia, fokus zostaje na przycisku). — verified by: test komponentu
+- [x] AC4: Given otwarte SC-07 u właściciela i uczestnika, when ktoś dołącza linkiem, then `members.changed` odświeża sekcję w ≤ 5 s u obu. — verified by: test komponentu (zdarzenie na żywo) + E2E dwa konteksty
+- [x] AC5: Given SC-07 (właściciel, uczestnik, pusty, błąd), when E2E je odwiedza, then axe bez naruszeń; `h2` „Na liście”. — verified by: E2E Playwright + axe
+- [x] SEC1 (TH-19): Given uczestnik listy, when `GET …/members`, then żaden `Person` nie ma pola `email` (także właściciela i jego własny wiersz bez cudzych danych); given `GET /api/v1/lists/:listId` i `GET /api/v1/lists`, then nadal bez e-maili. — verified by: test integracyjny kształtu odpowiedzi (rozszerzenie `participant-emails.test.ts`)
+- [x] SEC2 (TH-01): Given domownik bez dostępu do listy A, when `GET /api/v1/lists/<A>/members`, then 404 `not_found` bez treści; anonim 401; niepoprawny `listId` 404. — verified by: test integracyjny autoryzacji
 
 ## TDD plan
 
@@ -87,15 +87,52 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+### Tests (red → green)
+
+| # | Test | Red (before the code) | Now |
+| --- | --- | --- | --- |
+| 1 | `apps/api/test/lists.members.test.ts` „gives the owner the participants with e-mails, in the order they joined” | `expected 404 to be 200` (no route) | pass |
+| 2 | same file „gives a participant everyone without an email key, including the owner and themselves” + `participant-emails.test.ts` (now also `GET …/members` as Tomek) | written after the role branch existed; red proven by temporarily returning the records with e-mails to a participant: `expected {…} to deeply equal {…}` and `expected '{"owner":…' not to contain 'user-…@example.com'`; restored | pass |
+| 3 | same file „answers 404 to someone without access and to a bad listId, 401 to an anonymous request” | red proven by temporarily skipping `requireListAccess` in the route: `expected 200 to be 404`; restored | pass |
+| 4 | `ParticipantsScreen.members.test.tsx` „shows the owner every participant with their e-mail and the count”, „shows a participant „Ty” in their row, nobody's e-mail and no invitations” | `expected [ 'AAniawłaściciel · Ty' ] to deeply equal [ …(3) ]` / `[ 'AAniawłaściciel' ]` | pass |
+| 5 | same file „SC-07 Na liście states”: empty, skeleton of 3 rows, error + retry with focus kept | against the HEAD screen: skeleton and retry tests fail (region not found, timeout); empty state passed already (T-008 behaviour, now fed from `/members`). With the first implementation the retry test failed on `toHaveFocus()` (refetch of a query without data goes back to `pending` → skeleton → focus on `body`); fixed with `useRetry` | pass |
+| 6 | `ParticipantsScreen.live.test.tsx` „shows a person who joined to the owner / a participant after members.changed” | red with the `membersKey` invalidation removed from `useLiveList`: `Unable to find role="region" and name "Na liście (2 z 20)"`; restored | pass |
+| 7 | `apps/web/e2e/sc07-uczestnicy.spec.ts`: „SC-07 shows who is on the list, e-mails only to the owner, joins live” (Ania + Tomek + Kasia, three contexts, `≤ 5 s`), „SC-07 empty and load error states pass axe” | written after the behaviour worked at the faster seams (plan order) | pass |
+
+Also changed: `logs.content.test.ts` reads `GET …/members` as owner and as guest (TH-21: new route with personal data); `j04-zaproszenie.spec.ts` „SC-07 and SC-08 states pass axe” now also fills `GET …/members` with 20 participants (the counter and limit come from that response).
+
+### Commands (this run)
+
+- `pnpm vitest run` — 111 files, 605 tests passed; `pnpm vitest run --project api --sequence.shuffle --sequence.seed=7` and `=42` — 308 passed.
+- `pnpm test:e2e` — 58 passed (whole suite, Windows, 1 worker).
+- `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm quality` (0 clones, no dependency violations), `pnpm design-check`, `pnpm workflow-check`, `pnpm test:mobile`, web and API build — OK.
+
+### Acceptance criteria
+
+- AC1 — test 1 (`toEqual` with exact shape and join order).
+- AC2 — test 4; E2E test 7 (rows of Tomek's view: `AAniawłaściciel`, `TTomekTy`; no `@example.com` on his screen; no „Zaproszenia”).
+- AC3 — test 5.
+- AC4 — test 6 and E2E test 7 (Kasia joins → „Na liście (2 z 20)” at Ania and Tomek within 5 s).
+- AC5 — E2E: axe in owner, participant, empty, load-error states (test 7) and limit state (J-04); `h2` „Na liście (N z 20)”.
+- SEC1 — test 2 (`Object.keys(person)` = `["id","name"]` for owner and every participant; body contains no e-mail) and `participant-emails.test.ts` (members, lists, list details, WS).
+- SEC2 — test 3.
+
+### Decisions for QA
+
+- Type: `Person` stays `{ id, name }` (other routes cannot carry an e-mail by type); new `Participant extends Person { email? }` and `ListMembers` in `packages/shared/src/api/lists.ts`. `api.md` describes it as `Person = { id, name, email? }` — same wire shape; `api.md` not edited (out of my scope).
+- The e-mail is chosen in the domain (`membersOf`, branch on `access.role`), the repository always reads it (`peopleOf`).
+- Owner's own row keeps the T-008 text „właściciel · Ty” in the owner view; participants' rows show „Ty” for the viewer, otherwise e-mail (owner view) or nothing.
+- SC-07 counter and the 20-participant limit (Invitations) now come from `GET …/members`, not from `members` of the list details.
+- Long name / e-mail wrap with `overflow-wrap: anywhere` (`.who`) — QA plan check at 320 px.
+- Layer guides: „Gdzie jest kod” in `backend.md` and `web.md` updated (facts).

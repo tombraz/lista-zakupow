@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { deleteListKey } from "../lists/deleteListKey";
 import { listKey } from "../lists/useList";
+import { membersKey } from "../lists/useMembers";
 import { LISTS_KEY } from "../lists/useLists";
 import { removeItems, upsertNewer } from "../screens/SC-06-lista/itemsCache";
 import { useLive } from "./LiveProvider";
@@ -113,8 +114,9 @@ function applyListEvent(client: QueryClient, event: ListEvent): string | null {
       );
       return null;
     default:
-      // `members.changed`: uczestnicy z API (SC-06 okno usunięcia, SC-07).
+      // `members.changed`: uczestnicy z API (SC-06 okno usunięcia, SC-07 „Na liście”).
       void client.invalidateQueries({ queryKey: listKey(listId), exact: true });
+      void client.invalidateQueries({ queryKey: membersKey(listId) });
       return null;
   }
 }

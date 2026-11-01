@@ -26,6 +26,12 @@
   min-height: var(--size-target-min);
 }
 
+/* Długie imię i e-mail zawijają się na 320 px zamiast rozpychać wiersz. */
+.who {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .name {
   display: block;
 }

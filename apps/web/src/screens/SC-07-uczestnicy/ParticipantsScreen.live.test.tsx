@@ -2,7 +2,7 @@ import type { Invitation, ListSummary } from "@lista/shared";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { aList, ANIA, detailsOf, listsAre, TOMEK } from "../../../test/lists";
+import { aList, ANIA, listHandlers, listsAre, TOMEK } from "../../../test/lists";
 import { liveServer } from "../../../test/live";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
@@ -17,7 +17,7 @@ async function showParticipants(list: ListSummary, links: Invitation[] = []) {
   const live = liveServer();
   const state = { list, links };
   server.use(
-    http.get(`*/api/v1/lists/${list.id}`, () => HttpResponse.json(detailsOf(state.list))),
+    ...listHandlers(() => state.list),
     http.get(`*/api/v1/lists/${list.id}/invitations`, () => HttpResponse.json(state.links)),
   );
   listsAre([]);
@@ -54,6 +54,27 @@ describe("SC-07 live changes", () => {
       expect(invitations().queryAllByRole("group")).toHaveLength(0);
     });
     expect(await screen.findByRole("region", { name: "Na liście (1 z 20)" })).toBeVisible();
+  });
+
+  // T-057 AC4 (F-13): dołączenie linkiem odświeża „Na liście” u właściciela i u uczestnika.
+  it.each([
+    { viewer: "the owner", role: "owner" as const, kasia: "Kasiakasia@example.com" },
+    { viewer: "a participant", role: "participant" as const, kasia: "Kasia" },
+  ])("shows a person who joined to $viewer after members.changed", async ({ role, kasia }) => {
+    const owner = role === "owner" ? ANIA : { id: "u-ewa", name: "Ewa" };
+    const list = aList({ name: "Dom", role, owner, members: role === "owner" ? [TOMEK] : [ANIA] });
+    const { live, state } = await showParticipants(list);
+    await screen.findByRole("region", { name: "Na liście (1 z 20)" });
+
+    state.list = { ...list, members: [...list.members, { id: "u-kasia", name: "Kasia" }] };
+    act(() => {
+      live.send({ type: "members.changed", listId: list.id });
+    });
+
+    const members = within(await screen.findByRole("region", { name: "Na liście (2 z 20)" }));
+    expect(members.getAllByRole("listitem").at(-1)).toHaveTextContent(`K${kasia}`, {
+      normalizeWhitespace: false,
+    });
   });
 
   it("ignores invitations.changed of another list", async () => {

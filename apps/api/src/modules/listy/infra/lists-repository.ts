@@ -6,6 +6,7 @@ import type {
   JoinOutcome,
   ListPeople,
   ListItems,
+  ListPeopleRecord,
   ListRole,
   ListsRepository,
   Person,
@@ -166,6 +167,23 @@ export class DrizzleListsRepository implements ListsRepository {
         .where(eq(listMember.listId, listId)),
     ]);
     return list ? { ownerId: list.ownerId, participantIds: members.map(({ id }) => id) } : null;
+  }
+
+  async peopleOf(listId: string): Promise<ListPeopleRecord | null> {
+    const [[owner], participants] = await Promise.all([
+      this.db
+        .select({ id: user.id, name: user.name })
+        .from(shoppingList)
+        .innerJoin(user, eq(user.id, shoppingList.ownerId))
+        .where(eq(shoppingList.id, listId)),
+      this.db
+        .select({ id: user.id, name: user.name, email: user.email })
+        .from(listMember)
+        .innerJoin(user, eq(user.id, listMember.userId))
+        .where(eq(listMember.listId, listId))
+        .orderBy(asc(listMember.joinedAt), asc(listMember.userId)),
+    ]);
+    return owner ? { owner, participants } : null;
   }
 
   async invitationTarget(listId: string): Promise<InvitationTarget | null> {

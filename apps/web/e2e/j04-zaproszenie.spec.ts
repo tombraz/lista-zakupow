@@ -177,14 +177,21 @@ test("SC-07 and SC-08 states pass axe", async ({ page, browser }) => {
       value: { writeText: () => Promise.reject(new Error("denied")) },
     });
   });
+  const twenty = Array.from({ length: 20 }, (_, index) => ({
+    id: `u-${String(index)}`,
+    name: `Osoba ${String(index)}`,
+  }));
   await page.route(`**/api/v1/lists/${list.id}`, async (route) => {
     const response = await route.fetch();
     const details = (await response.json()) as Record<string, unknown>;
-    const members = Array.from({ length: 20 }, (_, index) => ({
-      id: `u-${String(index)}`,
-      name: `Osoba ${String(index)}`,
-    }));
-    await route.fulfill({ response, json: { ...details, members } });
+    await route.fulfill({ response, json: { ...details, members: twenty } });
+  });
+  // T-057: licznik i limit SC-07 z `GET …/members`.
+  await page.route(`**/api/v1/lists/${list.id}/members`, async (route) => {
+    const response = await route.fetch();
+    const people = (await response.json()) as Record<string, unknown>;
+    const participants = twenty.map((person) => ({ ...person, email: "osoba@example.com" }));
+    await route.fulfill({ response, json: { ...people, participants } });
   });
   await api(page).post(`/api/v1/lists/${list.id}/invitations`, {});
   await page.goto(`/listy/${list.id}/uczestnicy`);

@@ -1,4 +1,4 @@
-import type { ListDetails, ListSummary } from "@lista/shared";
+import type { ListDetails, ListMembers, ListSummary } from "@lista/shared";
 import { apiRequest } from "./client";
 
 export function fetchLists(): Promise<ListSummary[]> {
@@ -11,6 +11,11 @@ export function createList(name: string): Promise<ListSummary> {
 
 export function fetchList(listId: string): Promise<ListDetails> {
   return apiRequest<ListDetails>(`/api/v1/lists/${encodeURIComponent(listId)}`);
+}
+
+/** F-13: uczestnicy listy (SC-07); e-maile tylko w odpowiedzi dla właściciela. */
+export function fetchMembers(listId: string): Promise<ListMembers> {
+  return apiRequest<ListMembers>(`/api/v1/lists/${encodeURIComponent(listId)}/members`);
 }
 
 export function renameList(listId: string, name: string): Promise<ListSummary> {

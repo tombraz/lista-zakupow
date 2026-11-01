@@ -89,7 +89,9 @@ describe("content in logs (TH-21)", () => {
     live.close();
 
     const asGuest = requestsAs(app, guest);
-    for (const url of ["/api/v1/me", "/api/v1/lists", `/api/v1/lists/${list.id}`])
+    const members = `/api/v1/lists/${list.id}/members`;
+    expect((await asOwner("GET", members)).statusCode).toBe(200);
+    for (const url of ["/api/v1/me", "/api/v1/lists", `/api/v1/lists/${list.id}`, members])
       expect((await asGuest("GET", url)).statusCode).toBe(200);
     const tooLong = `${m.item}${"x".repeat(200)}`;
     expect(

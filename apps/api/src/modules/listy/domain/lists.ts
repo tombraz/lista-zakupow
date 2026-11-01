@@ -1,4 +1,10 @@
-import { BUSINESS_LIMITS, type Item, type ListRole, type Person } from "@lista/shared";
+import {
+  BUSINESS_LIMITS,
+  type Item,
+  type ListMembers,
+  type ListRole,
+  type Person,
+} from "@lista/shared";
 import { DomainError, type SecurityEvent } from "../../../domain-error";
 import { isUuid } from "../../../ids";
 
@@ -38,6 +44,13 @@ export function everyone(people: ListPeople | null): string[] {
   return people ? [people.ownerId, ...people.participantIds] : [];
 }
 
+/** Osoby z dostępem do listy z e-mailami uczestników, zanim domena zdecyduje, kto je zobaczy. */
+export interface ListPeopleRecord {
+  owner: Person;
+  /** W kolejności dołączenia. */
+  participants: (Person & { email: string })[];
+}
+
 /** Lista widziana z linku zaproszenia (SC-08): tylko nazwa i imię właściciela (MC-02). */
 export interface InvitationTarget {
   listName: string;
@@ -59,6 +72,8 @@ export interface ListsRepository {
   /** Właściciel i uczestnicy listy; `null`, gdy lista nie istnieje. */
   peopleWithAccess(listId: string): Promise<ListPeople | null>;
   participantCount(listId: string): Promise<number>;
+  /** Właściciel i uczestnicy z e-mailami; `null`, gdy lista nie istnieje. */
+  peopleOf(listId: string): Promise<ListPeopleRecord | null>;
 }
 
 /** Wynik dopisania uczestnika do listy (F-12). */
@@ -129,6 +144,23 @@ export async function listOf(
   const [list] = await repository.listsOf(userId, access.listId);
   if (!list) throw new DomainError("not_found");
   return viewOf(userId, list);
+}
+
+/**
+ * F-13: uczestnicy listy, do której dostęp jest już sprawdzony. E-mail tylko dla właściciela;
+ * uczestnik dostaje osoby bez klucza `email` (TH-19).
+ */
+export async function membersOf(
+  repository: ListsRepository,
+  access: ListAccess,
+): Promise<ListMembers> {
+  const people = await repository.peopleOf(access.listId);
+  if (!people) throw new DomainError("not_found");
+  const participants =
+    access.role === "owner"
+      ? people.participants.map(({ id, name, email }) => ({ id, name, email }))
+      : people.participants.map(({ id, name }) => ({ id, name }));
+  return { owner: { id: people.owner.id, name: people.owner.name }, participants };
 }
 
 /** F-05: tworzący zostaje właścicielem; limit liczy tylko własne listy. */

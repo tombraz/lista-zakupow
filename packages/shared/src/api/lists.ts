@@ -38,3 +38,14 @@ export interface ListDetails {
   /** Nieodhaczone od najnowszej (data-model.md, „Kolejność”). */
   items: Item[];
 }
+
+/** Uczestnik na SC-07; `email` tylko w odpowiedzi dla właściciela listy (F-13, TH-19). */
+export interface Participant extends Person {
+  email?: string;
+}
+
+/** `GET /api/v1/lists/:listId/members`: uczestnicy w kolejności dołączenia (api.md, „Listy”). */
+export interface ListMembers {
+  owner: Person;
+  participants: Participant[];
+}

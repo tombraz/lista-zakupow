@@ -1,4 +1,9 @@
-import { listNameRequestSchema, type ListDetails, type ListSummary } from "@lista/shared";
+import {
+  listNameRequestSchema,
+  type ListDetails,
+  type ListMembers,
+  type ListSummary,
+} from "@lista/shared";
 import type { FastifyInstance } from "fastify";
 import { validate } from "../../../http/validate";
 import type { Accounts } from "../../konta";
@@ -9,6 +14,7 @@ import {
   everyone,
   listOf,
   listsOf,
+  membersOf,
   renameList,
   requireListAccess,
   type ListItems,
@@ -67,6 +73,12 @@ export function listRoutes(
       members: list.members,
       items: await items.itemsOf(access.listId),
     } satisfies ListDetails;
+  });
+
+  app.get<ListParams>("/api/v1/lists/:listId/members", async (request, reply) => {
+    const user = await accounts.requireUser(request, reply);
+    const access = await requireListAccess(repository, user.id, request.params.listId, "member");
+    return (await membersOf(repository, access)) satisfies ListMembers;
   });
 
   app.patch<ListParams>("/api/v1/lists/:listId", async (request, reply) => {

@@ -57,8 +57,10 @@ export {
   LIST_NAME_MAX_LENGTH,
   listNameRequestSchema,
   type ListDetails,
+  type ListMembers,
   type ListNameRequest,
   type ListRole,
   type ListSummary,
+  type Participant,
   type Person,
 } from "./api/lists";
