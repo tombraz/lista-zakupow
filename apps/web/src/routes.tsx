@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from "react-router";
 import { SignInScreen } from "./screens/SC-01-logowanie/SignInScreen";
 import { SignUpScreen } from "./screens/SC-02-rejestracja/SignUpScreen";
+import { PasswordResetScreen } from "./screens/SC-03-reset-hasla/PasswordResetScreen";
 import { TermsScreen } from "./screens/SC-04-regulamin/TermsScreen";
 import { ListsScreen } from "./screens/SC-05-moje-listy/ListsScreen";
 import { ListScreen } from "./screens/SC-06-lista/ListScreen";
@@ -18,6 +19,8 @@ export const routes: RouteObject[] = [
       { path: "/rejestracja", element: <SignUpScreen /> },
     ],
   },
+  // SC-03: publiczny także dla zalogowanych — link z maila otwiera się w dowolnej przeglądarce.
+  { path: "/reset-hasla", element: <PasswordResetScreen /> },
   { path: "/regulamin", element: <TermsScreen /> },
   // SC-08: publiczny i dla zalogowanych (ia.md, „Punkty wejścia”).
   { path: "/zaproszenie/:token", element: <InvitationScreen /> },

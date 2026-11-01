@@ -135,7 +135,11 @@ function EmailTaken(props: { email: string; invitation: InvitationContext | null
       <EntryLink to="/logowanie" {...props}>
         {text.signIn}
       </EntryLink>{" "}
-      {text.or} <Link to="/reset-hasla">{text.reset}</Link>.
+      {text.or}{" "}
+      <EntryLink to="/reset-hasla" {...props}>
+        {text.reset}
+      </EntryLink>
+      .
     </>
   );
 }

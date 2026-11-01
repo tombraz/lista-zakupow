@@ -1,4 +1,10 @@
-import type { Me, SignInRequest, SignUpRequest, SignUpResponse } from "@lista/shared";
+import type {
+  Me,
+  PasswordResetRequest,
+  SignInRequest,
+  SignUpRequest,
+  SignUpResponse,
+} from "@lista/shared";
 import { apiRequest, ApiRequestError } from "./client";
 
 /** Z `invitationToken` odpowiedź mówi też, czy rejestracja dołączyła do listy (F-12). */
@@ -11,6 +17,11 @@ export async function signIn(credentials: SignInRequest): Promise<Me> {
     body: credentials,
   });
   return user;
+}
+
+/** F-03: zawsze 200, także dla nieistniejącego konta (TH-11); 429 przy limicie. */
+export async function requestPasswordReset(request: PasswordResetRequest): Promise<void> {
+  await apiRequest("/api/auth/request-password-reset", { body: request });
 }
 
 export async function signOut(): Promise<void> {

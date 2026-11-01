@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useLocation } from "react-router";
+import { AuthForm } from "../../components/AuthPage/AuthForm";
 import { AuthPage } from "../../components/AuthPage/AuthPage";
 import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
@@ -35,14 +36,7 @@ export function SignInScreen() {
           {formErrorText(form.formError)}
         </InlineAlert>
       )}
-      <form
-        className={styles.form}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          form.submit();
-        }}
-      >
+      <AuthForm onSubmit={form.submit}>
         <TextField
           ref={emailRef}
           label={messages.email.label}
@@ -67,7 +61,15 @@ export function SignInScreen() {
         <Button type="submit" loading={form.pending}>
           {messages.submit}
         </Button>
-      </form>
+      </AuthForm>
+      <EntryLink
+        className={styles.forgot}
+        to="/reset-hasla"
+        email={form.values.email}
+        invitation={invitation}
+      >
+        {messages.forgot}
+      </EntryLink>
       <div className={styles.register}>
         <p>{messages.noAccount}</p>
         <EntryLink

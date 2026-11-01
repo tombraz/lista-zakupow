@@ -225,6 +225,12 @@ const ROUTES: Record<string, RouteCase> = {
     to: () => "/rejestracja",
     heading: "Załóż konto",
   },
+  "/reset-hasla": {
+    signedIn: false,
+    from: () => "/logowanie",
+    to: () => "/reset-hasla",
+    heading: "Reset hasła",
+  },
   "/regulamin": {
     signedIn: false,
     from: () => "/logowanie",

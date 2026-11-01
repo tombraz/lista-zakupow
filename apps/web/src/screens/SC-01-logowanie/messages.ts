@@ -7,6 +7,7 @@ export const messages = {
   email: { label: "E-mail", required: "Wpisz adres e-mail" },
   password: { label: "Hasło", required: "Wpisz hasło" },
   submit: "Zaloguj się",
+  forgot: "Nie pamiętasz hasła?",
   noAccount: "Nie masz konta?",
   register: "Załóż konto",
   invitation: (list: string) => `Zaloguj się, żeby dołączyć do listy „${list}”.`,

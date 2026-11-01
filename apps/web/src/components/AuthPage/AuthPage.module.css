@@ -14,6 +14,12 @@
   composes: title from "../../styles/page.module.css";
 }
 
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
 .footer {
   padding-top: var(--spacing-lg);
   border-top: 1px solid var(--color-border-default);
