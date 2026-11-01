@@ -16,7 +16,8 @@ const consent = z.literal(true, { error: "required" });
 
 const name = requiredName(NAME_MAX_LENGTH);
 
-const signUpEmail = z
+// Ta sama skrzynka bez względu na wielkość liter i spacje (rejestracja, reset hasła).
+const accountEmail = z
   .string({ error: "required" })
   .trim()
   .min(1, { error: "required" })
@@ -30,7 +31,7 @@ const newPassword = z
 
 export const signUpRequestSchema = z.object({
   name,
-  email: signUpEmail,
+  email: accountEmail,
   password: newPassword,
   termsAccepted: consent,
   ageConfirmed: consent,
@@ -46,6 +47,12 @@ export const signInRequestSchema = z.object({
 });
 
 export type SignInRequest = z.input<typeof signInRequestSchema>;
+
+// F-03: `redirectTo` z api.md jest przyjmowany, ale pomijany — link w mailu zawsze na originie
+// aplikacji (TH-14), więc schemat go nie przepuszcza dalej.
+export const passwordResetRequestSchema = z.object({ email: accountEmail });
+
+export type PasswordResetRequest = z.input<typeof passwordResetRequestSchema>;
 
 export const meResponseSchema = z.object({
   id: z.string(),

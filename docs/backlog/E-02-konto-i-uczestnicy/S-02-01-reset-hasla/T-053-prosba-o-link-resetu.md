@@ -3,7 +3,7 @@ id: T-053
 title: "Prośba o link resetu: mail z linkiem (lokalnie, Mailpit)"
 epic: E-02
 story: S-02-01
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)

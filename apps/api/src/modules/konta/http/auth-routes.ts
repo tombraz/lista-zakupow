@@ -1,4 +1,5 @@
 import {
+  passwordResetRequestSchema,
   signInRequestSchema,
   signUpRequestSchema,
   type ErrorCode,
@@ -12,11 +13,15 @@ import { validate } from "../../../http/validate";
 import { logLimitEvent, securityEvent } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
+import type { PasswordResetRequests } from "../infra/password-reset-requests";
 import type { SignInFailures } from "../infra/sign-in-failures";
 
 interface AuthDeps {
   auth: Auth;
+  /** Pseudonim e-maila do liczników i logu `security` (TH-21). */
+  accountKey: (email: string) => string;
   failures: SignInFailures;
+  resetRequests: PasswordResetRequests;
   /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
   invitationOnSignUp: () => InvitationOnSignUp | undefined;
   /** TH-17: po wylogowaniu zamyka połączenia na żywo tej sesji (`na-zywo.closeSession`). */
@@ -51,7 +56,7 @@ interface AuthUser {
  * odpowiedzi w formacie API, bez tokenu sesji w treści (TH-16).
  */
 export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string): void {
-  const { auth, failures } = deps;
+  const { auth, failures, resetRequests } = deps;
   app.post("/api/auth/sign-up/email", async (request, reply) => {
     const { name, email, password, invitationToken } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
@@ -70,7 +75,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     await perIpRateLimit(scope);
     scope.post("/api/auth/sign-in/email", perIp("signInPerIp"), async (request, reply) => {
       const credentials = validate(signInRequestSchema, request.body);
-      const accountKey = failures.accountKey(credentials.email);
+      const accountKey = deps.accountKey(credentials.email);
       if (!(await failures.reserve(accountKey))) {
         logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", {
           ids: { accountKey },
@@ -89,6 +94,24 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
       }
       return relay(response, reply);
     });
+
+    // F-03: 200 zawsze (TH-11); mail wysyła `sendResetPassword` w tle. TH-27: limit per IP
+    // (w pamięci) przed licznikiem e-maila, który pisze do bazy.
+    scope.post(
+      "/api/auth/request-password-reset",
+      perIp("passwordResetPerIp"),
+      async (request, reply) => {
+        const { email } = validate(passwordResetRequestSchema, request.body);
+        const accountKey = deps.accountKey(email);
+        if (!(await resetRequests.take(accountKey))) {
+          logLimitEvent(request, "rate_limited", "passwordResetPerEmail", { ids: { accountKey } });
+          throw new ApiError(429, "rate_limited");
+        }
+        const response = await forward(auth, origin, request, { email });
+        if (response.status === 429) logLimitEvent(request, "rate_limited", "passwordResetPerIp");
+        return relay(response, reply);
+      },
+    );
   });
 
   app.post("/api/auth/sign-out", async (request, reply) => {

@@ -2,7 +2,7 @@
 id: S-02-01
 epic: E-02
 title: Reset hasła mailem (web)
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [F-03]
 screens: [SC-03, SC-01, SC-02]
 ---

@@ -53,6 +53,17 @@ const OVER = 3;
 
 const SIGN_IN = "/api/auth/sign-in/email";
 const SIGN_UP = "/api/auth/sign-up/email";
+const REQUEST_RESET = "/api/auth/request-password-reset";
+
+function requestReset(app: FastifyInstance, email: string, remoteAddress: string) {
+  return app.inject({
+    method: "POST",
+    url: REQUEST_RESET,
+    headers: { origin: TEST_ORIGIN },
+    remoteAddress,
+    payload: { email },
+  });
+}
 
 function signIn(app: FastifyInstance, email: string, remoteAddress: string) {
   return app.inject({
@@ -127,6 +138,20 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
         }),
       );
       return { event: "rate_limited", route: SIGN_UP };
+    },
+    passwordResetPerIp: async ({ app, atLimit }) => {
+      const ip = randomIp();
+      await exceed(RATE_LIMITS.passwordResetPerIp.max, atLimit, () =>
+        requestReset(app, `nikt-${randomUUID()}@example.com`, ip),
+      );
+      return { event: "rate_limited", route: REQUEST_RESET };
+    },
+    passwordResetPerEmail: async ({ app, atLimit }) => {
+      const { email } = await createUser(app);
+      await exceed(RATE_LIMITS.passwordResetPerEmail.max, atLimit, () =>
+        requestReset(app, email, randomIp()),
+      );
+      return { event: "rate_limited", route: REQUEST_RESET, accountKey: expect.any(String) };
     },
     healthReadyPerIp: async ({ app, atLimit }) => {
       const ip = randomIp();

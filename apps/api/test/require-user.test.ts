@@ -6,6 +6,7 @@ import { createLiveHub } from "../src/modules/na-zywo";
 import { TEST_ORIGIN, TEST_SECRET } from "./app";
 import { useTestDatabase } from "./database";
 import { createUser } from "./factories";
+import { capturingMailer } from "./mailer";
 
 // QA round 1, #5: trasy kolejnych modułów (T-005) chronią się przez publiczne API modułu `konta`.
 describe("Accounts.requireUser for routes of other modules", () => {
@@ -15,7 +16,10 @@ describe("Accounts.requireUser for routes of other modules", () => {
     const app = Fastify();
     apiErrors(app);
     const auth = { secret: TEST_SECRET, origin: TEST_ORIGIN };
-    const accounts = accountRoutes(app, db.pool, auth, createLiveHub());
+    const accounts = accountRoutes(app, db.pool, auth, {
+      live: createLiveHub(),
+      mailer: capturingMailer().mailer,
+    });
     app.get("/api/v1/chronione", async (request, reply) => {
       const user = await accounts.requireUser(request, reply);
       return { id: user.id, name: user.name, email: user.email };

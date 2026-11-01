@@ -1,4 +1,9 @@
-import { RATE_LIMITS, TERMS_VERSION, type RateLimit } from "@lista/shared";
+import {
+  PASSWORD_RESET_VALIDITY_SECONDS,
+  RATE_LIMITS,
+  TERMS_VERSION,
+  type RateLimit,
+} from "@lista/shared";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -13,15 +18,23 @@ export interface AuthSettings {
 
 const DAY_SECONDS = 24 * 60 * 60;
 
+/** F-03: token resetu hasła dla konta z tym e-mailem; wysyłka nie może opóźnić odpowiedzi. */
+export type OnPasswordResetToken = (email: string, token: string) => void;
+
 // ADR 0002: sesje w bazie, 30 dni bez użycia, przedłużane przy użyciu.
-export function createAuth(db: NodePgDatabase, settings: AuthSettings, log: FastifyBaseLogger) {
+export function createAuth(
+  db: NodePgDatabase,
+  settings: AuthSettings,
+  log: FastifyBaseLogger,
+  onPasswordResetToken: OnPasswordResetToken,
+) {
   return betterAuth({
     secret: settings.secret,
     baseURL: settings.origin,
     basePath: "/api/auth",
     trustedOrigins: [settings.origin],
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    emailAndPassword: { enabled: true },
+    emailAndPassword: emailAndPassword(onPasswordResetToken),
     // MC-04, MC-05: limity per IP w bazie; IP klienta ustawia most Fastify (auth-routes.ts).
     rateLimit: {
       enabled: true,
@@ -29,6 +42,7 @@ export function createAuth(db: NodePgDatabase, settings: AuthSettings, log: Fast
       customRules: {
         "/sign-in/email": rule(RATE_LIMITS.signInPerIp),
         "/sign-up/email": rule(RATE_LIMITS.signUpPerIp),
+        "/request-password-reset": rule(RATE_LIMITS.passwordResetPerIp),
       },
     },
     session: { expiresIn: 30 * DAY_SECONDS, updateAge: DAY_SECONDS },
@@ -71,6 +85,19 @@ export function createAuth(db: NodePgDatabase, settings: AuthSettings, log: Fast
       },
     },
   });
+}
+
+// F-03: token jednorazowy, ważny 1 godzinę.
+function emailAndPassword(onPasswordResetToken: OnPasswordResetToken) {
+  return {
+    enabled: true,
+    resetPasswordTokenExpiresIn: PASSWORD_RESET_VALIDITY_SECONDS,
+    // Link budujemy sami z originu aplikacji i tokenu (`url` Better Auth prowadzi do API).
+    sendResetPassword: ({ user, token }: { user: { email: string }; token: string }) => {
+      onPasswordResetToken(user.email, token);
+      return Promise.resolve();
+    },
+  };
 }
 
 function rule(limit: RateLimit) {

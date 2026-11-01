@@ -37,7 +37,8 @@ check "kontener działa bez roota" "1000" "$(docker run --rm "$image" id -u)"
 
 trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
 "${docker_run[@]}" -d --name "$container" -p "127.0.0.1:$port:8080" \
-  -e "APP_ORIGIN=http://localhost:$port" -e "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" "$image" >/dev/null
+  -e "APP_ORIGIN=http://localhost:$port" -e "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" \
+  -e "MAILPIT_URL=http://localhost:8025" "$image" >/dev/null
 
 smoke_status=0
 bash scripts/smoke.sh "http://localhost:$port" || smoke_status=$?

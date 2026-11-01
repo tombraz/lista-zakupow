@@ -8,7 +8,7 @@ import { webApp } from "./http/web-app";
 import { limitLogWindow, loggingOptions, type LogSettings } from "./logging";
 import { apiErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
-import { accountRoutes, type AuthSettings } from "./modules/konta";
+import { accountRoutes, type AuthSettings, type Mailer } from "./modules/konta";
 import { listsModule } from "./modules/listy";
 import { createLiveHub, liveModule } from "./modules/na-zywo";
 import { createItems, itemsModule } from "./modules/pozycje";
@@ -21,6 +21,8 @@ export interface AppOptions {
   /** Adresy / CIDR zaufanych proxy przed API; od nich adres klienta dla limitów per IP. */
   trustedProxies?: string;
   logger?: LogSettings;
+  /** Dostawca maili (mail resetu hasła, F-03); testy podają adapter przechwytujący. */
+  mailer: Mailer;
   /** Czas dla domeny (odhaczenie, aktywność dzienna, wygasanie zaproszeń); testy podają własny. */
   clock?: Clock;
 }
@@ -39,7 +41,10 @@ export function buildApp(options: AppOptions): FastifyInstance {
   trustedOrigin(app, options.auth.origin);
   healthRoutes(app, options.pool);
   const live = createLiveHub();
-  const accounts = accountRoutes(app, options.pool, options.auth, live);
+  const accounts = accountRoutes(app, options.pool, options.auth, {
+    live,
+    mailer: options.mailer,
+  });
   // Pozycje zależą od dostępu do listy, a szczegóły listy pokazują pozycje (ListItems).
   const lists = listsModule(app, options.pool, accounts, {
     items: createItems(options.pool),
