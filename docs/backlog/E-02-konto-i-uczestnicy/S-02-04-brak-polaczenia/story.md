@@ -2,7 +2,7 @@
 id: S-02-04
 epic: E-02
 title: Brak połączenia (web)
-status: todo           # todo | in-progress | done
+status: in-progress           # todo | in-progress | done
 requirements: [F-15]
 screens: [SC-05, SC-06, SC-07, SC-09]
 ---

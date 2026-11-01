@@ -1,4 +1,5 @@
 import type { ReactNode, Ref } from "react";
+import { useConnection } from "../../live/useConnection";
 import { Button } from "../Button/Button";
 import { TextField } from "../TextField/TextField";
 import styles from "./AddBar.module.css";
@@ -30,6 +31,7 @@ interface AddBarProps {
 /** Pasek dodawania na dole SC-06: Enter lub „Dodaj” wysyła (design-system.md, AddBar). */
 export function AddBar(props: AddBarProps) {
   const { label, formRef, name, note, submitText, alert, pending, disabled, onSubmit } = props;
+  const { online } = useConnection();
   const showNote = name.value !== "" || note.value !== "";
   return (
     <form
@@ -39,7 +41,8 @@ export function AddBar(props: AddBarProps) {
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (!pending) onSubmit();
+        // Bez połączenia nic nie wysyłamy; wpisany tekst zostaje (F-15).
+        if (!pending && online) onSubmit();
       }}
     >
       {alert}
@@ -50,6 +53,7 @@ export function AddBar(props: AddBarProps) {
           variant="accent"
           aria-label={label}
           loading={pending}
+          writes
           disabled={disabled}
         >
           {submitText}

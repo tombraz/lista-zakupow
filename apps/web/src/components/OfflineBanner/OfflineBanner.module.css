@@ -1,0 +1,12 @@
+/* Pod AppBar w przepływie: przesuwa treść, niczego nie zasłania (design-system.md). */
+.banner {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  color: var(--color-text-on-inverse);
+  background: var(--color-surface-inverse);
+  overflow-wrap: break-word;
+}
+
+.visuallyHidden {
+  composes: visuallyHidden from "../../styles/page.module.css";
+}

@@ -45,6 +45,7 @@ export function BoughtSection(props: BoughtSectionProps) {
           <Button
             ref={clearRef}
             variant="danger"
+            writes
             onClick={() => {
               setConfirming(true);
             }}

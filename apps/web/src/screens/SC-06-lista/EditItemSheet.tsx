@@ -82,10 +82,16 @@ function EditForm({ edit, nameRef, noteRef, onCancel }: EditFormProps) {
           form.setNote(event.target.value);
         }}
       />
-      <Button type="submit" loading={edit.saving} disabled={edit.removing}>
+      <Button type="submit" writes loading={edit.saving} disabled={edit.removing}>
         {messages.editSheet.save}
       </Button>
-      <Button variant="danger" loading={edit.removing} disabled={edit.saving} onClick={edit.remove}>
+      <Button
+        variant="danger"
+        writes
+        loading={edit.removing}
+        disabled={edit.saving}
+        onClick={edit.remove}
+      >
         {messages.editSheet.delete}
       </Button>
       <Button variant="secondary" onClick={onCancel}>

@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
 import { Link, useLocation } from "react-router";
+import { useConnection } from "../../live/useConnection";
+import { OfflineBanner } from "../OfflineBanner/OfflineBanner";
 import styles from "./AppBar.module.css";
 
 interface AppBarProps {
@@ -9,21 +11,26 @@ interface AppBarProps {
   actions?: ReactNode;
 }
 
+/** Pasek nagłówka zalogowanej części (SC-05–SC-07, SC-09), pod nim OfflineBanner (F-15). */
 export function AppBar({ title, back, actions }: AppBarProps) {
   const titleRef = useRouteFocus(title);
+  const { online } = useConnection();
   return (
-    <header className={styles.bar}>
-      <title>{`${title} · Wspólna lista zakupów`}</title>
-      {back && (
-        <Link className={styles.control} to={back.to}>
-          <span aria-hidden="true">←</span> {back.label}
-        </Link>
-      )}
-      <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
-        {title}
-      </h1>
-      {actions && <div className={styles.actions}>{actions}</div>}
-    </header>
+    <>
+      <header className={styles.bar}>
+        <title>{`${title} · Wspólna lista zakupów`}</title>
+        {back && (
+          <Link className={styles.control} to={back.to}>
+            <span aria-hidden="true">←</span> {back.label}
+          </Link>
+        )}
+        <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
+          {title}
+        </h1>
+        {actions && <div className={styles.actions}>{actions}</div>}
+      </header>
+      <OfflineBanner offline={!online} />
+    </>
   );
 }
 

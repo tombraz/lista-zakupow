@@ -193,13 +193,7 @@ function Invitations({
           {messages.limit}
         </InlineAlert>
       )}
-      {failure && (
-        <InlineAlert tone="error">
-          {failure.action === "create"
-            ? createErrorText(failure.code)
-            : revokeErrorText(failure.code)}
-        </InlineAlert>
-      )}
+      {failure && <InvitationFailure failure={failure} />}
       {links.map((link) => (
         <InviteLinkBox
           key={link.id}
@@ -219,6 +213,7 @@ function Invitations({
       ))}
       <Button
         ref={createRef}
+        writes
         disabled={full}
         loading={changes.create.isPending}
         onClick={() => {
@@ -233,6 +228,19 @@ function Invitations({
       </p>
       <Toast text={toast.text} />
     </section>
+  );
+}
+
+/** Błąd utworzenia albo unieważnienia linku. */
+function InvitationFailure({
+  failure,
+}: {
+  failure: NonNullable<ReturnType<typeof useInvitationChanges>["failure"]>;
+}) {
+  return (
+    <InlineAlert tone="error">
+      {failure.action === "create" ? createErrorText(failure.code) : revokeErrorText(failure.code)}
+    </InlineAlert>
   );
 }
 

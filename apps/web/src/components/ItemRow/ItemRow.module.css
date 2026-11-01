@@ -76,6 +76,20 @@
   border-color: var(--color-status-done);
 }
 
+/* Bez połączenia (F-15): nieaktywne, ale z fokusem; odhaczenie dalej widoczne. */
+.name[aria-disabled="true"],
+.checkbox[aria-disabled="true"] {
+  cursor: default;
+}
+
+.checkbox[aria-disabled="true"] .box {
+  background: var(--color-action-disabled);
+}
+
+.checkbox[aria-disabled="true"][aria-pressed="true"] .box {
+  background: var(--color-status-done);
+}
+
 /* Wskaźnik zapisu jak w Button (także bez animacji przy „ogranicz ruch”). */
 .spinner {
   composes: spinner from "../Button/Button.module.css";

@@ -1,15 +1,20 @@
 import type { Me } from "@lista/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { createMemoryRouter, type InitialEntry } from "react-router";
 import { RouterProvider } from "react-router/dom";
+import { createQueryClient } from "../src/queryClient";
 import { routes } from "../src/routes";
 import { aList, anItem, ANIA, detailsOf } from "./lists";
 import { server } from "./msw-server";
 
+/** Klient aplikacji (`createQueryClient`), ale bez ponawiania zapytań: błąd widać od razu. */
 function testQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = createQueryClient();
+  const defaults = client.getDefaultOptions();
+  client.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, retry: false } });
+  return client;
 }
 
 /** Domownik zalogowany (`/api/v1/me` 200) albo anonim (401). */

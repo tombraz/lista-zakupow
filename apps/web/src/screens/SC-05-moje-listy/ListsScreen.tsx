@@ -26,7 +26,12 @@ export function ListsScreen() {
     newList.open ? (
       <NewListForm onCancel={newList.cancel} onLimitReached={newList.refusedByLimit} />
     ) : (
-      <Button ref={newList.triggerRef} disabled={newList.limitReached} onClick={newList.show}>
+      <Button
+        ref={newList.triggerRef}
+        writes
+        disabled={newList.limitReached}
+        onClick={newList.show}
+      >
         {label}
       </Button>
     );

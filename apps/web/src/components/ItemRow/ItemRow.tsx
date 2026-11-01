@@ -1,6 +1,8 @@
 import type { Person } from "@lista/shared";
 import type { Ref } from "react";
+import { useConnection } from "../../live/useConnection";
 import { Avatar } from "../Avatar/Avatar";
+import { OFFLINE_BANNER_ID } from "../OfflineBanner/OfflineBanner";
 import styles from "./ItemRow.module.css";
 
 /** Checkbox odhaczenia (design-system.md, ItemRow): `button` z `aria-pressed`. */
@@ -40,6 +42,9 @@ interface ItemRowProps {
 export function ItemRow(props: ItemRowProps) {
   const { name, details, person, personIndex, editLabel, onEdit, editRef } = props;
   const { checkbox, checkboxRef, highlighted } = props;
+  // Bez połączenia edycja i odhaczanie nieaktywne, fokus zostaje (F-15, T-063).
+  const offline = !useConnection().online;
+  const inactive = offline ? { "aria-disabled": true, "aria-describedby": OFFLINE_BANNER_ID } : {};
   return (
     <li
       className={styles.row}
@@ -53,8 +58,9 @@ export function ItemRow(props: ItemRowProps) {
           type="button"
           className={styles.name}
           aria-label={editLabel}
+          {...inactive}
           onClick={(event) => {
-            onEdit(event.currentTarget);
+            if (!offline) onEdit(event.currentTarget);
           }}
         >
           {name}
@@ -69,8 +75,9 @@ export function ItemRow(props: ItemRowProps) {
         aria-pressed={checkbox.checked}
         // Bez `disabled`: fokus zostaje na checkboxie w czasie zapisu.
         aria-busy={checkbox.saving || undefined}
+        {...inactive}
         onClick={() => {
-          if (!checkbox.saving) checkbox.onToggle();
+          if (!checkbox.saving && !offline) checkbox.onToggle();
         }}
       >
         <span className={styles.box} aria-hidden="true">
