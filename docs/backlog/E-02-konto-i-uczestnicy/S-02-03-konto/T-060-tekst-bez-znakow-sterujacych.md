@@ -3,7 +3,7 @@ id: T-060
 title: "Tekst widoczny dla innych bez znaków sterujących i bidi; duplikat po NFKC"
 epic: E-02
 story: S-02-03
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)
@@ -150,3 +150,38 @@ Implementacja zatrzymana po zielonych testach 1–4 i 6 (szczegóły w Evidence)
 3. **Fokus na SC-02 (drobne):** AC4 mówi „fokus na polu”, a specyfikacja SC-02 mówi „po błędach walidacji fokus na podsumowaniu błędów (linki do pól)”. Zrobione wg SC-02 (podsumowanie, link przenosi na pole). Rekomendacja: zostawić tak. Alternatywa: fokus od razu na polu „Imię”.
 
 Answer: (1) Rekomendacja: krok migracji danych w TS w runMigrations (tabela data_migration, krok 0007_name_key_nfkc, kolizja: nowsza pozycja dostaje <klucz>#<id>). (2) Rekomendacja: duplikat wygrywa tylko dla nazwy pozycji (409 przy kolizji klucza po requireListAccess, inaczej 400 invalid; web w tej samej kolejności). (3) Rekomendacja: fokus na podsumowaniu błędów wg SC-02, bez zmian.
+
+## QA round 1 (2026-11-01)
+
+Verdict: pass
+
+Zakres: commity `712b035` (WIP) i `6225bc9` (+ logi postępu). Od czystego stanu: `pnpm install --frozen-lockfile`, `format:check`, `lint`, `typecheck`, `quality` (jscpd 0 klonów, depcruise 0 naruszeń), `design-check`, `pnpm test` (114 plików, 814 passed), `test:mobile` (10 passed), `build` — wszystko zielone. `pnpm test:e2e`: 58 passed (J-01, J-02, J-03 bez regresji, skany axe).
+
+**Kryteria akceptacji**
+
+| AC | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `visible-text.test.ts` czyta każde pole × 22 znaki; sonda własna: TAB, CR, U+00AD, U+2061, U+180E, U+034F, U+FFF9, U+E0001, ZWNJ → `invalid`; `\n` tylko w notatce, `\r\n` w notatce → `invalid`. |
+| AC2 | pass | U+2800, U+3164, U+115F, U+1160, same znaki łączące → `invalid`; „Rodzina 👨‍👩‍👧”, 👍🏽, 🥛 przyjęte; ZWJ między literami i „❤️‍a” → `invalid`. |
+| AC3 | pass | Unit + API; sonda: „mleko” + U+00AD, U+200B + „MLEKO”, „Mleko” + RLO przy „Mleko” → 409; „𝐌𝐥𝐞𝐤𝐨” → klucz „mleko”; NFD „żółw” = NFC. |
+| AC4 | pass | Testy komponentów (MSW) + własny przebieg Playwright (telefon): SC-02 (RLO w imieniu → podsumowanie + komunikat pod polem, brak konta), SC-05 (sam U+200B → komunikat, fokus na polu), SC-06 (nazwa z RLO i notatka z U+200B → komunikat w `aria-describedby`, fokus na polu); skany axe tych stanów bez naruszeń. |
+| AC5 | pass | `name-key-migration.test.ts` (przeliczenie, kolizja `<klucz>#<id>`, log liczby kolizji, partie, jednokrotność); `down` opisany w komentarzu kroku. |
+| SEC1 | pass | Testy integracyjne na każdej trasie + własne próby (Testcontainers): obcy domownik `PATCH`/`POST` z „Mleko” + U+200B → 404 (bez ujawnienia klucza), anonim → 401, zły `listId` → 404, rejestracja z U+2067 → 400 i brak konta. |
+
+Demo 1–3 odtworzone w przeglądarce (Playwright): „Mleko” + U+200B i „ﬁlet” → ostrzeżenie o duplikacie; RLO w imieniu / nazwie → komunikat przy polu.
+
+**Spot-checki (każdy przywrócony, `git status` czysty):** usunięcie `refine(withoutHiddenCharacters)` → 102 testy czerwone; NFKC → NFC w `normalizeItemName` → 6 czerwonych (unit, API, migracja); `duplicateBeforeRefusal` wyłączone → 3 czerwone (4b); wyłączona obsługa kolizji w kroku migracji → 1 czerwony; zmieniony `HIDDEN_CHARACTERS_TEXT` → 8 czerwonych testów komponentów. Evidence ma czerwone komunikaty dla każdego testu z planu.
+
+**Ustalenia**
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security (TH-29) | Separatory wiersza i akapitu U+2028 / U+2029 (Zl/Zp, nie Cc/Cf) są przyjmowane w imieniu, nazwach i notatce; przeglądarka łamie na nich wiersz, więc imię „Ania⏎Admin” wygląda jak dwa wiersze. Poza literą AC1, ale w duchu TH-29. | `POST …/items` „Masło\u2028Kowal” → 201; rejestracja „Ania\u2028Admin” → 200 | Decyzja właściciela: dopisać Zl/Zp do odrzucanych (notatka ma już `\n`). |
+| 2 | minor | security (TH-29) | Znaki tagów U+E0020–E007F są przyjmowane w dowolnej liczbie po 🏴 (wyjątek dla flag subdywizji), więc w nazwie można ukryć niewidoczny tekst („Ania 🏴” + tagi „hide”). Klucz duplikatu je usuwa, więc F-09 działa. | sonda `listNameRequestSchema`: „Ania 🏴\u{E0068}…” → ACCEPT | Wyjątek tylko dla poprawnej sekwencji flagi (2–6 tagów liter + U+E007F). |
+| 3 | minor | validation | Znaki prywatnego użytku (Co, np. U+E000) i samotny surogat (Cs) są przyjmowane, gdy obok jest widoczny znak. | „Ania\uE000”, „Ania\uD800” → ACCEPT | Rozważyć odrzucenie `\p{Co}` / `\p{Cs}` razem z Cc/Cf. |
+| 4 | minor | docs | Dokumenty nie opisują nowego stanu (implementer nie może ich zmieniać i zgłosił to w Evidence): `data-model.md` nadal definiuje `name_key` jako trim + NFC + lower, brak tabeli `data_migration` i kroku `0007_name_key_nfkc`; copy „Usuń niewidoczne lub specjalne znaki.” nie jest w tabelach Copy SC-02 / SC-05 / SC-06 (AC4 „dopisać”); TH-29 w `threat-model.md` bez wskazania testów. | `grep name_key docs/architecture/data-model.md` (wiersz 102) | Właściciel dopisuje (lista w Evidence, „Do zrobienia przez właściciela”). |
+| 5 | note | testing | Nowy stan błędu pola nie ma skanu axe w stałym E2E (strategia: skan każdego stanu). Sprawdzone ręcznie tymczasowym spec Playwright: bez naruszeń. | — | Dopisać kroki do `j01-konto` / `j03-pozycje` przy okazji. |
+| 6 | note | deploy | W oknie wdrożenia stara wersja API (jeszcze obsługująca ruch po `release_command`) zapisuje klucze starą regułą; „ｍｌｅｋｏ” dodane wtedy przy „Mleko” nie będzie duplikatem. Ryzyko małe. | analiza `0007-name-key-nfkc.ts` | Akceptować albo powtórzyć krok w kolejnej wersji. |
+| 7 | note | mobile | Reguła używa `\p{…}` i lookbehind — sprawdzić w Hermes przy pierwszym użyciu w Expo (zgłoszone przez implementera). | Evidence | — |
+
+Nie sprawdzone ręcznie: iOS / Android (dyktowanie), VoiceOver / TalkBack — brak urządzeń w tym przebiegu; czytanie komunikatu z polem potwierdza `aria-describedby` w testach i w przeglądarce.
