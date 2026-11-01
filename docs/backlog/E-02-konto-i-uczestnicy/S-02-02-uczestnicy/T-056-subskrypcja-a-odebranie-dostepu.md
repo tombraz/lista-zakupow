@@ -3,7 +3,7 @@ id: T-056
 title: "Na żywo: subskrypcja nie wyprzedza odebrania dostępu; sesja sprawdzana przy subskrypcji i okresowo"
 epic: E-02
 story: S-02-02
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: S                # S | M (L must be split)
@@ -109,3 +109,30 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 **Layer guide (8b):** `layers/backend.md` „Gdzie jest kod” — `requestSubscription`, kontrola sesji przy `subscribe` i pingu, `Accounts.sessionActive`, `AppOptions.live`, `test/gated-pool.ts` (fakty).
 
 **Dla QA:** `unsubscribe` w trakcie oczekującego `subscribe` nie anuluje oczekiwania (jak przed zmianą: subskrypcja powstaje) — poza kryteriami. Kontrola sesji przy `subscribe` robi jedno zapytanie na `subscribe` (ograniczone budżetem wiadomości), wynik nie jest trzymany w pamięci.
+
+## QA round 1 (2026-11-01)
+
+Verdict: pass
+
+**Odtworzenie:** `pnpm install --frozen-lockfile` (bez zmian w lockfile), `pnpm test` — 109 plików, 595 testów, wszystkie zielone; `pnpm typecheck`, `pnpm lint` (exit 0), `pnpm format:check`, `pnpm quality` (depcruise bez naruszeń) — OK.
+
+**Kryteria:**
+
+- AC1 — pass. `live.revoke.test.ts` (AC1) wstrzymuje wynik zapytania o `list_member` po odczycie (`gatedPool`), w tym czasie usuwa członkostwo i woła `revoke`; asercje: `error not_found`, brak `subscribed`, `item.upserted` nie dociera. Spot-check: usunięcie anulowania oczekujących w `LiveHub.revoke` → test pada („no "error" within 1000 ms; got [subscribed]”), przywrócone.
+- SEC1 (TH-04) — pass. Test SEC1: `access.revoked`, brak `item.upserted`, zapis uczestnika 404. Ugryzienie zgodne z Evidence (zachowanie z T-009).
+- SEC2 (TH-28) — pass. `live.session.test.ts`: wygasła i usunięta sesja → 1008 bez `subscribed`; bez `subscribe` zamknięcie przy pingu (24 999 ms otwarte, 25 000 ms → 1008). Spot-checki: wyłączona kontrola w `handle` → oba warianty padają; wyłączony `onPing` w `heartbeat` → padają testy pingu i AC2.
+- AC2 — pass. Test AC2 liczy zapytania do `session` przy wstrzymanej bazie: drugi ping dociera do obu połączeń, zapytań nadal 2. Spot-check: usunięta blokada `checking` → `expected 4 to be 2`.
+
+**Eksploracja (tymczasowy plik testowy, usunięty):**
+
+- Dwie sesje jednego konta, wygasła tylko starsza: jej gniazdo 1008 przy `subscribe`, druga sesja dostaje `subscribed` — OK.
+- Dwie karty jednej sesji: jedna subskrybowana, druga z `subscribe` w toku; `revoke` → pierwsza `access.revoked`, druga `error not_found`, obie bez dalszych zdarzeń — OK.
+- `unsubscribe` w trakcie oczekującego `subscribe` → po sprawdzeniu klient dostaje `subscribed` i subskrypcja zostaje (zgłoszone przez autora; poza kryteriami, bez skutku dla bezpieczeństwa — osoba ma dostęp).
+
+**Bezpieczeństwo:** kontrola sesji i dostępu po stronie serwera; wpis `live_session_check_failed` bez danych osobowych; błąd bazy przy `subscribe` łapany w istniejącym `live_message_failed`. TH-04 i TH-28 nie dały się wykorzystać w powyższych próbach (lokalna baza Testcontainers).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Behaviour | `unsubscribe` wysłany, gdy `subscribe` tej listy jeszcze czeka na sprawdzenie dostępu, nie anuluje oczekiwania — subskrypcja powstaje mimo późniejszego `unsubscribe`. | Test eksploracyjny: po `unsubscribe` w trakcie wstrzymanego `list_member` klient dostaje `subscribed`. | `unsubscribe` usuwa też oczekującą subskrypcję tej listy (np. `cancel` biletu w `LiveHub.unsubscribe`). |
+| 2 | note | Design | `AppOptions.live` jest typu konkretnej klasy `LiveHub` i istnieje tylko dla testów (do czasu trasy T-058). | `apps/api/src/app.ts` | Po T-058 rozważyć, czy testy mogą wołać trasę zamiast podawać hub. |
+| 3 | note | Design | `isSessionActive` używa `new Date()`, nie `AppOptions.clock` — spójne z Better Auth, ale testy wygasania muszą przestawiać `expires_at` w bazie. | `apps/api/src/modules/konta/index.ts` | Bez zmian; ewentualnie jedno zdanie w „Pułapkach” backend.md. |
