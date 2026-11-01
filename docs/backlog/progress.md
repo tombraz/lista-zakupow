@@ -36,3 +36,4 @@
 2026-11-01 22:26 | T-060 | qa | PASS | 0/0/4 minor; U+2028/2029 przechodzą, tagi po 🏴 bez limitu; docs data-model/SC-02/05/06/TH-29 do uzupełnienia przez właściciela
 2026-11-01 23:27 | T-063 | implementer | IN_QA | pasek Brak połączenia + blokada zapisów, po powrocie reconnect i refetch; check + 64 E2E zielone
 2026-11-01 23:36 | T-063 | qa | PASS | 0/0/3 minor; S-02-04 done; offline do 35 s bez internetu, SC-08 bez paska wbrew design, tekst Połączenie przywrócone. do akceptacji
+2026-11-02 00:06 | T-058 | implementer | IN_QA | usuwanie uczestnika z SC-07 (DELETE members/:userId 204), revoke na żywo, member_removed w logu
