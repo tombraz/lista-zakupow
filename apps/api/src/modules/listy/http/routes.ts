@@ -1,10 +1,12 @@
 import {
   listNameRequestSchema,
+  personIdSchema,
   type ListDetails,
   type ListMembers,
   type ListSummary,
 } from "@lista/shared";
 import type { FastifyInstance } from "fastify";
+import { DomainError } from "../../../domain-error";
 import { validate } from "../../../http/validate";
 import { securityEvent } from "../../../logging";
 import type { Accounts } from "../../konta";
@@ -123,6 +125,8 @@ function memberRoutes(
   app.delete<MemberParams>("/api/v1/lists/:listId/members/:userId", async (request, reply) => {
     const user = await accounts.requireUser(request, reply);
     const { listId, userId } = request.params;
+    // Identyfikator, którego baza nie przyjmie, nie należy do nikogo na liście: 404 jak nieznany.
+    if (!personIdSchema.safeParse(userId).success) throw new DomainError("not_found");
     const access = await requireListAccess(repository, user.id, listId, "owner");
     await removeParticipant(repository, access, userId);
     await withdrawAccess(live, repository, access.listId, userId);

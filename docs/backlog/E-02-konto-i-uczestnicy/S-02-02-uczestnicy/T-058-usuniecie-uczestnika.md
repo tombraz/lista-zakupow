@@ -3,7 +3,7 @@ id: T-058
 title: Usunięcie uczestnika przez właściciela
 epic: E-02
 story: S-02-02
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-056, T-057, T-063]
 size: M                # S | M (L must be split)
@@ -42,10 +42,10 @@ Each criterion must fail before the work and pass after it.
 - [x] AC3: Given U ma otwarte SC-06 lub SC-07 tej listy, when właściciel go usuwa, then U w ≤ 5 s jest na SC-05 z komunikatem „Lista „<nazwa>” została usunięta albo nie masz już do niej dostępu.”, a lista znika z jego SC-05. — verified by: E2E Playwright (dwa konteksty)
 - [x] AC4: Given brak połączenia, then „Usuń” przy uczestnikach nieaktywny (`aria-disabled`, T-015); given błąd serwera, then ConfirmDialog pokazuje „Nie udało się usunąć. Spróbuj ponownie.” (copy spoza SC-07, zatwierdzone przez właściciela 2026-11-01 — dopisać do Copy SC-07) i zostaje otwarty. — verified by: test komponentu
 - [x] AC5: Given SC-07 z otwartym ConfirmDialog i po usunięciu, when E2E je odwiedza, then axe bez naruszeń. — verified by: E2E + axe
-- [ ] SEC1 (TH-04): Given U z aktywną subskrypcją listy, when właściciel go usuwa, then U dostaje `access.revoked`, kolejne zdarzenie listy do niego nie dociera, a jego `PATCH`/`POST` na pozycjach i `GET` listy zwracają 404. — verified by: test integracyjny WS + HTTP
-- [ ] SEC2 (TH-02): Given uczestnik, when `DELETE …/members/<inny uczestnik>` lub `…/members/<właściciel>`, then 403 `owner_only` i nic się nie zmienia. — verified by: test integracyjny
-- [ ] SEC3 (TH-01): Given domownik bez dostępu do listy A, when `DELETE /api/v1/lists/<A>/members/<U>`, then 404; anonim 401; `userId` osoby spoza listy albo właściciela przez właściciela → 404, bez zmian. — verified by: test integracyjny autoryzacji
-- [ ] SEC4 (TH-21): Given usunięcie uczestnika, then log `security` zawiera zdarzenie `member_removed` z `listId`, `userId` właściciela i usuniętego, bez imion i e-maili. — verified by: test logów
+- [x] SEC1 (TH-04): Given U z aktywną subskrypcją listy, when właściciel go usuwa, then U dostaje `access.revoked`, kolejne zdarzenie listy do niego nie dociera, a jego `PATCH`/`POST` na pozycjach i `GET` listy zwracają 404. — verified by: test integracyjny WS + HTTP
+- [x] SEC2 (TH-02): Given uczestnik, when `DELETE …/members/<inny uczestnik>` lub `…/members/<właściciel>`, then 403 `owner_only` i nic się nie zmienia. — verified by: test integracyjny
+- [x] SEC3 (TH-01): Given domownik bez dostępu do listy A, when `DELETE /api/v1/lists/<A>/members/<U>`, then 404; anonim 401; `userId` osoby spoza listy albo właściciela przez właściciela → 404, bez zmian. — verified by: test integracyjny autoryzacji
+- [x] SEC4 (TH-21): Given usunięcie uczestnika, then log `security` zawiera zdarzenie `member_removed` z `listId`, `userId` właściciela i usuniętego, bez imion i e-maili. — verified by: test logów
 
 ## TDD plan
 
@@ -96,7 +96,7 @@ What an independent tester checks beyond the automated tests:
 - [x] Every acceptance criterion checked, with evidence below
 - [x] Global definition of done from `docs/architecture/testing-strategy.md` met
 - [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
@@ -183,3 +183,10 @@ Verdict: fail
 ### Must change
 
 1. Validate `userId` (and the route params) with a zod schema so that NUL and other input the database rejects gives 404 `not_found`, not 500, with a negative test.
+
+## Fix round 1 (2026-11-02)
+
+- Finding 1 (major): red: `lists.remove-member.authz.test.ts` › „answers 404 to the owner for a participant id the database would not accept” (`%00`, `a%00b`) → `expected 500 to be 404`. Green: `personIdSchema` in `packages/shared/src/api/lists.ts` (non-empty text, `withoutNul`); the route checks it first (validation → `requireListAccess` → domain) and answers 404 `not_found` like any unknown id. No max length in the schema: Fastify's `maxParamLength` (100) already answers 414 to longer ids (QA saw this too), so a second limit would duplicate it.
+- Finding 3 (minor): SEC1–SEC4 ticked; their evidence is above.
+- Finding 2 (minor) not changed in this round (fix rounds cover blocker and major only): the `member_removed` log still comes after `withdrawAccess`.
+- `pnpm check`: exit 0 (121 files / 842 Vitest tests, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check).

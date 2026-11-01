@@ -83,6 +83,21 @@ describe("authorization of DELETE /api/v1/lists/:listId/members/:userId", () => 
     await app.close();
   });
 
+  // QA T-058 round 1: NUL z adresu dochodził do PostgreSQL i kończył się 500.
+  it("answers 404 to the owner for a participant id the database would not accept", async () => {
+    const { app, ania, list } = await homeOfAnia();
+    const before = await memberIds(list.id);
+    const asAnia = requestsAs(app, ania);
+
+    for (const userId of ["%00", "a%00b"]) {
+      const response = await asAnia("DELETE", `/api/v1/lists/${list.id}/members/${userId}`);
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual(NOT_FOUND);
+    }
+    expect(await memberIds(list.id)).toEqual(before);
+    await app.close();
+  });
+
   it("removes nobody from another list of the owner when the participant id belongs elsewhere", async () => {
     const { app, ania, tomek, list } = await homeOfAnia();
     const other = await createList(db.pool, ania, "Działka");

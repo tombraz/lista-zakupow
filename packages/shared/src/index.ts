@@ -57,6 +57,7 @@ export {
 export {
   LIST_NAME_MAX_LENGTH,
   listNameRequestSchema,
+  personIdSchema,
   type ListDetails,
   type ListMembers,
   type ListNameRequest,
