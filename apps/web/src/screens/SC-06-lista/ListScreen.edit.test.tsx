@@ -82,6 +82,23 @@ describe("SC-06 sheet „Edytuj pozycję”", () => {
     expect(name).toHaveValue("mleko");
   });
 
+  it("refuses to rename „Masło” to „Mleko” + U+200B as a duplicate (T-060)", async () => {
+    const milk = anItem({ name: "Mleko" });
+    const butter = anItem({ name: "Masło" });
+    const { user, list, sheet } = await openSheet([milk, butter], "Masło");
+    const requests = savingSucceeds(list, butter);
+    const name = within(sheet).getByRole("textbox", { name: "Nazwa" });
+
+    await user.clear(name);
+    await user.type(name, `Mleko${String.fromCodePoint(0x200b)}{Enter}`);
+
+    expect(await within(sheet).findByRole("alert")).toHaveTextContent(
+      "Na liście jest już pozycja „Mleko”. Wybierz inną nazwę.",
+    );
+    expect(name).not.toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+    expect(requests).toEqual([]);
+  });
+
   it("shows the rename warning when the API finds the duplicate (AC3)", async () => {
     const butter = anItem({ name: "Masło" });
     const { user, list, sheet } = await openSheet([butter], "Masło");

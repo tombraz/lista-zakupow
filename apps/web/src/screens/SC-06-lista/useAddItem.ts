@@ -2,6 +2,7 @@ import {
   BUSINESS_LIMITS,
   createItemRequestSchema,
   fieldErrors,
+  onlyItemNameInvalid,
   type CreateItemRequest,
   type Item,
 } from "@lista/shared";
@@ -88,12 +89,16 @@ export function useAddItem(listId: string, items: Item[] = []) {
     setFailure(null);
     const sent: Draft = { name: draft.name, note: draft.note };
     const parsed = createItemRequestSchema.safeParse(sent);
-    setFields(parsed.success ? {} : fieldErrors(parsed.error));
-    if (!parsed.success) return;
-    if (sameNameAs(items, parsed.data.name)) {
-      setWarning(duplicateOf(items, parsed.data.name));
+    const invalid = parsed.success ? {} : fieldErrors(parsed.error);
+    // T-060: duplikat przed błędem ukrytych znaków, jak w API („Mleko” + U+200B przy „Mleko”).
+    const name = parsed.success ? parsed.data.name : sent.name;
+    if ((parsed.success || onlyItemNameInvalid(invalid)) && sameNameAs(items, name)) {
+      setFields({});
+      setWarning(duplicateOf(items, name));
       return;
     }
+    setFields(invalid);
+    if (!parsed.success) return;
     mutation.mutate({ request: { id: draft.idFor(sent), ...parsed.data }, sent });
   };
 

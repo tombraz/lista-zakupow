@@ -55,6 +55,8 @@ export interface ItemsRepository {
     changes: ItemChanges,
     at: Date,
   ): Promise<ListItem | null | "duplicate">;
+  /** Czy inna niż `exceptItemId` pozycja listy ma ten `nameKey` (F-09). */
+  nameKeyTaken(listId: string, nameKey: string, exceptItemId?: string): Promise<boolean>;
   /** `false`, gdy na liście nie ma tej pozycji. */
   delete(listId: string, itemId: string): Promise<boolean>;
   /**
@@ -130,6 +132,20 @@ export async function addItem(
   // Cudza pozycja wygląda jak nieistniejąca (TH-01).
   if (result.status === "id_taken") throw new DomainError("not_found");
   return { item: result.item, created: result.status === "created" };
+}
+
+/**
+ * T-060, F-09: nazwa odrzucona za ukryte znaki, której klucz ma już inna pozycja listy, to
+ * duplikat (decyzja właściciela 2026-11-01); `exceptItemId` — pozycja, której nazwa się zmienia.
+ */
+export async function refuseDuplicateName(
+  repository: ItemsRepository,
+  access: ListAccess,
+  name: string,
+  exceptItemId?: string,
+): Promise<void> {
+  const taken = await repository.nameKeyTaken(access.listId, normalizeItemName(name), exceptItemId);
+  if (taken) throw new DomainError("duplicate_item");
 }
 
 /**

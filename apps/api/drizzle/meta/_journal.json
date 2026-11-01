@@ -50,6 +50,13 @@
       "when": 1793219299181,
       "tag": "0006_zaproszenia",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793566826409,
+      "tag": "0007_data_migration",
+      "breakpoints": true
     }
   ]
 }

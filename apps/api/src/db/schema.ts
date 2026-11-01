@@ -228,3 +228,9 @@ export const signInFailure = pgTable("sign_in_failure", {
   failures: integer("failures").notNull(),
   windowStartedAt: timestamptz("window_started_at").notNull(),
 });
+
+// Kroki migracji danych w TS (`src/db/data-migrations/`), wykonane raz po migracjach SQL (T-060).
+export const dataMigration = pgTable("data_migration", {
+  name: text("name").primaryKey(),
+  appliedAt: timestamptz("applied_at").notNull().defaultNow(),
+});

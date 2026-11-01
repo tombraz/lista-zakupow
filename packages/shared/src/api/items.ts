@@ -18,6 +18,16 @@ export function normalizeItemName(name: string): string {
   return name.trim().normalize("NFKC").replace(IGNORABLE, "").trim().toLocaleLowerCase("pl-PL");
 }
 
+/**
+ * T-060 (decyzja właściciela 2026-11-01): nazwa pozycji odrzucona jako `invalid` (ukryte znaki)
+ * i nic poza nią. Klient i API sprawdzają wtedy najpierw, czy jej klucz ma inna pozycja listy:
+ * „Mleko” z niewidocznym znakiem przy „Mleko” to duplikat (F-09), nie błąd pola.
+ */
+export function onlyItemNameInvalid(fields: Partial<Record<string, string>>): boolean {
+  const names = Object.keys(fields);
+  return names.length === 1 && fields.name === "invalid";
+}
+
 const itemName = requiredName(ITEM_NAME_MAX_LENGTH);
 
 /** Pusta notatka to brak notatki (`null`). */

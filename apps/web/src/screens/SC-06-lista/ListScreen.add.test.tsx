@@ -133,6 +133,19 @@ describe("SC-06 AddBar warnings", () => {
     expect(requests).toEqual([]);
   });
 
+  it("warns about the duplicate, not the hidden character, for „Mleko” + U+200B (T-060 Demo 1)", async () => {
+    const { user, list, name } = await openList([anItem({ name: "Mleko" })]);
+    const requests = addingSucceeds(list);
+
+    await user.type(name, `Mleko${String.fromCodePoint(0x200b)}{Enter}`);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "„Mleko” jest już na liście. Pozycja nie została dodana.",
+    );
+    expect(name).not.toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+    expect(requests).toEqual([]);
+  });
+
   it("shows the warning when the API finds a duplicate added meanwhile (AC2)", async () => {
     const { user, list, name } = await openList();
     server.use(

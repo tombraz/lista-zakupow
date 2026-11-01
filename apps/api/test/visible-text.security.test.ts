@@ -135,3 +135,99 @@ describe("adding a compatibility variant of a name that is already on the list",
     await app.close();
   });
 });
+
+// T-060 SEC1, Demo 1 (decyzja właściciela 2026-11-01): nazwa pozycji odrzucona tylko za ukryte
+// znaki, której klucz ma już inna pozycja listy, to duplikat (409), nie błąd pola.
+describe("an item name with hidden characters whose key is already on the list", () => {
+  const db = useTestDatabase();
+
+  async function listWithMilkAndBread() {
+    const app = buildTestApp(db.pool);
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+    const milk = await createItem(db.pool, list, ania, "Mleko");
+    const bread = await createItem(db.pool, list, ania, "Chleb");
+    const asAnia = requestsAs(app, ania);
+    return {
+      app,
+      list,
+      add: (body: object) => asAnia("POST", `/api/v1/lists/${list.id}/items`, body),
+      edit: (id: string, body: object) =>
+        asAnia("PATCH", `/api/v1/lists/${list.id}/items/${id}`, body),
+      milk,
+      bread,
+    };
+  }
+
+  async function items() {
+    return (await db.pool.query<{ name: string }>("SELECT name FROM item ORDER BY name")).rows;
+  }
+
+  it("answers 409 duplicate_item when adding Mleko + U+200B next to Mleko and adds nothing", async () => {
+    const { app, add } = await listWithMilkAndBread();
+
+    const response = await add({ name: `Mleko${ZWSP}` });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({ error: { code: "duplicate_item" } });
+    expect(await items()).toEqual([{ name: "Chleb" }, { name: "Mleko" }]);
+    await app.close();
+  });
+
+  it("answers 400 invalid when the name with U+200B is not on the list", async () => {
+    const { app, add } = await listWithMilkAndBread();
+
+    const response = await add({ name: `Masło${ZWSP}` });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual(invalid("name"));
+    expect(await items()).toEqual([{ name: "Chleb" }, { name: "Mleko" }]);
+    await app.close();
+  });
+
+  it("answers 400 with every field when the note is invalid too", async () => {
+    const { app, add } = await listWithMilkAndBread();
+
+    const response = await add({ name: `Mleko${ZWSP}`, note: `2 l${RLO}` });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: { code: "validation_failed", fields: { name: "invalid", note: "invalid" } },
+    });
+    await app.close();
+  });
+
+  it("answers 409 duplicate_item when renaming another item to Mleko + U+200B", async () => {
+    const { app, edit, bread } = await listWithMilkAndBread();
+
+    const response = await edit(bread.id, { name: `Mleko${ZWSP}` });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({ error: { code: "duplicate_item" } });
+    expect(await items()).toEqual([{ name: "Chleb" }, { name: "Mleko" }]);
+    await app.close();
+  });
+
+  it("answers 400 invalid when renaming the item to its own name + U+200B", async () => {
+    const { app, edit, milk } = await listWithMilkAndBread();
+
+    const response = await edit(milk.id, { name: `Mleko${ZWSP}` });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual(invalid("name"));
+    await app.close();
+  });
+
+  it("answers 404 to someone without access, without revealing the item", async () => {
+    const { app, list } = await listWithMilkAndBread();
+    const stranger = requestsAs(app, await createUser(app));
+
+    const response = await stranger("POST", `/api/v1/lists/${list.id}/items`, {
+      name: `Mleko${ZWSP}`,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: { code: "not_found" } });
+    await app.close();
+  });
+});

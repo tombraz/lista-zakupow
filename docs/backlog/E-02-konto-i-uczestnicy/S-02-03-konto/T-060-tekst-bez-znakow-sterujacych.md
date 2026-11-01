@@ -3,7 +3,7 @@ id: T-060
 title: "Tekst widoczny dla innych bez znaków sterujących i bidi; duplikat po NFKC"
 epic: E-02
 story: S-02-03
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)
@@ -37,12 +37,12 @@ Imię, nazwy list i pozycji oraz notatki nie mogą zawierać znaków sterującyc
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given tekst ze znakiem z kategorii Cc (poza NUL — już odrzucany), Cf (np. U+200B, U+200D, U+FEFF, U+2060) albo bidi (U+202A–U+202E, U+2066–U+2069, U+200E, U+200F, U+061C), when walidacja imienia, nazwy listy, nazwy pozycji lub notatki, then błąd `invalid`; dla notatki dozwolone są tylko zwykłe spacje i (jeśli notatka je dziś przyjmuje) znak nowej linii. — verified by: testy unit dla każdej klasy znaków
-- [ ] AC2: Given tekst złożony tylko ze znaków niewidocznych (np. U+3164, U+2800, same znaki łączące), when walidacja pola wymaganego, then błąd `invalid` (wymóg widocznego znaku). Wyjątek od AC1: U+200D (ZWJ) i selektor wariantu U+FE0F są dozwolone tylko wewnątrz sekwencji emoji (między znakami `Extended_Pictographic`), więc „Rodzina 👨‍👩‍👧” i „🥛” przechodzą, a „Mleko‍” nie. — verified by: testy unit
-- [ ] AC3: Given `normalizeItemName`, then klucz = `trim` + NFKC + usunięcie znaków `Default_Ignorable_Code_Point` + `toLocaleLowerCase('pl-PL')`; „Mleko”, „MLEKO”, „ｍｌｅｋｏ” i „ﬁlet”/„filet” dają ten sam klucz co odpowiednik. Given API `POST …/items` z takim wariantem, then 409 `duplicate_item`. — verified by: testy unit + test integracyjny
-- [ ] AC4: Given web (SC-02 imię, SC-05 nazwa listy, SC-06 nazwa i notatka pozycji), when API zwraca `invalid` dla pola, then pod polem komunikat „Usuń niewidoczne lub specjalne znaki.” (copy zatwierdzone przez właściciela 2026-11-01 — dopisać do Copy SC-02, SC-05, SC-06), powiązany z polem (`aria-describedby`), fokus na polu. — verified by: testy komponentów (MSW)
-- [ ] AC5: Given istniejące pozycje, when migracja przelicza `name_key` nową normalizacją, then klucze są aktualne; given dwie pozycje jednej listy, które po przeliczeniu kolidują, then migracja nie pada: zostawia starszą z kluczem, a nowszej nadaje klucz rozróżniony (np. sufiks z `id`) i zapisuje w logu migracji liczbę takich przypadków; zapis odwracalny (`down` opisany w notatce). — verified by: test migracji na bazie z danymi przed migracją
-- [ ] SEC1 (TH-29): Given atakujący wysyła przez API imię „Ania‮gnp.exe” albo nazwę listy z samym U+200B, when rejestracja / zmiana nazwy / dodanie pozycji, then 400 `validation_failed` (pole `invalid`) i nic nie jest zapisane; given „Mleko​” przy istniejącym „Mleko”, then 409 `duplicate_item`. — verified by: testy integracyjne na każdej trasie zapisu tekstu (rejestracja, listy, pozycje)
+- [x] AC1: Given tekst ze znakiem z kategorii Cc (poza NUL — już odrzucany), Cf (np. U+200B, U+200D, U+FEFF, U+2060) albo bidi (U+202A–U+202E, U+2066–U+2069, U+200E, U+200F, U+061C), when walidacja imienia, nazwy listy, nazwy pozycji lub notatki, then błąd `invalid`; dla notatki dozwolone są tylko zwykłe spacje i (jeśli notatka je dziś przyjmuje) znak nowej linii. — verified by: testy unit dla każdej klasy znaków
+- [x] AC2: Given tekst złożony tylko ze znaków niewidocznych (np. U+3164, U+2800, same znaki łączące), when walidacja pola wymaganego, then błąd `invalid` (wymóg widocznego znaku). Wyjątek od AC1: U+200D (ZWJ) i selektor wariantu U+FE0F są dozwolone tylko wewnątrz sekwencji emoji (między znakami `Extended_Pictographic`), więc „Rodzina 👨‍👩‍👧” i „🥛” przechodzą, a „Mleko‍” nie. — verified by: testy unit
+- [x] AC3: Given `normalizeItemName`, then klucz = `trim` + NFKC + usunięcie znaków `Default_Ignorable_Code_Point` + `toLocaleLowerCase('pl-PL')`; „Mleko”, „MLEKO”, „ｍｌｅｋｏ” i „ﬁlet”/„filet” dają ten sam klucz co odpowiednik. Given API `POST …/items` z takim wariantem, then 409 `duplicate_item`. — verified by: testy unit + test integracyjny
+- [x] AC4: Given web (SC-02 imię, SC-05 nazwa listy, SC-06 nazwa i notatka pozycji), when API zwraca `invalid` dla pola, then pod polem komunikat „Usuń niewidoczne lub specjalne znaki.” (copy zatwierdzone przez właściciela 2026-11-01 — dopisać do Copy SC-02, SC-05, SC-06), powiązany z polem (`aria-describedby`), fokus na polu. — verified by: testy komponentów (MSW)
+- [x] AC5: Given istniejące pozycje, when migracja przelicza `name_key` nową normalizacją, then klucze są aktualne; given dwie pozycje jednej listy, które po przeliczeniu kolidują, then migracja nie pada: zostawia starszą z kluczem, a nowszej nadaje klucz rozróżniony (np. sufiks z `id`) i zapisuje w logu migracji liczbę takich przypadków; zapis odwracalny (`down` opisany w notatce). — verified by: test migracji na bazie z danymi przed migracją
+- [x] SEC1 (TH-29): Given atakujący wysyła przez API imię „Ania‮gnp.exe” albo nazwę listy z samym U+200B, when rejestracja / zmiana nazwy / dodanie pozycji, then 400 `validation_failed` (pole `invalid`) i nic nie jest zapisane; given „Mleko​” przy istniejącym „Mleko”, then 409 `duplicate_item`. — verified by: testy integracyjne na każdej trasie zapisu tekstu (rejestracja, listy, pozycje)
 
 ## TDD plan
 
@@ -88,9 +88,9 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
 - [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
 - [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
 - [ ] Handed to QA (`status: in-qa`)
@@ -99,17 +99,29 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-Stan po pierwszym przebiegu (2026-11-01): testy 1–4 i 6 z planu zielone, test 5 (migracja, AC5) nie zaczęty, bo czeka na odpowiedź w „Open question”. Test 6 zrobiony przed 5, bo nie zależy od migracji.
+Pierwszy przebieg (2026-11-01): testy 1–4 i 6; drugi przebieg (po odpowiedzi w „Open question”, 2026-11-01): test 5 (AC5), 4b i 6b (decyzja 2: duplikat wygrywa dla nazwy pozycji). Test 6 zrobiony przed 5, bo nie zależy od migracji.
 
 **Testy (red → green):**
 
 1. `packages/shared/test/visible-text.test.ts` › „control, format and bidi characters (T-060 AC1)”: każde pole (imię przy rejestracji, nazwa listy, nazwa pozycji przy dodaniu i edycji, notatka przy dodaniu i edycji) × 22 znaki (Cc: TAB, CR, ESC, DEL, U+0085; Cf: U+200B, U+200D, U+FEFF, U+2060, U+00AD; bidi: U+202A–202E, U+2066–2069, U+200E, U+200F, U+061C); polskie litery, NFD i spacje przyjęte; `\n` tylko w notatce. Red: 134 failed, np. `expected {} to deeply equal { name: 'invalid' }`. Green.
 2. Ten sam plik › „at least one visible character (T-060 AC2)”: U+3164, U+FFA0, U+2800, same znaki łączące, sam U+FE0F → `invalid`; „Ania” + U+3164 i „Mleko” + U+FE0F → `invalid`; emoji przyjęte (🥛, 👨‍👩‍👧, 👩🏽‍🍳, ❤️, 🏳️‍🌈, 🇵🇱, 🏴 + tagi, 1️⃣); ZWJ i U+FE0F poza emoji → `invalid`. Red: 37 failed (`expected undefined to be 'invalid'`, `expected 'invalid' to be undefined`). Green.
 3. `packages/shared/test/items.test.ts` › „normalizeItemName: compatibility forms and invisible characters (T-060 AC3)”: ｍｌｅｋｏ → „mleko”, ﬁlet → „filet”, „Mleko” z U+200B / U+200D / U+FEFF → „mleko”. Red: `expected 'ｍｌｅｋｏ' to be 'mleko'`, `expected 'mleko​' to be 'mleko'`. Green.
-4. `apps/api/test/visible-text.security.test.ts`: 400 `validation_failed` (`invalid`) i nic nie zapisane dla rejestracji „Ania” + RLO + „gnp.exe”, `POST /lists` z samym U+200B, `PATCH /lists/:id` z RLO, `POST …/items` (nazwa z RLO, nazwa z samym U+200B, notatka z RLO), `PATCH …/items/:id` (nazwa z RLO, notatka z U+200B); 409 `duplicate_item` dla ｍｌｅｋｏ przy „Mleko” i ﬁlet przy „filet”. Red (na kodzie `packages/shared/src` sprzed zmian, `git stash`): 10 failed, `expected 200 to be 400`, `expected 201 to be 400`, `expected 201 to be 409`. Green. **Brak jeszcze:** 409 dla „Mleko” + U+200B przy „Mleko” (SEC1), patrz „Open question”, pytanie 2.
+4. `apps/api/test/visible-text.security.test.ts`: 400 `validation_failed` (`invalid`) i nic nie zapisane dla rejestracji „Ania” + RLO + „gnp.exe”, `POST /lists` z samym U+200B, `PATCH /lists/:id` z RLO, `POST …/items` (nazwa z RLO, nazwa z samym U+200B, notatka z RLO), `PATCH …/items/:id` (nazwa z RLO, notatka z U+200B); 409 `duplicate_item` dla ｍｌｅｋｏ przy „Mleko” i ﬁlet przy „filet”. Red (na kodzie `packages/shared/src` sprzed zmian, `git stash`): 10 failed, `expected 200 to be 400`, `expected 201 to be 400`, `expected 201 to be 409`. Green.
+4b. (decyzja 2, drugi przebieg) Ten sam plik › „an item name with hidden characters whose key is already on the list”: `POST` „Mleko” + U+200B przy „Mleko” → 409 `duplicate_item`, nic nie dodane; `PATCH` „Chleb” → „Mleko” + U+200B → 409; „Masło” + U+200B (bez kolizji) → 400 `invalid`; zła też notatka → 400 z oboma polami; zmiana „Mleko” na własną nazwę + U+200B → 400; obcy domownik → 404 `not_found` (sprawdzenie klucza dopiero po `requireListAccess`, bez ujawnienia pozycji). Red: 3 failed — `expected 400 to be 409` (×2), `expected 400 to be 404`. Green.
+5. `apps/api/test/name-key-migration.test.ts` (Testcontainers; pozycje wstawione z kluczem starej reguły, potem `runMigrations`): „recomputes stale keys and leaves names unchanged” (ｍｌｅｋｏ → mleko, ﬁlet → filet, „Chleb” + U+200B → chleb, „Masło” bez zmian, nazwy nietknięte); „keeps the key of the older item and gives the newer one a distinct key on a collision” (starsza ｍｌｅｋｏ dostaje „mleko”, nowsza „Mleko” → `mleko#<id>`, ta sama nazwa w innej liście bez kolizji; log `data migration 0007_name_key_nfkc: 3 keys updated, 1 collisions`); „recomputes keys across batches” (2500 pozycji, partie po 1000); „runs the step once” (drugie `runMigrations` nic nie zmienia, wiersz `data_migration`). Red (stub `runMigrations(pool, options)` bez kroku): 3 failed — `expected [ [ 'ｍｌｅｋｏ', 'ｍｌｅｋｏ' ], …] to deeply equal [ [ 'ｍｌｅｋｏ', 'mleko' ], …]` (×2), `relation "data_migration" does not exist`. Green. Test partii dopisany po implementacji; sprawdzone, że gryzie: z krokiem kończącym po pierwszej partii `expected [ { stale: 1500 } ] to deeply equal [ { stale: +0 } ]`, kod przywrócony.
 6. Komunikat pola „Usuń niewidoczne lub specjalne znaki.” przy `invalid` z API (MSW), `aria-describedby`, fokus: `SignUpScreen.test.tsx` › „asks to remove hidden characters from the name the API refuses (T-060 AC4)” (fokus na podsumowaniu, link → pole, jak w SC-02), `ListsScreen.test.tsx` › „asks to remove hidden characters when the API refuses the name (T-060 AC4)” (SC-05), `ListScreen.test.tsx` › to samo dla zmiany nazwy listy (SC-06), `ListScreen.add.test.tsx` i `ListScreen.edit.test.tsx` › „asks to remove hidden characters from the name / note the API refuses, focus on it (T-060 AC4)”. Red: `toHaveAccessibleDescription()` (stary tekst „Wpisz imię” albo brak opisu), potem `toHaveFocus()`. Green. Zmieniony test T-026 (NUL w imieniu): oczekuje teraz nowego komunikatu, bo NUL to znak sterujący, a AC4 zmienia tekst dla `invalid`.
+6b. (decyzja 2) `ListScreen.add.test.tsx` › „warns about the duplicate, not the hidden character, for „Mleko” + U+200B (T-060 Demo 1)” i `ListScreen.edit.test.tsx` › „refuses to rename „Masło” to „Mleko” + U+200B as a duplicate (T-060)”: ostrzeżenie o duplikacie, bez komunikatu o znakach, bez żądania. Red: `Unable to find role="alert"` (×2). Green.
 
-**Przebieg tego stanu:** `pnpm typecheck` OK, `pnpm lint` OK, `pnpm vitest run --project web --project tokens --project shared`: 484 passed; `pnpm vitest run --project api`: 318 passed (77 plików).
+**Przebieg końcowy (drugi przebieg, 2026-11-01):** `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` (jscpd: 0 klonów; depcruise: 0 naruszeń), `pnpm design-check` — OK; `pnpm test`: 114 plików, 814 passed; `pnpm test:mobile`: 10 passed; `pnpm build` OK. E2E (Playwright) nie uruchamiane — plan ich nie przewiduje.
+
+**Kryteria:**
+
+- AC1 — test 1 (każda klasa znaków × każde pole); SEC1/test 4 na trasach.
+- AC2 — test 2 (wymóg widocznego znaku, wyjątki emoji).
+- AC3 — test 3 (unit) + test 4 (409 dla ｍｌｅｋｏ i ﬁlet).
+- AC4 — test 6 (komunikat, `aria-describedby`, fokus; SC-02 fokus na podsumowaniu wg decyzji 3).
+- AC5 — test 5 (przeliczenie, kolizja bez przerwania, log liczby kolizji, raz); `down` opisany w komentarzu `apps/api/src/db/data-migrations/0007-name-key-nfkc.ts`.
+- SEC1 — test 4 (400 i nic nie zapisane na rejestracji, `POST`/`PATCH` list, `POST`/`PATCH` pozycji) + 4b (409 dla „Mleko” + U+200B przy „Mleko”).
 
 **Decyzje w kodzie:**
 
@@ -117,9 +129,13 @@ Stan po pierwszym przebiegu (2026-11-01): testy 1–4 i 6 z planu zielone, test 
 - Miękka spacja U+00A0 i U+202F (QA plan): przyjęte. To odstępy (Zs): `trim` usuwa je z brzegów, NFKC w kluczu zamienia je na zwykłą spację.
 - `normalizeItemName`: `trim` → NFKC → usunięcie `Default_Ignorable_Code_Point` → `trim` → `toLocaleLowerCase('pl-PL')` (drugi `trim`, bo usunięty znak mógł stać za spacją).
 - Web: `HIDDEN_CHARACTERS_TEXT` w `apps/web/src/errorText.ts` (jedno miejsce dla trzech ekranów); `useFieldFocus` w `components/useFocus.ts` (fokus na polu z błędem po przerysowaniu, gdy komunikat jest już w `aria-describedby`); `useItemFieldErrors` (`SC-06-lista/itemFieldErrors.ts`) dla AddBar i arkusza edycji; `useListNameForm` dostaje `fieldRef`. Fokus przenosi też błąd ze schematu po stronie klienta (te same reguły co API).
+- Migracja danych (decyzja 1, wpis w `tech-stack.md` od właściciela): `runMigrations` po migracjach SQL wykonuje kroki z `apps/api/src/db/data-migrations/`; każdy w jednej transakcji z wstawieniem wiersza `data_migration` (`ON CONFLICT DO NOTHING`), więc równoległy drugi proces czeka na klucz główny i pomija krok. Tabela z migracji SQL `0007_data_migration.sql`. Krok `0007_name_key_nfkc` na czas przeliczenia zdejmuje i zakłada z powrotem `item_list_id_name_key_unique` (nowy klucz jednej pozycji może chwilowo równać się nieprzeliczonemu kluczowi innej); `ALTER TABLE` blokuje tabelę `item` na czas kroku (krótko przy obecnych danych). Log: `migrate-cli` wypisuje `data migration 0007_name_key_nfkc: N keys updated, M collisions` (widoczny w logu `release_command`).
+- Duplikat przed błędem znaków (decyzja 2): `onlyItemNameInvalid(fields)` w `packages/shared/src/api/items.ts` — jedyny błąd to `name: invalid`. API: `validateOr` w `apps/api/src/http/validate.ts` + `duplicateBeforeRefusal` w `pozycje/http/routes.ts` (po `requireListAccess`) + `refuseDuplicateName` w domenie i `nameKeyTaken` w repozytorium. Web: ta sama kolejność w `useAddItem.submit` i `checkEdit` (`useEditItem.ts`).
 - Ryzyko na później (mobile): reguła używa `\p{…}` i lookbehind; przy pierwszym użyciu w aplikacji Expo sprawdzić obsługę w Hermes.
 
-**Do zrobienia przez właściciela (poza zakresem implementera: `docs/design/`, `docs/architecture/`):** dopisać copy „Usuń niewidoczne lub specjalne znaki.” do tabel Copy SC-02, SC-05, SC-06; zaktualizować definicję `name_key` w `data-model.md` (NFKC + usunięcie ignorowalnych) i dopisać, że migracja nie zmienia istniejących imion i nazw list; w TH-29 (`threat-model.md`) wpisać testy `packages/shared/test/visible-text.test.ts` i `apps/api/test/visible-text.security.test.ts`.
+**Przewodniki warstw (Step 8b, fakty):** `layers/db.md` „Gdzie jest kod” — `0007_data_migration.sql`, `src/db/data-migrations/`; `layers/backend.md` — `optionalNote`, `onlyItemNameInvalid`, `validateOr`.
+
+**Do zrobienia przez właściciela (poza zakresem implementera: `docs/design/`, `docs/architecture/`):** w `data-model.md` dopisać tabelę `data_migration` i krok `0007_name_key_nfkc` (kolizja → `<klucz>#<id>`); dopisać copy „Usuń niewidoczne lub specjalne znaki.” do tabel Copy SC-02, SC-05, SC-06; zaktualizować definicję `name_key` w `data-model.md` (NFKC + usunięcie ignorowalnych) i dopisać, że migracja nie zmienia istniejących imion i nazw list; w TH-29 (`threat-model.md`) wpisać testy `packages/shared/test/visible-text.test.ts` i `apps/api/test/visible-text.security.test.ts`.
 
 ## Open question
 

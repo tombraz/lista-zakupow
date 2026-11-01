@@ -23,6 +23,7 @@ export {
   ITEM_NAME_MAX_LENGTH,
   ITEM_NOTE_MAX_LENGTH,
   normalizeItemName,
+  onlyItemNameInvalid,
   updateItemRequestSchema,
   type ClearCheckedResponse,
   type CreateItemRequest,

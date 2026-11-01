@@ -1,5 +1,6 @@
 import {
   fieldErrors,
+  onlyItemNameInvalid,
   updateItemRequestSchema,
   type Item,
   type UpdateItemRequest,
@@ -18,6 +19,32 @@ function changesOf(item: Item, edited: { name: string; note: string | null }): U
   return {
     ...(edited.name === item.name ? {} : { name: edited.name }),
     ...(edited.note === item.note ? {} : { note: edited.note }),
+  };
+}
+
+type CheckedEdit =
+  | { kind: "invalid"; fields: ReturnType<typeof fieldErrors> }
+  | { kind: "duplicate"; name: string }
+  | { kind: "valid"; changes: UpdateItemRequest; typed: string };
+
+/**
+ * Pola arkusza przez schemat API i lokalne sprawdzenie duplikatu (F-09). Duplikat przed błędem
+ * ukrytych znaków, jak w API: „Mleko” + U+200B przy „Mleko” to duplikat (T-060).
+ */
+function checkEdit(item: Item, items: Item[], edited: { name: string; note: string }): CheckedEdit {
+  const parsed = updateItemRequestSchema.safeParse(edited);
+  const invalid = parsed.success ? {} : fieldErrors(parsed.error);
+  const typed = parsed.success ? (parsed.data.name ?? item.name) : edited.name;
+  if (parsed.success || onlyItemNameInvalid(invalid)) {
+    const existing = sameNameAs(items, typed, item.id);
+    if (existing) return { kind: "duplicate", name: existing.name };
+  }
+  if (!parsed.success) return { kind: "invalid", fields: invalid };
+  const { name: newName = item.name, note: newNote = null } = parsed.data;
+  return {
+    kind: "valid",
+    changes: changesOf(item, { name: newName, note: newNote }),
+    typed: newName,
   };
 }
 
@@ -70,16 +97,10 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
   const save = () => {
     setDuplicate(null);
     setFailure(null);
-    const parsed = updateItemRequestSchema.safeParse({ name, note });
-    setFields(parsed.success ? {} : fieldErrors(parsed.error));
-    if (!parsed.success) return;
-    const { name: newName = item.name, note: newNote = null } = parsed.data;
-    const existing = sameNameAs(items, newName, item.id);
-    if (existing) {
-      setDuplicate(existing.name);
-      return;
-    }
-    saving.mutate({ changes: changesOf(item, { name: newName, note: newNote }), typed: newName });
+    const checked = checkEdit(item, items, { name, note });
+    setFields(checked.kind === "invalid" ? checked.fields : {});
+    if (checked.kind === "duplicate") setDuplicate(checked.name);
+    if (checked.kind === "valid") saving.mutate(checked);
   };
 
   return {
