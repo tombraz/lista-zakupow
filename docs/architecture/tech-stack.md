@@ -80,3 +80,5 @@ Powód: jeden epik MVP, jeden autor, produkt jeszcze niedostępny dla użytkowni
 | 2026-10-27 | `/implement-task T-002`: gałęzie tymczasowe `ci-test/T-NNN-<przypadek>` do weryfikacji CI (decyzja właściciela); `@vitest/coverage-v8` (raport pokrycia jako artefakt CI, zatwierdził właściciel). |
 | 2026-10-26 | `/implement-task T-001`: narzędzia uruchomieniowe (pg, tsx, esbuild, `pnpm --parallel`). |
 | 2026-10-26 | `/ci-cd`: hosting (ADR 0006), brak podglądów per PR, dystrybucja iOS w pilotażu tylko przez web (ADR 0008 — zawęża „Dystrybucja mobile”). |
+
+- 2026-11-01: migracje danych, które muszą liczyć wartości kodem z packages/shared, to kroki TS w runMigrations (apps/api/src/db/migrate.ts) po migracjach SQL, wykonywane raz dzięki tabeli data_migration (decyzja właściciela, T-060).

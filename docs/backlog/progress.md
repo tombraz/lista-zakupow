@@ -31,3 +31,4 @@
 2026-11-01 21:22 | T-057 | implementer | IN_QA | GET /lists/:id/members + sekcja uczestników SC-07 (e-maile tylko u właściciela); 605 vitest + 58 E2E
 2026-11-01 21:37 | T-057 | qa | PASS | 0/0/2 minor; api.md Person.email vs Participant, test E2E 7 bez dowodu red; kontenery Docker QA do usunięcia ręcznie
 2026-11-01 21:58 | T-060 | implementer | NEEDS_USER | walidacja Cc/Cf/bidi + NFKC w kluczu gotowe; pyta o migrację name_key (TS vs SQL) i 409 vs 400 dla Mleko+U+200B
+2026-11-01 21:58 | T-060 | user | ANSWER | migracja danych krokiem TS (data_migration); duplikat 409 wygrywa dla nazw pozycji; fokus na podsumowaniu SC-02
