@@ -20,3 +20,11 @@ export class MailDeliveryError extends Error {
     this.name = "MailDeliveryError";
   }
 }
+
+/** Dostawca nie odpowiedział w czasie; bez danych wysyłki (TH-21). */
+export class MailTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`mail provider did not answer in ${String(timeoutMs)} ms`);
+    this.name = "MailTimeoutError";
+  }
+}

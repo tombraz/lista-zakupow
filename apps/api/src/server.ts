@@ -2,14 +2,17 @@ import { existsSync } from "node:fs";
 import { buildApp } from "./app";
 import { readConfig } from "./config";
 import { createPool } from "./db/pool";
-import { MailpitMailer } from "./modules/konta";
+import { BrevoMailer, MailpitMailer } from "./modules/konta";
 
 const config = readConfig(process.env);
 const pool = createPool(config.DATABASE_URL);
 const app = buildApp({
   pool,
   auth: { secret: config.BETTER_AUTH_SECRET, origin: config.APP_ORIGIN },
-  mailer: new MailpitMailer(config.MAILPIT_URL),
+  mailer:
+    config.mail.provider === "brevo"
+      ? new BrevoMailer({ apiKey: config.mail.apiKey, sender: config.mail.sender })
+      : new MailpitMailer(config.mail.url),
   logger: { level: config.LOG_LEVEL },
   ...(config.TRUSTED_PROXIES ? { trustedProxies: config.TRUSTED_PROXIES } : {}),
   ...(existsSync(config.WEB_DIST_DIR) ? { webDistDir: config.WEB_DIST_DIR } : {}),

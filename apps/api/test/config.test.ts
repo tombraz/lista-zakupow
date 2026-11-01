@@ -29,7 +29,44 @@ describe("readConfig", () => {
     expect(() => readConfig({ ...withoutMail, MAILPIT_URL: "" })).toThrow(/MAILPIT_URL/);
   });
 
-  it("takes the Mailpit address from MAILPIT_URL", () => {
-    expect(readConfig(environment).MAILPIT_URL).toBe("http://localhost:8025");
+  // AC3 T-055: serwer z Brevo bez klucza albo nadawcy = błąd startu, nie cicha wysyłka donikąd.
+  const brevo = {
+    DATABASE_URL: environment.DATABASE_URL,
+    BETTER_AUTH_SECRET: environment.BETTER_AUTH_SECRET,
+    APP_ORIGIN: environment.APP_ORIGIN,
+    MAILER: "brevo",
+    BREVO_API_KEY: "test-brevo-key",
+    MAIL_FROM: "wlasciciel@example.com",
+  };
+
+  it("takes the Brevo key and the sender when MAILER=brevo, without MAILPIT_URL", () => {
+    expect(readConfig(brevo).mail).toEqual({
+      provider: "brevo",
+      apiKey: "test-brevo-key",
+      sender: "wlasciciel@example.com",
+    });
+  });
+
+  it.each(["BREVO_API_KEY", "MAIL_FROM"])(
+    "refuses to start with MAILER=brevo without %s",
+    (name) => {
+      expect(() => readConfig({ ...brevo, [name]: undefined })).toThrow(new RegExp(name));
+      expect(() => readConfig({ ...brevo, [name]: "" })).toThrow(new RegExp(name));
+    },
+  );
+
+  it("refuses a sender that is not an e-mail address", () => {
+    expect(() => readConfig({ ...brevo, MAIL_FROM: "właściciel" })).toThrow(/MAIL_FROM/);
+  });
+
+  it("refuses an unknown MAILER", () => {
+    expect(() => readConfig({ ...environment, MAILER: "smtp" })).toThrow(/MAILER/);
+  });
+
+  it("uses Mailpit when MAILER is not set", () => {
+    expect(readConfig(environment).mail).toEqual({
+      provider: "mailpit",
+      url: "http://localhost:8025",
+    });
   });
 });

@@ -15,6 +15,7 @@ import { SignInFailures } from "./infra/sign-in-failures";
 export type { AuthSettings } from "./infra/auth";
 export type { InvitationOnSignUp } from "./http/auth-routes";
 export type { Mail, Mailer } from "./domain/mailer";
+export { BrevoMailer } from "./infra/brevo-mailer";
 export { MailpitMailer } from "./infra/mailpit-mailer";
 
 export interface SessionUser {
