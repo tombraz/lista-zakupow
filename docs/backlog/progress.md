@@ -26,3 +26,4 @@
 2026-11-01 20:16 | T-055 | user | ANSWER | sekrety Brevo z --stage teraz; AC1–AC3/SEC1 do QA, AC4 + deployment.md po merge na main
 2026-11-01 20:19 | T-055 | implementer | IN_QA | BrevoMailer AC1–AC3/SEC1 do QA; AC4 i SEC2 po merge na main
 2026-11-01 20:24 | T-055 | qa | PASS | 0/0/2 minor; STORY S-02-01 FAILED: AC4 (mail na staging) dopiero po merge; proponowany task weryfikacji w story.md
+2026-11-01 20:53 | T-056 | implementer | IN_QA | revoke anuluje oczekujący subscribe; sesja sprawdzana przy subscribe i co ping (1008)
