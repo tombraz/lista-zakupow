@@ -2,7 +2,7 @@
 id: S-02-04
 epic: E-02
 title: Brak połączenia (web)
-status: in-progress           # todo | in-progress | done
+status: done                  # todo | in-progress | done
 requirements: [F-15]
 screens: [SC-05, SC-06, SC-07, SC-09]
 ---
@@ -13,9 +13,9 @@ screens: [SC-05, SC-06, SC-07, SC-09]
 
 ## Acceptance criteria (business)
 
-- [ ] Given domownik traci połączenie z otwartą aplikacją, then widzi pasek „Brak połączenia. Zmiany nie są zapisywane.” (SC-05, SC-06, SC-07, SC-09).
-- [ ] Given brak połączenia, when domownik próbuje dodać, edytować lub odhaczyć pozycję (albo utworzyć listę, zmienić dane), then akcje zapisu są nieaktywne i aplikacja nie pokazuje zmiany jako zapisanej.
-- [ ] Given połączenie wraca, when domownik ma otwartą listę, then pasek znika, a lista pokazuje aktualny stan, także zmiany innych z czasu przerwy.
+- [x] Given domownik traci połączenie z otwartą aplikacją, then widzi pasek „Brak połączenia. Zmiany nie są zapisywane.” (SC-05, SC-06, SC-07, SC-09).
+- [x] Given brak połączenia, when domownik próbuje dodać, edytować lub odhaczyć pozycję (albo utworzyć listę, zmienić dane), then akcje zapisu są nieaktywne i aplikacja nie pokazuje zmiany jako zapisanej.
+- [x] Given połączenie wraca, when domownik ma otwartą listę, then pasek znika, a lista pokazuje aktualny stan, także zmiany innych z czasu przerwy.
 
 ## Tasks
 

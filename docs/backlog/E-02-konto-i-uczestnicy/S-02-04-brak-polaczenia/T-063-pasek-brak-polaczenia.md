@@ -3,7 +3,7 @@ id: T-063
 title: "Pasek „Brak połączenia”, blokada zapisów i aktualny stan po powrocie"
 epic: E-02
 story: S-02-04
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)
@@ -158,3 +158,42 @@ Stabilność E2E: `brak-polaczenia.spec.ts` uruchomiony około 25 razy (pełny p
 ### Layer guide (Step 8b)
 
 `docs/architecture/layers/web.md` „Gdzie jest kod”: `queryClient.ts` (zapisy `networkMode: "always"`), `live/` (`isOnline`, `onStatus`, `useConnection`), Button `writes`, OfflineBanner, ItemRow, `test/live.ts` `browserGoes`, `setup.ts` / `renderApp`, `e2e/brak-polaczenia.spec.ts`, `e2e/lists.ts` `api().patch`.
+
+## QA round 1 (2026-11-01)
+
+Verdict: pass
+
+Zakres: commit `7a57237` (+ `16d0398` log postępu). Od czystego stanu: `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych), `pnpm check` exit 0 (format, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check, vitest 117 plików / 824 passed, mobile 10 passed). `pnpm test:e2e` (z buildem web i API): 64 passed (4.8 min), w tym `brak-polaczenia.spec.ts` (3 testy × telefon, komputer), J-05, `rozmiar-tekstu.spec.ts`, J-01 (wygasła sesja, T-018) — bez regresji.
+
+**Kryteria akceptacji**
+
+| AC | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `connection.test.tsx`: pasek w regionie `role="status"` po `offline`; po `online` pasek zostaje, dopóki serwer nie odeśle `subscribed`, potem znika i region ogłasza „Połączenie przywrócone.”; cisza 34 s → brak paska, 35,5 s → pasek (SC-05). E2E (c): pasek pod `header`, `main` pod paskiem (przesuwa treść). |
+| AC2 | pass | `offlineWrites.test.tsx`: SC-05 „+ Nowa lista”, SC-06 „Dodaj pozycję” (też Enter w polu), „Odhacz”, „Edytuj”, „Usuń wszystkie kupione”, SC-07 „Utwórz link zaproszenia”, „Unieważnij” — `aria-disabled="true"`, opis = tekst paska, fokus zostaje, zero żądań zapisu; „Kopiuj” i „Wyloguj się” działają. Przegląd kodu: `writes` także na „Utwórz” (NewListForm), „Zapisz” / „Usuń” w arkuszu edycji, „Zapisz” zmiany nazwy, potwierdzenie `ConfirmDialog`. E2E (b) na prawdziwym API. |
+| AC3 | pass | `offlineInFlight.test.tsx`: POST i PATCH zerwane błędem sieci → pozycja się nie pojawia, checkbox wraca (`aria-pressed=false`, bez `aria-busy`), komunikat „Brak połączenia. Sprawdź internet i spróbuj ponownie.”, po `online` brak ponownego wysłania. |
+| AC4 | pass | `connection.test.tsx` (SC-06: druga subskrypcja, nowy GET, „Masło” i „Kupione (1)”, fokus zostaje w „Co kupić?”; SC-07 po cichym zerwaniu: nowi uczestnicy). E2E (a): dwa konteksty, `setOffline`, zmiany Ani przez API widoczne u Tomka po powrocie bez odświeżania. |
+| AC5 | pass | E2E (b) axe bez naruszeń w stanie Offline SC-06, SC-07, SC-05, SC-09 (oba projekty); (c) 320 px + 200 % tekstu: pasek nie ucięty, nie zasłania treści, axe bez naruszeń. Żadna reguła axe nie wyłączona. |
+
+**Spot-checki (każdy przywrócony `git checkout`, `git status` czysty):**
+- `Button`: `offline` na sztywno `false` → 3 z 4 testów `offlineWrites` czerwone (SC-05, SC-06, SC-07).
+- `LiveSocket.open`: `connected = true` od razu po `open` zamiast czekania na `subscribed` → test AC1 czerwony.
+- `queryClient`: bez `mutations.networkMode: "always"` → test SC-09 „Wyloguj się” czerwony (zapis wstrzymany = kolejka).
+Evidence ma czerwone komunikaty dla testów 1, 3, 6 i udokumentowane próby „gryzienia” dla 2, 4, 5 (testy przeszły od razu, bo zachowanie było już w kodzie).
+
+**Przegląd kodu:** jeden hook `useConnection()` (poza `LiveProvider` zawsze online, więc SC-01–SC-04 i SC-08 bez paska), prop `writes` w `Button`, `ItemRow` przez ten sam hook — zgodnie z notatkami implementacyjnymi; zależności `components → live` w granicach depcruise. Reconnect: `offline` zamyka gniazdo, bez sieci nie ma prób, `online` łączy od razu z wyzerowanym backoffem; stare gniazdo zamykane przed nowym (limit połączeń na sesję, T-037). Adres WS bez tokenu (`liveUrl` bez zmian, TH-16). Brak nowych danych, logów ani tras API. Tokeny: `surface.inverse` / `text.on-inverse`, `action.disabled`; design-check bez `HARD-CODED`.
+
+**Dostępność (z kodu i E2E):** region `role="status"` stale w drzewie, więc zmiana treści jest ogłaszana i przy pojawieniu, i przy zniknięciu; nieaktywne przyciski fokusowalne z `aria-describedby` na pasek; brak animacji (ograniczenie ruchu bez znaczenia); 320 px / 200 % w E2E. Czytnika ekranu na urządzeniu nie uruchamiałem (środowisko bez VoiceOver / TalkBack) — sprawdzone semantycznie.
+
+**Ustalenia**
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | spec / docs | „Brak ponga przez 10 s” zaimplementowane jako 35 s ciszy po ostatnim pingu (25 + 10), bo klient nie wysyła pingów. Tryb samolotowy i DevTools dają zdarzenie `offline` (pasek od razu), ale „Wi-Fi bez internetu” pokazuje pasek dopiero po ≤ 35 s. Interpretacja spójna z istniejącym `SILENCE_LIMIT_MS` i opisana w Evidence; brzmienie `architecture.md` (wiersz 127) jest niejednoznaczne. | `liveSocket.ts` `SILENCE_LIMIT_MS`; test „no ping … 34 s / 35,5 s” | Właściciel doprecyzowuje `architecture.md` („bez pingu serwera przez 25 + 10 s”) albo zleca ping klienta. |
+| 2 | minor | design / docs | `design-system.md` (OfflineBanner „Używany na: SC-05–SC-09”) i `ia.md` (wiersz 28) obejmują SC-08, a task świadomie wyłącza SC-08 (publiczny ekran z własnym błędem sieci). | `grep -n "SC-05–SC-09" docs/design` | Ujednolicić dokumenty designu z decyzją z tasku. |
+| 3 | minor | copy | Ukryty tekst „Połączenie przywrócone.” (ogłoszenie zniknięcia paska) nie występuje w tabelach Copy SC-05/06/07/09 ani w `design-system.md`. | `OfflineBanner.tsx` `texts.restored` | Właściciel zatwierdza tekst i dopisuje do Copy. |
+| 4 | note | performance | Po powrocie połączenia lista pobierana dwa razy (`refetchOnReconnect` TanStack + `onReconnect` gniazda). Wynik ten sam. | Evidence „Decyzje do wglądu” | Ewentualnie wyłączyć `refetchOnReconnect` dla zapytań odświeżanych przez gniazdo. |
+| 5 | note | testing | `offlineInFlight.test.tsx` (AC3) przechodzi także bez `mutations.networkMode: "always"`; gryzie tylko przy `retry > 0`. Zachowanie „bez kolejki” pilnuje test SC-09 z `offlineWrites`. | spot-check `queryClient` | Wystarczające; ewentualnie dopisać wariant AC3 z zapisem rozpoczętym już offline. |
+| 6 | note | testing (E2E) | Czas powrotu w E2E ma zapas 20 s z powodu ~10 s opóźnienia nowego połączenia TCP na Windows; u mnie 64/64 zielone w jednym przebiegu. | `brak-polaczenia.spec.ts` `BACK` | Obserwować flaki w CI (Linux). |
+
+**Story S-02-04:** T-063 to jedyny task story. Kryteria biznesowe sprawdzone end to end E2E (a) i (b) na prawdziwym API: pasek na SC-05, SC-06, SC-07, SC-09; zapisy nieaktywne i nic nie jest pokazane jako zapisane; po powrocie pasek znika, a lista pokazuje zmiany drugiej osoby z czasu przerwy. Story → `done`. Epik E-02 niezakończony (S-02-01, S-02-02, S-02-03 w toku, S-02-05 todo).
