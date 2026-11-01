@@ -135,3 +135,5 @@ fly secrets list -a lista-staging   # do Evidence: same nazwy, bez wartości
 **Rekomendacja:** ustaw sekrety teraz z `--stage` (bez restartu obecnej maszyny), oddaj task do QA dla AC1–AC3 i SEC1, a AC4 (mail w skrzynce / spamie, czas dostarczenia, czy Brevo przyjmuje nadawcę z darmowej poczty) i wpis w `deployment.md` zrób po wdrożeniu gałęzi epiku na `main` — wynik dopisz w odpowiedzi.
 
 **Alternatywa:** wdrożyć gałąź epiku na staging ręcznie (`workflow_dispatch` / `scripts/deploy.sh` z obrazem tej gałęzi) przed merge i zweryfikować AC4 od razu, w ramach tego tasku.
+
+Answer: Rekomendacja przyjęta: właściciel ustawia sekrety staging (BREVO_API_KEY, MAIL_FROM) teraz z --stage; task do QA dla AC1–AC3 i SEC1; AC4 i wpis w deployment.md po wejściu epiku na main.
