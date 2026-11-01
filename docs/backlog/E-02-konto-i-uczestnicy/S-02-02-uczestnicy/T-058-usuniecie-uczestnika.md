@@ -3,7 +3,7 @@ id: T-058
 title: Usunięcie uczestnika przez właściciela
 epic: E-02
 story: S-02-02
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-056, T-057, T-063]
 size: M                # S | M (L must be split)
@@ -145,3 +145,41 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 ### Layer guides (Step 8b)
 
 `backend.md` and `web.md`, „Gdzie jest kod”: new route, helpers and SC-07 files (facts only).
+
+## QA round 1 (2026-11-02)
+
+Verdict: fail
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | major | security / input validation | `userId` from the path of `DELETE /api/v1/lists/:listId/members/:userId` is not validated. A NUL byte reaches Postgres and the API answers 500 instead of 404. This breaks `backend.md` "Zasady bezpieczeństwa": "Wejście, którego baza nie przyjmie (NUL w tekście), odrzuca schemat w `packages/shared`" (QA T-005 round 1) and "Każda trasa … ma schemat zod". It is also SEC3: an id of nobody on the list must give 404. | Temporary QA test (deleted): owner `DELETE …/members/%00` → `500 {"error":{"code":"internal",…}}`. `%2F..%2F..` and `' OR 1=1 --` → 404; a 5000-character id → 414 (Fastify param limit). No data changed, nothing leaked in the body. | Validate `params` with a zod schema (for example a non-empty text id with `withoutNul` and a sane max length) and answer 404 `not_found` like any unknown id, matching the "Implementation notes" route order (validation → `requireListAccess` → domain). Add a negative test with `%00` to `lists.remove-member.authz.test.ts`. |
+| 2 | minor | robustness / logging | `securityEvent("member_removed")` is written after `withdrawAccess`. If `peopleWithAccess` throws after the committed `DELETE`, the owner gets a 500 for a removal that happened, and TH-21 loses the trace. | `apps/api/src/modules/listy/http/routes.ts`, the `app.delete` handler | Log right after `removeParticipant` succeeds, before the notifications. |
+| 3 | minor | backlog hygiene | SEC1–SEC4 checkboxes are left unchecked, although Evidence covers them. | task file "Acceptance criteria" | Tick them when the evidence is there. |
+| 4 | note | design docs | Copy SC-07 still has no `remove.failed` "Nie udało się usunąć. Spróbuj ponownie." (approved 2026-11-01). No polite sentence after a removal either; the count heading is announced instead. | `docs/design/screens/SC-07-uczestnicy.md` Copy table; `messages.ts` | Owner adds the copy line (and decides on a dedicated sentence, if wanted). |
+| 5 | note | MC-03 ordering | `revoke` runs after the awaited `DELETE` resolves. Between the commit and `revoke` the event loop can deliver an event from a concurrent write to the removed person's socket. The window is tiny and the event comes at the instant of removal. | `withdrawAccess` in `routes.ts` | Acceptable. Mention it in `architecture.md` "Zmiany na żywo" if the wording "w tej samej operacji" is meant strictly. |
+| 6 | note | accessibility (manual) | Manual screen reader, zoom and reduce-motion checks were not done (no assistive tech in this autonomous run). Keyboard, focus and Escape are covered by component tests. axe passes on SC-07 with the dialog open, after the removal and on the removed person's SC-05 (E2E). | — | Cover them in UAT. |
+
+### What QA ran
+
+- `pnpm install --frozen-lockfile`, then `pnpm check`: exit 0 (121 files / 841 Vitest tests, mobile 10 tests, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check).
+- `playwright test e2e/sc07-uczestnicy.spec.ts`: 6 passed (telefon and komputer), including "owner removes participants who have the list open; they land on SC-05" with axe.
+- Spot-check 1: `live.revoke(userId, listId)` commented out → both tests in `live.remove-member.test.ts` fail. Restored.
+- Spot-check 2: `listId` dropped from the `DELETE … WHERE` in `lists-repository.ts` → "removes nobody from another list…" fails. Restored.
+- Exploits (temporary test, deleted): the removed person with two open WS tabs gets `access.revoked` in both, then no `item.upserted`. A second `DELETE` → 404. The removed person's `DELETE …/members/<owner>` and `GET …/members` → 404. After re-adding the membership, `GET` the list → 200 (rejoin works). Hostile ids: see finding 1.
+- `git status` clean after the spot-checks.
+
+### Acceptance criteria
+
+- AC1 pass: test 1 and test 3 read and run; the assertions match the criterion.
+- AC2 pass: component tests (dialog, starting focus on "Anuluj", focus to the next row or to the heading, Escape, one request).
+- AC3 pass: E2E with 3 contexts.
+- AC4 pass: offline `aria-disabled`, error text in the dialog, which stays open.
+- AC5 pass: E2E axe.
+- SEC1 pass: test 2, plus the two-tabs exploit.
+- SEC2 pass: authz test.
+- SEC3 fail on hostile input (finding 1). The ordinary cases pass.
+- SEC4 pass: log test (ids only, no names or e-mails).
+
+### Must change
+
+1. Validate `userId` (and the route params) with a zod schema so that NUL and other input the database rejects gives 404 `not_found`, not 500, with a negative test.
