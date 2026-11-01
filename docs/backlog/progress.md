@@ -28,3 +28,4 @@
 2026-11-01 20:24 | T-055 | qa | PASS | 0/0/2 minor; STORY S-02-01 FAILED: AC4 (mail na staging) dopiero po merge; proponowany task weryfikacji w story.md
 2026-11-01 20:53 | T-056 | implementer | IN_QA | revoke anuluje oczekujący subscribe; sesja sprawdzana przy subscribe i co ping (1008)
 2026-11-01 20:59 | T-056 | qa | PASS | 0/0/1 minor; unsubscribe w trakcie oczekującego subscribe go nie anuluje
+2026-11-01 21:22 | T-057 | implementer | IN_QA | GET /lists/:id/members + sekcja uczestników SC-07 (e-maile tylko u właściciela); 605 vitest + 58 E2E
