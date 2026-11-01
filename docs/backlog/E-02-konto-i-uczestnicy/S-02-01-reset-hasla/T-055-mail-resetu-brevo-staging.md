@@ -3,7 +3,7 @@ id: T-055
 title: Mail resetu przez Brevo na staging
 epic: E-02
 story: S-02-01
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-053]
 size: S                # S | M (L must be split)
@@ -115,6 +115,8 @@ Run 2026-11-01 (implementer, autonomiczny). Kod gotowy; AC4 i część SEC2 czek
 **Layer guide (Step 8b):** `docs/architecture/layers/backend.md` — „Gdzie jest kod” (`infra/brevo-mailer.ts`, `test/brevo.ts`) i akapit pod „Komendy” (`MAILER`, `BREVO_API_KEY`, `MAIL_FROM`).
 
 **Do aktualizacji przez właściciela (poza uprawnieniami implementera):** `deployment.md` — „Zmienne API”: `MAILER=brevo`, sekret `MAIL_FROM` obok `BREVO_API_KEY`; wynik AC4 i zamknięcie punktu „Wysyłka Brevo bez własnej domeny”.
+
+**Run 2026-11-01 (po odpowiedzi właściciela):** zastosowana odpowiedź z „Open question” — task oddany do QA w zakresie AC1–AC3 i SEC1 (oraz części SEC2 możliwej w repo: `git grep xkeysib` bez wyników). AC4 i potwierdzenie SEC2 w CI/`fly secrets list` oraz wpis w `deployment.md` właściciel robi po wejściu epiku na `main` (sekrety `BREVO_API_KEY`, `MAIL_FROM` ustawia teraz z `--stage`). Kryteria AC4 i SEC2 zostają nieodhaczone celowo. Świeża weryfikacja: `pnpm check` — exit 0 (108 plików / 589 testów vitest, jest mobile 10/10). Bez zmian w kodzie względem `6f72263`.
 
 ## Open question
 
