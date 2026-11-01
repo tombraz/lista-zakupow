@@ -3,7 +3,7 @@ id: T-054
 title: "Nowe hasło z linku; reset kończy wszystkie sesje"
 epic: E-02
 story: S-02-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-053]
 size: M                # S | M (L must be split)
@@ -156,3 +156,58 @@ Przebieg 2026-11-01 (`/implement-task T-054`, tryb autonomiczny).
 - **Przewodniki warstw (8b, fakty):** backend — `reset-password` w moście, `Live.closeUser`, helper `test/reset-token.ts`, `startMailpit(hostPort?)`; web — pliki SC-03 kroku 2, `e2e/mailpit.ts`, port Mailpita E2E.
 - **Do aktualizacji przez właściciela (nie edytuję `docs/architecture/` poza przewodnikami):** `architecture.md` tabela błędów — `400 invalid_token` (jest w `api.md`); `api.md` „Stan po T-004” — most udostępnia też `reset-password` (Origin 403, reset kończy sesje i połączenia na żywo); `testing-strategy.md` — E2E czyta maile przez API Mailpita na porcie `E2E_MAILPIT_PORT`.
 
+
+## QA round 1 (2026-11-01)
+
+Verdict: pass
+
+Niezależna weryfikacja (tryb autonomiczny, świeży kontekst). Zmiany: `9a8f8fd`, `e598abb`.
+
+### Reprodukcja
+
+- `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality`, `pnpm design-check`: zielone.
+- `pnpm test`: 106 plików, 575 testów, zielone.
+- `pnpm test:e2e`: 54 passed (4,6 min), w tym `j01-nowe-haslo.spec.ts` (telefon, komputer) z Mailpit i axe.
+
+### Kryteria akceptacji
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | test 1 przeczytany: 200, stare hasło 401 `invalid_credentials`, nowe 200; E2E zielone |
+| AC2 | pass | test 2 (400 `validation_failed` + `fields.newPassword`, token dalej działa); test komponentu: opis błędu powiązany z polem, fokus |
+| AC3 | pass | testy komponentu; spot-check: bez `replace: true` w `useNewPassword` test AC3 pada |
+| AC4 | pass | użyty / 1 h + 1 s / nieznany / konto usunięte → 400 `invalid_token`; ekran „link nieważny” → krok 1 z fokusem na nagłówku |
+| AC5 | pass | E2E z axe we wszystkich stanach, oba viewporty |
+| SEC1 (TH-10) | pass | test 4 i równoległe resety (200 + 400); spot-check: `revokeSessionsOnPasswordReset: false` → test 4 pada |
+| SEC2 (TH-28) | pass | spot-check: bez `deps.onPasswordReset(userId)` → test WS pada (`connection still open`) |
+| SEC3 (TH-21) | pass | test logów: brak tokenu, hasła, e-maila; `password_reset` z `userId`; redakcja `?token=` na `/reset-hasla` |
+
+Spot-checki przywrócone (`git checkout`), `git status` czysty.
+
+### Próby ataku (lokalnie, `fastify.inject`, konta z fabryk testowych)
+
+- Obcy / brak `Origin`, także `/api/%61uth/reset-password`: 403 (test 6a).
+- Wrogie wejście (`{}`, pusty token, NUL, tablica, liczba): 400, nigdy 500. Token 100 kB: 413 (limit treści).
+- `GET /api/auth/reset-password/:token` (callback Better Auth): 404, mostek nie wystawia innych tras Better Auth.
+- Dwa linki z dwóch próśb: po użyciu drugiego (200) pierwszy **dalej ustawia hasło** (200) — patrz #1.
+
+### Findings
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security / F-03 | Udany reset nie unieważnia innych niewykorzystanych linków resetu tego konta; starszy link działa do końca swojej godziny i zmienia hasło ponownie (i znowu kończy sesje). F-03 jest spełnione dosłownie (każdy link jednorazowy, 1 h), ale to przypadek z planu QA. | tymczasowy test: `requestResetToken` ×2, reset tokenem 2 → 200, potem tokenem 1 → 200 | po udanym resecie usunąć wszystkie wiersze `verification` `reset-password:*` tego konta (follow-up, decyzja właściciela) |
+| 2 | minor | code quality (spójność modułu) | Stan wejścia `passwordChanged` i `passwordChangedOf` dodane do `apps/web/src/invitations/invitationContext.ts` — moduł zaproszeń niesie stan resetu hasła. | `invitationContext.ts:19`, `:51` | przenieść stan wejścia SC-01 do neutralnego modułu (np. `screens/SC-01-logowanie` albo `entry`) |
+| 3 | minor | docs | Pozycja DoD „Architecture docs updated” niezaznaczona: `architecture.md` (tabela błędów, `invalid_token`), `api.md` „Stan po T-004” (most z `reset-password`), `testing-strategy.md` (Mailpit E2E, `E2E_MAILPIT_PORT`) czekają na właściciela. | sekcja Evidence, „Do aktualizacji przez właściciela” | uzupełnić dokumenty |
+| 4 | note | security (TH-27) | `/api/auth/reset-password` nie ma limitu per IP w Fastify przed limitem Better Auth, który zapisuje wiersz `rate_limit` (IP + ścieżka). Odczyt `verification` przed Better Auth to tylko odczyt. To samo, co zgłosił autor. | `auth-routes.ts`, `newPasswordRoute` poza zakresem `perIpRateLimit` | decyzja o progu; wtedy `perIp(...)` jak przy prośbie o reset |
+| 5 | note | API errors | 413 dla zbyt dużej treści wraca w domyślnym formacie Fastify (`statusCode`, `code`, `message`), nie `{ error: { code } }`. Dotyczy wszystkich tras, istniało przed tym taskiem. | spot-check: token 100 kB → 413 `FST_ERR_CTP_BODY_TOO_LARGE` | błąd w formacie API (osobny task) |
+| 6 | note | UX | Utracona odpowiedź po zapisie: ponowienie daje `invalid_token`, więc ekran pokazuje „link nieważny” + „Wyślij nowy link”. Akceptowalne zgodnie z propozycją planu (hasło jest już zmienione, logowanie działa). | plan, „Client state during writes” | bez zmian |
+| 7 | note | design | Teksty spoza tabeli Copy SC-03: „Hasło może mieć najwyżej 128 znaków”, „Nie udało się zapisać hasła. Spróbuj ponownie.” | `SC-03-reset-hasla/messages.ts` | dopisać do `docs/design/screens/SC-03-reset-hasla.md` |
+| 8 | note | manual checks | Nie sprawdzone ręcznie: czytnik ekranu, prawdziwe telefony z maila, menedżer haseł, zoom 200 % (środowisko bez urządzeń). Automaty: axe w E2E, fokus i opisy w testach komponentu. | — | sprawdzić w UAT epiki |
+
+### Jakość testów
+
+Czerwone komunikaty w Evidence dla każdego testu z planu; testy, które przeszły od razu, mają udokumentowany spot-check. Testy na uzgodnionych granicach (HTTP, WS, ekran z MSW, Playwright), oczekiwane wartości to literały. Wszystkie 8 planowanych testów jest w repo.
+
+### Story / epic
+
+Story S-02-01 nie jest skończona (T-055 `todo`).
