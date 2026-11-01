@@ -66,6 +66,8 @@ export interface ListsRepository {
   /** Zmiana nazwy przesuwa listę na początek (`updated_at`). */
   rename(listId: string, name: string): Promise<void>;
   delete(listId: string): Promise<void>;
+  /** Usuwa członkostwo uczestnika; `false`, gdy nie był uczestnikiem tej listy. */
+  removeParticipant(listId: string, userId: string): Promise<boolean>;
   /** Listy z dostępem domownika (własne i udostępnione), od ostatnio zmienionej. */
   listsOf(userId: string, listId?: string): Promise<ShoppingList[]>;
   invitationTarget(listId: string): Promise<InvitationTarget | null>;
@@ -193,4 +195,19 @@ export async function renameList(
 /** F-05: tylko właściciel; członkostwa (później pozycje i zaproszenia) znikają kaskadą. */
 export async function deleteList(repository: ListsRepository, access: ListAccess): Promise<void> {
   await repository.delete(access.listId);
+}
+
+/**
+ * F-13: tylko właściciel (dostęp sprawdzony z rolą `owner`). Pozycje uczestnika zostają z jego
+ * imieniem. Właściciel i osoba spoza listy dają `not_found` (TH-01).
+ */
+export async function removeParticipant(
+  repository: ListsRepository,
+  access: ListAccess,
+  userId: string,
+): Promise<void> {
+  // Identyfikator domownika (Better Auth) to tekst, nie UUID; trafia do zapytania jako parametr.
+  if (!(await repository.removeParticipant(access.listId, userId))) {
+    throw new DomainError("not_found");
+  }
 }

@@ -27,6 +27,15 @@ export const messages = {
   copyManually: "Skopiuj link ręcznie.",
   revoke: "Unieważnij",
   revoked: "Link unieważniony",
+  remove: {
+    action: "Usuń",
+    label: (name: string) => `Usuń ${name} z listy`,
+    question: (name: string) => `Usunąć ${name} z listy?`,
+    consequence: "Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną.",
+    // Spoza tabeli Copy SC-07; zatwierdził właściciel 2026-11-01 (T-058 AC4).
+    failed: "Nie udało się usunąć. Spróbuj ponownie.",
+  },
+  cancel: "Anuluj",
   limit: "Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę.",
 };
 

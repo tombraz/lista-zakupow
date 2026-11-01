@@ -84,3 +84,51 @@ test("SC-07 empty and load error states pass axe", async ({ page }) => {
   await retry.click();
   await expect(page.getByRole("heading", { level: 2, name: "Na liście (0 z 20)" })).toBeVisible();
 });
+
+// T-058 AC3, AC5 (F-13, MC-03): usunięty z otwartą listą (SC-06 albo SC-07) wraca na SC-05.
+test("SC-07 owner removes participants who have the list open; they land on SC-05", async ({
+  page,
+  browser,
+}) => {
+  const list = await openNewList(page, "Dom");
+  const tomek = await joinWithLink(page, browser, list.id, "Tomek");
+  const ola = await joinWithLink(page, browser, list.id, "Ola");
+  await tomek.page.goto(`/listy/${list.id}`);
+  await expect(tomek.page.getByRole("heading", { level: 1, name: "Dom" })).toBeVisible();
+  await ola.page.goto(`/listy/${list.id}/uczestnicy`);
+  await expect(
+    ola.page.getByRole("heading", { level: 2, name: "Na liście (2 z 20)" }),
+  ).toBeVisible();
+
+  await page.goto(`/listy/${list.id}/uczestnicy`);
+  await expect(page.getByRole("heading", { level: 2, name: "Na liście (2 z 20)" })).toBeVisible();
+  await page.getByRole("button", { name: "Usuń Tomek z listy" }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Usunąć Tomek z listy?" });
+  await expect(dialog.getByRole("button", { name: "Anuluj" })).toBeFocused();
+  await expectNoAxeViolations(page);
+  await dialog.getByRole("button", { name: "Usuń" }).click();
+
+  await expect(page.getByRole("heading", { level: 2, name: "Na liście (1 z 20)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Usuń Ola z listy" })).toBeFocused();
+  await expectNoAxeViolations(page);
+
+  await expectBackOnLists(tomek.page);
+
+  await page.getByRole("button", { name: "Usuń Ola z listy" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Usuń" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Na liście (0 z 20)" })).toBeFocused();
+  await expectBackOnLists(ola.page);
+  await tomek.client.close();
+  await ola.client.close();
+});
+
+/** MC-03: SC-05 z komunikatem, bez usuniętej listy. */
+async function expectBackOnLists(removed: Page) {
+  await expect(
+    removed.getByText("Lista „Dom” została usunięta albo nie masz już do niej dostępu."),
+  ).toBeVisible(LIVE);
+  await expect(removed.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+  expect(new URL(removed.url()).pathname).toBe("/listy");
+  await expect(removed.getByText("Dom", { exact: true })).toHaveCount(0);
+  await expectNoAxeViolations(removed);
+}

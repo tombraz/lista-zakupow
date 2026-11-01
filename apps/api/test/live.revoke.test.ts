@@ -61,7 +61,8 @@ describe("deleting a list revokes live access (SEC2, TH-04, MC-03)", () => {
   });
 });
 
-// Usunięcie uczestnika (T-058) to zapis w bazie i `revoke`; tu oba wprost, bo trasy jeszcze nie ma.
+// Zapis w bazie i `revoke` wprost, żeby sterować ich kolejnością względem `subscribe`; trasę
+// usunięcia uczestnika (T-058) sprawdza `live.remove-member.test.ts`.
 describe("removing a participant revokes live access (T-056, TH-04, MC-03)", () => {
   const db = useTestDatabase();
   let app: FastifyInstance | undefined;

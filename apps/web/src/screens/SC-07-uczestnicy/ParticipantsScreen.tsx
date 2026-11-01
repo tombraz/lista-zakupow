@@ -3,12 +3,10 @@ import {
   type Invitation,
   type ListDetails,
   type ListMembers,
-  type Participant,
 } from "@lista/shared";
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AppBar } from "../../components/AppBar/AppBar";
-import { Avatar } from "../../components/Avatar/Avatar";
 import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { InviteLinkBox } from "../../components/InviteLinkBox/InviteLinkBox";
@@ -18,8 +16,8 @@ import { Toast, useToast } from "../../components/Toast/Toast";
 import { useLimitFocus } from "../../components/useFocus";
 import { useList } from "../../lists/useList";
 import { useMembers } from "../../lists/useMembers";
-import { useSession } from "../../session/useSession";
 import { useLiveList } from "../../live/useLiveList";
+import { Members } from "./Members";
 import { createErrorText, messages, revokeErrorText } from "./messages";
 import styles from "./ParticipantsScreen.module.css";
 import { useInvitationChanges, useInvitations } from "./useInvitations";
@@ -99,57 +97,6 @@ function useRetry(refetches: (() => Promise<unknown>)[]) {
     });
   };
   return { retrying, retry };
-}
-
-/** F-13: właściciel i uczestnicy w kolejności dołączenia; e-mail tylko w widoku właściciela. */
-function Members({ list, members }: { list: ListDetails; members: ListMembers }) {
-  const isOwner = list.role === "owner";
-  const me = useSession().data?.id;
-  const { owner, participants } = members;
-  return (
-    <section className={styles.section} aria-labelledby="members-heading">
-      <h2 id="members-heading" className={styles.heading}>
-        {messages.members(participants.length)}
-      </h2>
-      <ul className={styles.people}>
-        <PersonRow
-          person={owner}
-          index={0}
-          detail={isOwner ? `${messages.owner} · ${messages.you}` : messages.owner}
-        />
-        {participants.map((person, index) => (
-          <PersonRow
-            key={person.id}
-            person={person}
-            index={index + 1}
-            detail={person.id === me ? messages.you : person.email}
-          />
-        ))}
-      </ul>
-      {isOwner && participants.length === 0 && <p className={styles.empty}>{messages.empty}</p>}
-    </section>
-  );
-}
-
-/** Wiersz osoby: awatar, imię, pod spodem rola („właściciel”, „Ty”) albo e-mail. */
-function PersonRow({
-  person,
-  index,
-  detail,
-}: {
-  person: Participant;
-  index: number;
-  detail: string | undefined;
-}) {
-  return (
-    <li className={styles.person}>
-      <Avatar person={person} index={index} />
-      <span className={styles.who}>
-        <span className={styles.name}>{person.name}</span>
-        {detail && <span className={styles.role}>{detail}</span>}
-      </span>
-    </li>
-  );
 }
 
 function Invitations({

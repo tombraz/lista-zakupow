@@ -35,8 +35,9 @@ describe("SC-07 Na liście", () => {
 
     expect(await memberRows("Na liście (2 z 20)")).toEqual([
       "AAniawłaściciel · Ty",
-      "TTomektomek@example.com",
-      "OOlaola@example.com",
+      // T-058: „Usuń” przy każdym uczestniku w widoku właściciela.
+      "TTomektomek@example.comUsuń",
+      "OOlaola@example.comUsuń",
     ]);
     expect(screen.getByRole("heading", { level: 2, name: "Na liście (2 z 20)" })).toBeVisible();
   });

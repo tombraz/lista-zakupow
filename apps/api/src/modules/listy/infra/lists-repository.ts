@@ -107,6 +107,14 @@ export class DrizzleListsRepository implements ListsRepository {
     await this.db.delete(shoppingList).where(eq(shoppingList.id, listId));
   }
 
+  async removeParticipant(listId: string, userId: string): Promise<boolean> {
+    const removed = await this.db
+      .delete(listMember)
+      .where(and(eq(listMember.listId, listId), eq(listMember.userId, userId)))
+      .returning({ userId: listMember.userId });
+    return removed.length > 0;
+  }
+
   async listsOf(userId: string, listId?: string): Promise<ShoppingList[]> {
     const isMember = exists(
       this.db
