@@ -128,6 +128,31 @@ describe("SC-06 sheet „Edytuj pozycję”", () => {
     expect(requests).toEqual([]);
   });
 
+  it.each([
+    ["name", "Nazwa"],
+    ["note", NOTE],
+  ])(
+    "asks to remove hidden characters from the %s the API refuses, focus on it (T-060 AC4)",
+    async (field, label) => {
+      const milk = anItem({ name: "Mleko" });
+      const { user, list, sheet } = await openSheet([milk], "Mleko");
+      server.use(
+        http.patch(`*/api/v1/lists/${list.id}/items/${milk.id}`, () =>
+          apiError(400, { code: "validation_failed", fields: { [field]: "invalid" } }),
+        ),
+      );
+      await user.type(within(sheet).getByRole("textbox", { name: "Nazwa" }), " 3,2%");
+      await user.type(within(sheet).getByRole("textbox", { name: NOTE }), "2 l");
+
+      await user.click(within(sheet).getByRole("button", { name: "Zapisz" }));
+
+      const refused = within(sheet).getByRole("textbox", { name: label });
+      await expect.poll(() => refused.getAttribute("aria-invalid")).toBe("true");
+      expect(refused).toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+      expect(refused).toHaveFocus();
+    },
+  );
+
   it("says the save failed and keeps the sheet open", async () => {
     const milk = anItem({ name: "Mleko" });
     const { user, list, sheet } = await openSheet([milk], "Mleko");

@@ -1,27 +1,27 @@
 import { z } from "zod";
 import type { Person } from "./person";
-import { requiredName, withoutNul } from "./text";
+import { optionalNote, requiredName } from "./text";
 
 /** Nazwa pozycji 1–100 znaków, ilość / notatka do 200 (F-07). */
 export const ITEM_NAME_MAX_LENGTH = 100;
 export const ITEM_NOTE_MAX_LENGTH = 200;
 
+const IGNORABLE = /\p{Default_Ignorable_Code_Point}/gu;
+
 /**
  * Klucz porównania nazw pozycji (F-09, ADR 0004): `item.name_key` w bazie i lokalne sprawdzenie
  * w klientach. Jedyne miejsce tej reguły; jej zmiana wymaga migracji przeliczającej klucze.
+ * NFKC i usunięcie znaków ignorowalnych: „ﬁlet”, „ｍｌｅｋｏ” i „Mleko” z niewidocznym znakiem to
+ * duplikaty (TH-29); końcowy `trim`, bo usunięty znak mógł stać za spacją.
  */
 export function normalizeItemName(name: string): string {
-  return name.trim().normalize("NFC").toLocaleLowerCase("pl-PL");
+  return name.trim().normalize("NFKC").replace(IGNORABLE, "").trim().toLocaleLowerCase("pl-PL");
 }
 
 const itemName = requiredName(ITEM_NAME_MAX_LENGTH);
 
 /** Pusta notatka to brak notatki (`null`). */
-const itemNote = z
-  .string({ error: "invalid" })
-  .trim()
-  .max(ITEM_NOTE_MAX_LENGTH, { error: "too_long" })
-  .refine(withoutNul, { error: "invalid" })
+const itemNote = optionalNote(ITEM_NOTE_MAX_LENGTH)
   .nullish()
   .transform((note) => note || null);
 

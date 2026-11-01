@@ -18,7 +18,7 @@ interface AddBarProps {
   formRef?: Ref<HTMLFormElement>;
   name: AddBarField & { ref: Ref<HTMLInputElement> };
   /** Pole ilości / notatki: pokazywane dopiero po wpisaniu nazwy (design-system.md, AddBar). */
-  note: AddBarField;
+  note: AddBarField & { ref?: Ref<HTMLInputElement> };
   submitText: string;
   /** Ostrzeżenie lub błąd nad polami (duplikat, limit, błąd zapisu). */
   alert: ReactNode;
@@ -55,7 +55,7 @@ export function AddBar(props: AddBarProps) {
           {submitText}
         </Button>
       </div>
-      {showNote && <AddBarInput field={note} disabled={disabled} />}
+      {showNote && <AddBarInput field={note} inputRef={note.ref} disabled={disabled} />}
     </form>
   );
 }

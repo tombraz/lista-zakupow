@@ -2,7 +2,7 @@
 id: S-02-03
 epic: E-02
 title: "Konto: zmiana imienia i usunięcie konta (web)"
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [F-04, F-16, N-02]
 screens: [SC-09, SC-01]
 ---

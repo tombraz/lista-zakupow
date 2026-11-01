@@ -6,7 +6,7 @@ import {
   type Person,
 } from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
-import { errorText } from "../../errorText";
+import { errorText, HIDDEN_CHARACTERS_TEXT } from "../../errorText";
 
 /** Teksty z tabeli „Copy” SC-06 (docs/design/screens/SC-06-lista.md). */
 export const messages = {
@@ -77,13 +77,14 @@ export function boughtByText(person: Person | null): string {
 
 /** SC-06 „Error — długość”; pusta nazwa — tekst agenta jak „Wpisz nazwę listy” na SC-05. */
 export function itemNameErrorText(code: FieldErrorCode): string {
-  return code === "too_long"
-    ? `Nazwa może mieć najwyżej ${String(ITEM_NAME_MAX_LENGTH)} znaków`
-    : "Wpisz nazwę pozycji";
+  if (code === "too_long") return `Nazwa może mieć najwyżej ${String(ITEM_NAME_MAX_LENGTH)} znaków`;
+  return code === "invalid" ? HIDDEN_CHARACTERS_TEXT : "Wpisz nazwę pozycji";
 }
 
-export function itemNoteErrorText(): string {
-  return `Notatka może mieć najwyżej ${String(ITEM_NOTE_MAX_LENGTH)} znaków`;
+export function itemNoteErrorText(code: FieldErrorCode): string {
+  return code === "invalid"
+    ? HIDDEN_CHARACTERS_TEXT
+    : `Notatka może mieć najwyżej ${String(ITEM_NOTE_MAX_LENGTH)} znaków`;
 }
 
 /** Nieudany zapis zmiany (SC-06, „Error — zapis”). */

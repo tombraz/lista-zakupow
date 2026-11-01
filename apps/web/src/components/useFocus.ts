@@ -49,3 +49,17 @@ export function useLimitFocus(reached: boolean, from: RefObject<HTMLElement | nu
   }, [reached, from]);
   return ref;
 }
+
+/**
+ * Fokus na polu z błędem dopiero po przerysowaniu, gdy komunikat jest już powiązany z polem
+ * (`aria-describedby`), więc czytnik ekranu czyta go razem z polem (T-060 AC4).
+ */
+export function useFieldFocus<T extends string>(fields: Record<T, RefObject<HTMLElement | null>>) {
+  const [focus, requestFocus] = useFocusRequest<T>();
+  useEffect(() => {
+    if (focus) fields[focus.target].current?.focus();
+    // Pola to stałe refy; reagujemy tylko na nowe żądanie fokusu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus]);
+  return requestFocus;
+}

@@ -227,6 +227,26 @@ describe("SC-05 Moje listy", () => {
 
       expect(await screen.findByText("Nazwa listy może mieć najwyżej 100 znaków")).toBeVisible();
     });
+
+    it("asks to remove hidden characters when the API refuses the name (T-060 AC4)", async () => {
+      const user = userEvent.setup();
+      listsAre([aList({ name: "Dom" })]);
+      server.use(
+        http.post("*/api/v1/lists", () =>
+          apiError(400, { code: "validation_failed", fields: { name: "invalid" } }),
+        ),
+      );
+      renderApp("/listy");
+      await user.click(await screen.findByRole("button", { name: "+ Nowa lista" }));
+      const field = screen.getByRole("textbox", { name: "Nazwa listy" });
+
+      await user.type(field, "Zakupy");
+      await user.click(screen.getByRole("button", { name: "Utwórz" }));
+
+      await expect.poll(() => field.getAttribute("aria-invalid")).toBe("true");
+      expect(field).toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+      expect(field).toHaveFocus();
+    });
   });
 
   describe("limit of 50 own lists (AC3)", () => {

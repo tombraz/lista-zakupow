@@ -188,6 +188,33 @@ describe("SC-06 AddBar warnings", () => {
     expect(name).toHaveAccessibleDescription("Nazwa może mieć najwyżej 100 znaków");
   });
 
+  it.each([
+    ["name", "Co kupić?"],
+    ["note", "Ilość / notatka (opcjonalnie)"],
+  ])(
+    "asks to remove hidden characters from the %s the API refuses, focus on it (T-060 AC4)",
+    async (field, label) => {
+      const { user, list, name } = await openList();
+      server.use(
+        http.post(`*/api/v1/lists/${list.id}/items`, () =>
+          apiError(400, { code: "validation_failed", fields: { [field]: "invalid" } }),
+        ),
+      );
+      await user.type(name, "Mleko");
+      await user.type(
+        screen.getByRole("textbox", { name: "Ilość / notatka (opcjonalnie)" }),
+        "2 l",
+      );
+
+      await user.click(screen.getByRole("button", { name: "Dodaj pozycję" }));
+
+      const refused = screen.getByRole("textbox", { name: label });
+      await expect.poll(() => refused.getAttribute("aria-invalid")).toBe("true");
+      expect(refused).toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+      expect(refused).toHaveFocus();
+    },
+  );
+
   it("shows the limit and disables the AddBar at 500 items (AC5)", async () => {
     // Limit liczy też kupione; zwinięte „Kupione” się nie renderują, więc test nie płaci
     // za 500 wierszy w jsdom (~2 s, T-021).

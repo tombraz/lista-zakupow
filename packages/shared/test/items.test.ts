@@ -33,6 +33,27 @@ describe("normalizeItemName (AC2, F-09, ADR 0004)", () => {
   });
 });
 
+describe("normalizeItemName: compatibility forms and invisible characters (T-060 AC3, TH-29)", () => {
+  it("gives full-width letters and ligatures the key of their plain form (NFKC)", () => {
+    expect(normalizeItemName("\uFF2D\uFF4C\uFF45\uFF4B\uFF4F")).toBe("mleko");
+    expect(normalizeItemName("\uFB01let")).toBe("filet");
+    expect(normalizeItemName("\uFB01let")).toBe(normalizeItemName("Filet"));
+  });
+
+  it("drops invisible characters, so they do not make a new name", () => {
+    expect(normalizeItemName("Mleko\u200B")).toBe("mleko");
+    expect(normalizeItemName("Mle\u200Dko")).toBe("mleko");
+    expect(normalizeItemName("\uFEFFMleko")).toBe("mleko");
+    expect(normalizeItemName("Mleko\u2060\u00AD")).toBe("mleko");
+    expect(normalizeItemName("Mleko \u200B")).toBe("mleko");
+  });
+
+  it("still ignores case and keeps Polish letters", () => {
+    expect(normalizeItemName("MLEKO")).toBe("mleko");
+    expect(normalizeItemName("ŻÓŁTY SER")).toBe("żółty ser");
+  });
+});
+
 function errorsOf(schema: z.ZodType, input: unknown) {
   const result = schema.safeParse(input);
   return result.success ? {} : fieldErrors(result.error);

@@ -163,6 +163,23 @@ describe("SC-06 Lista", () => {
       expect(screen.getByRole("button", { name: "Więcej opcji" })).toHaveFocus();
     });
 
+    it("asks to remove hidden characters when the API refuses the name (T-060 AC4)", async () => {
+      const { user, list, sheet } = await openRename("Dom");
+      server.use(
+        http.patch(`*/api/v1/lists/${list.id}`, () =>
+          apiError(400, { code: "validation_failed", fields: { name: "invalid" } }),
+        ),
+      );
+      const field = within(sheet).getByRole("textbox", { name: "Nazwa listy" });
+
+      await user.type(field, " i działka");
+      await user.click(within(sheet).getByRole("button", { name: "Zapisz" }));
+
+      await expect.poll(() => field.getAttribute("aria-invalid")).toBe("true");
+      expect(field).toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+      expect(field).toHaveFocus();
+    });
+
     it("explains a blank name and closes on Esc without changes (AC2, AC8)", async () => {
       const { user, sheet } = await openRename("Dom");
       const field = within(sheet).getByRole("textbox", { name: "Nazwa listy" });

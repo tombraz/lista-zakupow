@@ -24,6 +24,7 @@ export function NewListForm({ onCancel, onLimitReached }: NewListFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const form = useListNameForm({
+    fieldRef: inputRef,
     save: createList,
     onSaved: (list: ListSummary) => {
       void client.invalidateQueries({ queryKey: LISTS_KEY });

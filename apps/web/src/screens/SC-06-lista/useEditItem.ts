@@ -1,19 +1,17 @@
 import {
   fieldErrors,
   updateItemRequestSchema,
-  type FieldErrorCode,
   type Item,
   type UpdateItemRequest,
 } from "@lista/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { deleteItem, updateItem } from "../../api/items";
+import { useItemFieldErrors } from "./itemFieldErrors";
 import { removeItems, replaceItem } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
-
-type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
 
 /** Tylko zmienione pola: zapis nie nadpisuje cudzej zmiany drugiego pola (F-14). */
 function changesOf(item: Item, edited: { name: string; note: string | null }): UpdateItemRequest {
@@ -27,6 +25,8 @@ export interface EditCallbacks {
   onSaved: () => void;
   /** Pozycji już nie ma: usunięta z arkusza albo wcześniej przez inną osobę (F-14). */
   onRemoved: () => void;
+  /** Pola arkusza: błąd przenosi fokus na pierwsze z nich (T-060 AC4). */
+  fields: Record<"name" | "note", RefObject<HTMLInputElement | null>>;
 }
 
 /**
@@ -37,7 +37,7 @@ export function useEditItem(listId: string, item: Item, items: Item[], callbacks
   const client = useQueryClient();
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note ?? "");
-  const [fields, setFields] = useState<Fields>({});
+  const [fields, setFields] = useItemFieldErrors(callbacks.fields);
   /** Nazwa pozycji, która już jest na liście (`dup.rename`). */
   const [duplicate, setDuplicate] = useState<string | null>(null);
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);

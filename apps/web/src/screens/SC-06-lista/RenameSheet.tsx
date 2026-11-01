@@ -26,6 +26,7 @@ export function RenameSheet({ list, onClose, returnFocus }: RenameSheetProps) {
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const form = useListNameForm({
     initial: list.name,
+    fieldRef: inputRef,
     save: (name) => renameList(list.id, name),
     onSaved: (renamed: ListSummary) => {
       client.setQueryData<ListDetails>(listKey(list.id), (current) =>
