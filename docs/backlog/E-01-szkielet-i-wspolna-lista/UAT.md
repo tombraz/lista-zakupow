@@ -38,8 +38,31 @@ Przygotuj trzy adresy e-mail testowe (A, B, C), komputer z przeglądarką i tele
 - Otwarte zadania naprawcze z przeglądu E-01 runda 3 (T-041–T-044, wszystkie niskiej wagi): spójność logu `security`, limit list w pustym stanie SC-05, stan zapisu przy równoległym unieważnianiu linków, przypięcie stałych limitów i lint.
 - T-047 (zablokowane, waga low): testy ekranów web `SignUpScreen`, `ListScreen*`, `ParticipantsScreen*` sporadycznie padają pod obciążeniem pełnego `pnpm test` lokalnie na Windows; w CI nie zaobserwowano, nie odtworzono w 11 przebiegach. Czeka na kolejną porażkę z zapisanym `test-results/vitest-junit.xml`.
 - Ręczne sprawdzenia dostępności (czytnik ekranu, tylko klawiatura, powiększenie 200 %) i Safari na iPhonie nie były wykonane przez QA — sprawdź przy krokach 5–7 na telefonie.
+- CI na `main` po merge (`b271ba3`, run 41225740398) czerwone: wszystkie 97 plików testów zielone, ale 4 nieobsłużone błędy Postgresa `57P01 terminating connection due to administrator command` przy sprzątaniu po `apps/api/test/items.limit.test.ts` (połączenia puli żyją, gdy baza testowa jest usuwana). Na `e1abd6a` ten sam zestaw zielony — niestabilne. Do zadania naprawczego przez `/plan-backlog`.
 - Poza zakresem epiku: reset hasła, usuwanie konta, uczestnicy, pasek „brak połączenia” (E-02); produkcja, monitoring, kopie (E-03); ekrany mobile (E-04).
 
 ## Wynik
 
-<Uzupełnia `/qa-task E-01` po przejściu kroków z właścicielem: pass / fail z komentarzem dla każdego kroku i data potwierdzenia.>
+**UAT potwierdzony przez właściciela: 2026-11-01.** Staging `https://lista-staging.fly.dev`, commit `b271ba3` (merge PR #1, Deploy `image` / `staging` / `zap` zielone).
+
+Warunki przed UAT: wszystkie spełnione (PR #1 zmergowany 2026-10-31, `ci-ok` zielony na `e1abd6a`, gałęzie `deploy-test/T-010*` usunięte, obraz `91c62fd…` usunięty z GHCR — potwierdził właściciel).
+
+| Krok | Wynik | Kto / komentarz |
+| --- | --- | --- |
+| 1 Staging działa | pass | właściciel |
+| 2 Konto A | pass | QA, Playwright (Chromium 1280×800) na stagingu |
+| 3 Lista, duplikat, kto dodał | pass | QA, Playwright: komunikat „„Mleko” jest już na liście. Pozycja nie została dodana.”, „dodał(a) UAT A” |
+| 4 Link zaproszenia | pass | QA, Playwright: `https://…/zaproszenie/<43 znaki>` |
+| 5 Konto B z linku | pass | QA, Playwright (WebKit, emulacja iPhone 13) oraz właściciel na prawdziwym telefonie |
+| 6 Ponowne użycie linku | pass | QA, Playwright: „Ten link nie działa”, bez nazwy listy i właściciela |
+| 7 Na żywo ≤ 5 s | pass | QA, Playwright: dodanie 88 ms, odhaczenie z „kupił(a)” 112 ms, usunięcie 97 ms |
+| 8 Trzecie konto nie widzi listy | pass | QA, Playwright: „Nie masz dostępu do tej listy.”, API 404 dla listy i pozycji, zmiany A nie docierają |
+| 9 Wylogowanie | pass | QA, Playwright: `/listy/<id>` → `/logowanie` |
+| 10 CI blokuje zepsuty test | pass | QA: PR #11 (`ci-test/E-01-uat-broken-test`), `tests` czerwony na zmienionym asercie, `ci-ok` czerwony, merge `BLOCKED`; PR zamknięty bez merge |
+| 11 Mobile | pass | QA: `mobile-android`, `mobile-ios`, `mobile` zielone na `e1abd6a`; emulator lokalnie niesprawdzany |
+| 12 Zajęty e-mail (Safari, iPhone) | pass | właściciel |
+| 13 Nowa lista w drugiej karcie | pass | QA, Playwright: 313 ms |
+| 14 Wdrożenie po merge | pass | QA: Deploy run 41225740394, `image`, `staging`, `zap` zielone |
+| Dostępność ręcznie (klawiatura, czytnik ekranu, 200 %) | pass | właściciel |
+
+Konta testowe na stagingu: `uat-a-mvwpcpcj@example.com`, `uat-b-mvwpcpcj@example.com`, `uat-c-mvwpcpcj@example.com` oraz konta właściciela z kroków 5 i 12.

@@ -1,7 +1,7 @@
 ---
 id: E-01
 title: Szkielet i pierwsza wspólna lista
-status: in-uat         # todo | in-progress | in-uat | done
+status: done           # todo | in-progress | in-uat | done
 approved: 2026-10-26    # date the user approved this epic's tasks (set by /plan-backlog)
 change:                # brownfield only: the change ID this epic implements (C-NN)
 branch: epic/E-01-szkielet-i-wspolna-lista # set by /build-epic: epic/E-xx-<slug> (epic-branch workflow)
