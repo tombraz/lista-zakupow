@@ -24,3 +24,4 @@
 2026-11-01 19:58 | T-054 | qa | PASS | 0/0/3 minor; stare linki resetu działają po udanym resecie, passwordChanged w invitationContext, brak aktualizacji docs architektury
 2026-11-01 20:16 | T-055 | implementer | NEEDS_USER | BrevoMailer gotowy; pyta o sekrety staging (BREVO_API_KEY, MAIL_FROM) i sposób sprawdzenia AC4
 2026-11-01 20:16 | T-055 | user | ANSWER | sekrety Brevo z --stage teraz; AC1–AC3/SEC1 do QA, AC4 + deployment.md po merge na main
+2026-11-01 20:19 | T-055 | implementer | IN_QA | BrevoMailer AC1–AC3/SEC1 do QA; AC4 i SEC2 po merge na main
