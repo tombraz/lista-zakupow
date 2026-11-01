@@ -3,7 +3,7 @@ id: T-055
 title: Mail resetu przez Brevo na staging
 epic: E-02
 story: S-02-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-053]
 size: S                # S | M (L must be split)
@@ -139,3 +139,31 @@ fly secrets list -a lista-staging   # do Evidence: same nazwy, bez wartości
 **Alternatywa:** wdrożyć gałąź epiku na staging ręcznie (`workflow_dispatch` / `scripts/deploy.sh` z obrazem tej gałęzi) przed merge i zweryfikować AC4 od razu, w ramach tego tasku.
 
 Answer: Rekomendacja przyjęta: właściciel ustawia sekrety staging (BREVO_API_KEY, MAIL_FROM) teraz z --stage; task do QA dla AC1–AC3 i SEC1; AC4 i wpis w deployment.md po wejściu epiku na main.
+
+## QA round 1 (2026-11-01)
+
+Verdict: pass
+
+Zakres wg odpowiedzi właściciela w „Open question”: AC1–AC3 i SEC1 w tym tasku; AC4, potwierdzenie SEC2 (skan CI, `fly secrets list`) i wpis w `deployment.md` po wejściu epiku na `main`.
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` + `pnpm check` — exit 0 (108 plików / 589 testów vitest, w tym Testcontainers; jest mobile 10/10; lint, typy, jscpd, dependency-cruiser, design-check). Instalacja nie zmieniła plików śledzonych.
+
+**Kryteria:**
+
+- AC1 — pass. Test sprawdza metodę, ścieżkę `/v3/smtp/email`, nagłówek `api-key`, `sender` z konfiguracji, `to`, `subject`, `textContent` (z polskimi znakami) i domyślny host `https://api.brevo.com`.
+- AC2 — pass. 400/401/429/500/503 → `MailDeliveryError` ze statusem; 10 s bez odpowiedzi → `MailTimeoutError` (po 9 999 ms dalej czeka); test integracyjny: `request-password-reset` 200 przy Brevo 500, log `source: mailer` tylko z typem i statusem.
+- AC3 — pass. `config.test.ts` + ręcznie: zbudowany `dist/server.js` z `MAILER=brevo` bez `BREVO_API_KEY` kończy start `ZodError` „BREVO_API_KEY is required when MAILER=brevo”; przy błędnym `MAIL_FROM` błąd startu nie zawiera wartości klucza.
+- AC4 — not verifiable (decyzja właściciela: po wdrożeniu z `main`).
+- SEC1 — pass. Testy sprawdzają brak e-maila, linku z tokenem, treści, klucza i adresu nadawcy w błędzie i w logu.
+- SEC2 — częściowo: `git grep xkeysib` bez wyników, w repo tylko wartości testowe; skan CI i `fly secrets list` — not verifiable teraz (decyzja właściciela).
+
+**Spot-check (czy testy gryzą):** `"api-key"` → `"x-key"`, `TIMEOUT_MS` 10 s → 30 s, konfiguracja bez wymogu `MAIL_FROM` — padły odpowiednio test AC1, test timeoutu i `refuses to start … without MAIL_FROM` (3 failed / 18). Kod przywrócony, `git status` czysty.
+
+**Exploit (TH-21, TH-22):** wyciek klucza/adresu w logu przy awarii dostawcy i przy błędzie startu — nie udało się (logi i ZodError bez wartości). Klucz w repo — brak.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | wdrożenie | `fly.staging.toml` ustawia `MAILER = "brevo"`: wdrożenie z `main` bez sekretów `BREVO_API_KEY` i `MAIL_FROM` zatrzyma start API na staging (zamierzone, AC3). | diff `apps/api/fly.staging.toml` | Właściciel ustawia oba sekrety (`--stage`) przed merge epiku — zgodnie z odpowiedzią. |
+| 2 | note | testy | Testy 2 (4xx/5xx) i 3 (reset przy awarii) bez czerwieni — zielone od razu; zastąpione udokumentowanym spot-checkiem, potwierdzone też w tej rundzie. | Evidence, punkty 2–3 | — |
+| 3 | minor | dokumentacja | `deployment.md` („Zmienne API”) nie wymienia `MAILER=brevo` ani sekretu `MAIL_FROM`; implementer nie mógł edytować pliku. | Evidence, „Do aktualizacji przez właściciela” | Dopisać przy weryfikacji AC4. |
+| 4 | minor | testy | Zależność kolejności w `database.test.ts > starts the next test with empty tables` przy `--sequence.shuffle` (sprzed tego tasku, zgłoszona przez implementera). | Evidence, „Weryfikacja” | Osobny task naprawczy, jeśli właściciel chce. |
