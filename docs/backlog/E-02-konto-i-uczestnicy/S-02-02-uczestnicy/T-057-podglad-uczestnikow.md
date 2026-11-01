@@ -3,7 +3,7 @@ id: T-057
 title: "Uczestnicy na SC-07: podgląd, e-maile tylko dla właściciela"
 epic: E-02
 story: S-02-02
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)
@@ -136,3 +136,38 @@ Also changed: `logs.content.test.ts` reads `GET …/members` as owner and as gue
 - SC-07 counter and the 20-participant limit (Invitations) now come from `GET …/members`, not from `members` of the list details.
 - Long name / e-mail wrap with `overflow-wrap: anywhere` (`.who`) — QA plan check at 320 px.
 - Layer guides: „Gdzie jest kod” in `backend.md` and `web.md` updated (facts).
+
+## QA round 1 (2026-11-01)
+
+Verdict: pass
+
+Środowisko: Windows 11, Docker (Postgres, Mailpit), `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych.
+
+**Reprodukcja:** `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, vitest 111 plików / 605 testów, mobile 10 testów) — zielone. `pnpm test:e2e` — 58 passed (w tym `sc07-uczestnicy.spec.ts` ×2, `j04-zaproszenie.spec.ts` „SC-07 and SC-08 states pass axe”).
+
+**Kryteria akceptacji:**
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | test 1 (`toEqual` z dokładnym kształtem i kolejnością); na żywo: właściciel dostał `participants` z `email` w kolejności dołączenia |
+| AC2 | pass | test komponentu + E2E; na żywo w Chromium 320 px: właściciel „Ania właściciel · Ty”, uczestnicy z e-mailem; uczestnik „Ania właściciel”, „Tomek Ty”, inni bez e-maila, brak „Zaproszenia” |
+| AC3 | pass | testy komponentu (pusty, szkielet 3 wierszy, błąd + ponowienie z fokusem) i E2E (pusty, błąd 500 → ponowienie) |
+| AC4 | pass | test komponentu (właściciel i uczestnik) + E2E trzy konteksty ≤ 5 s |
+| AC5 | pass | E2E axe: właściciel, uczestnik, pusty, błąd, limit (J-04); `h2` „Na liście (N z 20)” |
+| SEC1 (TH-19) | pass | test 2 (`Object.keys` = `["id","name"]`) i `participant-emails.test.ts`; na żywo: odpowiedzi API SC-07 i SC-06 uczestnika zawierają tylko jego własny e-mail (z `/me`), `GET /lists` i `GET /lists/:id` bez e-maili |
+| SEC2 (TH-01) | pass | test 3; na żywo: obcy 404 `{"error":{"code":"not_found"}}` identyczny z losowym UUID, `nie-uuid` / wstrzyknięcie w `listId` 404, anonim 401; odmowy w logu `security` (`list_access_denied`) |
+
+**Spot-checki (przywrócone, `git status` czysty):**
+
+- `membersOf` zwraca e-mail także uczestnikowi → padają `lists.members.test.ts` (participant) i `participant-emails.test.ts`.
+- trasa `/members` bez `requireListAccess` → padają testy SEC1/SEC2.
+- usunięta inwalidacja `membersKey` w `useLiveList` → padają 3 testy „members.changed” (i 2 testy limitu/fokusu zależne od odświeżenia).
+
+**Eksploracja:** długie imię (30 znaków) i e-mail (~80 znaków) na 320 px — zawijanie, brak przewijania w poziomie (`scrollWidth` = 320); log API (`test-results/api.log`) bez e-maili po przebiegu; brak pól wrażliwych w odpowiedziach dla uczestnika.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | `api.md` „Listy” opisuje `Person = { id, name, email? }`, kod rozdziela `Person` / `Participant` (`packages/shared/src/api/lists.ts`); autor świadomie nie zmienił `api.md` | Evidence „Decisions for QA” | jedna linijka w `api.md` o typie `Participant` / `ListMembers` |
+| 2 | minor | tests | Brak dowodu „red” dla E2E (test 7) — napisany po działającym zachowaniu; red dla testów 2, 3, 6 pokazany przez celowe zepsucie (potwierdzone moimi spot-checkami) | Evidence, tabela testów | akceptowalne; odnotowane |
+| 3 | note | design | Wiersz właściciela w jego widoku „właściciel · Ty” (zachowanie T-008), spec SC-07 wymienia „właściciel” / „Ty” rozłącznie | `ParticipantsScreen.tsx` `Members` | do potwierdzenia przez projekt; nie blokuje |
+| 4 | note | a11y | Manualne sprawdzenie czytnika ekranu / 200 % / Safari nie wykonane (brak narzędzi w trybie autonomicznym); automatyczny axe zielony | — | sprawdzić w UAT |
