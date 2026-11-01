@@ -18,3 +18,4 @@
 2026-10-29 13:44 | T-010 | user | ANSWER | token Fly + karta + GHCR publiczny; run 40872833932 próba 3: image/staging/zap zielone
 2026-10-29 14:40 | T-010 | implementer | IN_QA | deploy na lista-staging.fly.dev z migracjami/smoke/ZAP zielony; błędna migracja zatrzymuje wdrożenie; AC6 w deployment.md
 2026-10-29 15:14 | T-010 | qa | PASS | 0/0/2 minor; S-01-01 done; EPIC_UAT_READY; flaky InvitationScreen.entry trzyma ci-ok na czerwono
+2026-11-01 19:04 | T-053 | implementer | IN_QA | reset hasła: request-password-reset + Mailpit, limity 3/min IP i 3/15 min e-mail; 551 vitest + 52 E2E
