@@ -3,7 +3,7 @@ id: T-053
 title: "Prośba o link resetu: mail z linkiem (lokalnie, Mailpit)"
 epic: E-02
 story: S-02-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: M                # S | M (L must be split)
@@ -158,3 +158,41 @@ Przebieg 2026-11-01 (`/implement-task T-053`, tryb autonomiczny).
 - **Trasa `/reset-hasla`** jest publiczna także dla zalogowanych (nie pod `PublicOnly`), bo link z maila (T-054) może otworzyć się w przeglądarce z sesją.
 - **Przewodniki warstw (8b, fakty):** backend — „Gdzie jest kod” (nowe pliki `konta`, helpery testów `mailer.ts`, `mailpit.ts`, `PASSWORD_RESET_VALIDITY_SECONDS`), „Komendy” (`MAILPIT_URL`); web — trasa `/reset-hasla`, SC-03, `AuthForm`, `EntryLink`, Mailpit w serwerze E2E.
 - **Do aktualizacji przez właściciela (nie edytuję `docs/architecture/` poza przewodnikami):** `api.md` „Stan po T-004” — most udostępnia też `request-password-reset`, limity resetu 3/min per IP i 3/15 min per e-mail, `redirectTo` pomijany; `tech-stack.md` / `deployment.md` — zmienna `MAILPIT_URL` (lokalnie, CI).
+
+## QA round 1 (2026-11-01)
+Verdict: pass
+
+Niezależna weryfikacja (tryb autonomiczny, świeży kontekst). Wszystko poniżej uruchomione przez QA.
+
+**Odtworzenie:** `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych), `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` (depcruise bez naruszeń, jscpd OK), `pnpm design-check` (0 hard-coded): zielone. `pnpm test`: 103 pliki, 551 testów, zielone. `pnpm test:e2e`: 51/52 — `j02-listy.spec.ts` › „SEC3 another account sees no content…” [telefon] padł (timeout `toBeVisible`) w chwili, gdy równolegle działał skrypt QA w przeglądarce; ponownie `playwright test j02-listy --repeat-each 3`: 24/24 zielone. Spec niezwiązany z taskiem — niestabilność pod obciążeniem (#5). `playwright test j01 rozmiar-tekstu`: 16/16.
+
+**Kryteria akceptacji**
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | test 1 czytany: dosłowny temat i treść z SC-03 Copy, link `APP_ORIGIN/reset-hasla?token=`, `verification.expires_at` = teraz + 1 h. Na żywo (API lokalnie + Mailpit z Docker Compose): mail „Reset hasła — Wspólna lista zakupów”, treść zgodna z `mail.body`, link `http://localhost:5173/reset-hasla?token=…`. |
+| AC2 | pass | `mailpit-mailer.test.ts` w pełnym przebiegu; na żywo mail widoczny w Mailpit (`/api/v1/search`), dla nieistniejącego e-maila 0 maili. |
+| AC3 | pass | testy wejścia SC-01 / SC-02 → SC-03 → SC-01 (e-mail + zaproszenie); w Chromium i Firefox (320 px): link „Nie pamiętasz hasła?” osiągalny Tabem, Enter otwiera SC-03 z e-mailem, „Wróć do logowania” wraca z e-mailem. |
+| AC4 | pass | testy komponentu (Loading `aria-disabled`, fokus, `role="status"` z adresem wysłanym, 429 i sieć w `role="alert"`); na żywo sukces po Enter w polu. |
+| AC5 | pass | E2E `j01-reset-hasla` (oba projekty, axe w 4 stanach, `dblclick` = 1 żądanie) + test komponentu. |
+| SEC1 (TH-11) | pass | na żywo: 200 `{}` i identyczne nagłówki (poza `date`, `x-request-id`) dla istniejącego i nieistniejącego; 30 par żądań przeplatanych — mediana 20,4 ms vs 20,4 ms (brak różnicy czasu). Test z adapterem opóźnionym o 2 s czytany. |
+| SEC2 (TH-10) | pass | na żywo: jeden e-mail z różnych IP → `200,200,200,429,429`, 3 maile; nieistniejący e-mail → ten sam wzorzec; jeden IP, nowe e-maile → `200,200,200,429,429,429`. |
+| SEC3 (TH-27) | pass | `password-reset-rate-limit.test.ts` (liczba wierszy `verification` / `rate_limit` po limicie) w pełnym przebiegu; spot-check niżej. |
+| SEC4 (TH-21) | pass | log API z całej sesji eksploitów (170 linii): 0 wystąpień adresów e-mail i `token=`; zdarzenia `rate_limited` w kanale `security` z `limit`, `route`, `accountKey` (pseudonim). |
+| SEC5 (TH-14) | pass | na żywo: obcy / brak `Origin` → 403 `invalid_origin`, także `/api/%61uth/…` i z `?x=1`; `//api/…`, `/…/`, wielkie litery → 404; po atakach 0 maili. Obcy `redirectTo` + podmieniony `Host` / `X-Forwarded-Host` + e-mail wielkimi literami ze spacjami → mail do właściwej skrzynki z linkiem na `APP_ORIGIN`. Inne trasy Better Auth (`/forget-password`, `/reset-password`) dalej 404. |
+
+**Jakość testów:** spot-check — limit per e-mail wyłączony (`<= max + 100`) i `PUBLIC_AUTH_ROUTES` pominięte w `trusted-origin.ts` → 5 testów czerwonych (3 limitu e-mail, log limitu, 403 Origin); przywrócone (`git checkout`), `git status` czysty. Czerwone komunikaty w Evidence dla każdego testu z planu; testy 2 i 5b przeszły od razu, ale autor pokazał, że gryzą (zgodne z moim spot-checkiem). Mocki tylko na granicy (`Mailer`, MSW, zegar). Wrogie dane: `{}`, `""`, tablica, CRLF z `Bcc:`, `<script>` → 400 `validation_failed`; 200 kB → 413.
+
+**Przegląd kodu:** granica `Mailer` w `domain`, implementacja w `infra`, wybór w `server.ts`; HMAC e-maila wydzielony do `infra/account-key.ts` (usunięta duplikacja z `SignInFailures`); `AuthForm` wydzielony dla SC-01 / SC-03 (dwa użycia). Licznik per e-mail atomowy (`INSERT … ON CONFLICT`). Bez nadmiarowych abstrakcji i zmian poza zakresem.
+
+**Dostępność / design:** 320 px bez przewijania poziomego, tekst 200 % bez przewijania (Chromium, Firefox), cele „Nie pamiętasz hasła?” i „Wróć do logowania” 48 px, `autocomplete="email"`, błąd walidacji przez `aria-describedby`. Czytnika ekranu i urządzeń iOS/Android nie sprawdzano ręcznie (role `status` / `alert` potwierdzone testami i axe).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | UX / SC-03 | Po udanej prośbie i kolejnym wysłaniu złego adresu na ekranie zostaje stary komunikat sukcesu („Jeśli konto z adresem X istnieje…”) obok błędu pola. | Chromium i Firefox: po sukcesie wpisane „zly” + Enter → `role="status"` nadal 1, błąd „Wpisz poprawny adres e-mail” widoczny. | Komunikat sukcesu znika przy nowej próbie (walidacja nieudana) albo jest jasne, że dotyczy poprzedniego adresu. |
+| 2 | minor | Mail / T-054 | Link w treści maila kończy się kropką (`…?token=XYZ. Jeśli…`, zgodnie z Copy `mail.body`); część klientów pocztowych dołącza kropkę do linku, wtedy token na kroku 2 będzie nieważny. | Mail w Mailpit: `…reset-hasla?token=ng6OR8K5o4zprbNJvtZqeIjt. Jeśli to nie Ty…` | T-054 toleruje końcową kropkę w `token` albo Copy oddziela link od kropki (decyzja design). |
+| 3 | note | Dokumentacja | `api.md` (Konta: `redirectTo` pomijany, limity resetu), `tech-stack.md` / `deployment.md` (`MAILPIT_URL`) nieaktualne — implementer nie może ich edytować; punkt DoD „Architecture docs updated” niezaznaczony z tego powodu. | Evidence „Do aktualizacji przez właściciela”. | Właściciel aktualizuje dokumenty architektury. |
+| 4 | note | Design | Teksty spoza Copy SC-03: „Wpisz poprawny adres e-mail”, „Nie udało się wysłać linku. Spróbuj ponownie.” | `SC-03-reset-hasla/messages.ts` | Dopisać stany walidacji i błędu ogólnego do `SC-03-reset-hasla.md`. |
+| 5 | note | E2E | `j02-listy.spec.ts` „SEC3 another account…” [telefon] niestabilny pod obciążeniem maszyny (niezwiązany z taskiem). | 1 porażka w pełnym przebiegu, 0/6 w powtórkach. | Obserwować; ewentualnie dłuższy timeout lub mniej pracy w teście. |
+| 6 | note | Wdrożenie | API nie startuje bez `MAILPIT_URL`; `fly.staging.toml` go nie ma. Bezpieczne, dopóki epik trafia na `main` dopiero po T-055 (wdrożenie tylko z `main`). | `config.ts`, `deploy.yml` (`branches: [main]`). | T-055 dodaje konfigurację dostawcy na staging przed scaleniem. |
+| 7 | note | Dane testowe | QA zostawił konta `qa053-*@example.com`, `ui-*@example.com` itp. w lokalnej bazie Docker Compose i maile w lokalnym Mailpit. | — | Ewentualnie `pnpm services:reset`. |
