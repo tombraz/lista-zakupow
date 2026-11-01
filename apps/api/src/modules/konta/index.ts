@@ -10,6 +10,7 @@ import { passwordResetMail } from "./domain/reset-mail";
 import { accountKey } from "./infra/account-key";
 import { createAuth, type AuthSettings } from "./infra/auth";
 import { PasswordResetRequests } from "./infra/password-reset-requests";
+import { isSessionActive } from "./infra/sessions";
 import { SignInFailures } from "./infra/sign-in-failures";
 
 export type { AuthSettings } from "./infra/auth";
@@ -32,6 +33,8 @@ export interface Accounts {
     request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<{ user: SessionUser; sessionId: string }>;
+  /** TH-28: sesja połączenia na żywo nadal istnieje i nie wygasła. */
+  sessionActive(sessionId: string): Promise<boolean>;
   /**
    * F-01, F-12: rejestracja z `invitationToken` przyjmuje zaproszenie. Moduł `zaproszenia`
    * zależy od `konta` (sesja), więc podaje obsługę po utworzeniu (odwrócenie zależności).
@@ -78,6 +81,7 @@ export function accountRoutes(
   return {
     requireUser: (request, reply) => requireUser(auth, request, reply),
     requireSession: (request, reply) => requireSession(auth, request, reply),
+    sessionActive: (sessionId) => isSessionActive(db, sessionId, new Date()),
     acceptInvitationsOnSignUp: (accept) => {
       invitationOnSignUp = accept;
     },

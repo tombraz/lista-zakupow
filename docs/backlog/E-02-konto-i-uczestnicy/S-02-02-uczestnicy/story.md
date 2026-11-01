@@ -2,7 +2,7 @@
 id: S-02-02
 epic: E-02
 title: "Uczestnicy listy: podgląd, usunięcie, opuszczenie (web)"
-status: todo           # todo | in-progress | done
+status: in-progress           # todo | in-progress | done
 requirements: [F-13]
 screens: [SC-07, SC-06, SC-05]
 ---

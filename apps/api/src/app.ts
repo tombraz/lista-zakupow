@@ -10,7 +10,7 @@ import { apiErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
 import { accountRoutes, type AuthSettings, type Mailer } from "./modules/konta";
 import { listsModule } from "./modules/listy";
-import { createLiveHub, liveModule } from "./modules/na-zywo";
+import { createLiveHub, liveModule, type LiveHub } from "./modules/na-zywo";
 import { createItems, itemsModule } from "./modules/pozycje";
 import { invitationsModule } from "./modules/zaproszenia";
 
@@ -25,6 +25,8 @@ export interface AppOptions {
   mailer: Mailer;
   /** Czas dla domeny (odhaczenie, aktywność dzienna, wygasanie zaproszeń); testy podają własny. */
   clock?: Clock;
+  /** Hub zmian na żywo; testy podają własny, żeby wołać `revoke` jak moduł bez trasy (T-056). */
+  live?: LiveHub;
 }
 
 export function buildApp(options: AppOptions): FastifyInstance {
@@ -40,7 +42,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
   securityHeaders(app);
   trustedOrigin(app, options.auth.origin);
   healthRoutes(app, options.pool);
-  const live = createLiveHub();
+  const live = options.live ?? createLiveHub();
   const accounts = accountRoutes(app, options.pool, options.auth, {
     live,
     mailer: options.mailer,
@@ -65,6 +67,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
       const { user, sessionId } = await accounts.requireSession(request, reply);
       return { userId: user.id, sessionId };
     },
+    sessionActive: (sessionId) => accounts.sessionActive(sessionId),
     requireListAccess: async (userId, listId) => {
       await lists.requireListAccess(userId, listId, "member");
     },
