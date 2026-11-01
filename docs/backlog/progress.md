@@ -20,3 +20,4 @@
 2026-10-29 15:14 | T-010 | qa | PASS | 0/0/2 minor; S-01-01 done; EPIC_UAT_READY; flaky InvitationScreen.entry trzyma ci-ok na czerwono
 2026-11-01 19:04 | T-053 | implementer | IN_QA | reset hasła: request-password-reset + Mailpit, limity 3/min IP i 3/15 min e-mail; 551 vitest + 52 E2E
 2026-11-01 19:18 | T-053 | qa | PASS | 0/0/2 minor; stary komunikat SC-03 po błędzie walidacji, kropka po linku w mailu; flaky j02 SEC3
+2026-11-01 19:49 | T-054 | implementer | IN_QA | nowe hasło z linku SC-03 krok 2; reset usuwa sesje i zamyka WS 1008; testy zielone
