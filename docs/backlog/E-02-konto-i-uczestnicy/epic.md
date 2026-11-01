@@ -43,7 +43,7 @@ Jak w `docs/architecture/tech-stack.md`, potwierdzone przez właściciela 2026-1
 
 ## Done when
 
-- Mail resetu dochodzi na staging; link działa raz i wygasa po 1 h.
+- Mail resetu dochodzi na staging; link działa raz i wygasa po 1 h. Weryfikacja na staging (T-069) dopiero po merge PR epiku na `main` (staging wdraża się tylko z `main`, T-013; decyzja właściciela 2026-11-01), więc epik zamyka się po tym tasku.
 - Usunięty uczestnik z otwartą listą natychmiast traci dostęp (MC-03).
 - Usunięcie konta działa zgodnie z F-04; logowanie na usunięte konto się nie udaje.
 - Po resecie hasła, usunięciu konta i wygaśnięciu sesji otwarte połączenie na żywo przestaje dostawać zdarzenia (TH-28).

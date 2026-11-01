@@ -25,6 +25,7 @@ screens: [SC-03, SC-01, SC-02]
 - T-053 Prośba o link resetu: mail z linkiem (lokalnie, Mailpit)
 - T-054 Nowe hasło z linku; reset kończy wszystkie sesje
 - T-055 Mail resetu przez Brevo na staging
+- T-069 Weryfikacja maila resetu przez Brevo na staging (po merge epiku na `main`)
 
 ## Notes
 
@@ -37,3 +38,5 @@ screens: [SC-03, SC-01, SC-02]
 Wszystkie taski `done`. Kryteria 2–6 i część 1 (mail w Mailpit lokalnie) potwierdzone zielonymi testami T-053/T-054/T-055 (`pnpm check`, 589/589). **Luka:** kryterium 1 „na staging w prawdziwej skrzynce” nie jest jeszcze zweryfikowane — wg decyzji właściciela w T-055 wysyłka przez Brevo na staging jest możliwa dopiero po wdrożeniu gałęzi epiku z `main`. Story zostaje `in-progress`.
 
 **Proponowany task:** „Weryfikacja maila resetu przez Brevo na staging” (`depends_on: [T-055]`, `layers: [infra]`): po wdrożeniu — sekrety `BREVO_API_KEY`, `MAIL_FROM` (`fly secrets list` bez wartości), reset dla konta testowego, mail w skrzynce / spamie, czas dostarczenia, czy Brevo przyjmuje nadawcę z darmowej poczty; zielony skan sekretów w CI; wpis w `deployment.md` (zmienne `MAILER`, `MAIL_FROM`; zamknięcie „Wysyłka Brevo bez własnej domeny”). Zamyka AC4 i SEC2 z T-055.
+
+**Zaplanowano (2026-11-01, `/plan-backlog`):** T-069 — weryfikacja po merge E-02 na `main` (decyzja właściciela: bez ręcznego wdrażania gałęzi epiku, zasada z T-013 bez zmian).
