@@ -3,7 +3,7 @@ id: T-065
 title: Zapytania miar sukcesu (metrics.sql)
 epic: E-02
 story: S-02-05
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: S                # S | M (L must be split)
@@ -76,7 +76,7 @@ What an independent tester checks beyond the automated tests:
 - [x] Every acceptance criterion checked, with evidence below
 - [x] Global definition of done from `docs/architecture/testing-strategy.md` met
 - [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
@@ -114,3 +114,19 @@ Wznowienie po odpowiedzi właściciela (Docker działa). Pliki: `apps/api/script
 **Ustalenia na wznowienie (niezależne od środowiska):** `list_daily_activity.day` jest już datą w `Europe/Warsaw` (zapis w `statystyki`), więc tydzień = `date_trunc('week', day)::date` (poniedziałek; przełom roku nie dzieli tygodnia). „Wspólna” = lista, która **dziś** ma wiersz `list_member` (historii członkostw nie ma) — do zapisania w komentarzu pliku. Test uruchamia plik jednym zapytaniem `pg` w transakcji `BEGIN READ ONLY` (dowód „tylko czyta”); plik bez metakomend psql.
 
 Answer: Docker działa (uruchomiony przez właściciela) — wznów TDD z testami Testcontainers.
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Reprodukcja: `pnpm vitest run --project api metrics` — 3/3 zielone; `pnpm check` — exit 0 (142 pliki / 937 testów, mobile 10/10). Kryteria: AC1 pass, AC2 pass, AC3 pass, AC4 pass (wiersz „miary sukcesu” w `db.md` → „Komendy”: lokalnie, `docker exec`, produkcja rolą tylko do odczytu / `default_transaction_read_only` / Neon SQL Editor).
+
+Spot-checki (każdy cofnięty `git checkout`, `git status` czysty): usunięty filtr `EXISTS list_member` w mierze 1 → test AC1 czerwony; `checks >= 3` → `>= 2` → test AC2 czerwony; `GROUP BY a.list_id, a.day` → `GROUP BY a.day` (sumowanie list) → test AC2 czerwony.
+
+Ręcznie (`pnpm services:up` + migracje, psql w `lista-zakupow-postgres-1`, dane w transakcji wycofanej): wynik identyczny przy `TimeZone` sesji `Pacific/Kiritimati` i `America/Los_Angeles` (tydzień nie zależy od strefy sesji); granice zmiany czasu 2026-03-29 (nd.) → tydzień 2026-03-23, 2026-10-25 (nd.) → 2026-10-19; 2027-01-03 (nd.) → 2026-12-28, 2027-01-04 → 2027-01-04; po wyjściu uczestnika lista znika z miar wstecz (zgodnie z decyzją w komentarzu pliku); cały plik z `PGOPTIONS='-c default_transaction_read_only=on'` i `ON_ERROR_STOP=1` → dwie tabele, exit 0. Wynik: tylko `tydzień` i liczby. Red evidence dla testów 1–2 jest; test 3 przeszedł od razu, z dowodem, że gryzie (trzy mutacje).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Miara / czytelność | Tydzień bez żadnej aktywności na wspólnej liście nie ma wiersza (w obu miarach), więc w raporcie po 4 tygodniach „pusty” tydzień jest niewidoczny zamiast pokazać 0. Decyzja opisana w Evidence, ale nie w komentarzu pliku. | `metrics.sql` grupuje tylko istniejące wiersze `list_daily_activity` | Zapisać to w komentarzu pliku albo generować tygodnie (`generate_series`) z 0 |
+| 2 | minor | Test | Asercja na brak słów BEGIN / COMMIT / ROLLBACK / END / SET (bez rozróżniania wielkości liter) obejmuje też komentarze — angielskie słowo „end”/„set” w przyszłym komentarzu wywali test bez realnego problemu. | `apps/api/test/metrics.test.ts`, test AC3 | Sprawdzać tylko linie bez komentarza (`--`) albo polegać na `BEGIN READ ONLY` |
+| 3 | note | Kod | Filtr „lista wspólna” (`EXISTS list_member`) powtórzony w obu zapytaniach — uzasadnione (widok byłby DDL), akceptowalne przy dwóch użyciach. | `metrics.sql` | — |
