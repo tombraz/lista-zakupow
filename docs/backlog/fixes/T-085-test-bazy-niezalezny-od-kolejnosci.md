@@ -4,7 +4,7 @@ title: "Test izolacji bazy testowej niezależny od kolejności testów"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: done     # todo | in-progress | in-qa | done | blocked
+status: in-qa    # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -67,7 +67,11 @@ Poprawka: dwa jednakowe testy (`starts a test with empty tables (first probe)` /
 
 ## Prevention
 
-Co by zapobiegło: przebieg testów w losowej kolejności w CI zamiast ręcznego sprawdzenia kilku seedów (reguła w `layers/backend.md`, „Pułapki”, od QA T-051). Propozycja dla właściciela (niezastosowana): krok CI `pnpm vitest run --project api --sequence.shuffle` ze stałym seedem zmienianym co jakiś czas albo z seedem wypisywanym w logu, żeby czerwony wynik dało się powtórzyć.
+Co by zapobiegło: przebieg testów w losowej kolejności w CI zamiast ręcznego sprawdzenia kilku seedów (reguła w `layers/backend.md`, „Pułapki”, od QA T-051). Przyjęte przez właściciela (2026-11-02, po QA runda 1) i zastosowane:
+
+- `.github/workflows/ci.yml`, job `tests`: krok „Testy API w losowej kolejności (seed = numer przebiegu)” — `pnpm vitest run --project api --sequence.shuffle --sequence.seed="$SEED"`, `SEED` = `github.run_number` przez `env` (bez wstawiania wyrażenia w skrypt), seed i komenda do powtórki wypisane w logu; blokujący (przez `ci-ok`). `timeout-minutes` jobu 15 → 20 (drugi przebieg api, lokalnie ~50 s).
+- `pipeline.md` (wiersz „CI na PR”) i `layers/backend.md` („Pułapki”, T-051) opisują ten krok.
+- Sprawdzenie: `pnpm workflow-check` OK, Prettier OK; komenda kroku lokalnie z `SEED=123`: 101 plików / 429 testów zielone.
 
 ## QA round 1 (2026-11-02)
 

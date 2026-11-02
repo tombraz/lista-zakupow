@@ -120,12 +120,20 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - name: Unit, komponenty i integracja (Testcontainers)
         run: pnpm test:coverage
+      # T-085, layers/backend.md „Pułapki”: testy API nie mogą zależeć od kolejności plików ani
+      # testów w pliku. Seed zmienia się z każdym przebiegiem, a czerwony wynik da się powtórzyć.
+      - name: Testy API w losowej kolejności (seed = numer przebiegu)
+        env:
+          SEED: ${{ github.run_number }}
+        run: |
+          echo "Seed: $SEED — lokalnie: pnpm vitest run --project api --sequence.shuffle --sequence.seed=$SEED"
+          pnpm vitest run --project api --sequence.shuffle --sequence.seed="$SEED"
       - name: Raport pokrycia (bez progu)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
