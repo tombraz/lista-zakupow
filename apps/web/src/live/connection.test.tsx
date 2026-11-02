@@ -165,7 +165,6 @@ describe("back online", () => {
     list = aList({ ...LIST, members: [TOMEK] });
     live.dropAll();
     await screen.findByText(OFFLINE);
-    expect(live.connections()).toBe(1);
 
     await act(() => vi.advanceTimersByTimeAsync(1_000));
     await subscribed(live, 2);

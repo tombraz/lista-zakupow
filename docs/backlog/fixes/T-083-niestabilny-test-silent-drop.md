@@ -71,7 +71,9 @@ Inne wystąpienia tego wzorca (czekanie na ponowne połączenie z backoffem): `u
 
 ## Prevention
 
-Testy czekające na ponowne połączenie z backoffem (`LiveSocket.reconnect`) używają sztucznego zegara z jawnym `advanceTimersByTimeAsync` albo jawnego limitu `waitFor` powyżej opóźnienia, z komentarzem. Propozycja QA: dopisać to jako „Pitfall” w `docs/architecture/layers/web.md` (decyzja użytkownika).
+Co by zapobiegło: reguła, że test czekający na ponowne połączenie z backoffem nie polega na domyślnym limicie `waitFor`. Automatyczny check (lint) nie odróżni statycznie takiego czekania, więc najtańsze trwałe rozwiązanie to wpis w „Pułapkach” warstwy. Użytkownik zaakceptował (2026-11-02): wpis w `docs/architecture/layers/web.md` („Pułapki” + historia zmian). Helpera w `test/live.ts` nie zamawiano.
+
+Po QA (finding 1, minor, decyzja użytkownika): usunięta asercja `expect(live.connections()).toBe(1)` przed przesunięciem zegara — przy `shouldAdvanceTime` zależała od czasu rzeczywistego. Niestabilność `ParticipantsScreen.remove.test.tsx` → T-084.
 
 ## Incident note
 
