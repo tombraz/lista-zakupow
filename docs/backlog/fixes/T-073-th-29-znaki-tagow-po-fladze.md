@@ -4,7 +4,7 @@ title: "TH-29: ukryty tekst ze znaków tagów po 🏴 przechodzi walidację nazw
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: [F-05, F-07, F-16]
@@ -74,3 +74,34 @@ Zaakceptowane przez właściciela 2026-11-02: test własności z AC4 zostaje na 
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Zakres: commity `715a73e`, `4801627` (diff `packages/shared/src/api/text.ts`, testy w `packages/shared/test/visible-text.test.ts` i `apps/api/test/visible-text.security.test.ts`).
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `pnpm check` zielony: format, lint, typecheck, quality, design-check, backlog-check, workflow-check, `vitest run` 142 pliki / 1106/1106 (tym razem bez niestabilnego `connection.test.tsx`), `test:mobile` 10/10.
+
+**Kryteria:**
+
+- AC1 — pass. Testy „rejects hidden ASCII text after 🏴”, „more than six tags”, „hidden text ending with the cancel tag” dla 6 pól (imię przy rejestracji i zmianie, nazwa listy, nazwa pozycji przy dodaniu i edycji, notatka). Sonda QA na prawdziwym `requiredName`/`optionalNote`: „Ania 🏴” + 11 tagów → `invalid`.
+- AC2 — pass. Anglia, Szkocja, Walia przechodzą (także dwie flagi obok siebie); `gbzzz`, `plwp`, brak U+E007F, sam U+E007F, tagi bez 🏴, wielkie litery, dodatkowy tag albo drugi U+E007F po fladze, VS16 przed tagami → `invalid`.
+- AC3 — pass. ❤︎, 1️⃣, #️⃣ przechodzą; dwa selektory z rzędu, selektor bez emoji, VS16 wewnątrz keycapu z dublem → `invalid`. Sonda: `1` + U+FE0E + U+20E3 → `invalid`.
+- AC4 — pass. Test własności przechodzi po wszystkich znakach `\p{Cf}` (>150) w 13 miejscach, w tym w sąsiedztwie każdego wyjątku z `EMOJI_PART`. Wyjątek dla U+FEFF na brzegu (usuwany przez `trim()` przed zapisem) jest uzasadniony.
+- SEC1 — pass. 3 testy integracyjne (Testcontainers, prawdziwa aplikacja przez `buildTestApp`): `POST /api/v1/lists`, `POST …/items` (nazwa i notatka), `PATCH /api/v1/me` → 400 `validation_failed`, bez zapisu w bazie; flaga Anglii zapisuje się 201.
+- AC5 — pass. Sonda: 👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈, ❤️, 1️⃣, 🇵🇱 przechodzą, a także 🏴‍☠️, 🏳️‍⚧️, 🏌️‍♀️, 👩‍❤️‍💋‍👨, 🫱🏻‍🫲🏿, 🧑🏽‍🤝‍🧑🏻 (zawężony lookbehind ZWJ nie psuje sekwencji z kolorem skóry i VS16).
+
+**Spot-check:** przywrócenie starego wzorca flag w `text.ts` → 63 testy `shared` i 3 testy API czerwone; po `git checkout` znowu zielone, `git status` czysty. Czerwone dowody w Evidence zgadzają się z tym, co odtworzyłem (63 i 3).
+
+**Exploit TH-29:** wykonany na lokalnej aplikacji z prawdziwym Postgresem (testy SEC1 i sondy): ukryty tekst w tagach, w notatce po nowej linii, U+E007F bez flagi, tagi bez 🏴, flaga + ZWJ, podwójny ZWJ, LRM, BOM w środku, VS17 (U+E0100) — wszystko `invalid`. Nie da się obejść.
+
+**Web:** kod web nietknięty; `listName.ts` i `useNameChange.ts` używają schematów z `packages/shared`, więc komunikat „Usuń niewidoczne lub specjalne znaki.” obejmuje nowe przypadki. Testy SC-02/SC-05 zielone. Design-check zielony.
+
+**Root cause / Prevention:** wyjaśnia, dlaczego testy T-060 nie wyłapały błędu (brak testu „każdy Cf w każdym miejscu”); test reprodukujący pada bez poprawki (spot-check powyżej).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test / komentarz | Komentarz nad testem AC4 mówi „Jedyny zatwierdzony znak Cf to ZWJ między dwoma obrazkami”, a znaki tagów (Cf) w trzech flagach RGI też są zatwierdzone. | `packages/shared/test/visible-text.test.ts`, describe „every format character outside the approved list” | Komentarz wymienia oba wyjątki (ZWJ i tagi flag RGI). |
+| 2 | note | walidacja | Emoji z kolorem skóry + U+FE0F (👍🏽 + VS16, sekwencja spoza RGI) przechodzi. To jeden widoczny selektor zaraz po emoji, zgodny z decyzją 2026-11-02, bez możliwości ukrycia tekstu. | sonda QA: `requiredName(40).safeParse("👍🏽️")` → success | Bez zmian; do rozważenia tylko jeśli właściciel chce samych sekwencji RGI. |
+| 3 | note | testy web | Brak testu komponentu web dla przypadku z tagami; ochronę daje wspólny schemat z `shared`. | `apps/web/src/lists/listName.ts` | Opcjonalnie: jeden przypadek z 🏴 + tagami w teście SC-05. |
