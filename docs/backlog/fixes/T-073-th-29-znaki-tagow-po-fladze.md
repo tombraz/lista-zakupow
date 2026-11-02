@@ -4,7 +4,7 @@ title: "TH-29: ukryty tekst ze znaków tagów po 🏴 przechodzi walidację nazw
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: [F-05, F-07, F-16]
@@ -55,9 +55,17 @@ related_tasks: [T-060]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+Wzorzec wyjątku flag z T-060 (`712b035`, `packages/shared/src/api/text.ts:18`) usuwał przed sprawdzeniem każdy znak tagu poprzedzony przez 🏴 i dowolną liczbę tagów (`[\u{E0020}-\u{E007E}]*` w lookbehind), więc po 🏴 przechodził dowolnie długi niewidoczny tekst ASCII. Testy T-060 sprawdzały tylko, że poprawna flaga Szkocji przechodzi, a odrzucenie — wyłącznie dla wybranych znaków Cf w środku słowa; nie było testu „każdy Cf w każdym miejscu”, który objąłby sąsiedztwo wyjątków.
+
+Poprawka: trzy flagi RGI jako dokładne ciągi; lookbehind ZWJ zawężony z `[\u{FE0F}\p{Emoji_Modifier}]*` do `\p{Emoji_Modifier}?\u{FE0F}?` (bez dowolnej liczby znaków, „Pułapki” w `backend.md`). Inne wystąpienia wzorca: brak (`grep` po `apps/` i `packages/`).
 
 ## Evidence
+
+- **Red (przed poprawką):** `pnpm vitest run --project shared visible-text` — 63 testy padają, np. „name (sign-up): rejects hidden ASCII text after 🏴” (`AssertionError: expected undefined to be 'invalid'`) i test własności „rejects every format character in every place” (`expected [ 'U+E0020 right after 🏴', …(190) ] to deeply equal []`). `pnpm vitest run --project api visible-text.security` — 3 testy SEC1 padają (`expected 201 to be 400`, `expected 200 to be 400`).
+- Sonda przed poprawką: poza tagami po 🏴 przechodził tylko U+FEFF na brzegu tekstu; `trim()` w JS usuwa go przed zapisem (to odstęp), więc test własności traktuje znak usunięty przez `trim()` jako niezapisany.
+- AC3 (selektory wariantu) przechodziło już przed poprawką; testy zostają jako ochrona.
+- **Green:** `shared` 379/379; `pnpm check`: format, lint, typecheck, quality, design-check, backlog-check, workflow-check zielone; `vitest run` 1105/1106 — jedyna porażka to znany niestabilny `apps/web/src/live/connection.test.tsx` › „SC-07: after a silent drop…” (zgłoszony w QA T-059 i T-062, plik nietknięty; 3 osobne przebiegi: 2× zielony, 1× czerwony). `pnpm test:mobile` 10/10, `pnpm build` zielony.
+- **Regression:** T-060 (👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈, ❤️, 1️⃣, 🇵🇱, flaga Szkocji) — istniejące testy zielone; migracja `name_key` nie korzysta z tego wzorca.
 
 ## Prevention
 
