@@ -11,7 +11,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
-import { logLimitEvent, securityEvent } from "../../../logging";
+import { errorSummary, logLimitEvent, securityEvent } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { PasswordResetRequests } from "../infra/password-reset-requests";
@@ -143,7 +143,7 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     const response = userId
       ? await deps.resetTokens.exclusive(userId, async () => {
           const result = await forward(auth, origin, request, body);
-          if (result.ok) await deps.resetTokens.revokeAll(userId);
+          if (result.ok) await revokeOtherLinks(request, deps.resetTokens, userId);
           return result;
         })
       : await forward(auth, origin, request, body);
@@ -153,6 +153,22 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     }
     return relay(response, reply);
   });
+}
+
+/**
+ * T-087: hasło już zmienione i sesje usunięte (transakcja Better Auth), więc błąd sprzątania
+ * pozostałych linków nie może przerwać logu `password_reset` ani zamknięcia połączeń (TH-28).
+ * Linki i tak wygasają po 1 h (F-03); błąd tylko w logu, bez tokenów (TH-21).
+ */
+async function revokeOtherLinks(request: FastifyRequest, tokens: ResetTokens, userId: string) {
+  try {
+    await tokens.revokeAll(userId);
+  } catch (error) {
+    request.log.error(
+      { event: "reset_tokens_revoke_failed", userId, err: errorSummary(error) },
+      "revoking reset links failed",
+    );
+  }
 }
 
 // architecture.md, „Obserwowalność”: zdarzenia bezpieczeństwa tylko z identyfikatorami.
