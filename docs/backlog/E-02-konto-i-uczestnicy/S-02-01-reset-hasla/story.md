@@ -26,6 +26,7 @@ screens: [SC-03, SC-01, SC-02]
 - T-054 Nowe hasło z linku; reset kończy wszystkie sesje
 - T-055 Mail resetu przez Brevo na staging
 - T-069 Weryfikacja maila resetu przez Brevo na staging (po merge epiku na `main`)
+- T-088 Alert mailem do właściciela, gdy reset nie unieważni pozostałych linków (change request 2026-11-02, z T-087)
 
 ## Notes
 

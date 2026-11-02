@@ -5,7 +5,7 @@ epic: E-02
 story: S-02-01
 status: blocked        # todo | in-progress | in-qa | done | blocked
 blocked_reason: "czeka na merge PR #13 epiku E-02 na main (staging wdraża się tylko z main); po merge zmień na todo"
-depends_on: [T-055, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065]
+depends_on: [T-055, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-088]
 size: S                # S | M (L must be split)
 layers: [infra]
 requirements: [F-03, N-02]
@@ -37,7 +37,7 @@ Po wejściu E-02 na `main` i automatycznym wdrożeniu staging prośba o reset ha
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given staging wdrożony z `main` z kodem T-055, when API startuje, then maszyna jest zdrowa (smoke po wdrożeniu zielony), a `fly secrets list -a lista-staging` pokazuje `BREVO_API_KEY` i `MAIL_FROM` (same nazwy, bez wartości w Evidence). — verified by: przebieg `deploy.yml` (link) + wynik `fly secrets list`
+- [ ] AC1: Given staging wdrożony z `main` z kodem T-055, when API startuje, then maszyna jest zdrowa (smoke po wdrożeniu zielony), a `fly secrets list -a lista-staging` pokazuje `BREVO_API_KEY`, `MAIL_FROM` i `ALERT_EMAIL` (T-088) (same nazwy, bez wartości w Evidence). — verified by: przebieg `deploy.yml` (link) + wynik `fly secrets list`
 - [ ] AC2: Given istniejące konto testowe, when właściciel poprosi o reset na staging, then mail dochodzi z działającym linkiem na `lista-staging.fly.dev`, a nowe hasło działa. — verified by: ręcznie właściciel (skrzynka Gmail i druga skrzynka, np. Onet / WP)
 - [ ] AC3: Given wynik AC2, when weryfikacja się kończy, then `deployment.md` zawiera: skrzynka odbiorcza czy spam (per dostawca poczty), czas dostarczenia, czy Brevo przyjmuje nadawcę bez własnej domeny; „Zmienne API” wymieniają `MAILER=brevo` i sekret `MAIL_FROM` obok `BREVO_API_KEY`; punkt „Wysyłka Brevo bez własnej domeny” odhaczony. — verified by: diff `deployment.md`
 - [ ] SEC1 (TH-21): Given wysyłka na staging (udana oraz prośba dla nieistniejącego e-maila), when przeglądamy logi API (`fly logs -a lista-staging`), then nie zawierają klucza API, e-maila odbiorcy ani linku z tokenem. — verified by: przegląd logów z okresu weryfikacji (fragment w Evidence, zredagowany)
