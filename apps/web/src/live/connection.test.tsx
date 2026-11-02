@@ -102,6 +102,9 @@ describe("back online", () => {
     sessionIs(ANIA);
     listsAre([LIST]);
   });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("SC-06: subscribes again and shows what others changed during the break, focus stays", async () => {
     const user = userEvent.setup();
@@ -146,6 +149,10 @@ describe("back online", () => {
   });
 
   it("SC-07: after a silent drop (no browser event) fetches the participants again", async () => {
+    // Bez zdarzenia przeglądarki pierwsza próba połączenia idzie po 1000 ms (`liveSocket.ts`,
+    // backoff), czyli na granicy domyślnego limitu `waitFor`. Sztuczny zegar przesuwamy jawnie,
+    // by test nie zależał od rzeczywistego czasu ponownego połączenia (T-083).
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["setTimeout", "clearTimeout"] });
     const live = liveServer();
     let list = aList({ ...LIST, members: [] });
     server.use(...listHandlers(() => list));
@@ -158,7 +165,9 @@ describe("back online", () => {
     list = aList({ ...LIST, members: [TOMEK] });
     live.dropAll();
     await screen.findByText(OFFLINE);
+    expect(live.connections()).toBe(1);
 
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
     await subscribed(live, 2);
     act(() => {
       live.send({ type: "subscribed", listId: LIST.id });
