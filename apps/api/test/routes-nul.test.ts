@@ -286,7 +286,10 @@ describe("NUL on every /api route (T-070, TH-20)", () => {
         ...(cookie ? { cookie } : {}),
         ...(payload === undefined ? {} : json),
       },
-      ...(payload === undefined ? {} : { payload: JSON.stringify(payload) }),
+      // Tekst idzie bez zmian (np. niepoprawny JSON); obiekt jako JSON.
+      ...(payload === undefined
+        ? {}
+        : { payload: typeof payload === "string" ? payload : JSON.stringify(payload) }),
     });
   }
 
@@ -340,6 +343,28 @@ describe("NUL on every /api route (T-070, TH-20)", () => {
               body: response.body,
             });
           }
+        }
+        // T-086: parametr ponad `maxParamLength` (100) z NUL — 414 w formacie błędu API.
+        for (const name of Object.keys(params)) {
+          const value = `${"a".repeat(101)}%00`;
+          const response = await send(method, urlOf(pattern, { ...params, [name]: value }), cookie);
+          answers.push({
+            caller,
+            case: `:${name}=a×101%00`,
+            status: response.statusCode,
+            body: response.body,
+          });
+        }
+        // T-086: surowy (nieescapowany) NUL w treści to niepoprawny JSON — 400 `validation_failed`.
+        if (textFields(body()).length > 0) {
+          const raw = JSON.stringify(body()).replace('":"', '":"\u0000');
+          const response = await send(method, urlOf(pattern, params), cookie, raw);
+          answers.push({
+            caller,
+            case: "raw NUL in JSON",
+            status: response.statusCode,
+            body: response.body,
+          });
         }
         for (const field of textFields(body())) {
           for (const index of nulTexts("x").keys()) {

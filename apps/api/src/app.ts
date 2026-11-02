@@ -6,7 +6,7 @@ import { securityHeaders } from "./http/security-headers";
 import { trustedOrigin } from "./http/trusted-origin";
 import { webApp } from "./http/web-app";
 import { limitLogWindow, loggingOptions, type LogSettings } from "./logging";
-import { apiErrors } from "./http/api-error";
+import { apiErrors, frameworkErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
 import { accountRoutes, type AuthSettings, type Mailer } from "./modules/konta";
 import { listsModule } from "./modules/listy";
@@ -33,6 +33,8 @@ export function buildApp(options: AppOptions): FastifyInstance {
   const app = Fastify({
     ...loggingOptions(options.logger),
     bodyLimit: HTTP_LIMITS.bodyBytes,
+    // T-086: błędy routera (zły zapis adresu, za długi parametr) w formacie błędu API.
+    frameworkErrors,
     ...(options.trustedProxies ? { trustProxy: options.trustedProxies } : {}),
   });
   const clock = options.clock ?? systemClock;

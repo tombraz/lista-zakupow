@@ -93,8 +93,8 @@ describe("invitation token in logs", () => {
   // zakodowanym pierwszym znakiem.
   const tokenTail = (token: string) => token.slice(1);
 
-  // Ścieżkę z nieprawidłową sekwencją `%` Fastify odrzuca 400 przed routerem i nie loguje żądania.
-  const logged = (url: string) => !/^[^?]*%zz/.test(url);
+  // Ścieżkę z nieprawidłową sekwencją `%` Fastify odrzuca 400 przed routerem; od T-086
+  // (`frameworkErrors`) to żądanie też jest w logu, więc też przechodzi przez redakcję.
 
   function loggedUrls(logs: ReturnType<typeof captureLogs>): string[] {
     return logs
@@ -134,7 +134,7 @@ describe("invitation token in logs", () => {
 
     expect(logs.lines.join("\n")).not.toContain(tokenTail(link.token));
     const urls = loggedUrls(logs);
-    expect(urls).toHaveLength(requests.filter(({ url }) => logged(url)).length);
+    expect(urls).toHaveLength(requests.length);
     for (const url of urls) {
       expect(url).toMatch(/^\/api\/v1\/invitations\/\[redacted\](\/accept)?(\?x=(1|%zz))?$/);
     }
@@ -157,7 +157,7 @@ describe("invitation token in logs", () => {
 
     expect(logs.lines.join("\n")).not.toContain(tokenTail(link.token));
     const urls = loggedUrls(logs);
-    expect(urls).toHaveLength(spellings.filter(logged).length);
+    expect(urls).toHaveLength(spellings.length);
     for (const url of urls) expect(url).toMatch(/^\/zaproszenie\/\[redacted\](\?x=(1|%zz))?$/);
     await app.close();
   });

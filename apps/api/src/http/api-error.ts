@@ -1,5 +1,5 @@
 import type { ApiErrorBody, DomainErrorCode, ErrorCode } from "@lista/shared";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { DomainError } from "../domain-error";
 import { errorSummary, logLimitEvent, securityEvent } from "../logging";
 
@@ -51,8 +51,36 @@ function isClientError(error: unknown): boolean {
   return typeof statusCode === "number" && statusCode < 500;
 }
 
+/**
+ * Błąd klienta wykryty przez Fastify przed trasą (zły JSON, pusta treść, `content-type`, 413,
+ * 414 `maxParamLength`): kody `FST_ERR_*` ze statusem 4xx (T-086).
+ */
+function isFastifyClientError(error: unknown): error is { statusCode: number } {
+  const { code } = error as { code?: unknown };
+  return isClientError(error) && typeof code === "string" && code.startsWith("FST_ERR_");
+}
+
 function isBodyTooLarge(error: unknown): boolean {
   return (error as { code?: unknown }).code === "FST_ERR_CTP_BODY_TOO_LARGE";
+}
+
+/**
+ * Opcja `frameworkErrors` Fastify: błędy routera (`FST_ERR_BAD_URL` 400, `FST_ERR_MAX_PARAM_LENGTH`
+ * 414) wysyłane z pominięciem `setErrorHandler`; ten sam format co w `apiErrors` (T-086).
+ */
+export function frameworkErrors(
+  error: FastifyError,
+  request: FastifyRequest,
+  reply: FastifyReply,
+): void {
+  if (isFastifyClientError(error)) {
+    const body: ApiErrorBody = { error: { code: "validation_failed" } };
+    void reply.code(error.statusCode).send(body);
+    return;
+  }
+  request.log.error({ err: errorSummary(error) }, "unexpected error");
+  const body: ApiErrorBody = { error: { code: "internal", requestId: request.id } };
+  void reply.code(500).send(body);
 }
 
 export function apiErrors(app: FastifyInstance): void {
@@ -64,7 +92,13 @@ export function apiErrors(app: FastifyInstance): void {
     }
     // TH-13, TH-21: limit treści (`bodyLimit`) też zostawia zdarzenie w logu `security` (T-034).
     if (isBodyTooLarge(error)) logLimitEvent(request, "limit_reached", "bodyBytes");
-    // Błędy klienta z Fastify (np. 413 z limitu treści, zły JSON) obsługuje jego handler.
+    // T-086: format błędu API zamiast odpowiedzi Fastify (bez `message` z fragmentem treści);
+    // status bez zmian, kod `validation_failed` (decyzja właściciela 2026-11-02).
+    if (isFastifyClientError(error)) {
+      const body: ApiErrorBody = { error: { code: "validation_failed" } };
+      return reply.code(error.statusCode).send(body);
+    }
+    // Inne błędy klienta ze statusem (np. z wtyczek) obsługuje handler Fastify.
     if (isClientError(error)) throw error;
     // Domyślny handler wysłałby klientowi `message` wyjątku (np. SQL z parametrami).
     request.log.error({ err: errorSummary(error) }, "unexpected error");
