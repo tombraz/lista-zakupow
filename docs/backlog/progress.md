@@ -43,3 +43,4 @@
 2026-11-02 08:59 | T-059 | implementer | IN_QA | opuszczenie listy z SC-07 (POST leave), access.revoked na wszystkie połączenia, właściciel 403 owner_cannot_leave
 2026-11-02 09:17 | T-059 | qa | PASS | 0/0/4 minor; S-02-02 done; flaky connection.test.tsx (reconnect 1000 ms vs waitFor), flaky E2E sc07:64, brak tekstu błędu w Copy SC-07
 2026-11-02 10:17 | T-061 | implementer | IN_QA | PATCH /me zmiana imienia (TH-29), members.changed + lists.changed do współdzielących, formularz SC-09
+2026-11-02 10:39 | T-061 | qa | PASS | 0/0/4 minor; api.md members.changed bez zmiany imienia, zdublowany typ NameChanged, 500 gdy announce padnie po commicie
