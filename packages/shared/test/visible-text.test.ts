@@ -202,8 +202,8 @@ describe("text visible to others: variation selectors (T-073 AC3, TH-29)", () =>
   }
 });
 
-// T-073 AC4: test własności zamkniętej listy wyjątków (backend.md, „Pułapki”). Jedyny zatwierdzony
-// znak Cf to ZWJ między dwoma obrazkami; każdy inny, w każdym miejscu, daje `invalid`.
+// T-073 AC4: test własności zamkniętej listy wyjątków (backend.md, „Pułapki”). Zatwierdzone znaki Cf
+// to ZWJ między dwoma obrazkami i tagi trzech flag RGI w całości; każdy inny Cf, w każdym miejscu, daje `invalid`.
 describe("text visible to others: every format character outside the approved list (T-073 AC4, TH-29)", () => {
   const FORMAT_CHARACTERS: string[] = [];
   for (let codePoint = 0; codePoint <= 0x10ffff; codePoint++) {
