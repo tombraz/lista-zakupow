@@ -69,6 +69,12 @@ related_tasks: [T-054, T-075]
 
 ## Prevention
 
+**Co by temu zapobiegło?** Test z błędem zapytania po zatwierdzeniu zmiany w Better Auth. Testy T-054 i T-075 sprawdzały tylko ścieżkę, w której baza działa, a nowy krok sprzątania trafił przed log `security` i zamknięcie połączeń.
+
+Propozycje (użytkownik przyjął 1 i 2, 2026-11-02):
+1. Pułapka w `docs/architecture/layers/backend.md` (zastosowana): krok mostu po zatwierdzeniu w Better Auth nie może przerwać logu `security` ani zamknięcia połączeń; test z `test/failing-pool.ts`.
+2. Alert na `reset_tokens_revoke_failed` (po takim błędzie pozostałe linki resetu działają do 1 h): osobne zadanie przez `/plan-backlog`.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
