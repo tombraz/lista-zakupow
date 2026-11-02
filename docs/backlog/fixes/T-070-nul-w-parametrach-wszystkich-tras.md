@@ -4,7 +4,7 @@ title: "Inwentarz tras i WS: NUL w każdym parametrze i polu tekstowym daje 4xx,
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: [T-058]
 layers: [backend]
 requirements: [N-02]
@@ -100,3 +100,30 @@ Regresja: pozycje (`items.*.test.ts`, w tym duplikat T-060 `items.duplicate.test
 - `nulAccepted` (NUL poprawną treścią, oczekiwane tylko „nigdy 500”): `password` przy rejestracji i logowaniu, `newPassword` przy resecie (do bazy trafia skrót scrypt; HMAC dopełnia klucz zerami, więc poprawne hasło z NUL na końcu loguje — własność kryptografii, wymaga znajomości hasła) oraz `invitationToken` przy rejestracji (zły token nie blokuje rejestracji, F-12: 200 z `invitation_invalid`).
 - Każda trasa: świeży właściciel (lista, uczestnik, pozycja, link, token resetu), mutacje jako właściciel (4xx), obcy i anonim (nigdy 500); na końcu poprawne żądanie na świeżych danych ze statusem z tabeli (`ok`), żeby wpis naprawdę dochodził do handlera.
 - Zapisać regułę w `layers/backend.md` („Pułapki”): nowa trasa wymaga wpisu w tabeli testu inwentarza. Zaktualizować wiersz TH-20 w `threat-model.md` („Weryfikacja”: test inwentarza tras z NUL).
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Odtworzenie: `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych; `pnpm test` 144 pliki / 1132 testy zielone; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (0 klonów, 0 naruszeń zależności) bez błędów.
+
+Kryteria:
+
+- AC1 pass — `has an example request or a stated exclusion…` zielony; inwentarz (22 wpisy `EXAMPLES` + 4 `EXCLUDED`) zgodny 1:1 z 26 trasami w `api.md`; test sprawdza też kierunek odwrotny (`notRegistered`), więc błąd parsera `printRoutes` nie przejdzie po cichu.
+- AC2 pass — QA dodał tymczasowo `POST /api/v1/lists/:listId/qa-temp`: test czerwony z `missingInTable`; cofnięte.
+- AC3 pass — każdy parametr dostaje `%00` sam, z przodu, z tyłu, w środku, `%2500`; właściciel musi dostać 4xx z kodem z kontraktu.
+- AC4 pass — każde pole tekstowe (rekurencyjnie) z NUL w 4 pozycjach; `nulAccepted` tylko dla haseł i `invitationToken`, z powodem, i nadal „nigdy 500”.
+- AC5 pass — QA usunął `personIdSchema.safeParse(userId)` (listy/http/routes.ts:130): czerwony `DELETE …/members/:userId` i test logu; cofnięte.
+- AC6 pass — usunięcie `if (!withoutNul(name)) return;` w `pozycje/http/routes.ts` daje czerwone `POST …/items`, `PATCH …/items/:itemId` i test logu; brak wyłączeń „bo 500”.
+- AC7 pass — usunięcie `.refine(withoutNul)` w `shared/src/api/live.ts` daje czerwone `live.test.ts` i `live.nul.test.ts`; test WS liczy zapytania do bazy (0) i sprawdza poprawny `subscribe` po odrzuceniu.
+- SEC1 pass — wariant obcy i anonim w każdej trasie, regex na ślady bazy w treści odpowiedzi, test logu (brak `level >= 50`, brak `22021`).
+
+Eksploracja (tymczasowy test, usunięty): NUL w kluczu JSON, treść jako tekst / tablica, `name` jako tablica / obiekt z NUL, dodatkowy klucz z NUL w `PATCH /api/v1/me`, NUL w `note` i `id` pozycji, NUL przy duplikacie nazwy i z Cf, NUL w e-mailu logowania, `%00` w ciasteczku, w zapytaniu (`?x=%00`), w ścieżce nieznanej trasy i `/api/v1/live%00`, parametr > `maxParamLength` z `%00` — wszystkie 4xx albo ignorowane pole (200), żadnego 500 ani śladu bazy.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | API / kontrakt błędów | Treść z surowym (nieescapowanym) NUL to niepoprawny JSON: odpowiedź 400 w domyślnym kształcie Fastify `{statusCode, code:"FST_ERR_CTP_INVALID_JSON_BODY", error, message}`, nie `{error:{code}}` z `api.md`. Tak samo 414 `FST_ERR_MAX_PARAM_LENGTH`. Przed T-070, świadomie (`api-error.ts`: „błędy klienta z Fastify obsługuje jego handler”), bez 500 i bez treści bazy. | `POST /api/v1/lists` z payloadem `{"name":"<raw NUL>"}` → 400 FST_ERR_CTP_INVALID_JSON_BODY | Rozważyć mapowanie błędów klienta Fastify na `validation_failed` w kształcie kontraktu. |
+| 2 | note | Test | Inwentarz parsuje tekst `printRoutes()` (odstępstwo od `onRoute`, uzasadnione w notatkach). Zmiana formatu w nowej wersji Fastify da głośny błąd (`toContain`, `notRegistered`), nie cichą lukę. | `routes-nul.test.ts` › `registeredRoutes` | Bez zmian; przy aktualizacji Fastify sprawdzić. |
+| 3 | note | Test | Evidence: `--sequence.shuffle` seed 4242 wywraca `database.test.ts › starts the next test with empty tables` (zależność od kolejności w pliku), niezwiązane z T-070. | Evidence autora | Osobne zadanie, jeśli shuffle ma być w CI. |
+
+Root cause: wyjaśnia, dlaczego testy nie złapały błędu (ręczne testy NUL dla pojedynczych pól, T-060 testował Cf, nie NUL). Test reprodukujący pada bez poprawki (spot-check wyżej). `git status` czysty po spot-checkach.
