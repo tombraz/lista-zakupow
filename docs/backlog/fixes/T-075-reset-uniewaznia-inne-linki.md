@@ -4,7 +4,7 @@ title: "Reset hasła: udany reset unieważnia pozostałe linki resetu konta"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-03]
@@ -72,3 +72,32 @@ Better Auth (1.7.13, `reset-password`) w transakcji resetu zużywa tylko użyty 
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Weryfikacja niezależna (świeży kontekst), gałąź `epic/E-02-konto-i-uczestnicy` @ bfe5442, diff `8a297ad`.
+
+**Reprodukcja:** `pnpm vitest run --project api password-reset` → 5 plików, 27 testów zielonych. `pnpm test` → 145 plików, 1148 testów zielonych. `format:check`, `lint`, `typecheck`, `quality`, `backlog-check` — czysto. `git status` czysty po instalacji i testach.
+
+**Kryteria:**
+- AC1 — pass. Test `refuses the other unused link once the password was changed (AC1)` przez HTTP (`buildTestApp` + Testcontainers Postgres, mail przechwycony): link B → 200, link A → `400 {error:{code:"invalid_token"}}`, logowanie nowym hasłem 200. Odpowiada krokom z Report.
+- AC2 — pass. `keeps the reset links of another account valid (AC2)`: token innego konta po resecie pierwszego → 200 i nowe hasło działa.
+- AC3 — pass. Testy T-054 (`password-reset.new-password.test.ts`), T-053 (`password-reset.test.ts`, `password-reset-rate-limit.test.ts`) i `live.password-reset.test.ts` zielone.
+
+**Spot-checki (przywrócone, `git status` czysty):**
+1. Usunięcie `revokeAll` w trasie → AC1 i test równoległy czerwone (`expected { status: 200, body: {} } to deeply equal { status: 400, …}`, `expected [ 200, 200 ] to deeply equal [ 200, 400 ]`).
+2. Usunięcie filtra `eq(verification.value, userId)` → AC2 czerwony (straż przed zbyt szerokim usuwaniem działa).
+3. Usunięcie serializacji (`run()` zamiast `previous.then(run, run)`) → test równoległy czerwony.
+
+**Root cause:** wyjaśnia, czemu istniejące testy nie złapały błędu (sprawdzały tylko ten sam token). Czerwone komunikaty przed poprawką w Evidence; potwierdzone spot-checkiem 1.
+
+**TH-10 (exploit):** dwa linki jednego konta, kolejno i równolegle, przez HTTP przeciw lokalnej bazie testowej — drugi link odrzucony w obu wariantach. Blokada `exclusive` jest w pamięci procesu; zgodne z ADR 0003 (jedna instancja, `--ha=false` w `deployment.md`).
+
+**Edge cases:** reset po usunięciu konta — istniejący test `refuses the token of an account deleted in the meantime` zielony. Nieznany token omija kolejkę i idzie do Better Auth (400) — OK. `LIKE 'reset-password:%'` bez znaków specjalnych w prefiksie.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | backend / odporność | `revokeAll` działa po zatwierdzonej zmianie hasła, poza transakcją Better Auth. Jeśli DELETE się nie uda, klient dostaje 500, choć hasło jest zmienione, a `onPasswordReset` (zamknięcie połączeń na żywo, TH-28) i log `password_reset` nie zostają wykonane. | `auth-routes.ts` `newPasswordRoute`: `if (result.ok) await deps.resetTokens.revokeAll(userId)` przed `logSecurity`/`onPasswordReset` | błąd sprzątania tokenów zalogowany, ale nie blokuje zamknięcia sesji na żywo i odpowiedzi sukcesu (albo sprzątanie w tej samej transakcji) |
+| 2 | note | architektura | Serializacja resetów w pamięci procesu przestanie wystarczać przy więcej niż jednej instancji API. | `infra/reset-tokens.ts` `queues: Map` | przy zmianie ADR 0003 zastąpić blokadą w bazie (np. `pg_advisory_xact_lock`) |
