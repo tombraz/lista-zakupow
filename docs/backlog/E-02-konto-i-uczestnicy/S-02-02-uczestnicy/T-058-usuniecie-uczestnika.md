@@ -3,7 +3,7 @@ id: T-058
 title: Usunięcie uczestnika przez właściciela
 epic: E-02
 story: S-02-02
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-056, T-057, T-063]
 size: M                # S | M (L must be split)
@@ -190,3 +190,27 @@ Verdict: fail
 - Finding 3 (minor): SEC1–SEC4 ticked; their evidence is above.
 - Finding 2 (minor) not changed in this round (fix rounds cover blocker and major only): the `member_removed` log still comes after `withdrawAccess`.
 - `pnpm check`: exit 0 (121 files / 842 Vitest tests, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check).
+
+## QA round 2 (2026-11-02)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | robustness / logging | Round 1 finding 2 is still open: `securityEvent("member_removed")` comes after `withdrawAccess`. If `peopleWithAccess` throws after the committed `DELETE`, the owner gets a 500 for a removal that did happen, and the TH-21 trace is lost. | `apps/api/src/modules/listy/http/routes.ts`, the `app.delete` handler | Log right after `removeParticipant`, before the notifications. |
+| 2 | note | input validation (app-wide) | A path with invalid percent-encoding (`…/members/%C0%80`) gets Fastify's default 400 `FST_ERR_BAD_URL` body (`{"error":"Bad Request","code":…,"message":"'<url>' is not a valid url component"}`), not the API error envelope. Nothing changes and nothing leaks except the echoed URL. It happens before routing, so it applies to every route, not only this one. | Temporary QA test (deleted) | Map `FST_ERR_BAD_URL` to the standard envelope in the error handler, in T-070 or a separate task. |
+| 3 | note | authorization order | A participant who sends a NUL id now gets 404 instead of 403 `owner_only`, because validation runs before `requireListAccess`. This matches the documented route order and leaks nothing: the participant already knows the list exists. | Temporary QA test | Acceptable. |
+| 4 | note | design docs / a11y | Round 1 notes 4 to 6 still apply: `remove.failed` copy is not yet in Copy SC-07, there is no polite sentence after a removal, and the manual screen reader, zoom and reduce-motion checks belong in UAT. | — | Owner action / UAT. |
+
+### What QA ran
+
+- `pnpm install --frozen-lockfile` (lockfile unchanged), then `pnpm check`: exit 0 (121 files / 842 Vitest tests, mobile 10, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check).
+- `playwright test e2e/sc07-uczestnicy.spec.ts`: 6 passed (telefon and komputer). The existing build was used; the fix touches only the API guard.
+- Spot-check: guard `personIdSchema.safeParse(userId)` disabled → the new test "answers 404 to the owner for a participant id the database would not accept" fails with `expected 500 to be 404`; the other 4 authz tests stay green. Restored, `git status` clean.
+- Exploits (temporary test, deleted), owner unless stated: `…/members/%00`, `…/members/<id>%00`, `…/lists/%00/members/<id>`, `%F0%9F%98%80`, `%20`, a 99-character id, an empty id → 404 `not_found`; participant `%00` → 404; stranger `%00` → 404; anonymous `%00` → 401; `%C0%80` → Fastify 400 (finding 2). Membership unchanged after all of them; a real removal afterwards → 204.
+- The fix diff (`149f25f`) is small and in scope: `personIdSchema` in `packages/shared` (non-empty, `withoutNul`), checked first in the route, and one negative test. No test weakened compared with round 1.
+
+### Acceptance criteria
+
+- AC1–AC5, SEC1, SEC2, SEC4: pass. The round 1 verification stands; the fix does not touch them, and the suite and the E2E are green.
+- SEC3: pass. Hostile ids now give 404 with no change (round 1 finding 1 fixed, the test bites).
