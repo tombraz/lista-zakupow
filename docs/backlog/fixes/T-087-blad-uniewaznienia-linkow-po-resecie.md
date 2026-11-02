@@ -4,7 +4,7 @@ title: "Reset hasła: błąd unieważnienia pozostałych linków nie pomija zamk
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: [T-075]
 layers: [backend]
 requirements: [F-03]
@@ -72,3 +72,25 @@ related_tasks: [T-054, T-075]
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Bezpieczeństwo (TH-10) | Przy błędzie `revokeAll` pozostałe linki konta działają do wygaśnięcia (do 1 h). Decyzja zapisana w Root cause i dopuszczona przez AC2; BRD F-03 wymaga tylko jednorazowości i 1 h, więc to nie narusza kontraktu. Sygnałem jest wpis `error` `reset_tokens_revoke_failed`. | test: drugi link po błędzie daje 200 | Ewentualnie alert na `reset_tokens_revoke_failed` w monitoringu (decyzja użytkownika). |
+
+**Reprodukcja:** `pnpm install --frozen-lockfile` bez zmian w plikach śledzonych. `pnpm test` → 1149 testów, 0 błędów. `format:check`, `lint`, `typecheck`, `quality` (jscpd 0 klonów, depcruise 0 naruszeń) → czysto. `pnpm vitest run --project api password-reset` → 6 plików, 28 testów zielonych (w tym regresja T-075 `other reset links of the account`, `live.password-reset.test.ts`, `password-reset.logs.test.ts`).
+
+**Kryteria:**
+
+- AC1 pass: test `password-reset.revoke-failure.test.ts` sprawdza `password_reset` w `security`, zamknięcie WS kodem 1008 i wpis `reset_tokens_revoke_failed` (poziom 50, `errorSummary` z `code 57P01`); `errorSummary` nie zawiera `message` (SQL i parametry Drizzle nie trafiają do logu); brak tokenów i e-maila w całym logu.
+- AC2 pass: odpowiedź 200 `{}`, decyzja opisana w Root cause.
+- AC3 pass: pełny zestaw testów zielony.
+
+**Spot-check:** przywrócenie `await deps.resetTokens.revokeAll(userId)` w `newPasswordRoute` → test pada `expected { status: 500 } to deeply equal { status: 200 }`; zmiana cofnięta, `git status` czysty.
+
+**Jakość testu i kodu:** błąd wstrzyknięty przez pulę (`test/failing-pool.ts`, wzorzec `gated-pool.ts`), bez `vi.mock`, zgodnie z planem TDD. Asercje na zachowaniu (status, log, kod zamknięcia gniazda). Czerwony dowód w Evidence. Root cause wyjaśnia, czemu wcześniejsze testy nie wykryły błędu. Zmiana produkcyjna minimalna, bez scope creep. Kolejka `ResetTokens.exclusive` nie dostaje odrzucenia (drugi reset po błędzie 200).
+
+**Zagrożenia:** TH-28 potwierdzone testem (WS zamknięte mimo błędu). TH-10: brak nowej powierzchni ataku; jedyny skutek to uwaga #1. Próba exploitu przez lokalne środowisko testowe (Testcontainers) w ramach testu reprodukującego.
