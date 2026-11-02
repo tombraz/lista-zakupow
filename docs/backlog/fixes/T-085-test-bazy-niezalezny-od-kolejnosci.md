@@ -4,7 +4,7 @@ title: "Test izolacji bazy testowej niezależny od kolejności testów"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa    # todo | in-progress | in-qa | done | blocked
+status: done     # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -92,3 +92,22 @@ Weryfikacja własna:
 | # | Severity | Area | Finding | Evidence | Expected |
 | --- | --- | --- | --- | --- | --- |
 | 1 | note | CI / proces | Losowa kolejność testów nadal sprawdzana tylko ręcznie; propozycja z sekcji Prevention (krok CI z `--sequence.shuffle` i seedem w logu) nie jest zastosowana. | Sekcja Prevention; `layers/backend.md` „Pułapki” (T-051) | Decyzja właściciela: krok CI z losową kolejnością i wypisanym seedem. |
+
+## QA round 2 (2026-11-02)
+
+Verdict: pass
+
+Zakres: commit `2e7c8b6` (krok CI z sekcji Prevention, przyjęty przez właściciela po rundzie 1): `.github/workflows/ci.yml`, `docs/architecture/pipeline.md`, `docs/architecture/layers/backend.md`. Kod testu z `100f369` bez zmian od rundy 1. Zadanie typu fix: bez akceptacji story i epiki.
+
+Weryfikacja własna:
+
+- **Krok CI:** job `tests`, po `pnpm test:coverage`; `SEED` z `github.run_number` przez `env` (bez wstawiania wyrażenia w skrypt), seed i komenda do powtórki w logu; job `tests` jest w `needs` `ci-ok`, więc krok blokuje. Upload pokrycia ma `if: !cancelled()`, więc raport zostaje także przy czerwonym kroku; drugi przebieg bez `--coverage` nie czyści `coverage/`.
+- **Skrypt kroku lokalnie** (`SEED=1`, `SEED=58`): 101 plików / 429 testów zielone, exit 0.
+- **Czy krok łapie test zależny od kolejności (spot-check):** `database.test.ts` z `100f369^`, ten sam skrypt z `SEED=4242`: `× starts the next test with empty tables`, exit 1. Plik przywrócony (`git checkout`), `git status` czysty.
+- `pnpm workflow-check` OK, `pnpm format:check` OK, `node scripts/backlog-check.mjs` OK.
+- Dokumentacja: `pipeline.md` (etap 2) i `layers/backend.md` („Pułapki”, wpis w historii zmian) zgodne z krokiem.
+- Bezpieczeństwo: brak nowych sekretów i uprawnień; `permissions: contents: read` bez zmian; wartość z kontekstu GitHub tylko przez `env`.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Testy / raporty | Drugi przebieg (`pnpm vitest run --project api …`) używa głównego `vitest.config.ts` i nadpisuje `test-results/vitest-junit.xml` wynikami samego api. W CI plik nie jest wysyłany jako artefakt, więc bez skutku; przy lokalnym powtórzeniu kroku po `pnpm test` porażki pełnego zestawu z pliku znikają (cel T-047). | `vitest.config.ts` (`outputFile.junit`); `ci.yml` bez uploadu `test-results/` dla jobu `tests` | Ewentualnie osobny `--outputFile.junit` dla przebiegu losowego, jeśli JUnit trafi kiedyś do artefaktów. |
