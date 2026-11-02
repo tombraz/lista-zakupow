@@ -45,3 +45,4 @@
 2026-11-02 10:17 | T-061 | implementer | IN_QA | PATCH /me zmiana imienia (TH-29), members.changed + lists.changed do współdzielących, formularz SC-09
 2026-11-02 10:39 | T-061 | qa | PASS | 0/0/4 minor; api.md members.changed bez zmiany imienia, zdublowany typ NameChanged, 500 gdy announce padnie po commicie
 2026-11-02 11:38 | T-062 | implementer | IN_QA | DELETE /me usuwa konto w transakcji, po commicie zdarzenia + 1008; SC-09 sekcja usuwania; 912 testów + 74 E2E
+2026-11-02 12:01 | T-062 | qa | PASS | 0/0/3 minor; S-02-03 done; 500 zamiast 404 przy wyścigu FK, flaky test SC-09 pod obciążeniem, powód accountDeleted zostaje w cache
