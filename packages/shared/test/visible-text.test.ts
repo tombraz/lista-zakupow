@@ -4,6 +4,7 @@ import {
   createItemRequestSchema,
   fieldErrors,
   listNameRequestSchema,
+  nameChangeRequestSchema,
   signUpRequestSchema,
   updateItemRequestSchema,
 } from "../src";
@@ -23,6 +24,7 @@ const SIGN_UP = {
 /** Każde pole tekstu widocznego dla innych: kod błędu tego pola dla podanego tekstu. */
 const FIELDS: [string, (text: string) => string | undefined][] = [
   ["name (sign-up)", (text) => errorsOf(signUpRequestSchema, { ...SIGN_UP, name: text }).name],
+  ["name (change)", (text) => errorsOf(nameChangeRequestSchema, { name: text }).name],
   ["list name", (text) => errorsOf(listNameRequestSchema, { name: text }).name],
   ["item name (add)", (text) => errorsOf(createItemRequestSchema, { name: text }).name],
   ["item name (edit)", (text) => errorsOf(updateItemRequestSchema, { name: text }).name],
@@ -129,6 +131,124 @@ describe("text visible to others: at least one visible character (T-060 AC2, TH-
       expect(errorOf("Mle\u200Dko")).toBe("invalid");
       expect(errorOf("\u{1F95B}\u200Dmleko")).toBe("invalid");
       expect(errorOf("a\uFE0Fb")).toBe("invalid");
+    });
+  }
+});
+
+/** 🏴 i znaki tagów (U+E0000 + kod ASCII), np. `flag("gbeng")` to flaga Anglii. */
+const BLACK_FLAG = "\u{1F3F4}";
+const CANCEL_TAG = "\u{E007F}";
+const tags = (ascii: string) =>
+  Array.from(ascii, (letter) => String.fromCodePoint(0xe0000 + letter.charCodeAt(0))).join("");
+const flag = (region: string) => BLACK_FLAG + tags(region) + CANCEL_TAG;
+
+// T-073 AC1, AC2 (decyzja właściciela 2026-11-02): z sekwencji tagów tylko trzy flagi RGI.
+describe("text visible to others: tag sequences after the black flag (T-073, TH-29)", () => {
+  const REFUSED: [string, string][] = [
+    ["hidden ASCII text after 🏴", `Ania ${BLACK_FLAG}${tags("secret text")}`],
+    ["hidden text ending with the cancel tag", `Ania ${BLACK_FLAG}${tags("secret")}${CANCEL_TAG}`],
+    ["England without the cancel tag", `${BLACK_FLAG}${tags("gbeng")}`],
+    ["more than six tags", `${BLACK_FLAG}${tags("gbengland")}${CANCEL_TAG}`],
+    ["an unknown region gbzzz", flag("gbzzz")],
+    ["an unlisted subdivision plwp", flag("plwp")],
+    ["the cancel tag alone after 🏴", `${BLACK_FLAG}${CANCEL_TAG}`],
+    ["the cancel tag without 🏴", `Mleko${CANCEL_TAG}`],
+    ["tags without 🏴", `Mleko${tags("gbeng")}${CANCEL_TAG}`],
+    ["a tag after a valid flag", `${flag("gbeng")}${tags("x")}`],
+    ["a second cancel tag after a valid flag", `${flag("gbsct")}${CANCEL_TAG}`],
+    ["a flag followed by ZWJ", `${flag("gbwls")}‍\u{1F308}`],
+    ["upper-case tags of England", flag("GBENG")],
+    ["🏴 with VS16 before the tags", `${BLACK_FLAG}️${tags("gbeng")}${CANCEL_TAG}`],
+  ];
+
+  for (const [field, errorOf] of FIELDS) {
+    for (const [kind, text] of REFUSED) {
+      it(`${field}: rejects ${kind}`, () => {
+        expect(errorOf(text)).toBe("invalid");
+      });
+    }
+
+    it(`${field}: accepts the flags of England, Scotland and Wales`, () => {
+      expect(errorOf(`${flag("gbeng")} Anglia`)).toBeUndefined();
+      expect(errorOf(flag("gbsct"))).toBeUndefined();
+      expect(errorOf(`Walia ${flag("gbwls")}`)).toBeUndefined();
+      expect(errorOf(`${flag("gbeng")}${flag("gbsct")}`)).toBeUndefined();
+    });
+
+    it(`${field}: accepts 🏴 alone and at the end of the text`, () => {
+      expect(errorOf(BLACK_FLAG)).toBeUndefined();
+      expect(errorOf(`Piraci ${BLACK_FLAG}`)).toBeUndefined();
+    });
+  }
+});
+
+// T-073 AC3 (decyzja właściciela 2026-11-02): VS15 zaraz po emoji i VS16 w keycapie, po jednym.
+describe("text visible to others: variation selectors (T-073 AC3, TH-29)", () => {
+  for (const [field, errorOf] of FIELDS) {
+    it(`${field}: accepts VS15 right after an emoji and VS16 in a keycap`, () => {
+      expect(errorOf("❤︎ Zakupy")).toBeUndefined();
+      expect(errorOf("1️⃣ pierwsza")).toBeUndefined();
+      expect(errorOf("#️⃣")).toBeUndefined();
+    });
+
+    it(`${field}: rejects two variation selectors in a row or one without an emoji`, () => {
+      expect(errorOf("❤️️")).toBe("invalid");
+      expect(errorOf("❤︎️")).toBe("invalid");
+      expect(errorOf("❤️︎")).toBe("invalid");
+      expect(errorOf("1️️⃣")).toBe("invalid");
+      expect(errorOf("Mleko︎")).toBe("invalid");
+      expect(errorOf("︎ mleko")).toBe("invalid");
+    });
+  }
+});
+
+// T-073 AC4: test własności zamkniętej listy wyjątków (backend.md, „Pułapki”). Jedyny zatwierdzony
+// znak Cf to ZWJ między dwoma obrazkami; każdy inny, w każdym miejscu, daje `invalid`.
+describe("text visible to others: every format character outside the approved list (T-073 AC4, TH-29)", () => {
+  const FORMAT_CHARACTERS: string[] = [];
+  for (let codePoint = 0; codePoint <= 0x10ffff; codePoint++) {
+    if (codePoint >= 0xd800 && codePoint <= 0xdfff) continue;
+    const char = String.fromCodePoint(codePoint);
+    if (/\p{Cf}/u.test(char)) FORMAT_CHARACTERS.push(char);
+  }
+
+  // Miejsca, w których żaden znak Cf (także ZWJ) nie jest zatwierdzony; obejmują sąsiedztwo każdego
+  // wyjątku z `EMOJI_PART`: obrazek, kolor skóry, selektor wariantu, keycap, ZWJ, 🏴 i flagę.
+  const PLACES: [string, (char: string) => string][] = [
+    ["at the start", (c) => `${c}Mleko`],
+    ["inside a word", (c) => `Mle${c}ko`],
+    ["at the end", (c) => `Mleko${c}`],
+    ["right after an emoji", (c) => `\u{1F95B}${c} mleko`],
+    ["after an emoji with a skin tone", (c) => `\u{1F469}\u{1F3FD}${c} kucharka`],
+    ["after an emoji with VS16", (c) => `❤️${c} Zakupy`],
+    ["after an emoji with VS15", (c) => `❤︎${c} Zakupy`],
+    ["inside a keycap", (c) => `1️${c}⃣`],
+    ["after a keycap", (c) => `1️⃣${c}`],
+    ["after a ZWJ sequence", (c) => `\u{1F468}‍\u{1F469}${c} rodzina`],
+    ["right after 🏴", (c) => `${BLACK_FLAG}${c} Ania`],
+    [
+      "inside the tags of a flag",
+      (c) => `${BLACK_FLAG}${tags("gb")}${c}${tags("eng")}${CANCEL_TAG}`,
+    ],
+    ["right after a flag", (c) => `${flag("gbeng")}${c} Anglia`],
+  ];
+
+  it("finds the format characters to check", () => {
+    expect(FORMAT_CHARACTERS.length).toBeGreaterThan(150);
+    expect(FORMAT_CHARACTERS).toContain("‍");
+    expect(FORMAT_CHARACTERS).toContain(CANCEL_TAG);
+  });
+
+  for (const [field, errorOf] of FIELDS) {
+    it(`${field}: rejects every format character in every place`, () => {
+      // `trim()` usuwa U+FEFF z brzegów przed zapisem (odstęp w JS), więc ten znak nie zostaje.
+      const removedByTrim = (text: string, char: string) => !text.trim().includes(char);
+      const accepted = PLACES.flatMap(([place, insert]) =>
+        FORMAT_CHARACTERS.filter(
+          (char) => errorOf(insert(char)) !== "invalid" && !removedByTrim(insert(char), char),
+        ).map((char) => `U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase()} ${place}`),
+      );
+      expect(accepted).toEqual([]);
     });
   }
 });

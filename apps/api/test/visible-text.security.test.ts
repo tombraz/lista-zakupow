@@ -111,6 +111,72 @@ describe("text with hidden characters on every route that saves text for others"
   });
 });
 
+// T-073 SEC1 (TH-29): ukryty tekst ze znaków tagów po 🏴 nie przechodzi przez API.
+describe("text hidden in tag characters after the black flag", () => {
+  const db = useTestDatabase();
+  const tags = (ascii: string) =>
+    Array.from(ascii, (letter) => String.fromCodePoint(0xe0000 + letter.charCodeAt(0))).join("");
+  const HIDDEN = `Ania 🏴${tags("secret text")}`;
+  const ENGLAND = `🏴${tags("gbeng")}${String.fromCodePoint(0xe007f)}`;
+
+  async function rows(sql: string) {
+    return (await db.pool.query<Record<string, unknown>>(sql)).rows;
+  }
+
+  it("refuses to create a list with hidden tags and creates nothing", async () => {
+    const app = buildTestApp(db.pool);
+    const asAnia = requestsAs(app, await createUser(app));
+
+    const response = await asAnia("POST", "/api/v1/lists", { name: HIDDEN });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual(invalid("name"));
+    expect(await rows("SELECT 1 FROM shopping_list")).toEqual([]);
+    await app.close();
+  });
+
+  it("refuses to add an item with hidden tags in the name or the note and adds nothing", async () => {
+    const app = buildTestApp(db.pool);
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+    const add = (body: object) =>
+      requestsAs(app, ania)("POST", `/api/v1/lists/${list.id}/items`, body);
+
+    const byName = await add({ name: HIDDEN });
+    const byNote = await add({ name: "Chleb", note: HIDDEN });
+
+    expect(byName.statusCode).toBe(400);
+    expect(byName.json()).toEqual(invalid("name"));
+    expect(byNote.statusCode).toBe(400);
+    expect(byNote.json()).toEqual(invalid("note"));
+    expect(await rows("SELECT 1 FROM item")).toEqual([]);
+    await app.close();
+  });
+
+  it("refuses to change the name to one with hidden tags and keeps the old one", async () => {
+    const app = buildTestApp(db.pool);
+    const asTomek = requestsAs(app, await createUser(app, { name: "Tomek" }));
+
+    const response = await asTomek("PATCH", "/api/v1/me", { name: HIDDEN });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual(invalid("name"));
+    expect((await asTomek("GET", "/api/v1/me")).json<{ name: string }>().name).toBe("Tomek");
+    await app.close();
+  });
+
+  it("accepts the flag of England in a list name", async () => {
+    const app = buildTestApp(db.pool);
+    const asAnia = requestsAs(app, await createUser(app));
+
+    const response = await asAnia("POST", "/api/v1/lists", { name: `Anglia ${ENGLAND}` });
+
+    expect(response.statusCode).toBe(201);
+    expect(await rows("SELECT name FROM shopping_list")).toEqual([{ name: `Anglia ${ENGLAND}` }]);
+    await app.close();
+  });
+});
+
 // T-060 AC3 (F-09, TH-29): wariant zgodności Unicode to duplikat.
 describe("adding a compatibility variant of a name that is already on the list", () => {
   const db = useTestDatabase();

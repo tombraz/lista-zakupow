@@ -8,14 +8,16 @@ export const withoutNul = (text: string) => !text.includes("\u0000");
 // ukryć część nazwy przed innymi albo zrobić nazwę pustą wizualnie.
 const HIDDEN_CHARACTER = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 
-// Wyjątki tylko wewnątrz emoji: ZWJ między obrazkami (👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈), selektor wariantu
-// po obrazku (❤️) i w keycapie (1️⃣), znaczniki flag regionów (🏴 + tagi).
+// Zamknięta lista wyjątków tylko wewnątrz emoji; żaden wzorzec nie dopuszcza dowolnej liczby
+// znaków Cf (backend.md, „Pułapki”, T-073). ZWJ między obrazkami (👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈), jeden
+// selektor wariantu po obrazku (❤️, ❤︎) i w keycapie (1️⃣) oraz trzy flagi RGI z tagami jako
+// dokładne ciągi: Anglia, Szkocja, Walia (decyzja właściciela 2026-11-02).
 const EMOJI_PART = new RegExp(
   [
-    String.raw`(?<=\p{Extended_Pictographic}[\u{FE0F}\p{Emoji_Modifier}]*)\u{200D}(?=\p{Extended_Pictographic})`,
+    String.raw`(?<=\p{Extended_Pictographic}\p{Emoji_Modifier}?\u{FE0F}?)\u{200D}(?=\p{Extended_Pictographic})`,
     String.raw`(?<=\p{Extended_Pictographic}\p{Emoji_Modifier}?)[\u{FE0E}\u{FE0F}]`,
     String.raw`(?<=[#*0-9])\u{FE0F}(?=\u{20E3})`,
-    String.raw`(?<=\u{1F3F4}[\u{E0020}-\u{E007E}]*)[\u{E0020}-\u{E007F}]`,
+    String.raw`(?<=\u{1F3F4})\u{E0067}\u{E0062}(?:\u{E0065}\u{E006E}\u{E0067}|\u{E0073}\u{E0063}\u{E0074}|\u{E0077}\u{E006C}\u{E0073})\u{E007F}`,
   ].join("|"),
   "gu",
 );
