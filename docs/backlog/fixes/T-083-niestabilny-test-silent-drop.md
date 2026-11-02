@@ -4,7 +4,7 @@ title: "Niestabilny test SC-07 „after a silent drop” w connection.test.tsx"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-15]
@@ -28,9 +28,9 @@ related_tasks: [T-063, T-059, T-062]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given test „after a silent drop”, when uruchomiony 20 razy pod `--sequence.shuffle` oraz w pełnym `pnpm test`, then zielony za każdym razem; test nie zależy od rzeczywistego czasu ponownego połączenia (np. sztuczny zegar albo jawny limit `waitFor` powyżej opóźnienia pierwszej próby, z uzasadnieniem w komentarzu). — verified by: pętla przebiegów zapisana w Evidence
-- [ ] AC2: Test nadal sprawdza to samo zachowanie: po cichym zerwaniu pasek „Brak połączenia”, ponowna subskrypcja, ponowne pobranie uczestników i zniknięcie paska. — verified by: przegląd testu (mutacja: wyłączenie ponownego pobrania w `useLiveList` daje czerwony test)
-- [ ] AC3: No regression in: pozostałe testy `apps/web/src/live/`, T-063 (pasek „Brak połączenia”), T-059.
+- [x] AC1: Given test „after a silent drop”, when uruchomiony 20 razy pod `--sequence.shuffle` oraz w pełnym `pnpm test`, then zielony za każdym razem; test nie zależy od rzeczywistego czasu ponownego połączenia (np. sztuczny zegar albo jawny limit `waitFor` powyżej opóźnienia pierwszej próby, z uzasadnieniem w komentarzu). — verified by: pętla przebiegów zapisana w Evidence
+- [x] AC2: Test nadal sprawdza to samo zachowanie: po cichym zerwaniu pasek „Brak połączenia”, ponowna subskrypcja, ponowne pobranie uczestników i zniknięcie paska. — verified by: przegląd testu (mutacja: wyłączenie ponownego pobrania w `useLiveList` daje czerwony test)
+- [x] AC3: No regression in: pozostałe testy `apps/web/src/live/`, T-063 (pasek „Brak połączenia”), T-059.
 
 ## TDD plan
 
@@ -51,12 +51,30 @@ related_tasks: [T-063, T-059, T-062]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego: potwierdzić albo obalić hipotezę z Report, na podstawie komunikatu z junit. Sprawdzić, czy inne testy z `liveServer` czekają na ponowne połączenie z backoffem tym samym domyślnym `waitFor`.>
+Hipoteza QA T-059 potwierdzona. Po cichym zerwaniu (`live.dropAll()`, bez zdarzenia `online`) `LiveSocket.reconnect()` planuje pierwszą próbę po `1000 * 2 ** 0` = 1000 ms (`apps/web/src/live/liveSocket.ts:216`), a test czekał na drugą subskrypcję zwykłym `waitFor` z domyślnym limitem 1000 ms, liczonym od chwili pojawienia się paska OFFLINE (czyli nieco po starcie backoffu). Zapas wynosił kilkadziesiąt ms minus czas otwarcia gniazda MSW i wysłania `subscribe`; pod obciążeniem przekraczał limit. Kod produkcyjny jest poprawny.
+
+Dlaczego testy tego nie złapały: test przechodzi w zwykłym, pojedynczym przebiegu (okno na granicy), a porażka pojawia się tylko pod obciążeniem; nic nie wymusza, by testy czekające na backoff używały sztucznego zegara albo jawnego limitu.
+
+Inne wystąpienia tego wzorca (czekanie na ponowne połączenie z backoffem): `useLiveList.test.tsx:156` i `sessionEnded.test.tsx:98` mają jawny `timeout: 3000` — w porządku; „browser goes online” w `connection.test.tsx` łączy się od razu po zdarzeniu `online` — w porządku. Innych nie ma.
+
+## Fix
+
+`connection.test.tsx` › „SC-07: after a silent drop…”: sztuczny zegar (`vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["setTimeout", "clearTimeout"] })`, jak w teście „no ping” w tym samym pliku), po pojawieniu się paska sprawdzenie, że nadal jest 1 połączenie, i jawne `vi.advanceTimersByTimeAsync(1_000)` do pierwszej próby; `afterEach(vi.useRealTimers)` w `describe("back online")`. Komentarz w teście uzasadnia zmianę. Kod produkcyjny bez zmian.
 
 ## Evidence
 
+- **Odtworzenie (przed poprawką):** 6 równoległych przebiegów `pnpm vitest run --project web src/live/connection.test.tsx src/live/useLiveList.test.tsx src/screens/SC-07-uczestnicy --sequence.shuffle` → 1/6 czerwony: `× SC-07: after a silent drop (no browser event) fetches the participants again 1443ms`, `AssertionError: expected [ { type: 'subscribe', …(1) } ] to have a length of 2 but got 1` (`connection.test.tsx:32`, helper `subscribed`).
+- **AC1 (po poprawce):** 20 przebiegów tej samej komendy z `--sequence.shuffle`, po 4 równolegle (obciążenie) → test „silent drop” zielony 20/20. Pełne `pnpm check` (format, lint, typecheck, quality, design/backlog/workflow-check, `pnpm test` 142 pliki, `test:mobile`) → exit 0.
+- **AC2 (mutacja):** zakomentowanie `client.invalidateQueries({ queryKey: listKey(listId) })` w `onReconnect` (`useLiveList.ts:60`) → test czerwony: `Unable to find an element with the text: Tomek`; po przywróceniu zielony. Asercje paska OFFLINE, drugiej subskrypcji, ponownego pobrania i zniknięcia paska bez zmian.
+- **AC3:** `apps/web/src/live/` i `src/screens/SC-07-uczestnicy` zielone w pętli; pełne `pnpm test` zielone.
+- **Znalezisko poza zakresem (inna przyczyna):** w 1/20 przebiegów pętli AC1 padł `ParticipantsScreen.remove.test.tsx` › „makes „Usuń” inactive without a connection…” z `Unable to find role="region" and name "Na liście (1 z 20)"` (zapytanie z linii 160, poprzedni test „retries…”; prawdopodobnie domyślny limit `findByRole` po ponownej próbie usunięcia pod obciążeniem, bez backoffu). Proponowane osobne zadanie fix.
+
 ## Prevention
 
+<uzupełnić po QA (Step 8)>
+
 ## Incident note
+
+Nie dotyczy (tylko test).
 
 <!-- QA rounds are appended below by /qa-task -->
