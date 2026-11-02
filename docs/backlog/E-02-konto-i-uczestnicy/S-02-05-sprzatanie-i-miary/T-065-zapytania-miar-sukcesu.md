@@ -3,7 +3,7 @@ id: T-065
 title: Zapytania miar sukcesu (metrics.sql)
 epic: E-02
 story: S-02-05
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: S                # S | M (L must be split)
@@ -83,3 +83,15 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 ## Evidence
 
 <Filled by /implement-task: test names, command output summary, screenshots for UI.>
+
+## Open question
+
+**Co się nie udało (FAILED, środowisko):** demon Dockera nie działa (`docker info`: brak `npipe:////./pipe/dockerDesktopLinuxEngine`), a cały plan TDD tego taska to testy integracyjne Vitest + Testcontainers. Bez Dockera nie da się zobaczyć ani czerwonego, ani zielonego testu, więc nie napisano jeszcze ani testu, ani `apps/api/scripts/metrics.sql`. Agent nie ma uprawnień do uruchomienia Docker Desktop.
+
+**Pytanie:** czy uruchomisz Docker Desktop (i zostawisz go włączonego na czas pętli), żeby można było wznowić T-065?
+
+**Rekomendacja:** uruchomić Docker Desktop i dopisać `Answer:` — kolejny przebieg zaczyna od testu 1 planu.
+
+**Alternatywa:** dać agentowi uprawnienie do startu Docker Desktop (reguła w ustawieniach Claude Code), żeby pętla sama podnosiła demona.
+
+**Ustalenia na wznowienie (niezależne od środowiska):** `list_daily_activity.day` jest już datą w `Europe/Warsaw` (zapis w `statystyki`), więc tydzień = `date_trunc('week', day)::date` (poniedziałek; przełom roku nie dzieli tygodnia). „Wspólna” = lista, która **dziś** ma wiersz `list_member` (historii członkostw nie ma) — do zapisania w komentarzu pliku. Test uruchamia plik jednym zapytaniem `pg` w transakcji `BEGIN READ ONLY` (dowód „tylko czyta”); plik bez metakomend psql.
