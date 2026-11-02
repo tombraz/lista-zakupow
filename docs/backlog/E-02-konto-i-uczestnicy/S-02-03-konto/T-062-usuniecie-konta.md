@@ -3,7 +3,7 @@ id: T-062
 title: Usunięcie konta (SC-09)
 epic: E-02
 story: S-02-03
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-056, T-063]
 size: M                # S | M (L must be split)
@@ -142,3 +142,46 @@ Run 2026-11-02 (implementer). Commands: `pnpm check` (format, lint, typecheck, j
 ### Layer guides (Step 8b)
 
 `docs/architecture/layers/backend.md` and `web.md` — „Gdzie jest kod” and the change history updated with the new files (facts only).
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+**Reproduce.** `pnpm install --frozen-lockfile` (no tracked files changed). `pnpm check`: format, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check green; `vitest run` 909/912 in that run — failures: `connection.test.tsx` › „SC-07: after a silent drop…” (known flake, T-059 QA), `PasswordResetScreen.entry.test.tsx` (5 s timeout under load) and this task's `AccountScreen.delete.test.tsx` › „deletes once…” (`Unable to find role="status"`, finding 2). Rerun: the three files 3× (connection flake once more, the others green), the T-062 component file 8× alone (10/10 each), `vitest run --project web` 2× (36/36 files), full `pnpm test` again: 137 files / 912 tests pass. `pnpm test:mobile` 10/10. E2E `playwright test e2e/j01-*.spec.ts` (telefon + komputer): 18/18 incl. the T-062 spec on both.
+
+**Acceptance criteria.**
+
+- AC1 pass — `me.delete.test.ts` asserts row counts before/after for every table in the inventory and the unsigned item on Ola's list. Spot-check: `tx.delete(user)` removed → AC1 and SEC1 tests fail; reverted.
+- AC2 pass — 4 bodies → 400, state unchanged; also `confirm: 1` → 400 (QA probe).
+- AC3 pass — WS integration + E2E (Tomek on „Dom” → SC-05 with the deletion message; „Działka” shows „dodał(a) usunięty użytkownik”). Spot-check: `announce()` removed → both event tests fail, the 1008 test still passes; reverted.
+- AC4 pass — component tests read; dialog count, focus on „Anuluj”, Escape/Anuluj blocked while saving, one request on double click, `replace` to SC-01 with `role="status"`, error text, offline, retry-401.
+- AC5 pass — E2E axe on SC-09, open dialog, SC-01 after deletion (both projects).
+- SEC1 pass — both sessions 401, sign-in 401 `invalid_credentials` identical to unknown e-mail.
+- SEC2 pass — both sockets closed 1008, upgrade 401; other users' sockets stay open.
+- SEC3 pass — `me.delete.others.test.ts`.
+- SEC4 pass — `account_deleted` with `userId` only; anonymous 401, foreign/missing `Origin` 403.
+
+**Exploratory (QA scratch test in `apps/api/test`, removed after; Testcontainers DB).**
+
+- Account without lists: 204. Double submit (two parallel DELETEs): 204 + 401 `unauthenticated`, no 500.
+- 50 lists × 500 items: 204 in 790 ms, all items gone.
+- Invitation link of the deleted owner: lookup and accept → 410 `invitation_invalid`.
+- Re-registration with the same e-mail works (author's test + E2E regression J-01 green).
+- After deletion no row in any public table contains the e-mail, the name or the user id (incl. `sign_in_failure`, `verification`, `rate_limit`) — data-model inventory met.
+- Participant adding items to D's own list while D deletes the account: some adds answer 500 `internal` instead of 404 (finding 1). The same race gives 500 for a plain `DELETE /api/v1/lists/:id` (pre-existing, not introduced here). No data left behind.
+- Authorisation: the route acts only on the session's user (no id parameter), so a second account cannot target D; anonymous / foreign-origin covered by tests.
+
+**Test quality.** Planned tests 1–8 present; red evidence shown for 1, 3, 5, 6, 7; tests 2, 4 and the 1008 case passed first with documented bite checks (I repeated two). Test 8 (E2E) not seen red — allowed by testing-strategy order. Tests use the HTTP/WS/MSW seams, literals from the spec.
+
+**Code review.** Transaction with row lock, collection before delete, events and `closeUser` after commit, dependency inversion `konta` → `listy` consistent with the existing `announceNameChanges`. No scope creep, copy matches SC-09, Button `danger` = „niebezpieczny-tekstowy”.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | backend / F-14 | Item added by a participant to D's own list during account deletion answers 500 `internal` (FK violation after the locked list row is gone) instead of 404; same pre-existing race with `DELETE /api/v1/lists/:id` | QA scratch test: 10 parallel `POST …/items` + `DELETE /api/v1/me` → `204,404,500,404,500,…`; list delete → `204,500,404,500,…` | data-model.md „Usunięcie wygrywa z równoczesną edycją”: 404 `not_found` (map FK violation 23503 on item insert to 404); follow-up fix task |
+| 2 | minor | tests (this task) | `AccountScreen.delete.test.tsx` › „deletes once…” failed once under full `pnpm check` load (`findByRole("status")` with RTL default 1000 ms, DOM empty) | 1 failure in `pnpm check`; 8 isolated runs and 3 full/web runs green | Explicit `findByRole` timeout or a higher global `asyncUtilTimeout` |
+| 3 | minor | web / SC-01 | The `accountDeleted` reason stays in the query cache until the next sign-in: after deletion any later redirect from a protected URL (e.g. typing `/listy`) shows „Konto zostało usunięte.” again and drops `from` | Code reading: `useSession.ts` (`SESSION_END_KEY` removed only by `useSetSession(user)` or another `endSession`), `guards.tsx` reads it on every redirect; not exercised in the browser | Consume the reason once (clear it when SC-01 has rendered it) |
+| 4 | note | tests (outside task) | Known flakes reappeared under load: `connection.test.tsx` „silent drop” (T-059 QA #1) and `PasswordResetScreen.entry.test.tsx` 5 s timeout | `pnpm check` run 1; rerun green | Fix task from T-059 QA |
+| 5 | note | coverage | Demo step 4 (second browser of D lands on SC-01 at next action) is not in E2E; covered by SEC1 (401 for both sessions) plus the T-018 401 handling | — | Optional E2E step |
+| 6 | note | accessibility | Manual checks (screen reader, 200 % zoom, reduce motion, real phones Safari/Chrome) not performed — no device/AT tooling in this run; automated axe green on all three states, keyboard focus/Escape covered by tests | — | Cover in epic UAT |
+
+`git status` clean after spot-checks and the scratch test.
