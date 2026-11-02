@@ -27,18 +27,21 @@ describe("integration database harness", () => {
     expect(applied).toBe(journal.entries.length);
   });
 
-  // Testy poniżej celowo zależą od kolejności: drugi sprawdza, że nie widzi danych pierwszego.
-  it("lets a test write data", async () => {
+  // Dwa takie same testy w dowolnej kolejności (także `--sequence.shuffle`, T-085): każdy zapisuje
+  // wiersz i widzi tylko swój, więc ten, który wykona się drugi, pada, gdy czyszczenie nie działa.
+  async function writeOneRowAndSeeOnlyIt(value: string) {
     await db.pool.query("CREATE TABLE IF NOT EXISTS isolation_probe (value text NOT NULL)");
-    await db.pool.query("INSERT INTO isolation_probe (value) VALUES ('from the previous test')");
+    await db.pool.query("INSERT INTO isolation_probe (value) VALUES ($1)", [value]);
 
     const { rows } = await db.pool.query("SELECT value FROM isolation_probe");
-    expect(rows).toHaveLength(1);
+    expect(rows).toEqual([{ value }]);
+  }
+
+  it("starts a test with empty tables (first probe)", async () => {
+    await writeOneRowAndSeeOnlyIt("first probe");
   });
 
-  it("starts the next test with empty tables", async () => {
-    const { rows } = await db.pool.query("SELECT value FROM isolation_probe");
-
-    expect(rows).toEqual([]);
+  it("starts a test with empty tables (second probe)", async () => {
+    await writeOneRowAndSeeOnlyIt("second probe");
   });
 });
