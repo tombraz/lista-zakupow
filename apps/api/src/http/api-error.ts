@@ -22,6 +22,7 @@ export class ApiError extends Error {
 const DOMAIN_STATUS: Record<DomainErrorCode, number> = {
   not_found: 404,
   owner_only: 403,
+  owner_cannot_leave: 403,
   limit_reached: 409,
   duplicate_item: 409,
   own_list: 409,

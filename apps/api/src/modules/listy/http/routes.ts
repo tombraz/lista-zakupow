@@ -15,6 +15,7 @@ import {
   createList,
   deleteList,
   everyone,
+  leaveList,
   listOf,
   listsOf,
   membersOf,
@@ -109,7 +110,7 @@ export function listRoutes(
   });
 }
 
-/** F-13: uczestnicy listy (SC-07) i ich usunięcie przez właściciela. */
+/** F-13: uczestnicy listy (SC-07), ich usunięcie przez właściciela i opuszczenie listy. */
 function memberRoutes(
   app: FastifyInstance,
   accounts: Accounts,
@@ -136,6 +137,14 @@ function memberRoutes(
       userId: user.id,
       removedUserId: userId,
     });
+    return reply.code(204).send();
+  });
+
+  app.post<ListParams>("/api/v1/lists/:listId/leave", async (request, reply) => {
+    const user = await accounts.requireUser(request, reply);
+    const access = await requireListAccess(repository, user.id, request.params.listId, "member");
+    await leaveList(repository, access, user.id);
+    await withdrawAccess(live, repository, access.listId, user.id);
     return reply.code(204).send();
   });
 }

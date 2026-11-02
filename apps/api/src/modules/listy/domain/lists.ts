@@ -211,3 +211,16 @@ export async function removeParticipant(
     throw new DomainError("not_found");
   }
 }
+
+/**
+ * F-13: uczestnik opuszcza listę, do której dostęp jest już sprawdzony; jego pozycje zostają.
+ * Właściciel nie może opuścić własnej listy (może ją usunąć, F-05).
+ */
+export async function leaveList(
+  repository: ListsRepository,
+  access: ListAccess,
+  userId: string,
+): Promise<void> {
+  if (access.role === "owner") throw new DomainError("owner_cannot_leave");
+  await removeParticipant(repository, access, userId);
+}

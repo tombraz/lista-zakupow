@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { deleteList } from "../../api/lists";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { confirmMutation } from "./confirmMutation";
-import { deleteListKey } from "../../lists/deleteListKey";
+import { deleteListKey } from "../../lists/ownExit";
 import { listKey } from "../../lists/useList";
 import { LISTS_KEY } from "../../lists/useLists";
 import { deleteConsequence, messages } from "./messages";

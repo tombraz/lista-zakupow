@@ -17,6 +17,7 @@ import { useLimitFocus } from "../../components/useFocus";
 import { useList } from "../../lists/useList";
 import { useMembers } from "../../lists/useMembers";
 import { useLiveList } from "../../live/useLiveList";
+import { LeaveList } from "./LeaveList";
 import { Members } from "./Members";
 import { createErrorText, messages, revokeErrorText } from "./messages";
 import styles from "./ParticipantsScreen.module.css";
@@ -39,15 +40,25 @@ export function ParticipantsScreen() {
             <Link to="/listy">{messages.backToLists}</Link>
           </>
         )}
-        {page.status === "ready" && <Members list={page.list} members={page.members} />}
-        {page.status === "ready" && page.links && (
-          <Invitations
-            listId={page.list.id}
-            participantCount={page.members.participants.length}
-            links={page.links}
-          />
-        )}
+        {page.status === "ready" && <ReadyPage page={page} />}
       </main>
+    </>
+  );
+}
+
+/** Osoby na liście, potem (uczestnik) „Opuść listę” albo (właściciel) „Zaproszenia”. */
+function ReadyPage({ page }: { page: Extract<ParticipantsPage, { status: "ready" }> }) {
+  return (
+    <>
+      <Members list={page.list} members={page.members} />
+      {page.list.role === "participant" && <LeaveList list={page.list} />}
+      {page.links && (
+        <Invitations
+          listId={page.list.id}
+          participantCount={page.members.participants.length}
+          links={page.links}
+        />
+      )}
     </>
   );
 }

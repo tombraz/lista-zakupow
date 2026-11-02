@@ -3,7 +3,7 @@ id: T-059
 title: Opuszczenie listy przez uczestnika
 epic: E-02
 story: S-02-02
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-056, T-057, T-063]
 size: S                # S | M (L must be split)
@@ -36,13 +36,13 @@ Uczestnik opuszcza listę z SC-07 po potwierdzeniu: lista znika z jego SC-05, zm
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given uczestnik, when `POST /api/v1/lists/:listId/leave`, then 204, członkostwo usunięte, `revoke` dla wszystkich jego połączeń, `members.changed` do listy, `lists.changed` do niego i właściciela; jego pozycje zostają z imieniem. — verified by: test integracyjny
-- [ ] AC2: Given właściciel, when `POST …/leave`, then 403 `owner_cannot_leave`, nic się nie zmienia; SC-07 właściciela nie ma „Opuść listę”. — verified by: test integracyjny + test komponentu
-- [ ] AC3: Given SC-07 uczestnika, when „Opuść listę” → ConfirmDialog z nazwą listy → „Opuść”, then przejście na SC-05 (`replace`, wstecz nie wraca na listę) bez tej listy; „Anuluj” wraca z fokusem na „Opuść listę”; błąd serwera — komunikat w oknie, okno zostaje; offline — przycisk nieaktywny. — verified by: test komponentu (MSW)
-- [ ] AC4: Given druga karta uczestnika z otwartym SC-06 tej listy, when wychodzi z listy w pierwszej, then druga karta w ≤ 5 s jest na SC-05 z komunikatem o braku dostępu. — verified by: E2E Playwright (dwie karty)
-- [ ] AC5: Given ConfirmDialog i SC-05 po wyjściu, when E2E je odwiedza, then axe bez naruszeń. — verified by: E2E + axe
-- [ ] SEC1 (TH-04): Given uczestnik po wyjściu, when następne zdarzenie listy, then do żadnego jego połączenia nie dociera; zapis i odczyt listy → 404. — verified by: test integracyjny WS + HTTP
-- [ ] SEC2 (TH-01): Given domownik bez dostępu do listy A, when `POST /api/v1/lists/<A>/leave`, then 404; anonim 401. — verified by: test integracyjny autoryzacji
+- [x] AC1: Given uczestnik, when `POST /api/v1/lists/:listId/leave`, then 204, członkostwo usunięte, `revoke` dla wszystkich jego połączeń, `members.changed` do listy, `lists.changed` do niego i właściciela; jego pozycje zostają z imieniem. — verified by: test integracyjny
+- [x] AC2: Given właściciel, when `POST …/leave`, then 403 `owner_cannot_leave`, nic się nie zmienia; SC-07 właściciela nie ma „Opuść listę”. — verified by: test integracyjny + test komponentu
+- [x] AC3: Given SC-07 uczestnika, when „Opuść listę” → ConfirmDialog z nazwą listy → „Opuść”, then przejście na SC-05 (`replace`, wstecz nie wraca na listę) bez tej listy; „Anuluj” wraca z fokusem na „Opuść listę”; błąd serwera — komunikat w oknie, okno zostaje; offline — przycisk nieaktywny. — verified by: test komponentu (MSW)
+- [x] AC4: Given druga karta uczestnika z otwartym SC-06 tej listy, when wychodzi z listy w pierwszej, then druga karta w ≤ 5 s jest na SC-05 z komunikatem o braku dostępu. — verified by: E2E Playwright (dwie karty)
+- [x] AC5: Given ConfirmDialog i SC-05 po wyjściu, when E2E je odwiedza, then axe bez naruszeń. — verified by: E2E + axe
+- [x] SEC1 (TH-04): Given uczestnik po wyjściu, when następne zdarzenie listy, then do żadnego jego połączenia nie dociera; zapis i odczyt listy → 404. — verified by: test integracyjny WS + HTTP
+- [x] SEC2 (TH-01): Given domownik bez dostępu do listy A, when `POST /api/v1/lists/<A>/leave`, then 404; anonim 401. — verified by: test integracyjny autoryzacji
 
 ## TDD plan
 
@@ -85,15 +85,54 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
 - [ ] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+### Tests (red → green)
+
+| # | Test | Red (before the code) | Now |
+| --- | --- | --- | --- |
+| 1 | `apps/api/test/lists.leave.test.ts` › „answers 204, removes the membership and keeps the items the participant added and checked” | `expected 501 to be 204` (stub route) | pass |
+| 2 | `apps/api/test/live.leave.test.ts` › „sends access.revoked to every tab of the participant, then no list event, and refuses writes and reads” (two WS connections of Tomek; afterwards `POST`/`PATCH` item, `GET` list, `GET …/members` and a second `POST …/leave` → 404 `not_found`; re-`subscribe` → `error not_found`) and › „tells the list members.changed and refreshes SC-05 of the participant who left and of everyone left” | Written after `withdrawAccess` was wired in the green step of #1 (the route reuses T-058's function). Bite check: the `withdrawAccess` call removed → both fail (`no "access.revoked" within 1000 ms; got [subscribed]`, `no "members.changed" within 1000 ms`); restored | pass |
+| 3 | `apps/api/test/lists.leave.authz.test.ts` (3 tests: owner 403 `owner_cannot_leave`, membership and his `GET /lists` unchanged; stranger, missing, malformed and `%00` `listId` 404 identical, anonymous 401; foreign `Origin` 403 `invalid_origin`, participant kept) | owner test: `expected 404 to be 403`. The 404/401 and `Origin` tests passed at once (`requireListAccess`, `requireUser` and `trustedOrigin` already guard every `/api/v1/*` route) | pass |
+| 4 | `apps/web/src/screens/SC-07-uczestnicy/ParticipantsScreen.leave.test.tsx` (10 tests: dialog + `replace` to SC-05 without the list; „Anuluj” / Escape focus back on „Opuść listę”; server error in the dialog, retry; offline `aria-disabled`, no dialog; owner has no „Opuść listę”; double „Opuść” = one request; lost response, retry 404 → SC-05 without error; `access.revoked` before the response → one navigation, no „no access” notice; SC-05 without the list before the lists are fetched again; browser Back does not show the list) | first test: `Unable to find an accessible element with the role "button" and name "Opuść listę"`. The other tests were written after the hook and passed at once; each was checked against a mutant (code changed, test run, code restored): `leaveListKey` not skipped in `useLiveList` → „access.revoked before the response” fails; 404 treated as an error → „lost response” and „access.revoked” fail; no `writes` → „offline” fails; no `error` in the dialog → „keeps the dialog open” and „lost response” fail; no `returnFocus` → „Anuluj / Escape” fails; `navigate` without `replace` → 6 tests fail; `useMutation` instead of `useGuardedMutation` → „double Opuść” fails; button also for the owner → „owner” fails; no drop of the list from the `GET /lists` cache → „SC-05 without the list at once” (and 2 more) fail | pass |
+| 5 | `apps/web/e2e/sc07-uczestnicy.spec.ts` › „SC-07 participant leaves the list; the other tab lands on SC-05 and the owner sees it” (Ania on SC-07, Tomek's tab 1 on SC-07, tab 2 on SC-06; axe on the open ConfirmDialog, on Tomek's SC-05 after leaving (empty state) and on tab 2's SC-05 with the notice; Ania sees „Na liście (0 z 20)” within 5 s) | written after the behaviour (slow E2E, run last). Bite check: `withdrawAccess` removed from the route (API rebuilt) → fails (`expect(locator).toBeVisible() failed`: tab 2 gets no SC-05 notice); restored | pass (telefon + komputer) |
+
+### Commands (this run, 2026-11-02)
+
+- `pnpm check` (format, lint, typecheck, jscpd 0 clones, depcruise no violations, design-check, backlog-check, workflow-check, `vitest run` 125 files / 858 tests, mobile tests): exit 0
+- `pnpm vitest run --project api --sequence.shuffle.files --sequence.seed=59` and `=159`: 84 files / 343 tests passed. (`--sequence.shuffle` also shuffles tests inside a file and then fails `database.test.ts` › „starts the next test with empty tables”, a pre-existing test that depends on the order of its own two tests on purpose; unrelated to this task.)
+- `playwright test e2e/sc07-uczestnicy.spec.ts`: 8 passed (telefon + komputer).
+- `pnpm test:e2e`: 68 passed (7.2 min, Windows, 1 worker).
+- A flaky failure seen once: `apps/web/src/live/connection.test.tsx` › „SC-07: after a silent drop (no browser event) fetches the participants again” failed in one run of `vitest run --project web` (SC-07, `live`, SC-06 folders) and passed in the next 3 runs and in `pnpm check`. The junit file was overwritten before it was saved (layers/web.md asks to keep it), so the message is lost. The file is not touched by this task; the only change in `useLiveList` is the skip condition (`isExitingOnItsOwn`), which does nothing in that test (no leave or delete mutation runs). QA: watch for it.
+
+### Acceptance criteria
+
+- AC1: test 1 (204, membership gone, Tomek's added and checked items keep `addedBy` / `checkedBy` Tomek, his `GET /lists` is empty) + test 2 (`access.revoked` to both of his connections, `members.changed` to the list, `lists.changed` to him (both tabs), to the owner (also a second connection) and to the remaining participant). Route: `requireListAccess(…, "member")` → `leaveList` → `withdrawAccess` (the same function as T-058).
+- AC2: test 3 „owner_cannot_leave” (403, nothing changes) + test 4 „SC-07 of the owner has no „Opuść listę””.
+- AC3: test 4 (dialog „Opuścić listę „Dom”?” with description „Żeby wrócić, potrzebujesz nowego zaproszenia.”, start focus on „Anuluj”, `replace` to `/listy` without the list, Back does not show the list, „Anuluj” / Escape focus back on „Opuść listę”, error in the dialog which stays open, offline inactive).
+- AC4: test 5 (tab 2 on SC-06 lands on `/listy` with „Lista „Dom” została usunięta albo nie masz już do niej dostępu.” within the 5 s `LIVE` limit).
+- AC5: test 5 `expectNoAxeViolations` on the ConfirmDialog, on SC-05 after leaving and on the second tab's SC-05.
+- SEC1: test 2 (no `item.upserted` / `list.updated` to either tab after the owner's next changes; writes and reads 404).
+- SEC2: test 3 (stranger 404 exactly like a missing list, anonymous 401).
+
+### Decisions for QA and the owner
+
+- **Error text in the dialog:** Copy SC-07 has no text for a failed leave. Used „Nie udało się opuścić listy. Spróbuj ponownie.”, following the other SC-07 write errors that are also outside the Copy table („Nie udało się unieważnić linku. Spróbuj ponownie.”). `network` gives the shared „Brak połączenia. Sprawdź internet i spróbuj ponownie.” (`errorText`). Owner: add `leave.failed` to Copy SC-07 or give another text.
+- **No notice on SC-05 after a voluntary leave:** the person chose to leave, so their SC-05 shows no „no access” notice (Demo step 2 shows none either). Their other tabs get the existing MC-03 notice (AC4).
+- **Own `access.revoked`:** the server sends `access.revoked` to every connection of the person who leaves, usually before the HTTP response. `useLiveList` skips it while this tab's leave is in progress (`leaveListKey`, like `deleteListKey` for deleting a list; both now in `lists/ownExit.ts`, `isExitingOnItsOwn`), so the tab goes to SC-05 once, from the response. The same covers „owner removes the participant at the same moment”: the leave then gets 404, which counts as left.
+- **„Wstecz nie wraca na listę”:** `replace` swaps SC-07 for SC-05 (as `useLiveList` does after a lost access). Browser Back then lands on the SC-06 entry, which shows the MC-01 „no access” screen (API 404), never the list itself (test 4 „Back”).
+- **No `security` log event for leaving:** `architecture.md` „Obserwowalność” lists the removal of a participant, not leaving; TH-21 is not in `threats:`. Not added.
+- **E2E second tab:** a second browser context with Tomek's session cookies, not `context.newPage()` (that stalls the API on Windows, layers/web.md „Pułapki”). For the server it is the same session with a second WS connection.
+
+### Layer guides (Step 8b)
+
+`backend.md` and `web.md`, „Gdzie jest kod”: leave route, `leaveList`, SC-07 `LeaveList` / `useLeaveList`, `lists/ownExit.ts` (renamed from `lists/deleteListKey.ts`) (facts only).

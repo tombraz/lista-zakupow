@@ -29,6 +29,11 @@ export async function deleteList(listId: string): Promise<void> {
   await apiRequest(`/api/v1/lists/${encodeURIComponent(listId)}`, { method: "DELETE" });
 }
 
+/** F-13: uczestnik opuszcza listę; 404 — już go na niej nie ma (lub listy). */
+export async function leaveList(listId: string): Promise<void> {
+  await apiRequest(`/api/v1/lists/${encodeURIComponent(listId)}/leave`, { method: "POST" });
+}
+
 /** F-13: właściciel usuwa uczestnika; 404 — osoby już nie ma na liście (lub listy). */
 export async function removeParticipant(listId: string, userId: string): Promise<void> {
   await apiRequest(

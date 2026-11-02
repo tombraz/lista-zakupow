@@ -132,3 +132,43 @@ async function expectBackOnLists(removed: Page) {
   await expect(removed.getByText("Dom", { exact: true })).toHaveCount(0);
   await expectNoAxeViolations(removed);
 }
+
+// T-059 AC4, AC5 (F-13): uczestnik opuszcza listę; jego druga karta wraca na SC-05.
+test("SC-07 participant leaves the list; the other tab lands on SC-05 and the owner sees it", async ({
+  page,
+  browser,
+}) => {
+  const list = await openNewList(page, "Dom");
+  const tomek = await joinWithLink(page, browser, list.id, "Tomek");
+  // Druga karta Tomka: ta sama sesja w osobnym kontekście (`newPage()` w trakcie testu
+  // wstrzymuje API na Windows, layers/web.md „Pułapki”).
+  const otherTab = await newClient(browser);
+  await otherTab.addCookies(await tomek.client.cookies());
+  const tab2 = await otherTab.newPage();
+  await tab2.goto(`/listy/${list.id}`);
+  await expect(tab2.getByRole("heading", { level: 1, name: "Dom" })).toBeVisible();
+  await page.goto(`/listy/${list.id}/uczestnicy`);
+  await expect(page.getByRole("heading", { level: 2, name: "Na liście (1 z 20)" })).toBeVisible();
+
+  const tab1 = tomek.page;
+  await tab1.goto(`/listy/${list.id}/uczestnicy`);
+  await expect(tab1.getByRole("heading", { level: 2, name: "Na liście (1 z 20)" })).toBeVisible();
+  await tab1.getByRole("button", { name: "Opuść listę" }).click();
+  const dialog = tab1.getByRole("alertdialog", { name: "Opuścić listę „Dom”?" });
+  await expect(dialog.getByRole("button", { name: "Anuluj" })).toBeFocused();
+  await expectNoAxeViolations(tab1);
+  await dialog.getByRole("button", { name: "Opuść" }).click();
+
+  await expect(tab1.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+  expect(new URL(tab1.url()).pathname).toBe("/listy");
+  await expect(tab1.getByText("Dom", { exact: true })).toHaveCount(0);
+  await expect(tab1.getByText(/nie masz już do niej dostępu/)).toHaveCount(0);
+  await expectNoAxeViolations(tab1);
+
+  await expectBackOnLists(tab2);
+  await expect(page.getByRole("heading", { level: 2, name: "Na liście (0 z 20)" })).toBeVisible(
+    LIVE,
+  );
+  await otherTab.close();
+  await tomek.client.close();
+});
