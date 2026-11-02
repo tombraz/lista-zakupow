@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import type { Live } from "../na-zywo";
 import { authRoutes, type InvitationOnSignUp } from "./http/auth-routes";
-import { meRoutes, type NameChanged } from "./http/me-routes";
+import { meRoutes, type AccountDeleting, type NameChanged } from "./http/me-routes";
 import { requireSession, requireUser } from "./http/require-user";
 import { MailDeliveryError, type Mailer } from "./domain/mailer";
 import { passwordResetMail } from "./domain/reset-mail";
@@ -15,7 +15,8 @@ import { SignInFailures } from "./infra/sign-in-failures";
 
 export type { AuthSettings } from "./infra/auth";
 export type { InvitationOnSignUp } from "./http/auth-routes";
-export type { NameChanged } from "./http/me-routes";
+export type { AccountDeleting, NameChanged } from "./http/me-routes";
+export type { AccountTransaction } from "./infra/users";
 export type { Mail, Mailer } from "./domain/mailer";
 export { BrevoMailer } from "./infra/brevo-mailer";
 export { MailpitMailer } from "./infra/mailpit-mailer";
@@ -46,6 +47,11 @@ export interface Accounts {
    * więc podaje rozesłanie zdarzeń po utworzeniu (odwrócenie zależności).
    */
   announceNameChanges(announce: NameChanged): void;
+  /**
+   * F-04: kto traci dostęp przy usunięciu konta — listy posiada moduł `listy` (odwrócenie
+   * zależności jak przy imieniu). Bez podanej obsługi konto i tak znika (kaskady w bazie).
+   */
+  announceAccountDeletions(announce: AccountDeleting): void;
 }
 
 export function accountRoutes(
@@ -84,7 +90,17 @@ export function accountRoutes(
     settings.origin,
   );
   let nameChanged: NameChanged | undefined;
-  meRoutes(app, { auth, db, nameChanged: (userId) => nameChanged?.(userId) });
+  let accountDeleting: AccountDeleting | undefined;
+  meRoutes(app, {
+    auth,
+    db,
+    nameChanged: (userId) => nameChanged?.(userId),
+    accountDeleting: async (tx, userId) =>
+      (await accountDeleting?.(tx, userId)) ?? (() => undefined),
+    closeUser: (userId) => {
+      live.closeUser(userId);
+    },
+  });
   return {
     requireUser: (request, reply) => requireUser(auth, request, reply),
     requireSession: (request, reply) => requireSession(auth, request, reply),
@@ -94,6 +110,9 @@ export function accountRoutes(
     },
     announceNameChanges: (announce) => {
       nameChanged = announce;
+    },
+    announceAccountDeletions: (announce) => {
+      accountDeleting = announce;
     },
   };
 }

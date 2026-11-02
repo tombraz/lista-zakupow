@@ -17,6 +17,8 @@ export interface EntryState {
   joinedListId?: string;
   /** SC-01 po zapisie nowego hasła na SC-03 (komunikat „Info — po resecie”). */
   passwordChanged?: true;
+  /** SC-01 po usunięciu konta na SC-09 (F-04). */
+  accountDeleted?: true;
 }
 
 /**
@@ -50,6 +52,11 @@ export const invitationPath = (token: string) => `/zaproszenie/${encodeURICompon
 /** SC-01 otwarte po udanym resecie hasła (SC-03 krok 2). */
 export function passwordChangedOf(state: unknown): boolean {
   return isRecord(state) && state["passwordChanged"] === true;
+}
+
+/** SC-01 otwarte po usunięciu konta (SC-09). */
+export function accountDeletedOf(state: unknown): boolean {
+  return isRecord(state) && state["accountDeleted"] === true;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

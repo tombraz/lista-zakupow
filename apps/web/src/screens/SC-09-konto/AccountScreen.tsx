@@ -6,11 +6,12 @@ import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { useSession, useSetSession } from "../../session/useSession";
 import styles from "./AccountScreen.module.css";
+import { DeleteAccount } from "./DeleteAccount";
 import { NameForm } from "./NameForm";
 import { logoutErrorText, messages } from "./messages";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
 
-/** SC-09: dane konta, zmiana imienia (T-061), wylogowanie; usunięcie konta w T-062. */
+/** SC-09: dane konta, zmiana imienia (T-061), wylogowanie, usunięcie konta (T-062). */
 export function AccountScreen() {
   const { data: me } = useSession();
   const setSession = useSetSession();
@@ -50,6 +51,7 @@ export function AccountScreen() {
           {messages.logout}
         </Button>
         <Link to="/regulamin">{messages.legal}</Link>
+        <DeleteAccount />
       </main>
     </>
   );

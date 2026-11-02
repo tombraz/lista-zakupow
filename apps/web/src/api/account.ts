@@ -35,6 +35,11 @@ export function changeName(name: string): Promise<Me> {
   return apiRequest<Me>("/api/v1/me", { method: "PATCH", body: { name } });
 }
 
+/** F-04: trwałe usunięcie konta; 204, sesje konta przestają działać. */
+export async function deleteAccount(): Promise<void> {
+  await apiRequest("/api/v1/me", { method: "DELETE", body: { confirm: true } });
+}
+
 export async function signOut(): Promise<void> {
   await apiRequest("/api/auth/sign-out", { body: {} });
 }

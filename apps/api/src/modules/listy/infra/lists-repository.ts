@@ -52,6 +52,48 @@ export async function insertParticipant(
   return "joined";
 }
 
+/** Lista z osobami, które mają do niej dostęp. */
+export interface ListWithPeople extends ListPeople {
+  listId: string;
+}
+
+/**
+ * F-04: listy, do których domownik ma dostęp, z osobami na nich — w transakcji usunięcia konta,
+ * przed usunięciem. Własne listy zablokowane do końca transakcji, więc nikt nie dołączy do nich
+ * niezauważony (dołączenie blokuje wiersz listy, `insertParticipant`).
+ */
+export async function listsWithPeopleOf(
+  tx: Pick<NodePgDatabase, "select">,
+  userId: string,
+): Promise<ListWithPeople[]> {
+  const owned = await tx
+    .select({ id: shoppingList.id })
+    .from(shoppingList)
+    .where(eq(shoppingList.ownerId, userId))
+    .for("update");
+  const joined = await tx
+    .select({ id: listMember.listId })
+    .from(listMember)
+    .where(eq(listMember.userId, userId));
+  const listIds = [...owned, ...joined].map(({ id }) => id);
+  if (listIds.length === 0) return [];
+  const [lists, members] = await Promise.all([
+    tx
+      .select({ id: shoppingList.id, ownerId: shoppingList.ownerId })
+      .from(shoppingList)
+      .where(inArray(shoppingList.id, listIds)),
+    tx
+      .select({ listId: listMember.listId, userId: listMember.userId })
+      .from(listMember)
+      .where(inArray(listMember.listId, listIds)),
+  ]);
+  return lists.map((list) => ({
+    listId: list.id,
+    ownerId: list.ownerId,
+    participantIds: members.filter((member) => member.listId === list.id).map((m) => m.userId),
+  }));
+}
+
 export class DrizzleListsRepository implements ListsRepository {
   constructor(
     private readonly db: NodePgDatabase,

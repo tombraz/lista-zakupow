@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { heldResponse } from "../../../test/held";
 import { browserGoes } from "../../../test/live";
 import { server } from "../../../test/msw-server";
+import { listsAre } from "../../../test/lists";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const TOMEK = { id: "u-2", name: "Tomek", email: "tomek@example.com" };
@@ -43,6 +44,8 @@ async function typeName(
 describe("SC-09 Konto: changing the name", () => {
   beforeEach(() => {
     sessionIs(TOMEK);
+    // SC-09 liczy własne listy do okna usunięcia konta (T-062).
+    listsAre([]);
   });
 
   it("shows the name field with its description and autocomplete", async () => {
@@ -187,6 +190,8 @@ describe("SC-09 Konto: changing the name", () => {
 describe("SC-09 Konto: name change while writing", () => {
   beforeEach(() => {
     sessionIs(TOMEK);
+    // SC-09 liczy własne listy do okna usunięcia konta (T-062).
+    listsAre([]);
   });
 
   it("does not overwrite what the user typed while the save was in flight", async () => {

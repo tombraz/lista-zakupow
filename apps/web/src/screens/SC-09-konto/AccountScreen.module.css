@@ -31,3 +31,21 @@
 .form > button {
   justify-self: start;
 }
+
+/* Sekcja „Usuń konto” oddzielona od reszty ekranu (SC-09, „Layout”). */
+.danger {
+  display: grid;
+  gap: var(--spacing-sm);
+  justify-items: start;
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.danger h2 {
+  margin: 0;
+  font-size: var(--typography-size-title);
+}
+
+.danger p {
+  margin: 0;
+}

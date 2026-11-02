@@ -13,6 +13,16 @@ export const messages = {
   nameSaved: "Imię zmienione",
   logout: "Wyloguj się",
   legal: "Regulamin i polityka prywatności",
+  cancel: "Anuluj",
+  delete: {
+    section: "Usuń konto",
+    body: "Usunięcie konta jest trwałe. Twoje listy zostaną usunięte także u uczestników. Z cudzych list zostaniesz wypisany(-a), a dodane przez Ciebie pozycje zostaną z podpisem „usunięty użytkownik”.",
+    action: "Usuń konto",
+    question: "Usunąć konto na zawsze?",
+    consequence: (owned: number) =>
+      `${String(owned)} Twoich list zniknie, także u ich uczestników. Tego nie da się cofnąć.`,
+    confirm: "Usuń konto",
+  },
 };
 
 /** Błąd wylogowania → komunikat (tekst agenta; tabela „Copy” go nie ma). */

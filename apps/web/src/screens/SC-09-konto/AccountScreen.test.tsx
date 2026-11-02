@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "../../../test/msw-server";
+import { listsAre } from "../../../test/lists";
 import { renderApp, sessionIs } from "../../../test/render";
 
 const ANIA = { id: "u-1", name: "Ania", email: "ania@example.com" };
@@ -17,6 +18,8 @@ async function logOut() {
 describe("SC-09 Konto: failed sign-out", () => {
   beforeEach(() => {
     sessionIs(ANIA);
+    // SC-09 liczy własne listy do okna usunięcia konta (T-062).
+    listsAre([]);
   });
 
   it("says the connection is down when the request does not reach the server", async () => {
@@ -47,6 +50,8 @@ describe("SC-09 Konto: failed sign-out", () => {
 describe("SC-09 Konto: signing out", () => {
   beforeEach(() => {
     sessionIs(ANIA);
+    // SC-09 liczy własne listy do okna usunięcia konta (T-062).
+    listsAre([]);
   });
 
   // T-020: blokada nie czeka na przerysowanie przycisku w stanie zapisu.

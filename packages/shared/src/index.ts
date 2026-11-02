@@ -1,5 +1,6 @@
 export { healthReadyResponseSchema, type HealthReadyResponse } from "./health";
 export {
+  accountDeletionRequestSchema,
   fieldErrors,
   meResponseSchema,
   NAME_MAX_LENGTH,
@@ -11,6 +12,7 @@ export {
   signInRequestSchema,
   signUpRequestSchema,
   TERMS_VERSION,
+  type AccountDeletionRequest,
   type FieldErrorCode,
   type Me,
   type NameChangeRequest,

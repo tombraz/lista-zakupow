@@ -12,6 +12,8 @@ export const messages = {
   register: "Załóż konto",
   invitation: (list: string) => `Zaloguj się, żeby dołączyć do listy „${list}”.`,
   passwordChanged: "Hasło zmienione. Zaloguj się nowym hasłem.",
+  // SC-09 „Success — usunięcie” (Copy SC-09, `deleted`).
+  accountDeleted: "Konto zostało usunięte.",
 };
 
 /** Kod błędu API → komunikat nad formularzem (F-02: bez wskazania, co było złe). */

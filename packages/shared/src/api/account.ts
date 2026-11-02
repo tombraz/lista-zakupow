@@ -70,6 +70,13 @@ export const nameChangeRequestSchema = z.object({ name });
 
 export type NameChangeRequest = z.input<typeof nameChangeRequestSchema>;
 
+// F-04: usunięcie konta tylko z wyraźnym potwierdzeniem (api.md, „Konto”).
+export const accountDeletionRequestSchema = z.object({
+  confirm: z.literal(true, { error: "required" }),
+});
+
+export type AccountDeletionRequest = z.input<typeof accountDeletionRequestSchema>;
+
 export const meResponseSchema = z.object({
   id: z.string(),
   name: z.string(),

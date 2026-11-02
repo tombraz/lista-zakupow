@@ -5,6 +5,10 @@ import { fetchMe } from "../api/account";
 import { ApiRequestError } from "../api/client";
 
 const SESSION_KEY = ["me"] as const;
+/** Powód końca sesji, który SC-01 ogłasza (F-04: „Konto zostało usunięte.”). */
+const SESSION_END_KEY = ["sessionEnd"] as const;
+
+export type SessionEnd = "accountDeleted";
 
 /** Stan sesji z `GET /api/v1/me`; `data === null` = niezalogowany. */
 export function useSession() {
@@ -15,19 +19,40 @@ export function useSession() {
  * Bez sesji dane poprzedniego domownika nie zostają w cache. Zapytanie sesji zostaje, tylko
  * dostaje `null`: obserwuje je `RequireSession`, a `clear()` odcięłoby go od nowej wartości.
  */
-function endSession(client: QueryClient) {
+function endSession(client: QueryClient, reason?: SessionEnd) {
   client.setQueryData(SESSION_KEY, null);
   client.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
   client.getMutationCache().clear();
+  if (reason) client.setQueryData(SESSION_END_KEY, reason);
 }
 
 /** Ustawia zalogowanego domownika po rejestracji, logowaniu albo wylogowaniu (`null`). */
 export function useSetSession() {
   const client = useQueryClient();
   return (user: Me | null) => {
-    if (user) client.setQueryData(SESSION_KEY, user);
-    else endSession(client);
+    if (!user) {
+      endSession(client);
+      return;
+    }
+    client.removeQueries({ queryKey: SESSION_END_KEY });
+    client.setQueryData(SESSION_KEY, user);
   };
+}
+
+/**
+ * Kończy sesję z powodem, który SC-01 ogłasza. Na SC-01 prowadzi wtedy tylko `RequireSession`
+ * (czyta powód): nawigacja ekranu obok jego przekierowania ścigałaby się z nim i gubiła komunikat.
+ */
+export function useEndSession() {
+  const client = useQueryClient();
+  return (reason: SessionEnd) => {
+    endSession(client, reason);
+  };
+}
+
+/** Powód ostatniego końca sesji w tej karcie albo `undefined` (zwykłe wylogowanie, 401). */
+export function useSessionEnd(): SessionEnd | undefined {
+  return useQueryClient().getQueryData<SessionEnd>(SESSION_END_KEY);
 }
 
 const isUnauthenticated = (error: unknown) =>
