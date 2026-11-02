@@ -2,6 +2,7 @@ import {
   createItemRequestSchema,
   onlyItemNameInvalid,
   updateItemRequestSchema,
+  withoutNul,
   type ClearCheckedResponse,
 } from "@lista/shared";
 import type { FastifyInstance } from "fastify";
@@ -53,6 +54,8 @@ function duplicateBeforeRefusal(
     if (target.itemId !== undefined && !isUuid(target.itemId)) return;
     // Błąd pola `name` znaczy, że treść jest obiektem z tekstem w `name`.
     const { name } = body as { name: string };
+    // Nazwy z NUL nie da się porównać w bazie (22021 → 500): zwykłe 400 (T-070, TH-20).
+    if (!withoutNul(name)) return;
     const access = await lists.requireListAccess(target.userId, target.listId, "member");
     await refuseDuplicateName(repository, access, name, target.itemId);
   };

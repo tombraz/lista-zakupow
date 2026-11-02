@@ -36,6 +36,27 @@ describe("parseClientMessage (SEC6, TH-25)", () => {
     expect(parseClientMessage(JSON.stringify({ type: "subscribe", listId: long }))).toBeNull();
   });
 
+  // T-070 (TH-20): NUL w identyfikatorze nie może dojść do bazy, także przez WebSocket.
+  it("rejects NUL in the listId of subscribe and unsubscribe, alone or next to a valid id", () => {
+    for (const type of ["subscribe", "unsubscribe"]) {
+      for (const listId of [
+        "\u0000",
+        `\u0000${LIST_ID}`,
+        `${LIST_ID}\u0000`,
+        `${LIST_ID.slice(0, 8)}\u0000${LIST_ID.slice(8)}`,
+      ]) {
+        expect({ listId, parsed: parseClientMessage(JSON.stringify({ type, listId })) }).toEqual({
+          listId,
+          parsed: null,
+        });
+      }
+    }
+    expect(
+      parseClientMessage(JSON.stringify({ type: "sub\u0000scribe", listId: LIST_ID })),
+    ).toBeNull();
+    expect(parseClientMessage(`{"type":"subscribe","list\\u0000Id":"${LIST_ID}"}`)).toBeNull();
+  });
+
   it("rejects extra fields", () => {
     const message = { type: "subscribe", listId: LIST_ID, userId: "someone-else" };
     expect(parseClientMessage(JSON.stringify(message))).toBeNull();

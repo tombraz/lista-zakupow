@@ -4,7 +4,7 @@ title: "Inwentarz tras i WS: NUL w każdym parametrze i polu tekstowym daje 4xx,
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-058]
 layers: [backend]
 requirements: [N-02]
@@ -27,14 +27,14 @@ Zakres: trasy HTTP `/api/*` i wiadomości klienta WS `/api/v1/live` (WS dopisany
 
 ## Acceptance criteria
 
-- [ ] AC1: Given aplikacja z `buildTestApp`, when test zbiera wszystkie zarejestrowane trasy (`onRoute`) i porównuje je z tabelą przykładowych żądań, then każda trasa pod `/api/` ma w tabeli wpis albo jawne wyłączenie z powodem (np. trasa bez wejścia, WS `/api/v1/live`, trasa testowa). — verified by: test inwentarza
-- [ ] AC2: Given nowa trasa dodana w `apps/api/src` bez wpisu w tabeli, when uruchamiam testy, then test inwentarza pada z nazwą metody i ścieżki brakującej trasy. — verified by: kontrola ręczna (tymczasowa trasa, czerwony wynik w Evidence, trasa usunięta)
-- [ ] AC3: Given każda trasa z parametrami ścieżki, when w każdy parametr po kolei wstawiam `%00` (sam i doklejony do poprawnej wartości) jako zalogowany właściciel zasobu, then odpowiedź to 4xx z kodem błędu z kontraktu, nigdy 500. — verified by: test parametrów
-- [ ] AC4: Given każda trasa z body JSON, when w każde pole tekstowe przykładowego żądania po kolei wstawiam znak U+0000, then odpowiedź to 4xx (zwykle 400 `validation_failed`), nigdy 500. — verified by: test pól body
-- [ ] AC5: Given poprawka T-058 cofnięta lokalnie (bez `personIdSchema` dla `userId`), when uruchamiam test parametrów, then pada na `DELETE /api/v1/lists/:listId/members/:userId`. Analogicznie dla pola body: `requiredName` bez `withoutNul` daje czerwony test pól body. — verified by: kontrola ręczna, czerwone wyniki w Evidence, zmiany cofnięte
-- [ ] AC6: Given trasa, która dziś zwraca 500 dla NUL (jeśli test jakąś znajdzie), then jest naprawiona tym samym wzorcem co T-058 (schemat z `packages/shared` z `withoutNul`), a nie wyłączona z testu. — verified by: test parametrów / pól body zielony bez wyłączeń z powodu „500”
-- [ ] AC7: Given wiadomość klienta WS `subscribe` lub `unsubscribe` z NUL w `listId` (sam i doklejony do poprawnego UUID), when trafia do `parseClientMessage`, then wynik to `null` (wiadomość odrzucona). Wysłana przez otwarte `/api/v1/live`, dostaje odpowiedź błędu z kontraktu WS bez zapytania do bazy, a połączenie i proces API działają dalej. — verified by: test wiadomości WS
-- [ ] SEC1 (TH-20): Given napastnik (zalogowany obcy lub anonim), when wysyła NUL w parametrze lub polu tekstowym dowolnej trasy, then dostaje 4xx bez treści błędu bazy (bez SQL, bez wartości pola), a log nie zawiera surowego wyjątku z bazy. — verified by: test parametrów i pól body (asercja na treść odpowiedzi), przegląd logu w jednym przypadku
+- [x] AC1: Given aplikacja z `buildTestApp`, when test zbiera wszystkie zarejestrowane trasy (`onRoute`) i porównuje je z tabelą przykładowych żądań, then każda trasa pod `/api/` ma w tabeli wpis albo jawne wyłączenie z powodem (np. trasa bez wejścia, WS `/api/v1/live`, trasa testowa). — verified by: test inwentarza
+- [x] AC2: Given nowa trasa dodana w `apps/api/src` bez wpisu w tabeli, when uruchamiam testy, then test inwentarza pada z nazwą metody i ścieżki brakującej trasy. — verified by: kontrola ręczna (tymczasowa trasa, czerwony wynik w Evidence, trasa usunięta)
+- [x] AC3: Given każda trasa z parametrami ścieżki, when w każdy parametr po kolei wstawiam `%00` (sam i doklejony do poprawnej wartości) jako zalogowany właściciel zasobu, then odpowiedź to 4xx z kodem błędu z kontraktu, nigdy 500. — verified by: test parametrów
+- [x] AC4: Given każda trasa z body JSON, when w każde pole tekstowe przykładowego żądania po kolei wstawiam znak U+0000, then odpowiedź to 4xx (zwykle 400 `validation_failed`), nigdy 500. — verified by: test pól body
+- [x] AC5: Given poprawka T-058 cofnięta lokalnie (bez `personIdSchema` dla `userId`), when uruchamiam test parametrów, then pada na `DELETE /api/v1/lists/:listId/members/:userId`. Analogicznie dla pola body: `requiredName` bez `withoutNul` daje czerwony test pól body. — verified by: kontrola ręczna, czerwone wyniki w Evidence, zmiany cofnięte
+- [x] AC6: Given trasa, która dziś zwraca 500 dla NUL (jeśli test jakąś znajdzie), then jest naprawiona tym samym wzorcem co T-058 (schemat z `packages/shared` z `withoutNul`), a nie wyłączona z testu. — verified by: test parametrów / pól body zielony bez wyłączeń z powodu „500”
+- [x] AC7: Given wiadomość klienta WS `subscribe` lub `unsubscribe` z NUL w `listId` (sam i doklejony do poprawnego UUID), when trafia do `parseClientMessage`, then wynik to `null` (wiadomość odrzucona). Wysłana przez otwarte `/api/v1/live`, dostaje odpowiedź błędu z kontraktu WS bez zapytania do bazy, a połączenie i proces API działają dalej. — verified by: test wiadomości WS
+- [x] SEC1 (TH-20): Given napastnik (zalogowany obcy lub anonim), when wysyła NUL w parametrze lub polu tekstowym dowolnej trasy, then dostaje 4xx bez treści błędu bazy (bez SQL, bez wartości pola), a log nie zawiera surowego wyjątku z bazy. — verified by: test parametrów i pól body (asercja na treść odpowiedzi), przegląd logu w jednym przypadku
 
 ## TDD plan
 
@@ -64,7 +64,31 @@ Zakres: trasy HTTP `/api/*` i wiadomości klienta WS `/api/v1/live` (WS dopisany
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+Reguła „tekst do bazy tylko przez `requiredName` / `withoutNul`” istniała tylko jako zdanie w `layers/backend.md`, bez strażnika: każda trasa sama decydowała, czy jej wejście przejdzie przez schemat, zanim dotknie bazy. Test inwentarza znalazł czwarty taki przypadek: od T-060 (`6225bc9`) nazwa pozycji z NUL (`POST /api/v1/lists/:listId/items`, `PATCH …/items/:itemId`) dostaje od schematu `invalid` (NUL to znak `Cc`, który odrzuca filtr ukrytych znaków TH-29), więc `onlyItemNameInvalid` uznaje ją za „może duplikat”, a `duplicateBeforeRefusal` szuka jej klucza w bazie — PostgreSQL odrzuca NUL (22021) i trasa odpowiada 500 zamiast 400. W WS `listId` z NUL przechodził `parseClientMessage` i `subscribe` pytał bazę o sesję, zanim `requireListAccess` odrzucił go jako nie-UUID.
+
+Dlaczego testy tego nie złapały: testy NUL były pisane ręcznie dla pojedynczych pól (`unexpected-error.test.ts` — nazwa listy, `sign-up.test.ts` — imię, T-058 — `userId`), a testy T-060 sprawdzały ukryte znaki Cf w nazwie pozycji, nie NUL. Nic nie wymuszało przypadku NUL dla nowej trasy ani nowej ścieżki przed walidacją.
+
+Inne wystąpienia: przegląd wszystkich tras `/api/*` (tabela `EXAMPLES`) — poza pozycjami brak. Ta sama ścieżka „kontrola przed walidacją z odczytem bazy” istnieje tylko w `pozycje/http/routes.ts` (`duplicateBeforeRefusal`, obie trasy) i jest naprawiona tutaj.
+
+## Evidence
+
+Testy reprodukujące, czerwone przed poprawką:
+
+- `apps/api/test/routes-nul.test.ts` › `POST /api/v1/lists/:listId/items: NUL in every path parameter and text field is 4xx, never 500` i to samo dla `PATCH /api/v1/lists/:listId/items/:itemId` — `expected [ { caller: 'owner', case: 'name#0', status: 500 }, … ] to deeply equal []`; w logu `DrizzleQueryError` / `22021` z `DrizzleItemsRepository.nameKeyTaken` ← `refuseDuplicateName` ← `duplicateBeforeRefusal`.
+- `packages/shared/test/live.test.ts` › `rejects NUL in the listId of subscribe and unsubscribe, alone or next to a valid id` — `expected { listId: ' ', parsed: { …(2) } } to deeply equal { listId: ' ', parsed: null }`.
+- `apps/api/test/live.nul.test.ts` › `answers validation_failed without a database query and keeps the connection usable` — `expected { type: 'error', code: 'not_found', listId } to deeply equal { type: 'error', code: 'validation_failed' }`.
+
+Kontrole ręczne (zmiany cofnięte, `git status` czysty w tych plikach):
+
+- AC2: tymczasowa `app.post("/api/v1/lists/:listId/archive", …)` w `listy/http/routes.ts` → `has an example request or a stated exclusion for every /api route` czerwony: `missingInTable: [ "POST /api/v1/lists/:listId/archive" ]`.
+- AC5 (parametr): bez `personIdSchema.safeParse(userId)` w trasie T-058 → czerwony `DELETE /api/v1/lists/:listId/members/:userId` (`:userId=%00`, `%00<id>`, `<id>%00` → 500) i test logu.
+- AC5 (treść): `requiredName` przepuszczający NUL (`withoutHiddenCharacters` z usuniętym ` ` przed sprawdzeniem) → czerwone sign-up, `PATCH /api/v1/me`, `POST`/`PATCH` list, `POST`/`PATCH` pozycji i test logu (7 testów).
+
+Poprawka: `withoutNul` (eksport z `@lista/shared`) przed odczytem bazy w `duplicateBeforeRefusal` (`pozycje/http/routes.ts`) — NUL daje 400 `validation_failed` `name: invalid`; `listId` wiadomości WS z `.refine(withoutNul)` (`packages/shared/src/api/live.ts`) — `validation_failed` bez zapytania do bazy, połączenie przyjmuje potem poprawny `subscribe`.
+
+Po poprawce: `pnpm test` 144 pliki / 1132 testy zielone; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality`, `pnpm build` bez błędów. `pnpm vitest run --project api --sequence.shuffle` z seedami 7 i 99 zielone; seed 4242: pada tylko `database.test.ts › starts the next test with empty tables`, także uruchomiony sam (shuffle miesza testy w pliku, a ten zależy od kolejności) — niezwiązane z T-070.
+
+Regresja: pozycje (`items.*.test.ts`, w tym duplikat T-060 `items.duplicate.test.ts`), WS (`live.*.test.ts`) — zielone w pełnym zestawie.
 
 ## Implementation notes
 
@@ -72,4 +96,7 @@ Zakres: trasy HTTP `/api/*` i wiadomości klienta WS `/api/v1/live` (WS dopisany
 - Tabela przykładowych żądań: dla każdej trasy (metoda + ścieżka) poprawne parametry i body, z danymi z `test/factories.ts`. Mutacja NUL dotyczy każdego parametru i każdego pola typu string w tym body. Obiekty i tablice przechodzić rekurencyjnie.
 - Przypadek z NUL wysyłać jako zalogowany właściciel zasobu, żeby żądanie doszło do walidacji i domeny, a nie skończyło się na 401/404 przed nimi. Wariant anonimowy i obcy (test 4) sprawdza tylko „nigdy 500”.
 - Trasy z limitem żądań (`perIp`) dostają losowy IP (`randomIp`) na każde żądanie, żeby 429 nie zastąpiło prawdziwej odpowiedzi.
+- Odstępstwo od notatki „rejestr tras przez hook `onRoute`”: `buildApp` rejestruje trasy głównej instancji synchronicznie, więc hook dodany przez test po `buildApp` ich nie widzi, a wstrzyknięcie hooka do `buildApp` tylko dla testu to zmiana kodu produkcyjnego. Inwentarz czyta `app.printRoutes()` z metodami (ten sam wzorzec co `logs.token-paths.test.ts`, „Pułapki”: bez `vi.mock` przy `isolate: false`).
+- `nulAccepted` (NUL poprawną treścią, oczekiwane tylko „nigdy 500”): `password` przy rejestracji i logowaniu, `newPassword` przy resecie (do bazy trafia skrót scrypt; HMAC dopełnia klucz zerami, więc poprawne hasło z NUL na końcu loguje — własność kryptografii, wymaga znajomości hasła) oraz `invitationToken` przy rejestracji (zły token nie blokuje rejestracji, F-12: 200 z `invitation_invalid`).
+- Każda trasa: świeży właściciel (lista, uczestnik, pozycja, link, token resetu), mutacje jako właściciel (4xx), obcy i anonim (nigdy 500); na końcu poprawne żądanie na świeżych danych ze statusem z tabeli (`ok`), żeby wpis naprawdę dochodził do handlera.
 - Zapisać regułę w `layers/backend.md` („Pułapki”): nowa trasa wymaga wpisu w tabeli testu inwentarza. Zaktualizować wiersz TH-20 w `threat-model.md` („Weryfikacja”: test inwentarza tras z NUL).

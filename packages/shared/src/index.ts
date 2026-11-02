@@ -70,3 +70,4 @@ export {
   type Participant,
   type Person,
 } from "./api/lists";
+export { withoutNul } from "./api/text";
