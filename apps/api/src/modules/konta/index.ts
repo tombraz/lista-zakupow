@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import type { Live } from "../na-zywo";
 import { authRoutes, type InvitationOnSignUp } from "./http/auth-routes";
-import { meRoutes } from "./http/me-routes";
+import { meRoutes, type NameChanged } from "./http/me-routes";
 import { requireSession, requireUser } from "./http/require-user";
 import { MailDeliveryError, type Mailer } from "./domain/mailer";
 import { passwordResetMail } from "./domain/reset-mail";
@@ -15,6 +15,7 @@ import { SignInFailures } from "./infra/sign-in-failures";
 
 export type { AuthSettings } from "./infra/auth";
 export type { InvitationOnSignUp } from "./http/auth-routes";
+export type { NameChanged } from "./http/me-routes";
 export type { Mail, Mailer } from "./domain/mailer";
 export { BrevoMailer } from "./infra/brevo-mailer";
 export { MailpitMailer } from "./infra/mailpit-mailer";
@@ -40,6 +41,11 @@ export interface Accounts {
    * zależy od `konta` (sesja), więc podaje obsługę po utworzeniu (odwrócenie zależności).
    */
   acceptInvitationsOnSignUp(accept: InvitationOnSignUp): void;
+  /**
+   * F-16: po zapisanej zmianie imienia. Listy posiada moduł `listy`, który sam zależy od `konta`,
+   * więc podaje rozesłanie zdarzeń po utworzeniu (odwrócenie zależności).
+   */
+  announceNameChanges(announce: NameChanged): void;
 }
 
 export function accountRoutes(
@@ -77,13 +83,17 @@ export function accountRoutes(
     },
     settings.origin,
   );
-  meRoutes(app, auth);
+  let nameChanged: NameChanged | undefined;
+  meRoutes(app, { auth, db, nameChanged: (userId) => nameChanged?.(userId) });
   return {
     requireUser: (request, reply) => requireUser(auth, request, reply),
     requireSession: (request, reply) => requireSession(auth, request, reply),
     sessionActive: (sessionId) => isSessionActive(db, sessionId, new Date()),
     acceptInvitationsOnSignUp: (accept) => {
       invitationOnSignUp = accept;
+    },
+    announceNameChanges: (announce) => {
+      nameChanged = announce;
     },
   };
 }

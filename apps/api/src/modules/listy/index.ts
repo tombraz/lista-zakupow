@@ -13,6 +13,7 @@ import {
   type ListPeople,
   type RequiredRole,
 } from "./domain/lists";
+import { announceRenamedPerson } from "./http/person-events";
 import { listRoutes } from "./http/routes";
 import {
   DrizzleListsRepository,
@@ -62,6 +63,8 @@ export function listsModule(
 ): Lists {
   const repository = new DrizzleListsRepository(drizzle(pool), items);
   listRoutes(app, accounts, repository, { items, live });
+  // F-16: imię widać przy pozycjach i uczestnikach list osoby, więc jej listy odświeżają się.
+  accounts.announceNameChanges((userId) => announceRenamedPerson(live, repository, userId));
   return listsApi(repository);
 }
 

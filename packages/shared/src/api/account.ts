@@ -65,6 +65,11 @@ export const passwordResetSchema = z.object({
 
 export type PasswordReset = z.input<typeof passwordResetSchema>;
 
+// F-16: zmiana imienia (SC-09); inne pola żądania (np. `email`) schemat pomija.
+export const nameChangeRequestSchema = z.object({ name });
+
+export type NameChangeRequest = z.input<typeof nameChangeRequestSchema>;
+
 export const meResponseSchema = z.object({
   id: z.string(),
   name: z.string(),

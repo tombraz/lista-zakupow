@@ -30,6 +30,11 @@ export async function resetPassword(reset: PasswordReset): Promise<void> {
   await apiRequest("/api/auth/reset-password", { body: reset });
 }
 
+/** F-16: nowe imię widoczne dla innych; 400 `validation_failed` z błędem pola `name`. */
+export function changeName(name: string): Promise<Me> {
+  return apiRequest<Me>("/api/v1/me", { method: "PATCH", body: { name } });
+}
+
 export async function signOut(): Promise<void> {
   await apiRequest("/api/auth/sign-out", { body: {} });
 }
