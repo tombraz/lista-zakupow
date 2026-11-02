@@ -95,3 +95,5 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 **Alternatywa:** dać agentowi uprawnienie do startu Docker Desktop (reguła w ustawieniach Claude Code), żeby pętla sama podnosiła demona.
 
 **Ustalenia na wznowienie (niezależne od środowiska):** `list_daily_activity.day` jest już datą w `Europe/Warsaw` (zapis w `statystyki`), więc tydzień = `date_trunc('week', day)::date` (poniedziałek; przełom roku nie dzieli tygodnia). „Wspólna” = lista, która **dziś** ma wiersz `list_member` (historii członkostw nie ma) — do zapisania w komentarzu pliku. Test uruchamia plik jednym zapytaniem `pg` w transakcji `BEGIN READ ONLY` (dowód „tylko czyta”); plik bez metakomend psql.
+
+Answer: Docker działa (uruchomiony przez właściciela) — wznów TDD z testami Testcontainers.
