@@ -50,3 +50,4 @@
 2026-11-02 12:47 | T-064 | qa | PASS | 0/0/1 minor; data-model.md bez cleanup_run i reguły rate_limit 1 h; DELETE partiami bez indeksu na kolumnach wygaśnięcia
 2026-11-02 19:08 | T-065 | implementer | FAILED | Docker nie działa, auto-mode zablokował start Docker Desktop; brak testów Testcontainers, nic nie zaimplementowano
 2026-11-02 19:26 | T-065 | implementer | IN_QA | metrics.sql: aktywni członkowie i dni wspólnych zakupów tygodniowo; 3 testy Testcontainers w READ ONLY
+2026-11-02 19:31 | T-065 | qa | PASS | 0/0/2 minor; S-02-05 done; puste tygodnie bez wiersza (zamiast 0), test AC3 łapie słowa kluczowe w komentarzach
