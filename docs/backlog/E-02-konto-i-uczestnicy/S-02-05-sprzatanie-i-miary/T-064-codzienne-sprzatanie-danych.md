@@ -3,7 +3,7 @@ id: T-064
 title: Codzienne sprzątanie danych w procesie API
 epic: E-02
 story: S-02-05
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: S                # S | M (L must be split)
@@ -113,3 +113,34 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 **Przewodniki warstw (Step 8b).** W sekcjach „Gdzie jest kod” w `layers/backend.md` i `layers/db.md`: `src/cleanup/`, `db/retention.ts`, reguły terminów, `errorSummary`, `cleanup_run` i `0008_sprzatanie`.
 
 **Propozycje dla właściciela (dokumentów architektury ten task nie edytował).** `data-model.md`: dopisać tabelę techniczną `cleanup_run` (jeden wiersz, początek ostatniego sprzątania), a w wierszu inwentarza „tokeny resetu, liczniki limitów” — że `rate_limit` jest usuwany po najdłuższym oknie (1 h). `architecture.md`: codzienne sprzątanie w `apps/api/src/cleanup/` poza modułami; każdy moduł podaje regułę terminu swoich tabel.
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+**Odtworzenie.** `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych). `pnpm vitest run --project api cleanup` → 4 pliki, 22 testy zielone. `pnpm test` → 141 plików, 934 testy zielone. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd, depcruise: 0 naruszeń), `drizzle-kit check` („Everything's fine”) — przechodzą.
+
+**Kryteria akceptacji.**
+
+| Kryterium | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | `cleanup.retention.test.ts`: każda tabela z granicą ± 1 s / 1 dzień, wartości oczekiwane jako literały; zaproszenia użyte / unieważnione liczone od `expires_at`; dzień aktywności w `Europe/Warsaw` (test 23:30 UTC). Mutacje: 30 → 0 dni dla zaproszeń i dzień UTC zamiast Warszawy — oba testy czerwone. |
+| AC2 | pass | `cleanup.schedule.test.ts` (timery i zegar podstawione, baza prawdziwa): start po 10 s, co 24 h, jedno nadrobienie po 3 dniach, czekanie po niedawnym przebiegu, dwa procesy → jeden przebieg, zatrzymanie przy zamknięciu. Mutacja: `setWhere` zawsze prawdziwe → 2 testy czerwone. Na żywo: drugi start API z niedawnym `cleanup_run` → 0 wpisów `cleanup`. |
+| AC3 | pass | `cleanup.failure.test.ts`: brak tabeli → `cleanup_failed` (poziom 50, `table`), pozostałe tabele sprzątnięte, `/health` 200, ponowienie po 24 h; błąd przed sprzątaniem (brak `cleanup_run`) → log i następny cykl; 2500 wierszy → 3 zapytania `DELETE` (partie po 1000). |
+| SEC1 (TH-27) | pass | test „sign-in failure counters…” i „keeps the number of pre-sign-in rows bounded” (5 dni nowych wierszy → zostają tylko wiersze otwartego okna: 15 / 60). Na żywo (lokalna baza, `node dist/server.js`): wiersze `sign_in_failure` sprzed 1 h i `rate_limit` sprzed 2 h usunięte po ~10 s, świeże zostały. |
+| SEC2 (TH-21) | pass | `cleanup.logs.test.ts`: dokładny zbiór kluczy wpisu `cleanup` i `cleanup_failed`, wyszukanie znaczników (id, e-mail, IP, tokeny, user agent, klucz konta) we wszystkich liniach logu, brak `DELETE` / SQL. Na żywo: `{"event":"cleanup","deleted":{"session":0,"verification":0,"rate_limit":1,"sign_in_failure":1,"invitation":0,"list_daily_activity":0}}` — tylko nazwy tabel i liczby. |
+
+**Jakość testów.** Testy na uzgodnionych granicach (`purgeExpiredData` na Testcontainers, `scheduleCleanup` z podstawionym zegarem), bez mocków własnych modułów; oczekiwania to literały. Dowody red w Evidence dla każdego testu planu; dla testów zielonych od razu (AC3) — mutacje opisane, ja potwierdziłem trzy własne (wyżej). Po spot-checku pliki przywrócone, `git status` czysty.
+
+**Przegląd kodu.** Reguły terminów w modułach-właścicielach tabel (`konta`, `zaproszenia`, `statystyki`) eksportowane przez `index.ts`, zbierane w `src/cleanup/` — kierunek zależności poprawny (depcruise bez naruszeń). Przeniesienie `summarize` → `errorSummary` bez zmiany zachowania (zmiana tylko miejsca). Harmonogram bez nowej zależności, `setTimeout` z `unref`, podłączony tylko w `server.ts`. Zakres zgodny z taskiem.
+
+**Eksploracja.** Strefa czasowa i zmiana czasu: dzień liczony `Intl` w `Europe/Warsaw`, odejmowanie na typie `date` — DST nie wpływa. Staging uśpiony kilka dni → jedno sprzątanie (test + znacznik w bazie). Wszystkie limity w `rate_limit` (Better Auth i reset per e-mail) mają okno ≤ 1 h, więc usuwanie po 1 h od `last_request` nie skraca żadnego okna. Regresja: pełny zestaw testów (T-048 logowanie, zaproszenia, miary) zielony.
+
+**Exploit (lokalnie).** TH-27: zapisy przed logowaniem z datami po oknie → usunięte przez pierwszy przebieg po starcie; brak wzrostu bez granic (test 5-dniowy). TH-21: wynik i błąd w logu bez danych osobowych (test + log na żywo). Dane testowe usunięte z lokalnej bazy po sprawdzeniu.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | `data-model.md` nie opisuje tabeli technicznej `cleanup_run` ani reguły „`rate_limit` usuwany 1 h po `last_request`”; autor zostawił to jako propozycję. | `docs/architecture/data-model.md` „Inwentarz danych osobowych” | właściciel dopisuje tabelę i regułę do modelu danych |
+| 2 | note | db | Każda partia `DELETE` przegląda całą tabelę (brak indeksów na `session.expires_at`, `verification.expires_at`, `invitation.expires_at`, `rate_limit.last_request`). Przy skali pilotażu bez znaczenia. | `src/db/retention.ts` | rozważyć indeksy, jeśli tabele urosną |
+| 3 | note | backend | Znacznik `cleanup_run` jest zajmowany przed sprzątaniem: proces przerwany w trakcie (wdrożenie, auto-stop) ponawia dopiero po 24 h. Zgodne z AC3 („kolejny cykl”). | `src/cleanup/run.ts` `claimRun` | — |
+| 4 | note | dx | Brak komendy deweloperskiej do ręcznego sprzątania; demo działa przez start API bez świeżego znacznika (task dopuszcza obie drogi). | Evidence, demo | — |
