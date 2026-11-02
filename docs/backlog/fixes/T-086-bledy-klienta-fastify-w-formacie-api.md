@@ -30,8 +30,8 @@ related_tasks: [T-005, T-034, T-070]
 ## Acceptance criteria
 
 - [ ] AC1: Given treść żądania `/api/*`, która nie jest poprawnym JSON, when API ją odrzuca, then odpowiedź to 400 `{ error: { code: "validation_failed" } }` bez `message` i bez fragmentu treści. — verified by: test integracyjny
-- [ ] AC2: Given parametr ścieżki dłuższy niż `maxParamLength`, then odpowiedź ma format błędu API (status i kod do ustalenia — patrz otwarte pytanie). — verified by: test integracyjny
-- [ ] AC3: Given 413 z limitu treści, then zdarzenie `limit_reached` w logu `security` zostaje (T-034), a format odpowiedzi zgodny z decyzją z otwartego pytania. — verified by: `body-limit.test.ts`
+- [ ] AC2: Given parametr ścieżki dłuższy niż `maxParamLength`, then odpowiedź to 414 `{ error: { code: "validation_failed" } }` (odpowiedź na otwarte pytanie). — verified by: test integracyjny
+- [ ] AC3: Given 413 z limitu treści, then zdarzenie `limit_reached` w logu `security` zostaje (T-034), a odpowiedź to 413 `{ error: { code: "validation_failed" } }`; nieobsługiwany `content-type` — 415 z tym samym kodem. — verified by: `body-limit.test.ts`
 - [ ] AC4: Given `routes-nul.test.ts`, then przypadki surowego NUL w treści (niepoprawny JSON) i za długiego parametru z `%00` są w teście i oczekują kodu z kontraktu. — verified by: `routes-nul.test.ts`
 - [ ] AC5: No regression in: pełny zestaw API, ekrany web obsługujące `validation_failed` bez `fields`.
 
@@ -56,6 +56,8 @@ related_tasks: [T-005, T-034, T-070]
 ## Open question
 
 Kontrakt (`ErrorCode`) nie ma kodów dla 413, 414 i 415. Czy dla nich: (a) status bez zmian i `code: "validation_failed"`, (b) nowe kody w `packages/shared` (zmiana kontraktu — wtedy `/plan-backlog`), czy (c) tylko zły JSON (400) w tym zadaniu, reszta bez zmian? Rekomendacja przy zakładaniu: (a) — bez nowych kodów, klient pokazuje ogólny błąd.
+
+Answer (właściciel, 2026-11-02): (a) — 413, 414 i 415 zachowują status, treść `{ error: { code: "validation_failed" } }`; bez nowych kodów w `packages/shared`. Zdarzenie `limit_reached` dla 413 w logu `security` bez zmian (T-034).
 
 ## Root cause
 
