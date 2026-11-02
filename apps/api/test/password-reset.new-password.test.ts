@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
 import { createUser, randomIp, signIn, type TestUser } from "./factories";
+import { capturingMailer } from "./mailer";
 import { requestsAs } from "./requests";
-import { resetTokenFor } from "./reset-token";
+import { requestResetToken, resetTokenFor } from "./reset-token";
 
 const RESET_PASSWORD = "/api/auth/reset-password";
 const NEW_PASSWORD = "nowe haslo ąę 123";
@@ -141,6 +142,64 @@ describe("new password from the reset link", () => {
       expect(failed && outcome(failed)).toEqual(INVALID_TOKEN);
       const winner = passwords[responses.findIndex((response) => response.statusCode === 200)];
       expect((await signInStatus(app, test.user, winner ?? "")).status).toBe(200);
+    });
+  });
+
+  // T-075 (F-03, TH-10): po zmianie hasła żaden starszy link resetu konta nie działa.
+  describe("other reset links of the account", () => {
+    async function twoLinks() {
+      const { mailer, sent } = capturingMailer();
+      const testApp = buildTestApp(db.pool, { mailer });
+      app = testApp;
+      const user = await createUser(testApp);
+      const first = await requestResetToken(testApp, user, sent);
+      const second = await requestResetToken(testApp, user, sent);
+      return { testApp, user, sent, first, second };
+    }
+
+    it("refuses the other unused link once the password was changed (AC1)", async () => {
+      const { testApp, user, first, second } = await twoLinks();
+
+      const used = await resetPassword(testApp, { token: second, newPassword: NEW_PASSWORD });
+      const stale = await resetPassword(testApp, { token: first, newPassword: "inne haslo 456" });
+
+      expect(used.statusCode).toBe(200);
+      expect({ status: stale.statusCode, body: stale.json<unknown>() }).toEqual({
+        status: 400,
+        body: { error: { code: "invalid_token" } },
+      });
+      expect((await signInStatus(testApp, user, NEW_PASSWORD)).status).toBe(200);
+    });
+
+    it("keeps the reset links of another account valid (AC2)", async () => {
+      const { testApp, sent, second } = await twoLinks();
+      const other = await createUser(testApp);
+      const otherToken = await requestResetToken(testApp, other, sent);
+
+      await resetPassword(testApp, { token: second, newPassword: NEW_PASSWORD });
+      const response = await resetPassword(testApp, {
+        token: otherToken,
+        newPassword: "haslo innego 789",
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect((await signInStatus(testApp, other, "haslo innego 789")).status).toBe(200);
+    });
+
+    it("lets only one of two parallel resets with different links succeed", async () => {
+      const { testApp, user, first, second } = await twoLinks();
+      const attempts = [
+        { token: first, newPassword: "pierwsze haslo 1" },
+        { token: second, newPassword: "drugie haslo 22" },
+      ];
+
+      const responses = await Promise.all(
+        attempts.map((payload) => resetPassword(testApp, payload)),
+      );
+
+      expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 400]);
+      const winner = attempts[responses.findIndex((response) => response.statusCode === 200)];
+      expect((await signInStatus(testApp, user, winner?.newPassword ?? "")).status).toBe(200);
     });
   });
 

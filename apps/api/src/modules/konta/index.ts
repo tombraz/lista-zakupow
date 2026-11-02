@@ -8,8 +8,9 @@ import { requireSession, requireUser } from "./http/require-user";
 import { MailDeliveryError, type Mailer } from "./domain/mailer";
 import { passwordResetMail } from "./domain/reset-mail";
 import { accountKey } from "./infra/account-key";
-import { createAuth, type AuthSettings } from "./infra/auth";
+import { createAuth, type AuthSettings, type OnPasswordResetToken } from "./infra/auth";
 import { PasswordResetRequests } from "./infra/password-reset-requests";
+import { ResetTokens } from "./infra/reset-tokens";
 import { isSessionActive } from "./infra/sessions";
 import { SignInFailures } from "./infra/sign-in-failures";
 
@@ -62,16 +63,7 @@ export function accountRoutes(
   { live, mailer }: { live: Pick<Live, "closeSession" | "closeUser">; mailer: Mailer },
 ): Accounts {
   const db = drizzle(pool);
-  const auth = createAuth(db, settings, app.log, (email, token) => {
-    // TH-11: wysyłka w tle — czas odpowiedzi nie zdradza, czy konto istnieje. Błąd dostawcy tylko
-    // w logu, bez adresu i treści (TH-21); odpowiedź i tak jest ta sama (architecture.md).
-    mailer.send(passwordResetMail(settings.origin, email, token)).catch((error: unknown) => {
-      app.log.error(
-        { source: "mailer", ...deliveryFailure(error) },
-        "password reset mail not sent",
-      );
-    });
-  });
+  const auth = createAuth(db, settings, app.log, sendResetMail(app, mailer, settings.origin));
   let invitationOnSignUp: InvitationOnSignUp | undefined;
   authRoutes(
     app,
@@ -80,6 +72,7 @@ export function accountRoutes(
       accountKey: (email) => accountKey(settings.secret, email),
       failures: new SignInFailures(db),
       resetRequests: new PasswordResetRequests(db),
+      resetTokens: new ResetTokens(db),
       invitationOnSignUp: () => invitationOnSignUp,
       onSignedOut: (sessionId) => {
         live.closeSession(sessionId);
@@ -115,6 +108,19 @@ export function accountRoutes(
     announceAccountDeletions: (announce) => {
       accountDeleting = announce;
     },
+  };
+}
+
+// TH-11: wysyłka w tle — czas odpowiedzi nie zdradza, czy konto istnieje. Błąd dostawcy tylko
+// w logu, bez adresu i treści (TH-21); odpowiedź i tak jest ta sama (architecture.md).
+function sendResetMail(app: FastifyInstance, mailer: Mailer, origin: string): OnPasswordResetToken {
+  return (email, token) => {
+    mailer.send(passwordResetMail(origin, email, token)).catch((error: unknown) => {
+      app.log.error(
+        { source: "mailer", ...deliveryFailure(error) },
+        "password reset mail not sent",
+      );
+    });
   };
 }
 

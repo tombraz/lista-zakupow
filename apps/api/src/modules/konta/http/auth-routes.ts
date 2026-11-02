@@ -15,6 +15,7 @@ import { logLimitEvent, securityEvent } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { PasswordResetRequests } from "../infra/password-reset-requests";
+import type { ResetTokens } from "../infra/reset-tokens";
 import type { SignInFailures } from "../infra/sign-in-failures";
 
 interface AuthDeps {
@@ -23,6 +24,8 @@ interface AuthDeps {
   accountKey: (email: string) => string;
   failures: SignInFailures;
   resetRequests: PasswordResetRequests;
+  /** F-03, TH-10: resety konta po kolei, po udanym reszta linków konta przestaje działać. */
+  resetTokens: ResetTokens;
   /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
   invitationOnSignUp: () => InvitationOnSignUp | undefined;
   /** TH-17: po wylogowaniu zamyka połączenia na żywo tej sesji (`na-zywo.closeSession`). */
@@ -137,7 +140,13 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     const body = validate(passwordResetSchema, request.body);
     // Właściciel tokenu przed jego zużyciem: po sukcesie wiadomo, czyje sesje usunął Better Auth.
     const userId = await resetTokenOwner(auth, body.token);
-    const response = await forward(auth, origin, request, body);
+    const response = userId
+      ? await deps.resetTokens.exclusive(userId, async () => {
+          const result = await forward(auth, origin, request, body);
+          if (result.ok) await deps.resetTokens.revokeAll(userId);
+          return result;
+        })
+      : await forward(auth, origin, request, body);
     if (response.ok && userId) {
       logSecurity(request, "password_reset", { userId });
       deps.onPasswordReset(userId);
