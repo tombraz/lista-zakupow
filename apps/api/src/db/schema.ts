@@ -234,3 +234,14 @@ export const dataMigration = pgTable("data_migration", {
   name: text("name").primaryKey(),
   appliedAt: timestamptz("applied_at").notNull().defaultNow(),
 });
+
+// T-064: początek ostatniego codziennego sprzątania (jeden wiersz). Stan w bazie, nie w pamięci,
+// żeby po uśpieniu maszyny (Fly auto-stop) zaległe sprzątanie ruszyło po starcie, i to tylko raz.
+export const cleanupRun = pgTable(
+  "cleanup_run",
+  {
+    id: integer("id").primaryKey().default(1),
+    startedAt: timestamptz("started_at").notNull(),
+  },
+  (table) => [check("cleanup_run_single_row", sql`${table.id} = 1`)],
+);

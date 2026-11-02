@@ -2,6 +2,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { activityDay } from "./domain/activity";
 import { incrementChecks } from "./infra/activity-repository";
 
+export { activityRetention } from "./infra/retention";
+
 /** Odhaczenie do miar sukcesu (BRD §10). */
 export interface CheckActivity {
   listId: string;

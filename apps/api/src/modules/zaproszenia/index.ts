@@ -10,6 +10,8 @@ import { acceptOnSignUp } from "./http/sign-up";
 import { DrizzleInvitationsRepository } from "./infra/invitations-repository";
 import { cryptoRandomBytes } from "./infra/random";
 
+export { invitationRetention } from "./infra/retention";
+
 export interface InvitationsDependencies {
   accounts: Accounts;
   lists: Lists;

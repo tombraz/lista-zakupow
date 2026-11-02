@@ -2,7 +2,7 @@
 id: S-02-05
 epic: E-02
 title: Sprzątanie danych i miary sukcesu
-status: todo           # todo | in-progress | done
+status: in-progress    # todo | in-progress | done
 requirements: [N-02]
 screens: []
 ---

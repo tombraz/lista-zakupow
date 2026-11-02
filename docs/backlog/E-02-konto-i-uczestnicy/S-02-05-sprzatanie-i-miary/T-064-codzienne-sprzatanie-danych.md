@@ -3,7 +3,7 @@ id: T-064
 title: Codzienne sprzątanie danych w procesie API
 epic: E-02
 story: S-02-05
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: S                # S | M (L must be split)
@@ -34,11 +34,11 @@ Lokalnie: dane testowe z datami w przeszłości → uruchom sprzątanie (start A
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given wiersze po terminie i w terminie w `session` (`expires_at` < teraz), `invitation` (`expires_at` < teraz − 30 dni; użyte i unieważnione liczone od `expires_at`), `list_daily_activity` (`day` < dziś − 90 dni), `verification` (`expires_at` < teraz), `rate_limit` i `sign_in_failure` (okno minęło), when sprzątanie się wykona (zegar), then usunięte są dokładnie wiersze po terminie. — verified by: test integracyjny na każdą tabelę (granice ± 1 s / 1 dzień)
-- [ ] AC2: Given API działa, when mija 24 h od ostatniego sprzątania, then sprzątanie uruchamia się samo; given API startuje, a ostatnie sprzątanie było ponad 24 h temu (albo nigdy), then uruchamia się wkrótce po starcie; dwa sprzątania nie działają naraz. — verified by: test z podstawionym zegarem / harmonogramem
-- [ ] AC3: Given błąd bazy w trakcie sprzątania, then błąd jest zalogowany, proces API działa dalej, a następna próba odbywa się w kolejnym cyklu; sprzątanie nie blokuje obsługi żądań (usuwanie partiami, np. po 1000 wierszy). — verified by: test integracyjny
-- [ ] SEC1 (TH-27): Given tabela `sign_in_failure` z wierszami po oknie 15 min, when sprzątanie, then usunięte; liczba wierszy tabel pisanych przed logowaniem nie rośnie bez granic w czasie. — verified by: test integracyjny
-- [ ] SEC2 (TH-21): Given sprzątanie, when loguje wynik, then tylko nazwy tabel i liczby wierszy (bez identyfikatorów użytkowników, e-maili, tokenów). — verified by: test logów
+- [x] AC1: Given wiersze po terminie i w terminie w `session` (`expires_at` < teraz), `invitation` (`expires_at` < teraz − 30 dni; użyte i unieważnione liczone od `expires_at`), `list_daily_activity` (`day` < dziś − 90 dni), `verification` (`expires_at` < teraz), `rate_limit` i `sign_in_failure` (okno minęło), when sprzątanie się wykona (zegar), then usunięte są dokładnie wiersze po terminie. — verified by: test integracyjny na każdą tabelę (granice ± 1 s / 1 dzień)
+- [x] AC2: Given API działa, when mija 24 h od ostatniego sprzątania, then sprzątanie uruchamia się samo; given API startuje, a ostatnie sprzątanie było ponad 24 h temu (albo nigdy), then uruchamia się wkrótce po starcie; dwa sprzątania nie działają naraz. — verified by: test z podstawionym zegarem / harmonogramem
+- [x] AC3: Given błąd bazy w trakcie sprzątania, then błąd jest zalogowany, proces API działa dalej, a następna próba odbywa się w kolejnym cyklu; sprzątanie nie blokuje obsługi żądań (usuwanie partiami, np. po 1000 wierszy). — verified by: test integracyjny
+- [x] SEC1 (TH-27): Given tabela `sign_in_failure` z wierszami po oknie 15 min, when sprzątanie, then usunięte; liczba wierszy tabel pisanych przed logowaniem nie rośnie bez granic w czasie. — verified by: test integracyjny
+- [x] SEC2 (TH-21): Given sprzątanie, when loguje wynik, then tylko nazwy tabel i liczby wierszy (bez identyfikatorów użytkowników, e-maili, tokenów). — verified by: test logów
 
 ## TDD plan
 
@@ -76,15 +76,40 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+**Zbudowane.** `apps/api/src/cleanup/` (`purgeExpiredData`, `cleanUpIfDue`, `scheduleCleanup`), `src/db/retention.ts` (usuwanie partiami po 1000 wierszy), reguły terminów w modułach-właścicielach tabel (`konta/infra/retention.ts`, `zaproszenia/infra/retention.ts`, `statystyki/infra/retention.ts`, eksport z `index.ts`), tabela znacznika `cleanup_run` (migracja `0008_sprzatanie.sql`, jeden wiersz, `CHECK (id = 1)`), podłączenie tylko w `src/server.ts` (nie w `buildApp` — aplikacje innych testów nie sprzątają). `summarize` przeniesione z `http/api-error.ts` do `logging.ts` jako `errorSummary` (wspólne dla handlera błędów i sprzątania; bez zmiany zachowania).
+
+**Testy (plan TDD).** `pnpm vitest run --project api cleanup` → 4 pliki, 22 testy zielone.
+
+| # | Plik / testy | Red (przed implementacją) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `test/cleanup.retention.test.ts` (9): sesja ±1 s, zaproszenie 30 dni ±1 s (także użyte i unieważnione), dzień aktywności 90/91, dzień Warszawa vs UTC, `verification` ±1 s, `rate_limit` 1 h ±1 s, `sign_in_failure` 15 min ±1 s, ograniczona liczba wierszy przez 5 dni, reszta danych zostaje | stub bez działania: 8 × `AssertionError` (np. `expected [ 'expired', 'valid' ] to deeply equal [ 'valid' ]`, `expected { failures: '250', limits: '600' } to deeply equal { failures: '15', limits: '60' }`); „keeps all other data” to strażnik — przechodzi także na stubie | zielone |
+| 2 | `test/cleanup.schedule.test.ts` (7): pierwsze sprzątanie wkrótce po starcie (nie przed 10 s), co 24 h (nie po 24 h − 1 s), nadrobienie raz po 3 dniach uśpienia, czekanie, gdy ostatnie 1 h temu (start po +23 h), dwa procesy API → jedno sprzątanie, zatrzymanie przy zamknięciu, opóźnienie startu ≤ 1 min | stub harmonogramu: 5 × `AssertionError: expected +0 to be 1` | zielone |
+| 3 | `test/cleanup.failure.test.ts` (4): błąd tabeli w logu (poziom 50, `table`), pozostałe sprzątnięte, `/health` 200; nieudana tabela ponowiona po 24 h; błąd bazy przed sprzątaniem (brak `cleanup_run`) → log, następny cykl sprząta; 2500 wierszy → 3 zapytania `DELETE` | pierwszy test red: `expected [] to deeply equal [ ObjectContaining{…} ]`. Trzy pozostałe przeszły od razu (partie i ponowne planowanie powstały przy teście 2); sprawdzone mutacją, potem przywrócone: bez `LIMIT` → `expected 2 to be 3`; bez planowania po błędzie → `expected [] to have a length of 1`; interwał 48 h → `expected 1 to be +0` | zielone |
+| 4 | `test/cleanup.logs.test.ts` (2): wpis `cleanup` ma tylko pola pino + `deleted` = `{ tabela: liczba }`; w żadnej linii logu nie ma identyfikatora i e-maila osoby, id listy, IP, tokenu sesji / resetu / zaproszenia, klucza konta ani user agenta; `cleanup_failed` ma tylko `table` i `err` = typ / stos / przyczyna (typ / kod / stos), bez SQL | pierwszy przebieg red na moim oczekiwaniu kształtu `err` (`expected [ 'cause', 'stack', 'type' ] to deeply equal [ 'code', … ]`) — asercja poprawiona do rzeczywistego kształtu `errorSummary`. Mutacja: log surowego wyniku / surowego błędu → `expected [ Array(8) ] to deeply equal [ Array(7) ]` i `expected [ 'message', 'params', 'query', … ]`; przywrócone | zielone |
+
+**Kryteria akceptacji.**
+
+- AC1: test 1, każda tabela, granice ± 1 s / 1 dzień. Zaproszenie: `expires_at < teraz − 30 dni` niezależnie od `used_at` / `revoked_at`. Aktywność: `day < dziś(Europe/Warsaw) − 90`, więc 90. dzień wstecz zostaje (moduł `statystyki` też liczy dzień w Warszawie). `rate_limit`: wiersz nie zapisuje swojego okna, więc wygasa po najdłuższym oknie limitów trzymanych w tej tabeli (1 h, `signUpPerIp`) — ta sama reguła, którą Better Auth sprząta tę tabelę; sama granica (dokładnie 15 min / 1 h) zostaje, jak w `SignInFailures` (`<`).
+- AC2: test 2. Znacznik `cleanup_run.started_at` w bazie: nadrabianie po Fly auto-stop bez stanu w pamięci i tylko jedno sprzątanie niezależnie od długości uśpienia. Wykluczenie: jedno atomowe `INSERT … ON CONFLICT DO UPDATE … WHERE started_at <= teraz − 24 h RETURNING`; w procesie sprawdzenia nie nakładają się (następny timer dopiero po końcu sprawdzenia).
+- AC3: test 3. Każda tabela osobno (błąd jednej nie zatrzymuje innych), zapytania autocommit po ≤ 1000 wierszy (`ctid = ANY (ARRAY(SELECT ctid … LIMIT 1000)) AND <warunek>`; warunek powtórzony, więc wiersz odnowiony w międzyczasie, np. sesja, jest sprawdzany ponownie). Błędy łapie harmonogram; następne sprawdzenie po 24 h.
+- SEC1 (TH-27): test 1 „sign-in failure counters…” i „keeps the number of pre-sign-in rows bounded over time” (5 dni nowych wierszy `sign_in_failure` / `rate_limit` → zostają tylko wiersze z otwartego okna).
+- SEC2 (TH-21): test 4.
+
+**Demo (lokalnie, 2026-11-02).** `pnpm services:up`, `db:migrate`, wiersz `sign_in_failure` sprzed 1 h i świeży, brak wiersza `cleanup_run`, potem `node dist/server.js`. Po ~10 s: `{"level":30,…,"event":"cleanup","deleted":{"session":0,"verification":42,"rate_limit":183,"sign_in_failure":1,"invitation":0,"list_daily_activity":0},"msg":"cleanup"}`; świeży wiersz został, `cleanup_run.started_at` ustawione. Osobnej komendy deweloperskiej nie ma: wyzwalaczem jest start API bez znacznika (albo ze znacznikiem starszym niż 24 h).
+
+**Pełne sprawdzenia.** `pnpm test` → 141 plików, 934 testy zielone. Przechodzą: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` (jscpd 0 klonów, depcruise bez naruszeń), `pnpm build`, `drizzle-kit check`, `node scripts/backlog-check.mjs`. `--project api --sequence.shuffle.files` z seedami 4242 i 99: 98 plików zielonych. Z `--sequence.shuffle` (losowana też kolejność testów w pliku) pada `test/database.test.ts` „starts the next test with empty tables”: test zależy od kolejności testów we własnym pliku. Jest starszy niż ten task i ten task go nie dotyka. `migrate-slow-database.test.ts` padł raz w jednym przebiegu losowym, przy powtórzeniu przeszedł (też nie dotknięty).
+
+**Przewodniki warstw (Step 8b).** W sekcjach „Gdzie jest kod” w `layers/backend.md` i `layers/db.md`: `src/cleanup/`, `db/retention.ts`, reguły terminów, `errorSummary`, `cleanup_run` i `0008_sprzatanie`.
+
+**Propozycje dla właściciela (dokumentów architektury ten task nie edytował).** `data-model.md`: dopisać tabelę techniczną `cleanup_run` (jeden wiersz, początek ostatniego sprzątania), a w wierszu inwentarza „tokeny resetu, liczniki limitów” — że `rate_limit` jest usuwany po najdłuższym oknie (1 h). `architecture.md`: codzienne sprzątanie w `apps/api/src/cleanup/` poza modułami; każdy moduł podaje regułę terminu swoich tabel.

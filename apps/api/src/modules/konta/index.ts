@@ -20,6 +20,7 @@ export type { AccountTransaction } from "./infra/users";
 export type { Mail, Mailer } from "./domain/mailer";
 export { BrevoMailer } from "./infra/brevo-mailer";
 export { MailpitMailer } from "./infra/mailpit-mailer";
+export { accountRetention } from "./infra/retention";
 
 export interface SessionUser {
   id: string;

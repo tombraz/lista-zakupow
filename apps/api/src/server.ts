@@ -1,5 +1,7 @@
 import { existsSync } from "node:fs";
 import { buildApp } from "./app";
+import { scheduleCleanup } from "./cleanup";
+import { systemClock } from "./clock";
 import { readConfig } from "./config";
 import { createPool } from "./db/pool";
 import { BrevoMailer, MailpitMailer } from "./modules/konta";
@@ -17,6 +19,9 @@ const app = buildApp({
   ...(config.TRUSTED_PROXIES ? { trustedProxies: config.TRUSTED_PROXIES } : {}),
   ...(existsSync(config.WEB_DIST_DIR) ? { webDistDir: config.WEB_DIST_DIR } : {}),
 });
+
+// N-02: dane po terminie z inwentarza (data-model.md) sprzątane raz na dobę.
+scheduleCleanup(app, { pool, clock: systemClock });
 
 app.addHook("onClose", async () => {
   await pool.end();
