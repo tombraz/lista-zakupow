@@ -3,7 +3,7 @@ id: T-059
 title: Opuszczenie listy przez uczestnika
 epic: E-02
 story: S-02-02
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-056, T-057, T-063]
 size: S                # S | M (L must be split)
@@ -90,7 +90,7 @@ What an independent tester checks beyond the automated tests:
 - [x] Every acceptance criterion checked, with evidence below
 - [x] Global definition of done from `docs/architecture/testing-strategy.md` met
 - [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
-- [ ] Handed to QA (`status: in-qa`)
+- [x] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
@@ -136,3 +136,37 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 ### Layer guides (Step 8b)
 
 `backend.md` and `web.md`, „Gdzie jest kod”: leave route, `leaveList`, SC-07 `LeaveList` / `useLeaveList`, `lists/ownExit.ts` (renamed from `lists/deleteListKey.ts`) (facts only).
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Independent run on `epic/E-02-konto-i-uczestnicy` @ `a6191b8` (Windows, Docker Postgres).
+
+**Reproduce.** `pnpm install --frozen-lockfile` (no tracked files changed), `pnpm check`: format, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check all green; `vitest run` 857/858 — the one failure is `apps/web/src/live/connection.test.tsx` › „SC-07: after a silent drop (no browser event) fetches the participants again” (`expected [ { type: 'subscribe' } ] to have a length of 2 but got 1`), see finding 1. `pnpm test:mobile` 10/10. The task's own tests (4 files, 16 tests) pass. `playwright test e2e/sc07-uczestnicy.spec.ts` twice (telefon + komputer): the T-059 test passed both times (8/8 on the second run; on the first run the T-057 test „SC-07 empty and load error states pass axe” failed once on `komputer`, then passed 2 + 8 times, finding 2).
+
+**Acceptance criteria.**
+
+| AC | Result | How verified |
+| --- | --- | --- |
+| AC1 | pass | `lists.leave.test.ts`, `live.leave.test.ts` read and run; live server: 204, Tomek's WS gets `subscribed, access.revoked, lists.changed`; Ania's members list empty; „Mleko” keeps `addedBy` Tomek |
+| AC2 | pass | `lists.leave.authz.test.ts`; live server: owner → 403 `owner_cannot_leave`; component test „SC-07 of the owner has no „Opuść listę”” |
+| AC3 | pass | `ParticipantsScreen.leave.test.tsx` (10 tests) read and run: dialog text and description, start focus „Anuluj”, `REPLACE` to `/listy`, focus back on „Opuść listę”, error stays in dialog, offline `aria-disabled` |
+| AC4 | pass | E2E two contexts: second tab lands on SC-05 with the MC-03 notice; owner sees „Na liście (0 z 20)” within `LIVE` |
+| AC5 | pass | E2E `expectNoAxeViolations` on the open ConfirmDialog, SC-05 after leaving and second tab's SC-05 |
+| SEC1 (TH-04) | pass | live server: after leave no `item.upserted` / `list.updated` reaches Tomek's socket after the owner's changes; re-`subscribe` → `error`; `GET` list / members, `POST` item → 404 |
+| SEC2 (TH-01) | pass | live server: stranger → 404 `not_found` (same for missing UUID and `' OR 1=1--` id), anonymous → 401 |
+
+**Spot-checks (mutants, all reverted, `git status` clean).** Owner guard removed from `leaveList` → authz test fails (`expected 404 to be 403`). `withdrawAccess` removed from the leave route → both `live.leave.test.ts` tests fail. `replace: false` in `useLeaveList` → 2 component tests fail („replaces SC-07 with SC-05”, „Wstecz”).
+
+**Exploratory (local E2E server, three accounts via sign-up API).** Foreign `Origin` → 403 `invalid_origin`; a JSON body `{ userId }` is ignored (only the caller leaves); double leave in parallel ×5 → 204/404, one withdrawal; leave racing the owner's `DELETE` list ×5 → both 204, no error; leave racing the owner's removal of the participant ×5 → 204/404, participant gone, which the client treats as left (component test „lost response”); re-joining with a new link works (200, list readable again). No `security` log event for leaving: consistent with `architecture.md` „Obserwowalność” (removal only).
+
+**Code review.** Small, follows T-058: route → `requireListAccess(…, "member")` → `leaveList` → shared `withdrawAccess`; client `useGuardedMutation` with `leaveListKey`, `isExitingOnItsOwn` merges the two own-exit keys (rename of `deleteListKey.ts` is in scope). Tests assert behaviour at the agreed seams (HTTP, WS, MSW screen, browser); expected values are literals. Red evidence present for #1, #3, #4; #2 and #5 were written after green and justified by recorded bite checks, which I reproduced for #2.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | tests (outside task) | Flaky `connection.test.tsx` › „SC-07: after a silent drop …” (from T-063, not touched by T-059). Root cause: `LiveSocket.reconnect()` waits `1000 * 2 ** retries` ms (first retry 1000 ms), while `subscribed(live, 2)` uses `waitFor` with the default 1000 ms timeout after `findByText(OFFLINE)` already spent part of it — the window is at the edge. | Failed in this QA's `pnpm check`; 1/12 isolated runs at HEAD; author saw it once too | Fix task: give that `waitFor` an explicit timeout above the first retry delay (or fake timers) |
+| 2 | minor | tests (outside task) | E2E `sc07-uczestnicy.spec.ts:64` „SC-07 empty and load error states pass axe” failed once on `komputer`, then passed 10 times; message overwritten by the rerun. | First Playwright run in this QA | Watch; capture trace on next failure |
+| 3 | minor | copy | „Nie udało się opuścić listy. Spróbuj ponownie.” is outside the Copy SC-07 table (author's decision, same pattern as the T-058 text the owner approved). | `SC-07-uczestnicy/messages.ts` | Owner adds `leave.failed` to Copy SC-07 or gives another text |
+| 4 | minor | naming / docs | `removeParticipant` doc comment says „tylko właściciel”, but `leaveList` now calls it for the participant himself. | `apps/api/src/modules/listy/domain/lists.ts` | Update the comment |
+| 5 | note | accessibility | Manual checks (screen reader, 200 % zoom, reduce motion) not performed in this autonomous run; keyboard flow and focus return are covered by component tests, axe by E2E. | — | Cover in UAT |
