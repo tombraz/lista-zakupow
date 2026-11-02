@@ -3,7 +3,7 @@ id: T-061
 title: Zmiana imienia (SC-09)
 epic: E-02
 story: S-02-03
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-060, T-063]
 size: M                # S | M (L must be split)
@@ -138,3 +138,35 @@ Regression fixed in passing: `apps/web/e2e/j01-konto.spec.ts` expected the name 
 - Name field: no `maxLength` attribute (as on SC-02), only the counter from 80% and the "too_long" message; this lets the user see the error for 31 characters.
 - Change in another tab: the SC-09 field follows the session name while the user has not typed their own; the session refreshes on reload (session `staleTime: Infinity`, no refetch on focus).
 - Layer guides: "Gdzie jest kod" updated (backend: `PATCH /me`, `infra/users.ts`, `announceNameChanges`, `person-events.ts`; web: SC-09, `session/personName.ts`, E2E).
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+**Reproduce:** `pnpm install --frozen-lockfile` (no tracked changes), `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality`, `pnpm design-check`: all OK. `pnpm vitest run`: 130 files, 886/886 pass. I ran it once, and the timeout in `PasswordResetScreen.entry.test.tsx` that the implementer saw did not happen. Full E2E `playwright test` (telefon + komputer, own ports 3191/3192): 72/72 pass, including `j01-zmiana-imienia` and `j01-konto`.
+
+**Acceptance criteria**
+
+| AC | Result | How verified |
+| --- | --- | --- |
+| AC1 | pass | `me.name.test.ts` asserts the trimmed name in `PATCH` and `GET /me`, `GET /lists` (owner and members), `…/members`, and `addedBy` / `checkedBy` of items. By hand on the running API, `GET /api/v1/invitations/:token` (SC-08) shows `ownerName` updated straight after the rename. |
+| AC2 | pass | Validation test (8 refusal cases, name unchanged). By hand: `null`, number, array, object → 400 `required`; 31 code points → `too_long`; 30 × „Ę” → 200 |
+| AC3 | pass | `live.name.test.ts`: right recipients, Ewa (no shared list) hears nothing, one `lists.changed` per person. E2E with two contexts on SC-06 and SC-07 ≤ 5 s. SC-05 is covered by `lists.changed` (existing `LiveProvider`) |
+| AC4 | pass | Component test (12 cases) read: Toast in `role="status"`, focus kept, field error with focus, server error text, offline `aria-disabled` |
+| AC5 | pass | E2E axe on form / field error / save error / success / offline; `h1` „Konto”, `h2` „Twoje dane” |
+| SEC1 | pass | By hand with byte-exact bodies: U+202E, U+200B (alone and inside), U+2066, U+00AD, inner U+FEFF, U+200D between letters → 400 `invalid`; U+3000 alone → `required`; emoji ZWJ family accepted (T-060 exception) |
+| SEC2 | pass | By hand: anonymous 401 `unauthenticated`; cookie without `Origin` 403 `invalid_origin`; `{name, email, id}` changes only the name. Bodies over the limit are cut off by `bodyLimit`. The API log (`test-results/api.log`) contains none of the names I used |
+
+**Spot-checks (reverted, `git status` clean):** commenting out `accounts.announceNameChanges(...)` made `live.name.test.ts` fail (`no "members.changed" within 1000 ms`). Removing `setSession(renamed)` in `useNameChange.ts` made 2 component tests fail.
+
+**Findings**
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | `api.md` (row `members.changed`, "Kiedy" column) still lists only joining, removal and leaving, but the server now also sends it after a name change and the client depends on that. The DoD box "Architecture docs updated" is ticked. The implementer only proposed the change | `docs/architecture/api.md:89` | The row also names "zmiana imienia uczestnika lub właściciela (klient pobiera uczestników i pozycje)" |
+| 2 | minor | code (duplicated knowledge) | `NameChanged` is exported as `(userId) => Promise<void>`, but `MeDependencies.nameChanged` repeats the signature inline as `Promise<void> \| undefined` | `apps/api/src/modules/konta/http/me-routes.ts:30-36` | One type: either `NameChanged` is used in `MeDependencies`, or the wrapper in `index.ts` resolves `undefined` to a void promise |
+| 3 | minor | error handling | `await nameChanged(user.id)` runs after the committed `UPDATE`. If `listsOf` fails, the client gets 500 ("Nie udało się zapisać") although the name was saved | `me-routes.ts:51` | Failed announcements are logged and do not change the 200 answer, or the behaviour is documented |
+| 4 | minor | T-060 rule (TH-29) | U+2028 / U+2029 (line and paragraph separator, categories Zl / Zp) inside a name are accepted (`"A B"` → 200). They can break a one-line name in the UI. This comes from the shared rule in `packages/shared/src/api/text.ts`, not from this task | `node probe.mjs` against the local API | Decide in T-060's rule whether Zl / Zp count as hidden characters |
+| 5 | note | TDD | The 12 component tests were written as one file before the implementation, not one test at a time; red was shown for all 12 | Evidence, test 5 | — |
+| 6 | note | a11y | Manual screen-reader / 200 % zoom checks were not done in this session (no tooling). axe passes on the phone and desktop projects | — | Check by hand during UAT |
+| 7 | note | UX | A rename in another tab shows on SC-09 only after a reload (session `staleTime: Infinity`). This is within the TDD plan wording "po fokusie / odświeżeniu sesji" | Decisions for QA | — |
