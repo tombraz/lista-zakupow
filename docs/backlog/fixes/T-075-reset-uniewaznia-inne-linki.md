@@ -71,12 +71,12 @@ Better Auth (1.7.13, `reset-password`) w transakcji resetu zużywa tylko użyty 
 
 **Co by temu zapobiegło?** Test „drugi link tego samego konta” przy każdej regule „link jednorazowy”. Testy T-054 sprawdzały jednorazowość tylko na jednym tokenie, a Better Auth zużywa wyłącznie podany token.
 
-Propozycje (do akceptacji użytkownika):
+Propozycje (użytkownik przyjął 2 i 3; zastosowane 2026-11-02):
 1. Automatyczna kontrola: testy z T-075 (`other reset links of the account`) już stoją na seamie `POST /api/auth/reset-password` i pilnują tej reguły w CI. Nic więcej nie trzeba.
 2. Pitfall w `docs/architecture/layers/backend.md`: „Better Auth zużywa tylko podany token `verification`. Reguła »jednorazowy na konto« wymaga własnego unieważnienia pozostałych tokenów; test jednorazowości obejmuje drugi token tego samego konta i dwa różne tokeny zużyte naraz.”
 3. Uwaga do ADR 0003 / `architecture.md`: kolejka resetów per konto (`ResetTokens.exclusive`) działa w pamięci procesu. Przy więcej niż jednej instancji API trzeba ją zastąpić blokadą w bazie (np. `pg_advisory_xact_lock`).
 
-Uwaga z QA (minor, bez zmian w tym zadaniu): `revokeAll` działa po zatwierdzeniu zmiany hasła, poza transakcją Better Auth. Jeśli DELETE się nie uda, klient dostaje 500, a zamknięcie połączeń na żywo (TH-28) i log `security` są pomijane.
+Uwaga z QA (minor, osobne zadanie T-087): `revokeAll` działa po zatwierdzeniu zmiany hasła, poza transakcją Better Auth. Jeśli DELETE się nie uda, klient dostaje 500, a zamknięcie połączeń na żywo (TH-28) i log `security` są pomijane.
 
 ## Incident note
 

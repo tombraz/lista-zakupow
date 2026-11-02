@@ -47,6 +47,8 @@ flowchart LR
 
 API działa jako **jedna instancja** (ADR 0003): rozsyłanie zdarzeń na żywo odbywa się w pamięci procesu. Odrzucone jako zbędne dla wymagań: mikroserwisy, kolejka wiadomości, Redis/cache, osobny serwis realtime, BFF dla mobile.
 
+Na jednej instancji opiera się też kolejka resetów hasła per konto (`konta/infra/reset-tokens.ts`, `ResetTokens.exclusive`, T-075): resety jednego konta idą po kolei w pamięci procesu, więc z dwóch linków zużytych naraz hasło zmienia tylko jeden. Przy więcej niż jednej instancji API trzeba ją zastąpić blokadą w bazie (np. `pg_advisory_xact_lock` na identyfikatorze konta).
+
 ## Moduły (granice domenowe)
 
 Moduły w `apps/api/src/modules/<moduł>`. Każdy moduł ma warstwę domenową (reguły, bez Fastify i Drizzle) i adaptery (trasy HTTP, repozytoria). Kierunek zależności sprawdzany w CI (`CODING_STANDARDS.md`).
@@ -284,5 +286,6 @@ Otwarte:
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-02 | T-075: kolejka resetów hasła per konto w pamięci procesu — zależna od jednej instancji API (ADR 0003). |
 | 2026-10-27 | T-004: kody `invalid_credentials` (401) i `invalid_origin` (403). |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |

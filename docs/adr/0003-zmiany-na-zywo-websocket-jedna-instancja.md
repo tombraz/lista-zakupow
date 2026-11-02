@@ -23,3 +23,4 @@ Jedno połączenie WebSocket na klienta (`/api/v1/live`, `@fastify/websocket`), 
 - Hosting musi obsługiwać długotrwałe połączenia WebSocket i jedną stałą instancję (warunek dla `/ci-cd`; wyklucza czyste funkcje serverless dla API).
 - Restart API zrywa połączenia; klienci łączą się ponownie i pobierają stan (F-15).
 - Przejście na wiele instancji = dodanie LISTEN/NOTIFY za interfejsem `LiveHub` (bez zmian w modułach domenowych).
+- Z jednej instancji korzysta też kolejka resetów hasła per konto (`ResetTokens.exclusive`, T-075, `architecture.md`); przy wielu instancjach trzeba ją zastąpić blokadą w bazie.
