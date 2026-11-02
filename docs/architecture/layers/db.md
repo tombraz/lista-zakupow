@@ -22,6 +22,7 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 - `apps/api/src/db/pool.ts` — pula `pg` (bezczynne połączenia zamykane po 30 s)
 - `apps/api/src/db/migrate.ts`, `migrate-cli.ts` — uruchamianie migracji: SQL, potem kroki danych w TS
 - `apps/api/src/db/data-migrations/` — kroki migracji danych liczone kodem z `packages/shared` (`index.ts`: lista kroków, każdy raz dzięki wierszowi `data_migration` w tej samej transakcji; `0007-name-key-nfkc.ts` — przeliczenie `item.name_key`, T-060); test `apps/api/test/name-key-migration.test.ts`
+- `apps/api/scripts/metrics.sql` — zapytania miar sukcesu (tylko `SELECT`, definicje w komentarzu pliku; test `apps/api/test/metrics.test.ts`, T-065)
 - `apps/api/src/db/retention.ts` — usuwanie wierszy po terminie partiami po 1000 (`ctid`), reguły terminów w `modules/<moduł>/infra/retention.ts` (T-064)
 - `apps/api/test/global-setup.ts`, `test/database.ts` — kontener testowy, baza-szablon, `useTestDatabase()`
 - repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`, `lockList(tx, listId)` — blokada wiersza `shopping_list` w transakcji innego modułu (eksport z `listy/index.ts`), `insertParticipant` — limit 20 uczestników pod tą blokadą; `pozycje/infra/items-repository.ts` — limit 500 z `SELECT … FOR UPDATE` na wierszu `shopping_list`, duplikat przez `ON CONFLICT (list_id, name_key) DO NOTHING` przy dodaniu i naruszenie `item_list_id_name_key_unique` (23505) przy zmianie nazwy; `statystyki/infra/activity-repository.ts` — licznik odhaczeń `INSERT … ON CONFLICT DO UPDATE SET checks = checks + 1`; `zaproszenia/infra/invitations-repository.ts` — przyjęcie: warunkowy `UPDATE invitation … RETURNING list_id` i `Lists.join` w jednej transakcji, limit tworzenia linków liczony pod `lockList`)
@@ -34,6 +35,7 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 | wygeneruj migrację | `pnpm --filter @lista/api db:generate` (pusta własna: `pnpm --filter @lista/api exec drizzle-kit generate --custom --name=<nazwa>`) | korzeń repo |
 | uruchom migracje | `pnpm --filter @lista/api db:migrate` | korzeń repo |
 | testy warstwy | `pnpm vitest run --project api` (Testcontainers, wymaga działającego Dockera) | korzeń repo |
+| miary sukcesu (BRD §10, T-065) | lokalnie: `psql "$DATABASE_URL" -f apps/api/scripts/metrics.sql` (bez lokalnego psql: `docker exec -i lista-zakupow-postgres-1 psql -U lista -d lista -f - < apps/api/scripts/metrics.sql`); produkcja: rolą tylko do odczytu Neon (albo z `PGOPTIONS='-c default_transaction_read_only=on'`) i jej connection string zamiast `$DATABASE_URL`, lub treść pliku wklejona w Neon SQL Editor; wynik: tydzień + liczby, bez danych osobowych | korzeń repo |
 
 Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
 

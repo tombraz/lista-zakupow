@@ -3,7 +3,7 @@ id: T-065
 title: Zapytania miar sukcesu (metrics.sql)
 epic: E-02
 story: S-02-05
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: []
 size: S                # S | M (L must be split)
@@ -33,10 +33,10 @@ Właściciel uruchamia `apps/api/scripts/metrics.sql` na bazie i dostaje dwie mi
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given dane aktywności, when zapytanie „aktywni domownicy”, then dla każdego tygodnia (poniedziałek–niedziela, `Europe/Warsaw`) liczba różnych `user_id` z aktywnością na listach wspólnych (lista z co najmniej jednym uczestnikiem); definicja „aktywny” i „wspólna” zapisana w komentarzu pliku. — verified by: test integracyjny na danych fabrykowanych
-- [ ] AC2: Given dane aktywności, when zapytanie „dni wspólnych zakupów”, then dla każdego tygodnia liczba dni, w których na którejś wspólnej liście suma `checks` ≥ 3. — verified by: test integracyjny (granica 2 / 3 odhaczeń, dwie listy tego samego dnia)
-- [ ] AC3: Given wynik, then zawiera tylko tydzień i liczby (bez imion, e-maili, nazw list, identyfikatorów). Plik działa w `psql` bez modyfikacji i tylko czyta (bez `INSERT`/`UPDATE`/`DELETE`/DDL). — verified by: test uruchamiający plik na bazie + sprawdzenie kolumn
-- [ ] AC4: Instrukcja uruchomienia (lokalnie i na bazie produkcyjnej tylko do odczytu) w przewodniku db (`docs/architecture/layers/db.md`, „Komendy”). — verified by: przegląd QA
+- [x] AC1: Given dane aktywności, when zapytanie „aktywni domownicy”, then dla każdego tygodnia (poniedziałek–niedziela, `Europe/Warsaw`) liczba różnych `user_id` z aktywnością na listach wspólnych (lista z co najmniej jednym uczestnikiem); definicja „aktywny” i „wspólna” zapisana w komentarzu pliku. — verified by: test integracyjny na danych fabrykowanych
+- [x] AC2: Given dane aktywności, when zapytanie „dni wspólnych zakupów”, then dla każdego tygodnia liczba dni, w których na którejś wspólnej liście suma `checks` ≥ 3. — verified by: test integracyjny (granica 2 / 3 odhaczeń, dwie listy tego samego dnia)
+- [x] AC3: Given wynik, then zawiera tylko tydzień i liczby (bez imion, e-maili, nazw list, identyfikatorów). Plik działa w `psql` bez modyfikacji i tylko czyta (bez `INSERT`/`UPDATE`/`DELETE`/DDL). — verified by: test uruchamiający plik na bazie + sprawdzenie kolumn
+- [x] AC4: Instrukcja uruchomienia (lokalnie i na bazie produkcyjnej tylko do odczytu) w przewodniku db (`docs/architecture/layers/db.md`, „Komendy”). — verified by: przegląd QA
 
 ## TDD plan
 
@@ -71,18 +71,35 @@ What an independent tester checks beyond the automated tests:
 
 ## Definition of done
 
-- [ ] All tests in the TDD plan written test-first and passing
-- [ ] Full test suite, type check and lint pass
-- [ ] Every acceptance criterion checked, with evidence below
-- [ ] Global definition of done from `docs/architecture/testing-strategy.md` met
-- [ ] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
+- [x] All tests in the TDD plan written test-first and passing
+- [x] Full test suite, type check and lint pass
+- [x] Every acceptance criterion checked, with evidence below
+- [x] Global definition of done from `docs/architecture/testing-strategy.md` met
+- [x] Architecture docs updated where the task changed what they describe (`pipeline.md`, `tech-stack.md`, layer guides in `docs/architecture/layers/`); deliberate deviations recorded there, not only in Evidence
 - [ ] Handed to QA (`status: in-qa`)
 
 Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+Wznowienie po odpowiedzi właściciela (Docker działa). Pliki: `apps/api/scripts/metrics.sql`, `apps/api/test/metrics.test.ts`; przewodnik db (Gdzie jest kod + Komendy).
+
+**Testy (red → green), `pnpm vitest run --project api metrics`:**
+
+1. `counts distinct active users per Monday-Sunday week, only on shared lists (AC1)` — red na stubie pliku (oba `SELECT … WHERE false`): `AssertionError: expected [] to deeply equal [ …(3) ]`; zielony po zapytaniu „aktywni domownicy”. Dane: niedziela 2026-11-01 w tygodniu od 2026-10-26, poniedziałek 2026-11-02 nowy tydzień, lista prywatna pominięta, przełom roku 2026-12-31/2027-01-01 = jeden tydzień od 2026-12-28.
+2. `counts days per week with at least 3 checks on one shared list (AC2)` — red: `AssertionError: expected [] to deeply equal [ …(3) ]`; zielony po zapytaniu „dni wspólnych zakupów”. Granica 2 (nie) / 3 (tak, suma dwóch osób), 2 + 2 na dwóch listach tego dnia = nie liczy się, dwie listy po 3 tego samego dnia = jeden dzień, lista prywatna z 9 pominięta, tydzień bez dnia ≥ 3 = 0.
+3. `returns only week and counts, and the file only reads (AC3)` — przeszedł od razu (zachowanie powstało w testach 1–2). Dowód, że gryzie (każda zmiana cofnięta, potem 3/3 zielone): dopisany `DELETE FROM list_daily_activity;` → `error: cannot execute DELETE in a read-only transaction`; dodana kolumna `min(a.user_id) AS uid` → `AssertionError` na liście kolumn; dopisane `\echo hi` → fail na braku metakomend.
+
+**Kryteria:**
+
+- AC1: test 1; definicje „tydzień”, „wspólna lista” (stan członkostw dziś — decyzja z QA planu zapisana w komentarzu pliku), „aktywny” i skutek usunięcia konta / retencji 90 dni w nagłówku pliku.
+- AC2: test 2.
+- AC3: test 3 (plik wykonany cały w `BEGIN READ ONLY`, kolumny dokładnie `tydzień` + liczba, bez metakomend i sterowania transakcją). Ręcznie: `psql -v ON_ERROR_STOP=1 -f -` w kontenerze `lista-zakupow-postgres-1` (`pnpm services:up` + migracje) na danych fabrykowanych w transakcji wycofanej → `2026-11-02 | 2` i `2026-11-02 | 1`; ten sam plik z `PGOPTIONS='-c default_transaction_read_only=on'` → dwie tabele, bez błędu.
+- AC4: wiersz „miary sukcesu” w `docs/architecture/layers/db.md` → „Komendy” (lokalnie, bez lokalnego psql przez `docker exec`, produkcja rolą tylko do odczytu Neon / `default_transaction_read_only` / Neon SQL Editor) — do przeglądu QA.
+
+**Weryfikacja całości:** `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, testy: 142 pliki / 937 testów, mobile) — exit 0; `pnpm build` — exit 0.
+
+**Decyzje dla QA:** tydzień bez aktywności na wspólnej liście nie ma wiersza (obie miary); tydzień z aktywnością, ale bez dnia ≥ 3, ma 0 w mierze 2. Filtr „lista wspólna” (`EXISTS list_member`) powtórzony w obu zapytaniach — widok byłby DDL, a plik ma tylko czytać.
 
 ## Open question
 
