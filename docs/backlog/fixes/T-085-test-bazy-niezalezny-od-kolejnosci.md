@@ -4,7 +4,7 @@ title: "Test izolacji bazy testowej niezależny od kolejności testów"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa    # todo | in-progress | in-qa | done | blocked
+status: done     # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -68,3 +68,23 @@ Poprawka: dwa jednakowe testy (`starts a test with empty tables (first probe)` /
 ## Prevention
 
 Co by zapobiegło: przebieg testów w losowej kolejności w CI zamiast ręcznego sprawdzenia kilku seedów (reguła w `layers/backend.md`, „Pułapki”, od QA T-051). Propozycja dla właściciela (niezastosowana): krok CI `pnpm vitest run --project api --sequence.shuffle` ze stałym seedem zmienianym co jakiś czas albo z seedem wypisywanym w logu, żeby czerwony wynik dało się powtórzyć.
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Zakres: commit `100f369` (`apps/api/test/database.test.ts`). Zadanie typu fix: bez akceptacji story i epiki.
+
+Weryfikacja własna:
+
+- **Reprodukcja (czerwony przed poprawką):** plik z `100f369^` przy `--sequence.shuffle --sequence.seed=4242` — `× starts the next test with empty tables`, `error: relation "isolation_probe" does not exist`. Potwierdza Root cause.
+- **AC1 — pass:** `pnpm vitest run --project api --sequence.shuffle --sequence.seed=<n> database` dla seedów 4242, 3, 1, 2, 7, 99 oraz w kolejności domyślnej: 4/4 zielone. Każda sonda oczekuje dokładnie `[{ value }]`, więc ta wykonana druga dowodzi, że zapis pierwszej nie jest widoczny.
+- **AC2 — pass:** spot-check — zakomentowane `await truncateAllTables(pool)` w `beforeEach` (`apps/api/test/database.ts`): seed 4242 i 3 — `× (first probe)` `expected [ { value: 'second probe' }, …(1) ] to deeply equal [ { value: 'first probe' } ]`; seed 1 i kolejność domyślna — `× (second probe)` analogicznie. Zmiana cofnięta (`git checkout`), `git status` czysty.
+- **AC3 — pass:** `pnpm test` 144 pliki / 1132 testy zielone; pełny zestaw z `--sequence.shuffle --sequence.seed=555` 144 / 1132 zielone; `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm quality` bez błędów.
+- **Regresja z QA planu:** wyszukanie w `apps/**/*.test.{ts,tsx}` odwołań do kolejności / poprzedniego / następnego testu — trafienia (`ListScreen.check.test.tsx:154`, `live.revoke.test.ts:64`, `name-key-migration.test.ts:62`) dotyczą kolejności wewnątrz jednego testu, nie zależności między testami.
+- **Root cause:** wyjaśnia, dlaczego istniejące testy tego nie złapały (CI bez losowej kolejności, ręczne seedy akurat w pierwotnej kolejności). Zmiana ograniczona do pliku testu, bez scope creep; helper `writeOneRowAndSeeOnlyIt` ma dwa użycia.
+- Bezpieczeństwo: n/a (tylko kod testu, `threats: []`).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | CI / proces | Losowa kolejność testów nadal sprawdzana tylko ręcznie; propozycja z sekcji Prevention (krok CI z `--sequence.shuffle` i seedem w logu) nie jest zastosowana. | Sekcja Prevention; `layers/backend.md` „Pułapki” (T-051) | Decyzja właściciela: krok CI z losową kolejnością i wypisanym seedem. |
