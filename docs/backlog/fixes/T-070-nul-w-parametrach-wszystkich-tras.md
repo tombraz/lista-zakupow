@@ -127,3 +127,12 @@ Eksploracja (tymczasowy test, usunięty): NUL w kluczu JSON, treść jako tekst 
 | 3 | note | Test | Evidence: `--sequence.shuffle` seed 4242 wywraca `database.test.ts › starts the next test with empty tables` (zależność od kolejności w pliku), niezwiązane z T-070. | Evidence autora | Osobne zadanie, jeśli shuffle ma być w CI. |
 
 Root cause: wyjaśnia, dlaczego testy nie złapały błędu (ręczne testy NUL dla pojedynczych pól, T-060 testował Cf, nie NUL). Test reprodukujący pada bez poprawki (spot-check wyżej). `git status` czysty po spot-checkach.
+
+## Prevention
+
+Co by zapobiegło: automatyczny strażnik zamiast zdania w przewodniku. To jest sam wynik tego zadania: `routes-nul.test.ts` (inwentarz tras z NUL, pada dla nowej trasy bez wpisu) i `live.nul.test.ts` (WS) w CI, a w `layers/backend.md` „Pułapki” reguła wpisu nowej trasy do tabeli i `withoutNul` przed odczytem bazy w kontroli sprzed walidacji.
+
+Do decyzji właściciela (propozycje, niezastosowane):
+
+- Błędy klienta z Fastify (niepoprawny JSON, np. surowy NUL; 414 `maxParamLength`) w kształcie `api.md` (`validation_failed`) zamiast domyślnego — QA runda 1, uwaga minor #1; zmiana kontraktu błędów → zadanie przez `/plan-backlog`.
+- `database.test.ts › starts the next test with empty tables` zależy od kolejności testów w pliku (pada przy `--sequence.shuffle --sequence.seed=4242`) — osobne zadanie fix, jeśli shuffle ma trafić do CI.
