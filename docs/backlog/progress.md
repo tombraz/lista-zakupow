@@ -48,3 +48,4 @@
 2026-11-02 12:01 | T-062 | qa | PASS | 0/0/3 minor; S-02-03 done; 500 zamiast 404 przy wyścigu FK, flaky test SC-09 pod obciążeniem, powód accountDeleted zostaje w cache
 2026-11-02 12:34 | T-064 | implementer | IN_QA | codzienne sprzątanie w procesie API (partie 1000, marker cleanup_run, nadrabianie po starcie); 934 testy zielone
 2026-11-02 12:47 | T-064 | qa | PASS | 0/0/1 minor; data-model.md bez cleanup_run i reguły rate_limit 1 h; DELETE partiami bez indeksu na kolumnach wygaśnięcia
+2026-11-02 19:08 | T-065 | implementer | FAILED | Docker nie działa, auto-mode zablokował start Docker Desktop; brak testów Testcontainers, nic nie zaimplementowano
