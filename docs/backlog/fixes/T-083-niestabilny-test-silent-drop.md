@@ -4,7 +4,7 @@ title: "Niestabilny test SC-07 „after a silent drop” w connection.test.tsx"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-15]
@@ -71,10 +71,30 @@ Inne wystąpienia tego wzorca (czekanie na ponowne połączenie z backoffem): `u
 
 ## Prevention
 
-<uzupełnić po QA (Step 8)>
+Testy czekające na ponowne połączenie z backoffem (`LiveSocket.reconnect`) używają sztucznego zegara z jawnym `advanceTimersByTimeAsync` albo jawnego limitu `waitFor` powyżej opóźnienia, z komentarzem. Propozycja QA: dopisać to jako „Pitfall” w `docs/architecture/layers/web.md` (decyzja użytkownika).
 
 ## Incident note
 
 Nie dotyczy (tylko test).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-02)
+
+Verdict: pass
+
+Zakres: commit `d40fe21` (tylko `apps/web/src/live/connection.test.tsx`, +9 linii; kod produkcyjny bez zmian).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test | Nowa asercja `expect(live.connections()).toBe(1)` po `findByText(OFFLINE)` zależy od czasu rzeczywistego: przy `shouldAdvanceTime: true` sztuczny zegar płynie razem z realnym, więc gdyby pojawienie się paska trwało ponad 1000 ms (skrajne obciążenie), próba połączenia odpaliłaby wcześniej i asercja byłaby czerwona. W praktyce pasek pojawia się od razu po `markDropped`; 20/20 zielonych. | `connection.test.tsx:168` | Ewentualnie `shouldAdvanceTime: false` dla tego testu albo pominięcie asercji; nie blokuje. |
+| 2 | note | test (poza zakresem) | Autor zgłosił drugi niestabilny test: `ParticipantsScreen.remove.test.tsx` › „makes „Usuń” inactive without a connection…” (1/20). W moich 20 przebiegach (w tym pliki SC-07) i w pełnym `pnpm check` nie wystąpił. | Evidence autora | Osobne zadanie fix, jeśli użytkownik zdecyduje. |
+
+Weryfikacja:
+
+- **Step 3:** `pnpm check` (format, lint, typecheck, quality, design/backlog/workflow-check, `pnpm test` 142 pliki / 1106 testów, `test:mobile` 10 testów) → exit 0.
+- **AC1 — pass:** 20 przebiegów `pnpm vitest run --project web src/live/connection.test.tsx src/live/useLiveList.test.tsx src/screens/SC-07-uczestnicy --sequence.shuffle`, po 4 równolegle (obciążenie) → 20/20 exit 0 (każdy 7 plików, 61 testów). Test nie zależy od realnego czasu połączenia: jawne `vi.advanceTimersByTimeAsync(1_000)` + komentarz z uzasadnieniem.
+- **AC2 — pass:** asercje paska OFFLINE, drugiej subskrypcji, pobrania „Tomek” i zniknięcia paska bez zmian. Mutacja 1: zakomentowanie `invalidateQueries` w `onReconnect` (`useLiveList.ts:60`) → czerwony `Unable to find an element with the text: Tomek`. Mutacja 2: opóźnienie pierwszej próby w `liveSocket.ts` 1000 → 5000 ms → czerwony `expected [ { type: 'subscribe', …(1) } ] to have a length of 2 but got 1` (test pilnuje też opóźnienia z backoffu). Oba przywrócone, `git status` czysty.
+- **AC3 — pass:** `src/live/` i `src/screens/SC-07-uczestnicy` zielone w pętli; pełne `pnpm test` zielone.
+- **Root cause (fix task):** wyjaśnia, dlaczego testy nie złapały (okno na granicy, porażka tylko pod obciążeniem) i przegląda inne wystąpienia wzorca. Czerwony dowód odtworzenia przed poprawką jest w Evidence (1/6). `afterEach(vi.useRealTimers)` dodane w `describe("back online")` — brak wycieku sztucznego zegara do innych testów.
+- **Security / design / a11y:** nie dotyczy (zmiana tylko w teście, `threats: []`).
