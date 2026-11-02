@@ -39,3 +39,4 @@
 2026-11-02 00:06 | T-058 | implementer | IN_QA | usuwanie uczestnika z SC-07 (DELETE members/:userId 204), revoke na żywo, member_removed w logu
 2026-11-02 00:12 | T-058 | qa | FAIL | userId w DELETE members/:userId bez walidacji: %00 daje 500 zamiast 404 (SEC3)
 2026-11-02 00:17 | T-058 | implementer | IN_QA | fix QA #1: walidacja userId personIdSchema, NUL daje 404; 842 testy zielone
+2026-11-02 08:19 | T-058 | qa | PASS | 0/0/1 minor; member_removed logowany po withdrawAccess (log ginie przy błędzie powiadomienia); %C0%80 daje FST_ERR_BAD_URL bez kopert
