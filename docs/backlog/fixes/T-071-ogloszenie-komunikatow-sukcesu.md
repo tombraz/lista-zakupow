@@ -33,7 +33,8 @@ related_tasks: [T-053, T-054, T-062]
 
 - [ ] AC1: Given SC-03 krok 1, when „Wyślij link” kończy się sukcesem (także drugi raz z tym samym adresem), then tekst trafia do regionu `role="status"`, który był w drzewie przed zdarzeniem; fokus zostaje na przycisku. — verified by: test komponentu
 - [ ] AC2: Given wejście na SC-01 po resecie hasła albo po usunięciu konta, then komunikat jest w regionie `role="status"` obecnym w drzewie przed wpisaniem tekstu (albo jest ogłaszany innym udokumentowanym sposobem, który działa przy fokusie na polu e-mail). — verified by: test komponentu
-- [ ] AC3: No regression in: błąd logowania na SC-01 (`role="alert"`, fokus na alercie), zaproszenie na SC-01, axe w E2E.
+- [ ] AC3: Given `eslint.config.js`, then `no-restricted-syntax` w `apps/web/src` odrzuca `InlineAlert` z `tone="success"` montowany warunkowo (`cond && <InlineAlert tone="success">`, operator `?:`), z komunikatem odsyłającym do `web.md`, „Pułapki”. Wyjątki tylko przez `eslint.config.js`, nie komentarzem. — verified by: `pnpm lint` zielony po poprawce; kontrola ręczna: przywrócony warunkowy alert daje błąd lintu (Evidence), zmiana cofnięta
+- [ ] AC4: No regression in: błąd logowania na SC-01 (`role="alert"`, fokus na alercie), zaproszenie na SC-01, axe w E2E.
 
 ## TDD plan
 
@@ -60,7 +61,7 @@ related_tasks: [T-053, T-054, T-062]
 
 ## Prevention
 
-Propozycja z przeglądu: `InlineAlert` z tonem `success`/`info` nie jest montowany warunkowo; dodać linię w `web.md`, „Pułapki”.
+Zaakceptowane przez właściciela 2026-11-02: linia w `web.md`, „Pułapki” (dodana przy przeglądzie) i lint z AC3 (w tym tasku, bo przed poprawką padałby na obecnym kodzie).
 
 ## Incident note
 

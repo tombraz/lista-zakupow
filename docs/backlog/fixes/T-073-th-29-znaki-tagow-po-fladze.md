@@ -61,7 +61,7 @@ related_tasks: [T-060]
 
 ## Prevention
 
-Test własności dla `requiredName` (przegląd, „Proposals”).
+Zaakceptowane przez właściciela 2026-11-02: test własności z AC4 zostaje na stałe w `packages/shared/test/` i obejmuje każdy wyjątek z `EMOJI_PART`; reguła zapisana w `backend.md`, „Pułapki” (dodana przy przeglądzie).
 
 ## Incident note
 
