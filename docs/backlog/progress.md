@@ -59,3 +59,4 @@
 2026-11-03 08:19 | T-088 | qa | FAIL | AC7: brak wpisów ALERT_EMAIL w deployment/architecture/pipeline/backend.md (odczyt A); kod OK; flaky routes-nul SEC1 /22021/
 2026-11-03 08:23 | T-088 | implementer | IN_QA | fix QA #1: wpisy ALERT_EMAIL/alert w deployment, architecture, pipeline, backend.md; kod bez zmian
 2026-11-03 08:26 | T-088 | qa | PASS | 0/0/1 minor; docs domknięte; flaky routes-nul (T-070); nieudana wysyłka alertu też otwiera okno 15 min (E-03)
+2026-11-03 10:37 | T-069 | user | UNBLOCK | PR #13 zmergowany na main; T-069 -> todo

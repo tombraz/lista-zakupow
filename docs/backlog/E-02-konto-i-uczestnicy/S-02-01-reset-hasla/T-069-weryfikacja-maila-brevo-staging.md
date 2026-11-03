@@ -3,8 +3,7 @@ id: T-069
 title: Weryfikacja maila resetu przez Brevo na staging
 epic: E-02
 story: S-02-01
-status: blocked        # todo | in-progress | in-qa | done | blocked
-blocked_reason: "czeka na merge PR #13 epiku E-02 na main (staging wdraża się tylko z main); po merge zmień na todo"
+status: todo           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-055, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-088]
 size: S                # S | M (L must be split)
 layers: [infra]
