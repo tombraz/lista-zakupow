@@ -140,9 +140,7 @@ function StatusLine({ items }: { items: ListDetails["items"] }) {
 /** Po dołączeniu z SC-08: „Dołączyłeś(-aś) do listy „<nazwa>”.” (F-12). */
 function JoinedNotice() {
   const joined = joinedListOf(useLocation().state);
-  return joined === null ? null : (
-    <InlineAlert tone="success">{messages.joined(joined)}</InlineAlert>
-  );
+  return <InlineAlert tone="success">{joined !== null && messages.joined(joined)}</InlineAlert>;
 }
 
 /** MC-01: cudza lista wygląda jak nieistniejąca — bez nazwy i treści. */

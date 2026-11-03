@@ -33,6 +33,8 @@ export function usePasswordResetRequest(initialEmail = "") {
       requestFocus("email");
       return;
     }
+    // Region `status` pusty w czasie wysyłki: ten sam komunikat po sukcesie znów jest ogłaszany.
+    setSentTo(null);
     mutation.mutate(parsed.data);
   };
 

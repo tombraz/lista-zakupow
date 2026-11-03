@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "../../../test/msw-server";
+import { statusAnnouncements } from "../../../test/announcements";
 import { renderApp, sessionIs } from "../../../test/render";
 import { fillIn } from "../../../test/user";
 
@@ -46,6 +47,23 @@ describe("SC-01 Logowanie", () => {
       "/regulamin",
     );
   });
+
+  it.each([
+    ["a password reset", { passwordChanged: true }, "Hasło zmienione. Zaloguj się nowym hasłem."],
+    ["an account deletion", { accountDeleted: true }, "Konto zostało usunięte."],
+  ])(
+    "after %s announces the message from a status region present before it (T-071)",
+    async (_case, state, text) => {
+      const announced = statusAnnouncements();
+      renderApp({ pathname: "/logowanie", state });
+
+      await waitFor(() => {
+        expect(announced).toEqual([text]);
+      });
+      expect(screen.getByRole("status")).toHaveTextContent(text);
+      expect(screen.getByLabelText("E-mail")).toHaveFocus();
+    },
+  );
 
   it("asks for both fields before sending anything", async () => {
     const requests = signInAnswers(200, { user: ANIA });

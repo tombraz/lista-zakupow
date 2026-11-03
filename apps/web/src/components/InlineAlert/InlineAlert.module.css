@@ -33,3 +33,8 @@
   color: var(--color-text-primary);
   background: var(--color-bg-subtle);
 }
+
+/* T-071: pusty region `status` sukcesu — w drzewie, bez miejsca w układzie. */
+.empty {
+  composes: visuallyHidden from "../../styles/page.module.css";
+}

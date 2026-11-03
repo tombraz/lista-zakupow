@@ -40,7 +40,7 @@ test("J-01 asks for a password reset link", async ({ page }) => {
   await expect(page.getByRole("alert")).toHaveText(
     /Zbyt wiele próśb o reset\. Spróbuj ponownie za kilka minut\./,
   );
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByRole("status")).toBeEmpty();
   await expectNoAxeViolations(page);
 
   await page.route(REQUEST_RESET, (route) => route.abort("internetdisconnected"));

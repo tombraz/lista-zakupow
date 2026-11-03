@@ -25,9 +25,7 @@ export function RequestLinkStep() {
   return (
     <AuthPage title={messages.title} titleRef={titleRef}>
       <p className={styles.intro}>{messages.intro}</p>
-      {form.sentTo !== null && (
-        <InlineAlert tone="success">{messages.sent(form.sentTo)}</InlineAlert>
-      )}
+      <InlineAlert tone="success">{form.sentTo !== null && messages.sent(form.sentTo)}</InlineAlert>
       {form.formError && <InlineAlert tone="error">{formErrorText(form.formError)}</InlineAlert>}
       <AuthForm onSubmit={form.submit}>
         <TextField

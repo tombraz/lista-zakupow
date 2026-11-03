@@ -101,7 +101,9 @@ describe("SC-09 Konto: deleting the account", () => {
     expect(screen.getByRole("alertdialog")).toBeVisible();
     held.release();
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Konto zostało usunięte.");
+    expect(await screen.findByText("Konto zostało usunięte.")).toBeVisible();
+
+    expect(screen.getByRole("status")).toHaveTextContent("Konto zostało usunięte.");
     expect(router.state.location.pathname).toBe("/logowanie");
     expect(router.state.historyAction).toBe("REPLACE");
     expect(sent).toEqual([{ confirm: true }]);

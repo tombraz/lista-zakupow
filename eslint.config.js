@@ -156,6 +156,15 @@ const WEB_ENTRY_LINK_SYNTAX = [
   },
 ];
 
+// T-071: sukces w regionie `status` obecnym przed tekstem; wstawiony już z treścią nie jest ogłaszany.
+const SUCCESS_ALERT =
+  "JSXElement > JSXOpeningElement[name.name='InlineAlert'] > JSXAttribute[name.name='tone'][value.value='success']";
+const WEB_SUCCESS_ALERT_SYNTAX = ["LogicalExpression", "ConditionalExpression"].map((parent) => ({
+  selector: `${parent} > ${SUCCESS_ALERT}`,
+  message:
+    'InlineAlert tone="success" renderuj zawsze, a warunek daj w treści ({cond && tekst}): region status wstawiony z tekstem nie jest ogłaszany (T-071, layers/web.md „Pułapki”).',
+}));
+
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
 // Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
 const SESSION_KEY = "/sess|token|auth|cookie|jwt/i";
@@ -372,6 +381,7 @@ export default tseslint.config(
         ...WEB_SESSION_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
         ...WEB_ENTRY_LINK_SYNTAX,
+        ...WEB_SUCCESS_ALERT_SYNTAX,
       ],
     },
   },
@@ -385,6 +395,7 @@ export default tseslint.config(
         ...SAFE_SYNTAX,
         ...WEB_SESSION_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
+        ...WEB_SUCCESS_ALERT_SYNTAX,
       ],
     },
   },
@@ -398,6 +409,7 @@ export default tseslint.config(
         ...SAFE_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
         ...WEB_ENTRY_LINK_SYNTAX,
+        ...WEB_SUCCESS_ALERT_SYNTAX,
       ],
     },
   },
