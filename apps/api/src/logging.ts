@@ -174,7 +174,7 @@ export function logLimitEvent(
   securityEvent(request, event, { ...ids, limit });
 }
 
-interface ErrorSummary {
+export interface ErrorSummary {
   type: string;
   code?: string;
   stack?: string;
@@ -195,5 +195,17 @@ export function errorSummary(error: unknown): ErrorSummary {
     ...(typeof code === "string" ? { code } : {}),
     ...(frames ? { stack: frames } : {}),
     ...(error.cause === undefined ? {} : { cause: errorSummary(error.cause) }),
+  };
+}
+
+/**
+ * Błąd wysyłki maila do logu: typ i status dostawcy, nigdy komunikat (bywa z adresem lub treścią,
+ * TH-21).
+ */
+export function deliveryFailure(error: unknown): { error: string; status?: number } {
+  const status = (error as { status?: unknown } | null)?.status;
+  return {
+    error: error instanceof Error ? error.name : typeof error,
+    ...(typeof status === "number" ? { status } : {}),
   };
 }

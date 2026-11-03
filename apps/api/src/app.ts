@@ -2,6 +2,7 @@ import { HTTP_LIMITS } from "@lista/shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { systemClock, type Clock } from "./clock";
+import { createOwnerAlerts } from "./owner-alerts";
 import { securityHeaders } from "./http/security-headers";
 import { trustedOrigin } from "./http/trusted-origin";
 import { webApp } from "./http/web-app";
@@ -23,6 +24,11 @@ export interface AppOptions {
   logger?: LogSettings;
   /** Dostawca maili (mail resetu hasła, F-03); testy podają adapter przechwytujący. */
   mailer: Mailer;
+  /**
+   * N-03: adres alarmów do właściciela projektu (`ALERT_EMAIL`); bez niego alarm tylko w logu
+   * (lokalnie, T-088).
+   */
+  alertEmail?: string;
   /** Czas dla domeny (odhaczenie, aktywność dzienna, wygasanie zaproszeń); testy podają własny. */
   clock?: Clock;
   /** Hub zmian na żywo; testy podają własny, żeby wołać `revoke` jak moduł bez trasy (T-056). */
@@ -48,6 +54,12 @@ export function buildApp(options: AppOptions): FastifyInstance {
   const accounts = accountRoutes(app, options.pool, options.auth, {
     live,
     mailer: options.mailer,
+    clock,
+    ownerAlerts: createOwnerAlerts({
+      mailer: options.mailer,
+      to: options.alertEmail,
+      log: app.log,
+    }),
   });
   // Pozycje zależą od dostępu do listy, a szczegóły listy pokazują pozycje (ListItems).
   const lists = listsModule(app, options.pool, accounts, {

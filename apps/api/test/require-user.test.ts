@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
+import { systemClock } from "../src/clock";
 import { apiErrors } from "../src/http/api-error";
 import { accountRoutes } from "../src/modules/konta";
 import { createLiveHub } from "../src/modules/na-zywo";
@@ -19,6 +20,8 @@ describe("Accounts.requireUser for routes of other modules", () => {
     const accounts = accountRoutes(app, db.pool, auth, {
       live: createLiveHub(),
       mailer: capturingMailer().mailer,
+      clock: systemClock,
+      ownerAlerts: { raise: () => undefined },
     });
     app.get("/api/v1/chronione", async (request, reply) => {
       const user = await accounts.requireUser(request, reply);

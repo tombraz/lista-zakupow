@@ -3,7 +3,7 @@ id: T-088
 title: Alert mailem do właściciela, gdy reset nie unieważni pozostałych linków
 epic: E-02
 story: S-02-01
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-087]
 size: S                # S | M (L must be split)
@@ -100,6 +100,66 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+**Run 2026-11-02/03 (implementacja, autonomicznie).** Kod i testy gotowe; AC7 czeka na właściciela (sekret Fly), patrz „Open question” na końcu.
+
+Zmiany:
+
+- `apps/api/src/owner-alerts.ts` (nowy, ogólny mechanizm N-03): `createOwnerAlerts({ mailer, to, log })`, `raise({ event, at, subject, text })` — wysyłka w tle (bez `await`, nie rzuca), okno tłumienia `OWNER_ALERT_WINDOW_SECONDS = 15 * 60` per nazwa zdarzenia w pamięci procesu (ADR 0003; restart zeruje okno), w treści „Pominięte takie same zdarzenia od poprzedniego alarmu: N”, błąd wysyłki → log `owner_alert_failed` (`alert`, `error`, `status`), bez adresu. Bez `to` (brak `ALERT_EMAIL`) nic nie wysyła; zdarzenie `reset_tokens_revoke_failed` jest już w logu.
+- `apps/api/src/modules/konta/domain/reset-alert.ts`: `linksNotRevokedAlert(userId, at, errorCode)` — temat „Alarm: linki resetu hasła nie zostały unieważnione”, `userId`, czas zdarzenia (ISO UTC), godzina wygaśnięcia (zdarzenie + `PASSWORD_RESET_VALIDITY_SECONDS`), kod błędu.
+- `auth-routes.ts` `revokeOtherLinks`: po logu `reset_tokens_revoke_failed` woła `deps.onLinksNotRevoked(userId, errorCodeOf(summary))` (kod najgłębszej przyczyny z `errorSummary`, np. `57P01`); `konta/index.ts` składa alarm z `clock.now()` i woła `ownerAlerts.raise` (nowy typ `AccountDeps` z `clock` i `ownerAlerts`). Kolejka `ResetTokens.exclusive` nie czeka na mail.
+- `app.ts`: `AppOptions.alertEmail`; `server.ts`: `config.mail.alertTo`. `config.ts`: `ALERT_EMAIL` (`z.email()`), wymagany przy `MAILER=brevo`, opcjonalny przy `mailpit`.
+- `deliveryFailure` przeniesione z `konta/index.ts` do `src/logging.ts` (wspólne dla maila resetu i alarmu; zachowanie bez zmian: typ + liczbowy `status`).
+- `.env.example`, `apps/api/fly.staging.toml` (komentarz o sekretach), komentarz w `mailer.ts`; `test/require-user.test.ts` podaje nowe zależności `accountRoutes`.
+- Step 8b: `docs/architecture/layers/backend.md` „Gdzie jest kod” (`owner-alerts.ts`, `reset-alert.ts`, `deliveryFailure`) i nota pod „Komendy” (`ALERT_EMAIL`). Z opisu `reset-mail.ts` usunięte „jedyny tekst po polsku tworzony przez API” (już nieprawda).
+
+Testy (TDD plan; `apps/api/test/password-reset.owner-alert.test.ts`, `apps/api/test/config.test.ts`):
+
+| # | Test | Red | Teraz |
+| --- | --- | --- | --- |
+| 1 | `mails the owner once with userId, event time and the links' latest expiry (AC1)` | `AssertionError: expected [] to have a length of 1 but got +0` | pass |
+| 2 | `sends no alert after a reset without a revocation failure (AC6)`, `sends no alert for a wrong, a missing or a used token (SEC2)` | przeszły od razu (ochrona wynika z miejsca wywołania); dowód, że gryzą — mutacja (alarm także po udanym `revokeAll` i po nieudanym resecie): `expected [ { …(3) } ] to deeply equal []` oraz `expected [ …3 ] to have a length of 1 but got 3`; kod przywrócony | pass |
+| 3 | `keeps the account e-mail, tokens, the alert address and the database message out (SEC1)` | przeszedł od razu; mutacja (adres alarmu doklejony do treści): `expected 'Alarm: linki resetu hasła nie zostały…' not to contain 'alarm-wlasciciela@example.com'`; przywrócony | pass |
+| 4 | `sends at most one alert per 15 minutes, then reports how many were skipped (AC2)` (10:00 alarm; 10:14:59.999 dwa błędy z dwóch kont — bez maila; 10:15:00 — mail z „…: 2”) | `expected [ {…}, {…}, {…} ] to have a length of 1 but got 3` | pass |
+| 5 | `answers 200, logs password_reset and closes live connections despite a provider refusal / a provider timeout (AC3)` (`MailDeliveryError(502)`, `MailTimeoutError`) | `expected [ { level: 30, …(6) }, …(9) ] to deep equally contain ObjectContaining{…}` (brak `owner_alert_failed`) | pass |
+| 6 | `answers the reset without waiting for the alert mail (AC4)` (mailer wstrzymany do `release()`) | przeszedł od razu; mutacja (trasa czeka na `send`): `Error: Test timed out in 30000ms.`; przywrócony | pass |
+| 7 | `config.test.ts`: `refuses to start with MAILER=brevo without ALERT_EMAIL`, `refuses an alert address that is not an e-mail address`, `starts with Mailpit without ALERT_EMAIL and takes it when set`, zaktualizowane `takes the Brevo key and the sender…` | 4 × red: `expected [Function] to throw an error` (×2), `expected { provider: 'brevo', …(2) } to deeply equal { provider: 'brevo', …(3) }`, `expected { provider: 'mailpit', …(1) } to deeply equal { provider: 'mailpit', …(2) }` | pass |
+
+Wysyłkę w tle sprawdza `vi.waitFor`, bez stałej pauzy. Brak wysyłki jest sprawdzany zaraz po odpowiedzi: `raise` woła `mailer.send` synchronicznie w obsłudze błędu, a adapter przechwytujący zapisuje mail przed pierwszym `await`.
+
+Weryfikacja (świeża):
+
+- `pnpm check` — exit 0: format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, vitest 147 plików / 1160 testów, jest mobile 10/10.
+- `pnpm vitest run --project api --sequence.shuffle --sequence.seed=88` — 104 pliki / 457 testów pass.
+- `pnpm --filter @lista/api build` — ok.
+- Regresja z QA planu (T-087 `password-reset.revoke-failure.test.ts`, T-075, T-054, T-053/T-055) — w pełnym przebiegu, zielone.
+
+Kryteria:
+
+- AC1 — test 1. AC2 — test 4. AC3 — test 5. AC4 — test 6. AC5 — test 7. AC6 — test 2.
+- SEC1 — test 3 (mail bez e-maila konta, obu tokenów, adresu alarmu i komunikatu bazy „connection terminated”, z kodem `57P01`; cały log bez e-maila konta, tokenów i adresu alarmu); log `owner_alert_failed` bez adresu sprawdza też test 5.
+- SEC2 — test 2 (zły, brak i zużyty token nie wysyłają alarmu, także poza oknem tłumienia). Przegląd tras: alarm woła tylko `revokeOtherLinks` w `reset-password` po udanej operacji Better Auth; żadna trasa nie przyjmuje adresu alarmu (tylko zmienna środowiskowa).
+- AC7 — **czeka na właściciela.** `fly secrets list -a lista-staging` (2026-11-03) pokazuje tylko `BETTER_AUTH_SECRET` i `DATABASE_URL` (`BREVO_API_KEY` i `MAIL_FROM` też jeszcze nie są ustawione, T-055/T-069). `.env.example` opisuje zmienną; `deployment.md` — propozycja niżej.
+
+Proponowane zmiany dokumentów architektury (implementer w trybie autonomicznym nie edytuje `docs/architecture/` poza faktami w przewodnikach warstw; do naniesienia przez właściciela):
+
+- `architecture.md` „Obserwowalność”: „Wybrane zdarzenia `error` dają alarm mailem z API do właściciela (`ALERT_EMAIL`, `src/owner-alerts.ts`), tym samym dostawcą co mail resetu (Brevo; N-02 — bez nowego podmiotu). Najwyżej jeden mail na zdarzenie w 15 min (okno w pamięci procesu, ADR 0003; restart zeruje okno), z liczbą pominiętych. Treść tylko z identyfikatorami i kodem błędu (TH-21). Teraz: `reset_tokens_revoke_failed` (T-088).”
+- `pipeline.md` „Monitoring i alarmy”: „Błąd po resecie hasła (linki nieunieważnione) → mail z API na `ALERT_EMAIL`, najwyżej 1 / 15 min (T-088).”
+- `deployment.md`, tabela zmiennych: „`ALERT_EMAIL` — sekret Fly per aplikacja (staging, produkcja); adres alarmów do właściciela; wymagany przy `MAILER=brevo` (bez niego API nie startuje), lokalnie opcjonalny.” W budżecie Brevo: alarmy najwyżej 96 na dobę w skrajnym przypadku (1 / 15 min), zwykle 0.
+- `backend.md` „Pułapki” (propozycja konwencji): „Mail z kroku po zatwierdzeniu w Better Auth (alarm) wysyłać w tle, bez `await` w kolejce `ResetTokens.exclusive`; test z mailerem wstrzymanym do zwolnienia.”
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## Open question
+
+AC7 wymaga sekretu `ALERT_EMAIL` na staging. Ustawia go właściciel (`fly secrets set` poza repo); implementer nie może tego zrobić. Kod, testy i `pnpm check` są gotowe. `fly secrets list -a lista-staging` pokazuje dziś tylko `BETTER_AUTH_SECRET` i `DATABASE_URL`.
+
+Komenda (z `--stage`, jak przy T-055, żeby nie restartować obecnej wersji):
+
+```
+fly secrets set --stage ALERT_EMAIL=<twój adres> -a lista-staging
+fly secrets list -a lista-staging   # do Evidence: sama nazwa, bez wartości
+```
+
+**Rekomendacja:** ustaw sekret teraz. Przy wznowieniu sprawdzę `fly secrets list`, zapiszę wynik w Evidence, odhaczę AC7 i oddam task do QA.
+
+**Alternatywa:** oddać task do QA od razu, z nieodhaczonym AC7, a sekret ustawić i sprawdzić razem z `BREVO_API_KEY` / `MAIL_FROM` przed merge E-02 (jak T-055; T-069 AC1 i tak sprawdza `ALERT_EMAIL` w `fly secrets list`).

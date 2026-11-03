@@ -1,11 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
+import type { Clock } from "../../clock";
+import { deliveryFailure } from "../../logging";
+import type { OwnerAlerts } from "../../owner-alerts";
 import type { Live } from "../na-zywo";
 import { authRoutes, type InvitationOnSignUp } from "./http/auth-routes";
 import { meRoutes, type AccountDeleting, type NameChanged } from "./http/me-routes";
 import { requireSession, requireUser } from "./http/require-user";
-import { MailDeliveryError, type Mailer } from "./domain/mailer";
+import type { Mailer } from "./domain/mailer";
+import { linksNotRevokedAlert } from "./domain/reset-alert";
 import { passwordResetMail } from "./domain/reset-mail";
 import { accountKey } from "./infra/account-key";
 import { createAuth, type AuthSettings, type OnPasswordResetToken } from "./infra/auth";
@@ -56,11 +60,19 @@ export interface Accounts {
   announceAccountDeletions(announce: AccountDeleting): void;
 }
 
+export interface AccountDeps {
+  live: Pick<Live, "closeSession" | "closeUser">;
+  mailer: Mailer;
+  clock: Clock;
+  /** N-03: alarmy do właściciela projektu (T-088). */
+  ownerAlerts: OwnerAlerts;
+}
+
 export function accountRoutes(
   app: FastifyInstance,
   pool: Pool,
   settings: AuthSettings,
-  { live, mailer }: { live: Pick<Live, "closeSession" | "closeUser">; mailer: Mailer },
+  { live, mailer, clock, ownerAlerts }: AccountDeps,
 ): Accounts {
   const db = drizzle(pool);
   const auth = createAuth(db, settings, app.log, sendResetMail(app, mailer, settings.origin));
@@ -79,6 +91,9 @@ export function accountRoutes(
       },
       onPasswordReset: (userId) => {
         live.closeUser(userId);
+      },
+      onLinksNotRevoked: (userId, errorCode) => {
+        ownerAlerts.raise(linksNotRevokedAlert(userId, clock.now(), errorCode));
       },
     },
     settings.origin,
@@ -122,10 +137,4 @@ function sendResetMail(app: FastifyInstance, mailer: Mailer, origin: string): On
       );
     });
   };
-}
-
-/** Błąd wysyłki do logu: typ i status, nigdy komunikat (bywa z adresem lub treścią, TH-21). */
-function deliveryFailure(error: unknown): { error: string; status?: number } {
-  if (error instanceof MailDeliveryError) return { error: error.name, status: error.status };
-  return { error: error instanceof Error ? error.name : typeof error };
 }

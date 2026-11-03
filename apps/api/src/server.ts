@@ -15,6 +15,7 @@ const app = buildApp({
     config.mail.provider === "brevo"
       ? new BrevoMailer({ apiKey: config.mail.apiKey, sender: config.mail.sender })
       : new MailpitMailer(config.mail.url),
+  ...(config.mail.alertTo ? { alertEmail: config.mail.alertTo } : {}),
   logger: { level: config.LOG_LEVEL },
   ...(config.TRUSTED_PROXIES ? { trustedProxies: config.TRUSTED_PROXIES } : {}),
   ...(existsSync(config.WEB_DIST_DIR) ? { webDistDir: config.WEB_DIST_DIR } : {}),

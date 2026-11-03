@@ -18,6 +18,10 @@ const environmentSchema = z.object({
   MAILPIT_URL: z.url().optional(),
   BREVO_API_KEY: z.string().min(1).optional(),
   MAIL_FROM: z.email().optional(),
+  // N-03 (T-088): adres alarmów do właściciela projektu (sekret Fly per aplikacja). Wymagany przy
+  // `brevo`: bez niego błąd po resecie (linki nieunieważnione) nie dałby znaku poza logiem Fly.
+  // Lokalnie opcjonalny — alarm tylko w logu.
+  ALERT_EMAIL: z.email().optional(),
   // Adresy / CIDR proxy przed API, po przecinku (Fastify trustProxy); brak = adres z połączenia.
   TRUSTED_PROXIES: z.string().min(1).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -30,21 +34,22 @@ const environmentSchema = z.object({
 
 const REQUIRED_FOR_MAILER = {
   mailpit: ["MAILPIT_URL"],
-  brevo: ["BREVO_API_KEY", "MAIL_FROM"],
+  brevo: ["BREVO_API_KEY", "MAIL_FROM", "ALERT_EMAIL"],
 } as const;
 
 export type MailConfig =
-  { provider: "mailpit"; url: string } | { provider: "brevo"; apiKey: string; sender: string };
+  | { provider: "mailpit"; url: string; alertTo?: string }
+  | { provider: "brevo"; apiKey: string; sender: string; alertTo: string };
 
 const configSchema = environmentSchema.transform((environment, context) => {
-  const { MAILER, MAILPIT_URL, BREVO_API_KEY, MAIL_FROM, ...rest } = environment;
+  const { MAILER, MAILPIT_URL, BREVO_API_KEY, MAIL_FROM, ALERT_EMAIL, ...rest } = environment;
   const mail: MailConfig | undefined =
     MAILER === "brevo"
-      ? BREVO_API_KEY && MAIL_FROM
-        ? { provider: MAILER, apiKey: BREVO_API_KEY, sender: MAIL_FROM }
+      ? BREVO_API_KEY && MAIL_FROM && ALERT_EMAIL
+        ? { provider: MAILER, apiKey: BREVO_API_KEY, sender: MAIL_FROM, alertTo: ALERT_EMAIL }
         : undefined
       : MAILPIT_URL
-        ? { provider: MAILER, url: MAILPIT_URL }
+        ? { provider: MAILER, url: MAILPIT_URL, ...(ALERT_EMAIL ? { alertTo: ALERT_EMAIL } : {}) }
         : undefined;
   if (mail) return { ...rest, mail };
   for (const name of REQUIRED_FOR_MAILER[MAILER].filter((key) => !environment[key])) {

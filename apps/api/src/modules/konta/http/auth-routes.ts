@@ -11,7 +11,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
-import { errorSummary, logLimitEvent, securityEvent } from "../../../logging";
+import { errorSummary, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { PasswordResetRequests } from "../infra/password-reset-requests";
@@ -32,6 +32,8 @@ interface AuthDeps {
   onSignedOut: (sessionId: string) => void;
   /** TH-28: reset usunął wszystkie sesje konta; zamyka ich połączenia na żywo (`na-zywo`). */
   onPasswordReset: (userId: string) => void;
+  /** T-088 (N-03): pozostałe linki konta nie zostały unieważnione — alarm do właściciela. */
+  onLinksNotRevoked: (userId: string, errorCode: string) => void;
 }
 
 /** Przyjmuje zaproszenie dla nowego konta; błąd zaproszenia wraca w treści, nie jako status. */
@@ -143,7 +145,7 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     const response = userId
       ? await deps.resetTokens.exclusive(userId, async () => {
           const result = await forward(auth, origin, request, body);
-          if (result.ok) await revokeOtherLinks(request, deps.resetTokens, userId);
+          if (result.ok) await revokeOtherLinks(request, deps, userId);
           return result;
         })
       : await forward(auth, origin, request, body);
@@ -160,15 +162,26 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
  * pozostałych linków nie może przerwać logu `password_reset` ani zamknięcia połączeń (TH-28).
  * Linki i tak wygasają po 1 h (F-03); błąd tylko w logu, bez tokenów (TH-21).
  */
-async function revokeOtherLinks(request: FastifyRequest, tokens: ResetTokens, userId: string) {
+async function revokeOtherLinks(
+  request: FastifyRequest,
+  deps: Pick<AuthDeps, "resetTokens" | "onLinksNotRevoked">,
+  userId: string,
+) {
   try {
-    await tokens.revokeAll(userId);
+    await deps.resetTokens.revokeAll(userId);
   } catch (error) {
+    const summary = errorSummary(error);
     request.log.error(
-      { event: "reset_tokens_revoke_failed", userId, err: errorSummary(error) },
+      { event: "reset_tokens_revoke_failed", userId, err: summary },
       "revoking reset links failed",
     );
+    deps.onLinksNotRevoked(userId, errorCodeOf(summary));
   }
+}
+
+/** Kod błędu z najgłębszej przyczyny (np. `57P01` z pg), bez komunikatu (TH-21). */
+function errorCodeOf(summary: ErrorSummary): string {
+  return (summary.cause && errorCodeOf(summary.cause)) ?? summary.code ?? summary.type;
 }
 
 // architecture.md, „Obserwowalność”: zdarzenia bezpieczeństwa tylko z identyfikatorami.

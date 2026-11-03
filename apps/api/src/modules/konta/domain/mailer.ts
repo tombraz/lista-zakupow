@@ -1,4 +1,7 @@
-/** Wiadomość tekstowa; aplikacja wysyła tylko mail resetu hasła (F-03). */
+/**
+ * Wiadomość tekstowa; aplikacja wysyła mail resetu hasła (F-03) i alarmy do właściciela projektu
+ * (N-03, `src/owner-alerts.ts`, T-088) — tym samym dostawcą.
+ */
 export interface Mail {
   to: string;
   subject: string;

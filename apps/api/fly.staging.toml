@@ -1,8 +1,9 @@
 # Fly.io, staging (T-010; deployment.md, ADR 0006). Obraz podaje scripts/deploy.sh (--image
 # ghcr.io/tombraz/lista-zakupow:<sha>), więc ten plik nie buduje niczego.
 # Sekrety (fly secrets, nie tutaj): DATABASE_URL (Neon lista-staging, sslmode=require), BETTER_AUTH_SECRET,
-# BREVO_API_KEY (klucz Brevo staging) i MAIL_FROM (zweryfikowany w Brevo adres właściciela — dana
-# osobowa, repo jest publiczne). Bez nich API z MAILER=brevo nie wystartuje (T-055).
+# BREVO_API_KEY (klucz Brevo staging), MAIL_FROM (zweryfikowany w Brevo adres właściciela — dana
+# osobowa, repo jest publiczne) i ALERT_EMAIL (adres alarmów do właściciela, T-088). Bez nich API
+# z MAILER=brevo nie wystartuje (T-055, T-088).
 app = "lista-staging"
 primary_region = "fra"
 

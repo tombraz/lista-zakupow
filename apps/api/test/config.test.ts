@@ -37,6 +37,7 @@ describe("readConfig", () => {
     MAILER: "brevo",
     BREVO_API_KEY: "test-brevo-key",
     MAIL_FROM: "wlasciciel@example.com",
+    ALERT_EMAIL: "alarm@example.com",
   };
 
   it("takes the Brevo key and the sender when MAILER=brevo, without MAILPIT_URL", () => {
@@ -44,10 +45,11 @@ describe("readConfig", () => {
       provider: "brevo",
       apiKey: "test-brevo-key",
       sender: "wlasciciel@example.com",
+      alertTo: "alarm@example.com",
     });
   });
 
-  it.each(["BREVO_API_KEY", "MAIL_FROM"])(
+  it.each(["BREVO_API_KEY", "MAIL_FROM", "ALERT_EMAIL"])(
     "refuses to start with MAILER=brevo without %s",
     (name) => {
       expect(() => readConfig({ ...brevo, [name]: undefined })).toThrow(new RegExp(name));
@@ -67,6 +69,20 @@ describe("readConfig", () => {
     expect(readConfig(environment).mail).toEqual({
       provider: "mailpit",
       url: "http://localhost:8025",
+    });
+  });
+
+  // T-088 AC5 (N-03): alarm do właściciela na serwerze obowiązkowy; lokalnie tylko w logu.
+  it("refuses an alert address that is not an e-mail address", () => {
+    expect(() => readConfig({ ...brevo, ALERT_EMAIL: "właściciel" })).toThrow(/ALERT_EMAIL/);
+  });
+
+  it("starts with Mailpit without ALERT_EMAIL and takes it when set", () => {
+    expect(readConfig(environment).mail).not.toHaveProperty("alertTo");
+    expect(readConfig({ ...environment, ALERT_EMAIL: "alarm@example.com" }).mail).toEqual({
+      provider: "mailpit",
+      url: "http://localhost:8025",
+      alertTo: "alarm@example.com",
     });
   });
 });
