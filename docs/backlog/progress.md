@@ -61,3 +61,4 @@
 2026-11-03 08:26 | T-088 | qa | PASS | 0/0/1 minor; docs domknięte; flaky routes-nul (T-070); nieudana wysyłka alertu też otwiera okno 15 min (E-03)
 2026-11-03 10:37 | T-069 | user | UNBLOCK | PR #13 zmergowany na main; T-069 -> todo
 2026-11-03 10:43 | T-069 | implementer | NEEDS_USER | staging nie wstaje: brak BREVO_API_KEY i MAIL_FROM; właściciel ustawia sekrety, test skrzynek, zgoda na deployment.md
+2026-11-03 11:20 | T-069 | user | ANSWER | Gmail OK (odbiorcza, od razu), nadawca przepisany na brevosend; Onet/WP nieprzetestowane; implementer wpisuje deployment.md

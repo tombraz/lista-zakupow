@@ -125,3 +125,5 @@ Staging po merge PR #13 nie wstaje: brakuje sekretów `BREVO_API_KEY` i `MAIL_FR
 Rekomendacja: ustawić sekrety bez `--stage` (natychmiastowy restart), podać wyniki tutaj i zezwolić implementerowi na wpis do `deployment.md` wg szkicu z Evidence; implementer domknie SEC1 (przegląd logów) i odda do QA.
 
 Alternatywa: właściciel sam wpisuje wynik do `deployment.md` i odhacza punkt; implementer tylko weryfikuje logi i diff, i oddaje do QA.
+
+Answer: Właściciel 2026-11-03: sekrety BREVO_API_KEY i MAIL_FROM ustawione bez --stage (fly secrets list: 5 sekretów Deployed; smoke staging OK). Gmail: mail w skrzynce odbiorczej (nie spam), przyszedł od razu, link działa, nowe hasło loguje, stare nie. Nieistniejący e-mail: ten sam komunikat, brak maila. Brevo Logs: Sent, Delivered, Opened, bez odrzuceń; nadawca przepisany przez Brevo na tom.brazkiewicz@12664190.brevosend.com (Gmail jako MAIL_FROM, DMARC) — zapisać w wyniku. Druga skrzynka (Onet/WP): niewykonana, właściciel nie ma innych kont — zapisać jako nieprzetestowane. Zgoda (jak T-088): implementer wpisuje wynik do docs/architecture/deployment.md wg szkicu z Evidence, sprawdza logi (SEC1) i oddaje do QA.
