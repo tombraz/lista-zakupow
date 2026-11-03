@@ -54,3 +54,5 @@
 2026-11-03 06:22 | T-088 | implementer | NEEDS_USER | alert mailem (okno 15 min, bez danych osobowych); AC7 wymaga fly secrets set ALERT_EMAIL na staging
 2026-11-03 08:06 | T-088 | user | ANSWER | ALERT_EMAIL ustawiony na staging (--stage)
 2026-11-03 08:10 | T-088 | implementer | IN_QA | AC7 ALERT_EMAIL Staged na staging; wiersz deployment.md jako propozycja w Evidence
+2026-11-03 08:14 | T-088 | qa | NEEDS_USER | 0/0/0; AC7: brak wpisów ALERT_EMAIL w docs/architecture (deployment/architecture/pipeline/backend), implementer nie może ich edytować
+2026-11-03 08:15 | T-088 | user | ANSWER | odczyt A: implementer nanosi 4 wpisy docs/architecture, QA fail AC7

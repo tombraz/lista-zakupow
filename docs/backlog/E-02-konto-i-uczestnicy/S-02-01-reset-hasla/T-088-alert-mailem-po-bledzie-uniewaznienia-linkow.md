@@ -179,3 +179,5 @@ Otwarte jest tylko AC7 (odhaczone przez implementera, ale niespełnione w częś
 
 - **Odczyt A (rekomendacja):** zgoda właściciela, żeby implementer w tym tasku naniósł cztery proponowane wpisy (`deployment.md` — zmienna `ALERT_EMAIL` i budżet Brevo, `architecture.md`, `pipeline.md`, pułapka w `backend.md`), jak przy T-010. Werdykt QA: `fail` (AC7) → poprawka samej dokumentacji → ponowne QA. Dokumenty są prawdziwe w chwili merge E-02.
 - **Odczyt B:** wpisy dokumentacji to praca właściciela / innego taska (np. dopisać do T-069 AC3 `ALERT_EMAIL` oraz wpisy w `architecture.md` i `pipeline.md`). Werdykt QA: `pass`, z brakiem dokumentacji jako follow-up.
+
+Answer: Odczyt A (właściciel, 2026-11-03): zgoda, żeby implementer w tym tasku naniósł cztery proponowane wpisy z Evidence (deployment.md: ALERT_EMAIL i budżet Brevo; architecture.md: Obserwowalność; pipeline.md: Monitoring i alarmy; pułapka w backend.md). QA: fail na AC7, poprawka samej dokumentacji, ponowne QA.
