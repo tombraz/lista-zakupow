@@ -3,7 +3,7 @@ id: T-088
 title: Alert mailem do właściciela, gdy reset nie unieważni pozostałych linków
 epic: E-02
 story: S-02-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-087]
 size: S                # S | M (L must be split)
@@ -181,3 +181,30 @@ Otwarte jest tylko AC7 (odhaczone przez implementera, ale niespełnione w częś
 - **Odczyt B:** wpisy dokumentacji to praca właściciela / innego taska (np. dopisać do T-069 AC3 `ALERT_EMAIL` oraz wpisy w `architecture.md` i `pipeline.md`). Werdykt QA: `pass`, z brakiem dokumentacji jako follow-up.
 
 Answer: Odczyt A (właściciel, 2026-11-03): zgoda, żeby implementer w tym tasku naniósł cztery proponowane wpisy z Evidence (deployment.md: ALERT_EMAIL i budżet Brevo; architecture.md: Obserwowalność; pipeline.md: Monitoring i alarmy; pułapka w backend.md). QA: fail na AC7, poprawka samej dokumentacji, ponowne QA.
+
+## QA round 1 (2026-11-03)
+
+Verdict: fail
+
+Niezależna weryfikacja (świeża sesja QA). Werdykt zgodny z decyzją właściciela (odczyt A w „Open question” wyżej): `fail` na AC7, poprawka samej dokumentacji, ponowne QA.
+
+Wyniki:
+
+- `pnpm vitest run --project api password-reset config` — 8 plików / 48 testów pass (w tym `password-reset.owner-alert.test.ts` 8/8 i `config.test.ts`).
+- `pnpm check` — format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check pass; vitest 1159/1160: jedna porażka `test/routes-nul.test.ts > never logs a raw database exception for NUL input (SEC1)` (T-070). Trzy ponowne uruchomienia `routes-nul` — 24/24 pass. Plik nie jest dotknięty przez T-088; asercja `not.toMatch(/byte sequence|22021/)` na całym logu łapie przypadkowe cyfry (`requestId`, `responseTime`, `time`), więc to niestabilny test, nie regresja tego taska (finding 3).
+- Mutacja: usunięcie wywołania `deps.onLinksNotRevoked(...)` w `revokeOtherLinks` → 7/8 testów taska czerwonych; przywrócone (`git checkout`), `git status` czysty.
+
+Kryteria:
+
+- AC1 pass (test AC1; temat, `userId`, czas, czas + 1 h). AC2 pass (zegar testowy, 10:14:59.999 bez maila, 10:15:00 z „…: 2”, dwa konta). AC3 pass (502 i timeout → 200, `password_reset`, WS zamknięte, `owner_alert_failed` bez adresu). AC4 pass (mailer wstrzymany; `raise` nie jest awaitowane). AC5 pass (`config.test.ts`). AC6 pass.
+- SEC1 pass (test szuka e-maila konta, obu tokenów, adresu alarmu i komunikatu bazy w mailu i logu; treść z `reset-alert.ts` zawiera tylko `userId`, czasy i kod). SEC2 pass: przegląd tras — `onLinksNotRevoked` wołane tylko z `catch` w `revokeOtherLinks` po udanym resecie Better Auth; adres alarmu wyłącznie ze zmiennej środowiskowej (`config.ts`), żadna trasa go nie przyjmuje; test zły / brak / zużyty token → brak alarmu.
+- AC7 **fail** — sekret `ALERT_EMAIL` jest w Fly (`Staged`, wpis w Evidence), `.env.example` opisuje zmienną, ale `deployment.md` (tabela zmiennych) nie: `grep ALERT docs/architecture/deployment.md` — brak wyników.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | AC7 / docs | `deployment.md` nie opisuje `ALERT_EMAIL` (tabela zmiennych) ani alarmów w budżecie Brevo | `grep -n ALERT docs/architecture/deployment.md` → nic | Wpis `ALERT_EMAIL` (sekret Fly per aplikacja, wymagany przy `MAILER=brevo`, lokalnie opcjonalny) i budżet Brevo (≤ 96 alarmów/dobę, zwykle 0) — tekst z Evidence „Proponowane zmiany dokumentów architektury” |
+| 2 | major | DoD / docs | `architecture.md` „Obserwowalność”, `pipeline.md` „Monitoring i alarmy” i pułapka w `backend.md` nie opisują alarmu (Implementation notes, DoD; QA plan: „restart API zeruje okno” w notatkach architektury) | `grep -n ALERT docs/architecture/architecture.md docs/architecture/pipeline.md` → nic; `backend.md` ma tylko „Gdzie jest kod” i „Komendy” | Nanieść trzy pozostałe wpisy z Evidence (zgoda właściciela, odpowiedź na „Open question”, odczyt A) |
+| 3 | minor | testy (T-070, poza zakresem) | `routes-nul.test.ts` SEC1 niestabilny: regex `/22021/` na całym logu trafia losowe cyfry | 1 porażka w `pnpm check`, 3 × pass przy ponownym uruchomieniu | Zawęzić asercję (np. do pól `err`/`msg` albo `\b22021\b` w kontekście `code`) — osobny task |
+| 4 | note | owner-alerts | Okno tłumienia startuje przed wynikiem wysyłki: nieudany mail alarmu zużywa okno, kolejny alarm najwcześniej po 15 min | `owner-alerts.ts`: `windows.set(...)` przed `mailer.send(...)` | Do rozważenia w E-03 (S-03-02); dziś akceptowalne — zdarzenie jest w logu jako `owner_alert_failed` |
+
+Do zmiany (tylko dokumentacja, kod bez zmian): findings 1 i 2 — cztery wpisy z Evidence w `docs/architecture/deployment.md`, `architecture.md`, `pipeline.md` i `layers/backend.md` („Pułapki”). Potem `pnpm check` i ponowne QA.
