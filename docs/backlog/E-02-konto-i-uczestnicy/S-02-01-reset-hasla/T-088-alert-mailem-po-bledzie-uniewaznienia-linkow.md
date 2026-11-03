@@ -3,7 +3,7 @@ id: T-088
 title: Alert mailem do właściciela, gdy reset nie unieważni pozostałych linków
 epic: E-02
 story: S-02-01
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-087]
 size: S                # S | M (L must be split)
@@ -36,13 +36,13 @@ Gdy po udanej zmianie hasła nie uda się unieważnić pozostałych linków rese
 
 Each criterion must fail before the work and pass after it.
 
-- [ ] AC1: Given ustawiony adres alarmu i błąd unieważnienia linków po udanej zmianie hasła, when trasa kończy reset, then mailer dostaje jeden mail na adres alarmu z tematem „Alarm: linki resetu hasła nie zostały unieważnione”, `userId`, czasem zdarzenia i godziną, do której pozostałe linki mogą działać (zdarzenie + 1 h). — verified by: test integracyjny (mailer przechwytujący)
-- [ ] AC2: Given kolejne błędy unieważnienia w oknie 15 minut od wysłanego alarmu, when występują, then nie wychodzi nowy mail. Pierwszy błąd po oknie wysyła mail z liczbą pominiętych zdarzeń. — verified by: test integracyjny ze sterowanym zegarem (`clock.ts`)
-- [ ] AC3: Given mailer odrzuca wysyłkę alarmu (błąd dostawcy albo timeout), when trasa kończy reset, then klient dalej dostaje 200, a `password_reset` w `security` i zamknięcie połączeń na żywo działają jak w T-087. Błąd wysyłki trafia do logu jako `owner_alert_failed` (nazwa zdarzenia alarmu i status, bez adresu). — verified by: test integracyjny
-- [ ] AC4: Given wysyłka alarmu trwa (mailer odpowiada z opóźnieniem), when klient czeka na odpowiedź resetu, then odpowiedź nie czeka na mail. — verified by: test integracyjny z mailerem wstrzymanym do zwolnienia
-- [ ] AC5: Given `MAILER=brevo` bez `ALERT_EMAIL`, when API startuje, then start kończy się czytelnym błędem konfiguracji. Given `MAILER=mailpit` bez `ALERT_EMAIL`, then start działa, a alarm jest tylko w logu. — verified by: `config.test.ts`
-- [ ] AC6: Given udany reset bez błędu unieważnienia, then nie wychodzi żaden alarm. — verified by: test integracyjny
-- [ ] AC7: Given staging, then sekret `ALERT_EMAIL` jest ustawiony w Fly (`fly secrets list` pokazuje nazwę, bez wartości) przed merge E-02 na `main`. `deployment.md` (tabela zmiennych) i `.env.example` opisują zmienną. — verified by: ręczna kontrola (właściciel uruchamia `fly secrets set`), wpis w Evidence
+- [x] AC1: Given ustawiony adres alarmu i błąd unieważnienia linków po udanej zmianie hasła, when trasa kończy reset, then mailer dostaje jeden mail na adres alarmu z tematem „Alarm: linki resetu hasła nie zostały unieważnione”, `userId`, czasem zdarzenia i godziną, do której pozostałe linki mogą działać (zdarzenie + 1 h). — verified by: test integracyjny (mailer przechwytujący)
+- [x] AC2: Given kolejne błędy unieważnienia w oknie 15 minut od wysłanego alarmu, when występują, then nie wychodzi nowy mail. Pierwszy błąd po oknie wysyła mail z liczbą pominiętych zdarzeń. — verified by: test integracyjny ze sterowanym zegarem (`clock.ts`)
+- [x] AC3: Given mailer odrzuca wysyłkę alarmu (błąd dostawcy albo timeout), when trasa kończy reset, then klient dalej dostaje 200, a `password_reset` w `security` i zamknięcie połączeń na żywo działają jak w T-087. Błąd wysyłki trafia do logu jako `owner_alert_failed` (nazwa zdarzenia alarmu i status, bez adresu). — verified by: test integracyjny
+- [x] AC4: Given wysyłka alarmu trwa (mailer odpowiada z opóźnieniem), when klient czeka na odpowiedź resetu, then odpowiedź nie czeka na mail. — verified by: test integracyjny z mailerem wstrzymanym do zwolnienia
+- [x] AC5: Given `MAILER=brevo` bez `ALERT_EMAIL`, when API startuje, then start kończy się czytelnym błędem konfiguracji. Given `MAILER=mailpit` bez `ALERT_EMAIL`, then start działa, a alarm jest tylko w logu. — verified by: `config.test.ts`
+- [x] AC6: Given udany reset bez błędu unieważnienia, then nie wychodzi żaden alarm. — verified by: test integracyjny
+- [x] AC7: Given staging, then sekret `ALERT_EMAIL` jest ustawiony w Fly (`fly secrets list` pokazuje nazwę, bez wartości) przed merge E-02 na `main`. `deployment.md` (tabela zmiennych) i `.env.example` opisują zmienną. — verified by: ręczna kontrola (właściciel uruchamia `fly secrets set`), wpis w Evidence
 - [ ] SEC1 (TH-21): Given alarm, when mail powstaje, then treść i temat nie zawierają e-maila konta, tokenów, haseł ani komunikatu błędu bazy (tylko `errorSummary`-owy kod, np. `57P01`), a log `owner_alert_failed` nie zawiera adresu alarmu. — verified by: test integracyjny (szuka e-maila konta, obu tokenów i `ALERT_EMAIL` w mailu i w całym logu)
 - [ ] SEC2 (TH-10): Given osoba spoza projektu, when wywołuje dowolną trasę `/api/*`, then nie może wywołać wysyłki alarmu ani zmienić adresu alarmu. Alarm uruchamia wyłącznie błąd po stronie serwera po udanym resecie. — verified by: test integracyjny, że nieudany reset (zły lub zużyty token) nie wysyła alarmu, oraz przegląd tras w QA
 
@@ -138,7 +138,7 @@ Kryteria:
 - AC1 — test 1. AC2 — test 4. AC3 — test 5. AC4 — test 6. AC5 — test 7. AC6 — test 2.
 - SEC1 — test 3 (mail bez e-maila konta, obu tokenów, adresu alarmu i komunikatu bazy „connection terminated”, z kodem `57P01`; cały log bez e-maila konta, tokenów i adresu alarmu); log `owner_alert_failed` bez adresu sprawdza też test 5.
 - SEC2 — test 2 (zły, brak i zużyty token nie wysyłają alarmu, także poza oknem tłumienia). Przegląd tras: alarm woła tylko `revokeOtherLinks` w `reset-password` po udanej operacji Better Auth; żadna trasa nie przyjmuje adresu alarmu (tylko zmienna środowiskowa).
-- AC7 — **czeka na właściciela.** `fly secrets list -a lista-staging` (2026-11-03) pokazuje tylko `BETTER_AUTH_SECRET` i `DATABASE_URL` (`BREVO_API_KEY` i `MAIL_FROM` też jeszcze nie są ustawione, T-055/T-069). `.env.example` opisuje zmienną; `deployment.md` — propozycja niżej.
+- AC7 — **czeka na właściciela** (stan z run 1, niżej rozwiązany).
 
 Proponowane zmiany dokumentów architektury (implementer w trybie autonomicznym nie edytuje `docs/architecture/` poza faktami w przewodnikach warstw; do naniesienia przez właściciela):
 
@@ -146,6 +146,11 @@ Proponowane zmiany dokumentów architektury (implementer w trybie autonomicznym 
 - `pipeline.md` „Monitoring i alarmy”: „Błąd po resecie hasła (linki nieunieważnione) → mail z API na `ALERT_EMAIL`, najwyżej 1 / 15 min (T-088).”
 - `deployment.md`, tabela zmiennych: „`ALERT_EMAIL` — sekret Fly per aplikacja (staging, produkcja); adres alarmów do właściciela; wymagany przy `MAILER=brevo` (bez niego API nie startuje), lokalnie opcjonalny.” W budżecie Brevo: alarmy najwyżej 96 na dobę w skrajnym przypadku (1 / 15 min), zwykle 0.
 - `backend.md` „Pułapki” (propozycja konwencji): „Mail z kroku po zatwierdzeniu w Better Auth (alarm) wysyłać w tle, bez `await` w kolejce `ResetTokens.exclusive`; test z mailerem wstrzymanym do zwolnienia.”
+
+**Run 2026-11-03 (wznowienie po odpowiedzi właściciela).**
+
+- AC7: `fly secrets list -a lista-staging` (2026-11-03) pokazuje `ALERT_EMAIL` ze statusem `Staged` (digest bez wartości; obok `BETTER_AUTH_SECRET`, `DATABASE_URL` — `Deployed`). Sekret zadziała przy następnym wdrożeniu (`--stage`, decyzja właściciela). `.env.example` opisuje zmienną (linie 10 i 17). Wpis w tabeli zmiennych `deployment.md` pozostaje propozycją wyżej (implementer nie edytuje `docs/architecture/`) — do naniesienia przez właściciela przed merge E-02.
+- Świeża weryfikacja: `pnpm check` — exit 0 (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, vitest, jest mobile 10/10). Kod bez zmian od run 1.
 
 <!-- QA rounds are appended below by /qa-task -->
 
