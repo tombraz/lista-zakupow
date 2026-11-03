@@ -65,6 +65,8 @@ Pierwsze wdrożenia staging (T-010, 2026-10-29): [przebieg 40882296349](https://
 
 Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 
+**Wysyłka Brevo bez własnej domeny — zweryfikowana 2026-11-03 na staging (T-069):** Brevo przyjmuje pojedynczego zweryfikowanego nadawcę z darmowej poczty (Gmail), bez odrzuceń (Brevo → Transactional → Logs: Sent, Delivered, Opened). Brevo przepisuje jednak adres nadawcy (polityka DMARC Gmaila): mail przychodzi od `<login>@<id-konta>.brevosend.com`, nie od adresu z `MAIL_FROM`. Gmail: skrzynka odbiorcza (nie spam), dostarczenie od razu (sekundy); link `https://lista-staging.fly.dev/reset-hasla?token=…` działa, nowe hasło loguje, stare nie; prośba dla nieistniejącego e-maila — ten sam komunikat, mail nie wychodzi. Inni dostawcy poczty (Onet, WP, Outlook): **nieprzetestowane** (właściciel nie ma takich kont) — ryzyko spamu u nich pozostaje (zob. „Ryzyka”).
+
 ## Sekrety i dostęp
 
 | Sekret | Używa | Przechowywany w (środowisko) | Rotacja |
@@ -74,8 +76,11 @@ Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 | `DATABASE_URL` | API | sekrety Fly (`fly secrets`) per aplikacja | przy zmianie hasła bazy |
 | `BETTER_AUTH_SECRET` | API (sesje) | sekrety Fly per aplikacja | przy podejrzeniu wycieku (wylogowuje wszystkich) |
 | `BREVO_API_KEY` | API (mail resetu, alarmy) | sekrety Fly per aplikacja | raz w roku |
+| `MAIL_FROM` | API (nadawca maili resetu i alarmów, adres zweryfikowany w Brevo) | sekrety Fly per aplikacja; lokalnie `.env` | przy zmianie adresu |
 | `ALERT_EMAIL` | API (adres alarmów do właściciela, T-088) | sekrety Fly per aplikacja (staging, produkcja); lokalnie `.env` | przy zmianie adresu |
 | `EXPO_TOKEN` | `mobile.yml` | sekret repozytorium | raz w roku |
+
+`MAILER` — zmienna jawna (nie sekret): `brevo` w `apps/api/fly.staging.toml`, lokalnie `mailpit`. Przy `MAILER=brevo` wymagane sekrety `BREVO_API_KEY`, `MAIL_FROM` i `ALERT_EMAIL` — bez któregokolwiek API nie wystartuje (walidacja konfiguracji, T-055, T-088; po merge E-02 brak `BREVO_API_KEY` i `MAIL_FROM` zatrzymał staging do czasu ich ustawienia — T-069).
 
 `ALERT_EMAIL` — adres alarmów do właściciela (T-088): wymagany przy `MAILER=brevo` (bez niego API nie wystartuje), lokalnie przy `MAILER=mailpit` opcjonalny (bez niego alarm jest tylko w logu).
 
@@ -95,7 +100,7 @@ Wszystkie strony otwarte 2026-10-26 (subagenci w `/ci-cd`).
 
 **Web.** Pierwotnie wybrany Cloudflare Workers static assets (darmowy, SPA fallback, `_headers`); po decyzji „bez własnej domeny” zastąpiony serwowaniem SPA przez Fastify na Fly (ten sam origin co API — ADR 0006). Inne rozważane: Vercel Hobby („non-commercial personal use only”), Netlify (kredyty; po wyczerpaniu pauzuje projekty), GitHub Pages (brak własnych nagłówków). Źródła: developers.cloudflare.com/workers/static-assets/routing/single-page-application/, developers.cloudflare.com/workers/platform/pricing/, vercel.com/docs/plans/hobby, netlify.com/pricing, docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits.
 
-**Mail.** Brevo (300/dzień, serwery w UE, DPA w regulaminie) — wybrany. Drugie miejsce: Mailjet (6000/mies., GCP Frankfurt/Belgia; logo w stopce na planie darmowym). Odrzucone: Resend (dane konta w USA), Postmark (100/mies.), Amazon SES (sandbox i konfiguracja IAM), Scaleway TEM (300 łącznie). Wysyłka bez własnej domeny (zweryfikowany pojedynczy nadawca): niezweryfikowane — sprawdzić w tasku staging. Źródła: brevo.com/features/email-api/, help.brevo.com (lokalizacja danych), mailjet.com/pricing/, resend.com/docs/dashboard/domains/regions, postmarkapp.com/pricing, aws.amazon.com/ses/pricing/.
+**Mail.** Brevo (300/dzień, serwery w UE, DPA w regulaminie) — wybrany. Drugie miejsce: Mailjet (6000/mies., GCP Frankfurt/Belgia; logo w stopce na planie darmowym). Odrzucone: Resend (dane konta w USA), Postmark (100/mies.), Amazon SES (sandbox i konfiguracja IAM), Scaleway TEM (300 łącznie). Wysyłka bez własnej domeny (zweryfikowany pojedynczy nadawca): działa, zweryfikowane 2026-11-03 (T-069, „Środowiska”). Źródła: brevo.com/features/email-api/, help.brevo.com (lokalizacja danych), mailjet.com/pricing/, resend.com/docs/dashboard/domains/regions, postmarkapp.com/pricing, aws.amazon.com/ses/pricing/.
 
 **Monitoring.** UptimeRobot Free — wybrany; drugie miejsce Better Stack Free (10 monitorów, „free for personal projects”). Freshping zamknięty (marzec 2026). Źródła: uptimerobot.com/pricing/, betterstack.com/pricing.
 
@@ -107,11 +112,12 @@ Wszystkie strony otwarte 2026-10-26 (subagenci w `/ci-cd`).
 
 - **Koszt bazy produkcyjnej:** Neon nalicza za czas, gdy baza nie śpi (usypia po 5 min bez połączeń). Gdyby nigdy nie spała: ~182 CU-h × 0,106 $ ≈ 19 $/mies. Środki: pula połączeń API zamyka bezczynne połączenia (`idleTimeoutMillis` ≤ 60 s), healthcheck Fly i UptimeRobot sprawdzają `/health` (bez bazy), `/health/ready` tylko w smoke teście po wdrożeniu; alert kosztowy u dostawcy (zob. `pipeline.md`, koszty). Wrócić po 2 tygodniach pilotażu z faktycznym rachunkiem.
 - **Pierwsze żądanie po uśpieniu bazy** czeka na jej wybudzenie (zwykle sekundy, niezweryfikowane) — akceptowalne przy N-03.
-- **Mail resetu w spamie:** nadawca bez własnej domeny (brak SPF/DKIM dla domeny nadawcy). Domownicy uprzedzeni; jeśli Brevo odmówi wysyłki z adresu darmowej poczty, wrócić do decyzji (Mailjet, Gmail SMTP albo zakup domeny).
+- **Mail resetu w spamie:** nadawca bez własnej domeny (brak SPF/DKIM dla domeny nadawcy; Brevo przepisuje nadawcę na `…brevosend.com`). W Gmailu 2026-11-03 trafił do odbiorczej; inni dostawcy nieprzetestowani (T-069). Domownicy uprzedzeni; jeśli Brevo odmówi wysyłki z adresu darmowej poczty, wrócić do decyzji (Mailjet, Gmail SMTP albo zakup domeny).
 - **Adres `*.fly.dev`:** zmiana dostawcy zmienia adres aplikacji (linki zaproszeń i zapisane adresy przestaną działać); do zaakceptowania w projekcie testowym.
 - **Jeden region, jedna maszyna:** awaria Fly `fra` = przerwa (N-03 to dopuszcza).
 
 ## Otwarte pytania
 
 - [x] Limit bezczynności WebSocket na Fly i nazwy aplikacji (staging) — rozstrzygnięte 2026-10-29 (T-010, „Środowiska”).
-- [ ] Ceny w € — potwierdzić przy pierwszym rachunku. Wysyłka Brevo bez własnej domeny — w E-02 (reset hasła).
+- [ ] Ceny w € — potwierdzić przy pierwszym rachunku.
+- [x] Wysyłka Brevo bez własnej domeny — zweryfikowane 2026-11-03 w T-069 (Gmail: odbiorcza; inni dostawcy nieprzetestowani; „Środowiska”).
