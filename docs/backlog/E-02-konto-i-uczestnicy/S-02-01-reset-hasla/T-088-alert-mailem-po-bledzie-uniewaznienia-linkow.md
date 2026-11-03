@@ -3,7 +3,7 @@ id: T-088
 title: Alert mailem do właściciela, gdy reset nie unieważni pozostałych linków
 epic: E-02
 story: S-02-01
-status: in-progress          # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-087]
 size: S                # S | M (L must be split)
@@ -151,6 +151,13 @@ Proponowane zmiany dokumentów architektury (implementer w trybie autonomicznym 
 
 - AC7: `fly secrets list -a lista-staging` (2026-11-03) pokazuje `ALERT_EMAIL` ze statusem `Staged` (digest bez wartości; obok `BETTER_AUTH_SECRET`, `DATABASE_URL` — `Deployed`). Sekret zadziała przy następnym wdrożeniu (`--stage`, decyzja właściciela). `.env.example` opisuje zmienną (linie 10 i 17). Wpis w tabeli zmiennych `deployment.md` pozostaje propozycją wyżej (implementer nie edytuje `docs/architecture/`) — do naniesienia przez właściciela przed merge E-02.
 - Świeża weryfikacja: `pnpm check` — exit 0 (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, vitest, jest mobile 10/10). Kod bez zmian od run 1.
+
+**Fix QA round 1 (2026-11-03, tylko dokumentacja; zgoda właściciela — odczyt A w „Open question”).** Kod bez zmian.
+
+- Finding 1 (blocker, AC7): `deployment.md` — wiersz „Mail” w „Ograniczenia” (alarmy N-03, ≤ 96/dobę w skrajnym przypadku, zwykle 0, mieści się w 300/dzień Brevo); tabela „Sekrety i dostęp”: `ALERT_EMAIL` (sekret Fly per aplikacja, lokalnie `.env`), `BREVO_API_KEY` — „mail resetu, alarmy”; akapit: wymagany przy `MAILER=brevo`, opcjonalny przy `mailpit`. Red przed poprawką: `grep -n ALERT docs/architecture/deployment.md` → brak wyników; teraz linie 22, 77, 80.
+- Finding 2 (major): `architecture.md` „Obserwowalność” — punkt „Alarm mailowy z API” (Brevo, okno 15 min w pamięci procesu, ADR 0003, restart zeruje okno — akceptowane, TH-21, `owner_alert_failed`) + wpis w „Historia zmian”; `pipeline.md` „Monitoring i alarmy” — punkt o alarmie `reset_tokens_revoke_failed`; `layers/backend.md` „Pułapki” — mail po zatwierdzeniu w Better Auth w tle, bez `await` w kolejce `ResetTokens.exclusive` + wpis w „Historia zmian”. Red: `grep -n ALERT docs/architecture/architecture.md docs/architecture/pipeline.md` → brak; teraz `architecture.md:271,290`, `pipeline.md:90`.
+- Finding 3 (minor, T-070, `routes-nul.test.ts`) i 4 (note) — poza zakresem poprawki (decyzja QA: osobny task / E-03).
+- Weryfikacja (świeża): `pnpm check` — exit 0 (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, vitest 147 plików / 1160 testów, jest mobile 10/10).
 
 <!-- QA rounds are appended below by /qa-task -->
 

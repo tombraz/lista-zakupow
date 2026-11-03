@@ -87,6 +87,7 @@ Nieudany smoke test po wdrożeniu staging zatrzymuje pipeline; nieudany smoke te
 - Healthcheck Fly (`/health`) restartuje maszynę API po awarii procesu.
 - Logi API (pino, JSON, bez danych osobowych) w Fly; zdarzenia bezpieczeństwa z logiem `security` (`architecture.md`).
 - Błędy 5xx przeglądane w logach Fly; bez zewnętrznego śledzenia błędów (N-02).
+- Błąd po resecie hasła (linki nieunieważnione, `reset_tokens_revoke_failed`) → mail z API na `ALERT_EMAIL`, najwyżej 1 / 15 min, z liczbą pominiętych (T-088; `architecture.md` „Obserwowalność”).
 
 ## Lokalna blokada komend produkcyjnych
 
