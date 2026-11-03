@@ -1,7 +1,7 @@
 ---
 id: E-02
 title: Konto i zarządzanie udostępnianiem (web)
-status: in-progress    # todo | in-progress | in-uat | done
+status: in-uat    # todo | in-progress | in-uat | done
 approved: 2026-11-01    # date the user approved this epic's tasks (set by /plan-backlog)
 change:                # brownfield only: the change ID this epic implements (C-NN)
 branch: epic/E-02-konto-i-uczestnicy

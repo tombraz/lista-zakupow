@@ -3,7 +3,7 @@ id: T-069
 title: Weryfikacja maila resetu przez Brevo na staging
 epic: E-02
 story: S-02-01
-status: in-qa    # todo | in-progress | in-qa | done | blocked
+status: done    # todo | in-progress | in-qa | done | blocked
 depends_on: [T-055, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-088]
 size: S                # S | M (L must be split)
 layers: [infra]
@@ -130,6 +130,31 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 - Nowego kodu nie ma; `pnpm check` nieuruchamiany (zmiany tylko w dokumentacji).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-03)
+
+Verdict: pass
+
+Zakres: task bez zmian w kodzie (tylko `docs/architecture/deployment.md` i backlog; `git diff 5de6893 HEAD` — 4 pliki dokumentacji). QA zweryfikowało samodzielnie wszystko, co da się sprawdzić bez skrzynek właściciela; AC2 opiera się na relacji właściciela (Answer w Open question).
+
+**Reprodukcja:** `pnpm check` na `17fa726` — exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check; vitest 147 plików / 1160 testów, jest mobile 10/10). `git status` po przebiegu czysty.
+
+**Kryteria:**
+
+- AC1 — **pass.** `fly secrets list -a lista-staging` (QA, tylko nazwy): `BETTER_AUTH_SECRET`, `DATABASE_URL`, `ALERT_EMAIL`, `BREVO_API_KEY`, `MAIL_FROM` — wszystkie `Deployed`. `gh run view 41612128862`: `success` (image, staging, zap). `GET https://lista-staging.fly.dev/health` → 200, `/reset-hasla` → 200. `apps/api/fly.staging.toml` ma `MAILER = "brevo"`.
+- AC2 — **pass (na podstawie relacji właściciela).** Gmail: odbiorcza, od razu, link działa, nowe hasło loguje, stare nie; Brevo Logs bez odrzuceń. Druga skrzynka niewykonana — odchylenie zaakceptowane przez właściciela i zapisane w `deployment.md` jako nieprzetestowane. QA nie ma dostępu do skrzynek; zachowanie API dla nieistniejącego e-maila sprawdzone niżej.
+- AC3 — **pass.** Diff `deployment.md` (`c509a84`): wynik per dostawca (Gmail odbiorcza; inni „nieprzetestowane”), czas („od razu (sekundy)”), Brevo przyjmuje nadawcę z darmowej poczty i przepisuje go na `…brevosend.com`; wiersz `MAIL_FROM` w tabeli sekretów, akapit o `MAILER` (jawna zmienna, `brevo` / `mailpit`, wymagane sekrety); punkt otwarty odhaczony, „Ceny w €” zostaje otwarte. Zgoda właściciela na edycję `docs/architecture/` jest w Answer.
+- SEC1 — **pass.** Logi z okresu testu właściciela (10:14–10:21Z) wypadły już z bufora `fly logs`, więc QA wykonało własną próbę: `POST /api/auth/request-password-reset` dla `qa-t069-nobody@example.com` → 200 `{}`; `fly logs -a lista-staging --no-tail` (100 linii, do 10:27Z): jedyne `@` to `lista-zakupow@sha256:…` (digest obrazu), 0 trafień `xkeysib` / `api-key` / `BREVO_API`, brak `token=`. `apps/api/src/modules/konta/infra/brevo-mailer.ts` nie loguje niczego.
+- SEC2 — **pass.** `git grep -nE 'xkeysib-[A-Za-z0-9]{10,}'` → brak (rc=1); `git grep -l xkeysib` tylko T-055 i T-069 (tekst). GitHub secret scanning i push protection włączone, `secret-scanning/alerts` → 0. Obraz `ghcr.io/tombraz/lista-zakupow:5de6893…` pobrany: `Config.Env` tylko `PATH, NODE_VERSION, YARN_VERSION, NODE_ENV, HOST, PORT`; `docker history` bez `brevo`/`xkeysib`; `grep -rlI "xkeysib-[A-Za-z0-9]" /` w kontenerze — brak.
+
+**Eksploracja (staging):** limit próśb o reset na e-mail — 3× 200, czwarta 429 `rate_limited` (zgodnie z 3/15 min); żądanie bez zaufanego `Origin` z `redirectTo` na obcą domenę → 403 `invalid_origin`. Nie sprawdzone przez QA (wymagają skrzynki): dwa maile i unieważnienie starszego linku, podgląd na telefonie, polskie znaki w temacie.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | AC2 / pokrycie | Wysyłka sprawdzona tylko w Gmailu; druga skrzynka (Onet/WP) z AC2 niewykonana | Answer właściciela; `deployment.md` „Środowiska” — „nieprzetestowane” | Odchylenie zaakceptowane przez właściciela i udokumentowane; sprawdzić przy pierwszym domowniku spoza Gmaila |
+| 2 | minor | Evidence / SEC2 | Evidence podaje workflow „Security” jako „skan sekretów w CI”, a to tylko CodeQL; skan sekretów to natywny GitHub secret scanning (poza workflow) | `gh run view 41612128877` — jedyny job `codeql`; `pipeline.md` etap 3 | Dowód SEC2 przez alerty secret scanning (QA: włączone, 0 alertów) i skan obrazu — uzupełnione przez QA |
+| 3 | note | Evidence / SEC1 | Fragment logów z okresu testu właściciela nie jest już odtwarzalny (bufor `fly logs`) | `fly logs --no-tail` zaczyna się od 10:21Z | QA potwierdziło własną próbą i przeglądem kodu mailera |
+| 4 | note | QA plan | Przypadki wymagające skrzynki (dwa maile / starszy link, telefon, polskie znaki) niewykonane na staging | — | Do kroku UAT E-02 (UAT.md) |
 
 ## Open question
 
