@@ -3,7 +3,7 @@ id: T-088
 title: Alert mailem do właściciela, gdy reset nie unieważni pozostałych linków
 epic: E-02
 story: S-02-01
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 blocked_reason:        # filled only when status is blocked
 depends_on: [T-087]
 size: S                # S | M (L must be split)
@@ -43,8 +43,8 @@ Each criterion must fail before the work and pass after it.
 - [x] AC5: Given `MAILER=brevo` bez `ALERT_EMAIL`, when API startuje, then start kończy się czytelnym błędem konfiguracji. Given `MAILER=mailpit` bez `ALERT_EMAIL`, then start działa, a alarm jest tylko w logu. — verified by: `config.test.ts`
 - [x] AC6: Given udany reset bez błędu unieważnienia, then nie wychodzi żaden alarm. — verified by: test integracyjny
 - [x] AC7: Given staging, then sekret `ALERT_EMAIL` jest ustawiony w Fly (`fly secrets list` pokazuje nazwę, bez wartości) przed merge E-02 na `main`. `deployment.md` (tabela zmiennych) i `.env.example` opisują zmienną. — verified by: ręczna kontrola (właściciel uruchamia `fly secrets set`), wpis w Evidence
-- [ ] SEC1 (TH-21): Given alarm, when mail powstaje, then treść i temat nie zawierają e-maila konta, tokenów, haseł ani komunikatu błędu bazy (tylko `errorSummary`-owy kod, np. `57P01`), a log `owner_alert_failed` nie zawiera adresu alarmu. — verified by: test integracyjny (szuka e-maila konta, obu tokenów i `ALERT_EMAIL` w mailu i w całym logu)
-- [ ] SEC2 (TH-10): Given osoba spoza projektu, when wywołuje dowolną trasę `/api/*`, then nie może wywołać wysyłki alarmu ani zmienić adresu alarmu. Alarm uruchamia wyłącznie błąd po stronie serwera po udanym resecie. — verified by: test integracyjny, że nieudany reset (zły lub zużyty token) nie wysyła alarmu, oraz przegląd tras w QA
+- [x] SEC1 (TH-21): Given alarm, when mail powstaje, then treść i temat nie zawierają e-maila konta, tokenów, haseł ani komunikatu błędu bazy (tylko `errorSummary`-owy kod, np. `57P01`), a log `owner_alert_failed` nie zawiera adresu alarmu. — verified by: test integracyjny (szuka e-maila konta, obu tokenów i `ALERT_EMAIL` w mailu i w całym logu)
+- [x] SEC2 (TH-10): Given osoba spoza projektu, when wywołuje dowolną trasę `/api/*`, then nie może wywołać wysyłki alarmu ani zmienić adresu alarmu. Alarm uruchamia wyłącznie błąd po stronie serwera po udanym resecie. — verified by: test integracyjny, że nieudany reset (zły lub zużyty token) nie wysyła alarmu, oraz przegląd tras w QA
 
 ## TDD plan
 
@@ -215,3 +215,25 @@ Kryteria:
 | 4 | note | owner-alerts | Okno tłumienia startuje przed wynikiem wysyłki: nieudany mail alarmu zużywa okno, kolejny alarm najwcześniej po 15 min | `owner-alerts.ts`: `windows.set(...)` przed `mailer.send(...)` | Do rozważenia w E-03 (S-03-02); dziś akceptowalne — zdarzenie jest w logu jako `owner_alert_failed` |
 
 Do zmiany (tylko dokumentacja, kod bez zmian): findings 1 i 2 — cztery wpisy z Evidence w `docs/architecture/deployment.md`, `architecture.md`, `pipeline.md` i `layers/backend.md` („Pułapki”). Potem `pnpm check` i ponowne QA.
+
+## QA round 2 (2026-11-03)
+
+Verdict: pass
+
+Niezależna weryfikacja (świeża sesja QA) poprawki rundy 1 (`d0a3275`, tylko dokumentacja).
+
+- Kod bez zmian od rundy 1: `git diff ef1b1da HEAD --stat` — wyłącznie `docs/architecture/{architecture,deployment,pipeline}.md`, `layers/backend.md` i pliki backlogu.
+- Finding 1 (AC7) zamknięty: `deployment.md` — wiersz „Mail” (alarmy N-03, ≤ 96/dobę, zwykle 0, w limicie 300/dzień Brevo), tabela sekretów `ALERT_EMAIL` (sekret Fly per aplikacja, lokalnie `.env`), akapit: wymagany przy `MAILER=brevo`, opcjonalny przy `mailpit` — zgodne z `config.ts` (`REQUIRED_FOR_MAILER.brevo` zawiera `ALERT_EMAIL`). Sekret w Fly (`Staged`) i `.env.example` — z rundy 1 / Evidence.
+- Finding 2 zamknięty: `architecture.md` „Obserwowalność” (okno 15 min w pamięci procesu, ADR 0003, restart zeruje okno — akceptowane, TH-21, `owner_alert_failed`) + historia zmian; `pipeline.md` „Monitoring i alarmy”; `layers/backend.md` „Pułapki” + historia zmian. Treść zgodna z `apps/api/src/owner-alerts.ts`.
+- `pnpm check` — exit 0 (vitest 147 plików / 1160 testów; niestabilny `routes-nul.test.ts` z rundy 1 tym razem zielony).
+- `pnpm vitest run --project api password-reset config` — 8 plików / 48 testów pass.
+- Mutacja: `OWNER_ALERT_WINDOW_SECONDS = 14 * 60` → test AC2 czerwony (1/8); przywrócone `git checkout`, `git status` czysty.
+
+Kryteria: AC1–AC7, SEC1, SEC2 — pass (AC1–AC6, SEC1, SEC2 jak w rundzie 1; kod niezmieniony).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | testy (T-070, poza zakresem) | Przeniesione z rundy 1: `routes-nul.test.ts` SEC1 niestabilny (regex `/22021/` na całym logu) | runda 1: 1 porażka, ponowne przebiegi zielone; runda 2 zielona | Osobny task (decyzja właściciela) |
+| 2 | note | owner-alerts | Przeniesione z rundy 1: okno tłumienia startuje przed wynikiem wysyłki (nieudany mail zużywa okno); `raise` nie łapie synchronicznego wyjątku z `mailer.send` (dzisiejsze adaptery są `async`, więc nie rzucają synchronicznie) | `owner-alerts.ts`: `windows.set(...)` przed `mailer.send(...).catch(...)` | Do rozważenia w E-03 (S-03-02) |
+
+Story S-02-01: nie zakończona — T-069 `blocked`.
