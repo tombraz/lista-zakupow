@@ -53,3 +53,4 @@
 2026-11-02 19:31 | T-065 | qa | PASS | 0/0/2 minor; S-02-05 done; puste tygodnie bez wiersza (zamiast 0), test AC3 łapie słowa kluczowe w komentarzach
 2026-11-03 06:22 | T-088 | implementer | NEEDS_USER | alert mailem (okno 15 min, bez danych osobowych); AC7 wymaga fly secrets set ALERT_EMAIL na staging
 2026-11-03 08:06 | T-088 | user | ANSWER | ALERT_EMAIL ustawiony na staging (--stage)
+2026-11-03 08:10 | T-088 | implementer | IN_QA | AC7 ALERT_EMAIL Staged na staging; wiersz deployment.md jako propozycja w Evidence
