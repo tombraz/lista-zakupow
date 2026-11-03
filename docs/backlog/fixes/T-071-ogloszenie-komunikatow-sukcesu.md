@@ -4,7 +4,7 @@ title: "SC-03 i SC-01: komunikaty sukcesu ogłaszane czytnikowi ekranu (stały r
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-03, F-04]
@@ -84,3 +84,26 @@ Zaakceptowane przez właściciela 2026-11-02: linia w `web.md`, „Pułapki” (
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-03)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Lint (AC3) | `WEB_SUCCESS_ALERT_SYNTAX` catches only `cond && <InlineAlert tone="success">` and `?:` directly around the element. It does not catch `tone={"success"}`, a wrapper (`cond && <div><InlineAlert tone="success">…</div>`) or an early `return null` before the alert. | Selector `LogicalExpression > JSXElement > JSXOpeningElement[name.name='InlineAlert'] > JSXAttribute[...value.value='success']` in `eslint.config.js` | AC3 asks only for `&&` and `?:`, so this passes. A broader selector (any `InlineAlert` with `tone` success under a `LogicalExpression`/`ConditionalExpression` ancestor in JSX) would close the gap. |
+| 2 | note | Accessibility | Manual screen-reader check (NVDA/VoiceOver) from the QA plan not verifiable here: no screen reader in this environment. The 100 ms `SUCCESS_ANNOUNCE_DELAY_MS` is a heuristic for when Chrome has registered the region; it is reasonable but not proven with a real reader. | DOM behaviour verified with `statusAnnouncements()` and E2E; no SR run | One manual NVDA + Chrome pass on SC-03 (two sends with the same address) and SC-01 after reset during UAT. |
+
+**Reproduce:** `pnpm check` exit 0 (format, lint incl. `--no-inline-config` pass, typecheck, design-check, backlog-check, 147 files / 1163 web+api tests, mobile 10 tests). `pnpm vitest run --project web SC-03 SC-01 SC-08 SC-09`: 72 passed. E2E (`E2E_MAILPIT_PORT=3199`, port 3125 held by a leftover container) `j01-reset-hasla j01-nowe-haslo j01-usuniecie-konta j04-zaproszenie`, phone + desktop: 14 passed (incl. axe on SC-07/SC-08 and SC-01 after deletion).
+
+**Acceptance criteria:**
+- AC1 pass: `PasswordResetScreen.test.tsx` „announces „sent” … again for the same address” asserts two announcements from a pre-existing region and focus on the button. Spot-check: removing `setSentTo(null)` → `expected [ Array(1) ] to deeply equal [ …(2) ]`.
+- AC2 pass: `SignInScreen.test.tsx` both cases assert announcement, region text and focus on „E-mail”. Spot-check: `useReady(false)` (no deferral) → both SC-01 tests, SC-03 test and SC-08 joined test fail (4 failed).
+- AC3 pass: restored `cond && <InlineAlert tone="success">` in SC-01 and `?:` form in SC-06 JoinedNotice → 2 `no-restricted-syntax` errors with the T-071 message. An `eslint-disable-next-line no-restricted-syntax` silences the first pass but the `pnpm lint` second pass (`eslint.directives.config.js --no-inline-config`) reports `Disabling 'no-restricted-syntax' is not allowed`. All spot-check edits reverted.
+- AC4 pass: SC-01 error/invitation tests green in the full suite; E2E reset, new password, deletion, invitation flows with axe green.
+
+**Test quality:** Red evidence recorded for all 4 tests; my spot-checks confirm they bite. Assertions use literal texts from the spec. Changed old assertions (`findByRole("status")` → `findByText` then region) are equivalent or stronger, not weaker. `statusAnnouncements()` correctly ignores a region inserted already filled (mutation target is the parent, outside the region).
+
+**Code review:** Change is minimal and in scope; JoinedNotice on SC-06 is the same root cause, justified in Root cause. Empty variant reconciles to the same `<div>` as the filled one, so the region stays in the tree. CSS via `composes: visuallyHidden`, no hard-coded values. `web.md` „Pułapki” and code map updated. Root cause explains why the old tests missed it.
+
+**Security:** UI-only, no data, no threats listed; nothing logged.
