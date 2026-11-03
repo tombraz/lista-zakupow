@@ -3,7 +3,7 @@ id: T-069
 title: Weryfikacja maila resetu przez Brevo na staging
 epic: E-02
 story: S-02-01
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: [T-055, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-088]
 size: S                # S | M (L must be split)
 layers: [infra]
@@ -95,6 +95,33 @@ Only a QA verdict "pass" from `/qa-task` sets `status: done`.
 
 ## Evidence
 
-<Filled by /implement-task: test names, command output summary, screenshots for UI.>
+**Run 2026-11-03 ~10:45 (implementer, stan „czerwony” potwierdzony):**
+
+- Test 1 / AC1 — **czerwony.** Deploy z merge PR #13 (`5de6893`, run https://github.com/tombraz/lista-zakupow/actions/runs/41612128862) w toku; maszyna `83d177ebde2ee8` (obraz `tombraz/lista-zakupow:5de6893…`) nie wstaje: `fly logs` pokazuje `ZodError` — „BREVO_API_KEY is required when MAILER=brevo”, „MAIL_FROM is required when MAILER=brevo”, osiągnięty limit 10 restartów; `curl https://lista-staging.fly.dev/api/health` → brak odpowiedzi (000). `fly secrets list -a lista-staging` (tylko nazwy): `BETTER_AUTH_SECRET`, `DATABASE_URL`, `ALERT_EMAIL` — **brak `BREVO_API_KEY` i `MAIL_FROM`** (zakładane w T-055 ustawienie z `--stage` nie zostało wykonane albo się nie zapisało). Walidacja konfiguracji działa zgodnie z T-055/T-088 (fail-fast).
+- Test 2 / SEC2 — workflow Security na `main` dla `5de6893` zielony: https://github.com/tombraz/lista-zakupow/actions/runs/41612128877. `git grep xkeysib` — trafienia wyłącznie w tekście backlogu (T-055, T-069: nazwa prefiksu w opisie), żadnego klucza w kodzie ani konfiguracji. Brak klucza w obrazie: klucz nie istnieje w repo, a obraz budowany jest z repo (sekret tylko w Fly) — do potwierdzenia po ustawieniu sekretu (nie dodawany jako build arg).
+- Test 3 / AC2 i Test 4 / SEC1 — niewykonalne, dopóki API na staging nie wstaje; wymagają właściciela (skrzynki).
+- AC3 — wpis do `docs/architecture/deployment.md` przygotowany niżej (szkic); implementer w trybie autonomicznym nie edytuje `docs/architecture/` — patrz Open question.
+
+**Kroki dla właściciela:**
+
+1. `fly secrets set -a lista-staging BREVO_API_KEY=<klucz staging z Brevo> MAIL_FROM=<zweryfikowany w Brevo adres>` (bez `--stage` — wdroży od razu i zrestartuje maszynę; jeśli maszyna dalej stoi: `fly machine restart 83d177ebde2ee8 -a lista-staging`).
+2. `fly secrets list -a lista-staging` — mają być `BREVO_API_KEY`, `MAIL_FROM`, `ALERT_EMAIL`; `bash scripts/smoke.sh staging` zielony (albo ponów job Deploy).
+3. Na `https://lista-staging.fly.dev/reset-hasla` reset dla konta testowego na Gmailu i na drugiej skrzynce (Onet/WP). Zanotuj per skrzynka: odbiorcza/spam, czas od kliknięcia do maila, czy link `https://lista-staging.fly.dev/reset-hasla?token=…` działa, nowe hasło loguje, stare nie. Dodatkowo prośba dla nieistniejącego e-maila (ten sam komunikat, brak maila).
+4. Czy Brevo przyjęło nadawcę z darmowej poczty (żadnego odrzucenia w panelu Brevo → Transactional → Logs).
+5. Implementer potem przejrzy `fly logs` z okresu testu (SEC1) i wpisze wynik.
+
+**Szkic wpisu do `deployment.md` (do uzupełnienia wynikami):**
+
+- „Zmienne API”: wiersz `MAIL_FROM` | API (nadawca maili resetu i alarmów, zweryfikowany w Brevo) | sekrety Fly per aplikacja | przy zmianie adresu; zdanie: `MAILER=brevo` w `fly.staging.toml` / `fly.toml` (zmienna jawna), lokalnie `mailpit`; przy `MAILER=brevo` wymagane `BREVO_API_KEY`, `MAIL_FROM`, `ALERT_EMAIL`, inaczej API nie wystartuje.
+- „Mail”/decyzje: „Wysyłka bez własnej domeny: zweryfikowana 2026-11-0X na staging — Gmail: <odbiorcza/spam>, <n> s; <Onet/WP>: <odbiorcza/spam>, <n> s; Brevo przyjmuje pojedynczego nadawcę z darmowej poczty: <tak/nie>.”
+- Otwarte punkty: `[x]` „Wysyłka Brevo bez własnej domeny — zweryfikowane w T-069”.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## Open question
+
+Staging po merge PR #13 nie wstaje: brakuje sekretów `BREVO_API_KEY` i `MAIL_FROM` w `lista-staging` (jest tylko `ALERT_EMAIL`). Proszę: (a) ustawić oba sekrety i wykonać kroki 1–4 z Evidence, a w odpowiedzi podać wyniki (per skrzynka: odbiorcza/spam, czas, link i nowe hasło działają; czy Brevo przyjęło nadawcę); (b) zgodzić się, by implementer w tym tasku wpisał wynik do `docs/architecture/deployment.md` (AC3 tego wymaga, a tryb autonomiczny zabrania edycji `docs/architecture/` bez zgody).
+
+Rekomendacja: ustawić sekrety bez `--stage` (natychmiastowy restart), podać wyniki tutaj i zezwolić implementerowi na wpis do `deployment.md` wg szkicu z Evidence; implementer domknie SEC1 (przegląd logów) i odda do QA.
+
+Alternatywa: właściciel sam wpisuje wynik do `deployment.md` i odhacza punkt; implementer tylko weryfikuje logi i diff, i oddaje do QA.
