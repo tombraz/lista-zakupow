@@ -18,3 +18,4 @@ docs/adr
 apps/mobile/*
 !apps/mobile/package.json
 apps/web/e2e
+apps/web/playwright.config.ts
