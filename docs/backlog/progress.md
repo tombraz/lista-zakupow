@@ -63,3 +63,4 @@
 2026-11-03 10:43 | T-069 | implementer | NEEDS_USER | staging nie wstaje: brak BREVO_API_KEY i MAIL_FROM; właściciel ustawia sekrety, test skrzynek, zgoda na deployment.md
 2026-11-03 11:20 | T-069 | user | ANSWER | Gmail OK (odbiorcza, od razu), nadawca przepisany na brevosend; Onet/WP nieprzetestowane; implementer wpisuje deployment.md
 2026-11-03 11:24 | T-069 | implementer | IN_QA | staging zdrowy, Deploy+smoke+ZAP zielone, logi bez maila/klucza/tokena, wynik w deployment.md; CI main czerwone przez flake 57P01 (T-052)
+2026-11-03 11:34 | T-069 | qa | PASS | 0/0/2 minor; S-02-01 done; EPIC_UAT_READY; tylko Gmail (decyzja właściciela), SEC1/SEC2 sprawdzone przez QA
