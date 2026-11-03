@@ -163,3 +163,5 @@ fly secrets list -a lista-staging   # do Evidence: sama nazwa, bez wartości
 **Rekomendacja:** ustaw sekret teraz. Przy wznowieniu sprawdzę `fly secrets list`, zapiszę wynik w Evidence, odhaczę AC7 i oddam task do QA.
 
 **Alternatywa:** oddać task do QA od razu, z nieodhaczonym AC7, a sekret ustawić i sprawdzić razem z `BREVO_API_KEY` / `MAIL_FROM` przed merge E-02 (jak T-055; T-069 AC1 i tak sprawdza `ALERT_EMAIL` w `fly secrets list`).
+
+Answer: Właściciel ustawił sekret 2026-11-03: fly secrets set --stage ALERT_EMAIL=... -a lista-staging (staged, zadziała przy następnym wdrożeniu). Sprawdź fly secrets list, zapisz nazwę w Evidence, odhacz AC7 i oddaj do QA.
