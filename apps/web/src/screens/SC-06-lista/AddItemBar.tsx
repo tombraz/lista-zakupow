@@ -33,10 +33,11 @@ export function AddItemBar({ state, disabled, onShowBought }: AddItemBarProps) {
         maxChars: ITEM_NAME_MAX_LENGTH,
       }}
       note={{
+        ref: state.noteRef,
         label: messages.add.noteLabel,
         value: state.note,
         onChange: state.setNote,
-        error: state.fields.note ? itemNoteErrorText() : null,
+        error: state.fields.note ? itemNoteErrorText(state.fields.note) : null,
         maxChars: ITEM_NOTE_MAX_LENGTH,
       }}
       alert={<AddAlert state={state} onShowBought={onShowBought} limitRef={limitRef} />}

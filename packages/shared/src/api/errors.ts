@@ -4,6 +4,7 @@ import type { FieldErrorCode } from "./account";
 export type DomainErrorCode =
   | "not_found"
   | "owner_only"
+  | "owner_cannot_leave"
   | "limit_reached"
   | "duplicate_item"
   | "own_list"
@@ -19,6 +20,7 @@ export type ErrorCode =
   | "invalid_credentials"
   | "invalid_origin"
   | "email_taken"
+  | "invalid_token"
   | "internal";
 
 /** Który limit biznesowy został osiągnięty (`limit_reached`). */

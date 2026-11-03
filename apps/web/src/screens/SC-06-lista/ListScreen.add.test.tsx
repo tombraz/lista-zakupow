@@ -133,6 +133,19 @@ describe("SC-06 AddBar warnings", () => {
     expect(requests).toEqual([]);
   });
 
+  it("warns about the duplicate, not the hidden character, for „Mleko” + U+200B (T-060 Demo 1)", async () => {
+    const { user, list, name } = await openList([anItem({ name: "Mleko" })]);
+    const requests = addingSucceeds(list);
+
+    await user.type(name, `Mleko${String.fromCodePoint(0x200b)}{Enter}`);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "„Mleko” jest już na liście. Pozycja nie została dodana.",
+    );
+    expect(name).not.toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+    expect(requests).toEqual([]);
+  });
+
   it("shows the warning when the API finds a duplicate added meanwhile (AC2)", async () => {
     const { user, list, name } = await openList();
     server.use(
@@ -187,6 +200,33 @@ describe("SC-06 AddBar warnings", () => {
     await expect.poll(() => name.getAttribute("aria-invalid")).toBe("true");
     expect(name).toHaveAccessibleDescription("Nazwa może mieć najwyżej 100 znaków");
   });
+
+  it.each([
+    ["name", "Co kupić?"],
+    ["note", "Ilość / notatka (opcjonalnie)"],
+  ])(
+    "asks to remove hidden characters from the %s the API refuses, focus on it (T-060 AC4)",
+    async (field, label) => {
+      const { user, list, name } = await openList();
+      server.use(
+        http.post(`*/api/v1/lists/${list.id}/items`, () =>
+          apiError(400, { code: "validation_failed", fields: { [field]: "invalid" } }),
+        ),
+      );
+      await user.type(name, "Mleko");
+      await user.type(
+        screen.getByRole("textbox", { name: "Ilość / notatka (opcjonalnie)" }),
+        "2 l",
+      );
+
+      await user.click(screen.getByRole("button", { name: "Dodaj pozycję" }));
+
+      const refused = screen.getByRole("textbox", { name: label });
+      await expect.poll(() => refused.getAttribute("aria-invalid")).toBe("true");
+      expect(refused).toHaveAccessibleDescription("Usuń niewidoczne lub specjalne znaki.");
+      expect(refused).toHaveFocus();
+    },
+  );
 
   it("shows the limit and disables the AddBar at 500 items (AC5)", async () => {
     // Limit liczy też kupione; zwinięte „Kupione” się nie renderują, więc test nie płaci

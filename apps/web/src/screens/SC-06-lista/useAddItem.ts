@@ -2,8 +2,8 @@ import {
   BUSINESS_LIMITS,
   createItemRequestSchema,
   fieldErrors,
+  onlyItemNameInvalid,
   type CreateItemRequest,
-  type FieldErrorCode,
   type Item,
 } from "@lista/shared";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,11 +12,10 @@ import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { addItem } from "../../api/items";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
 import { useLimitRefusal } from "../../api/useLimitRefusal";
+import { useItemFieldErrors } from "./itemFieldErrors";
 import { upsertNewer } from "./itemsCache";
 import { sameNameAs } from "./sameName";
 import { messages } from "./messages";
-
-type Fields = Partial<Record<"name" | "note", FieldErrorCode>>;
 
 /**
  * Ostrzeżenie o duplikacie nad polami AddBar (F-09). Limit 500 pozycji (F-07) to `limitReached`:
@@ -53,7 +52,7 @@ function duplicateOf(items: Item[], typed: string): AddWarning {
 export function useAddItem(listId: string, items: Item[] = []) {
   const client = useQueryClient();
   const draft = useItemDraft();
-  const [fields, setFields] = useState<Fields>({});
+  const [fields, setFields] = useItemFieldErrors({ name: draft.nameRef, note: draft.noteRef });
   const [warning, setWarning] = useState<AddWarning | null>(null);
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -90,12 +89,16 @@ export function useAddItem(listId: string, items: Item[] = []) {
     setFailure(null);
     const sent: Draft = { name: draft.name, note: draft.note };
     const parsed = createItemRequestSchema.safeParse(sent);
-    setFields(parsed.success ? {} : fieldErrors(parsed.error));
-    if (!parsed.success) return;
-    if (sameNameAs(items, parsed.data.name)) {
-      setWarning(duplicateOf(items, parsed.data.name));
+    const invalid = parsed.success ? {} : fieldErrors(parsed.error);
+    // T-060: duplikat przed błędem ukrytych znaków, jak w API („Mleko” + U+200B przy „Mleko”).
+    const name = parsed.success ? parsed.data.name : sent.name;
+    if ((parsed.success || onlyItemNameInvalid(invalid)) && sameNameAs(items, name)) {
+      setFields({});
+      setWarning(duplicateOf(items, name));
       return;
     }
+    setFields(invalid);
+    if (!parsed.success) return;
     mutation.mutate({ request: { id: draft.idFor(sent), ...parsed.data }, sent });
   };
 
@@ -134,6 +137,7 @@ const sameDraft = (a: Draft, b: Draft) => a.name === b.name && a.note === b.note
  */
 function useItemDraft() {
   const nameRef = useRef<HTMLInputElement>(null);
+  const noteRef = useRef<HTMLInputElement>(null);
   const attempt = useRef<{ id: string; sent: Draft } | null>(null);
   const [fields, setFields] = useState<Draft>(EMPTY_DRAFT);
   const idFor = (sent: Draft) => {
@@ -154,5 +158,5 @@ function useItemDraft() {
   const setNote = (note: string) => {
     setFields((current) => ({ ...current, note }));
   };
-  return { nameRef, ...fields, setName, setNote, idFor, clear };
+  return { nameRef, noteRef, ...fields, setName, setNote, idFor, clear };
 }

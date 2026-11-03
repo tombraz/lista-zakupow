@@ -12,6 +12,13 @@ export function shouldRetry(failures: number, error: unknown): boolean {
   return (status === 0 || status >= 500) && failures < MAX_RETRIES;
 }
 
+/**
+ * Zapisy `networkMode: "always"`: bez sieci żądanie idzie od razu i kończy się błędem sieci.
+ * Domyślny tryb TanStack („online”) wstrzymuje zapis do powrotu sieci i wysyła go później —
+ * to kolejka offline, poza zakresem (F-15, BRD §11).
+ */
 export function createQueryClient(): QueryClient {
-  return new QueryClient({ defaultOptions: { queries: { retry: shouldRetry } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: shouldRetry }, mutations: { networkMode: "always" } },
+  });
 }

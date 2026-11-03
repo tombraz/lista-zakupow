@@ -44,7 +44,8 @@ test("J-01 registers, signs out and signs in again", async ({ page, context }) =
   await page.getByRole("link", { name: "Konto" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Konto" })).toBeVisible();
   await expect(page.getByText(account.email)).toBeVisible();
-  await expect(page.getByText(account.name, { exact: true })).toBeVisible();
+  // T-061: imię w polu „Imię” (zmiana imienia na SC-09).
+  await expect(page.getByRole("textbox", { name: "Imię" })).toHaveValue(account.name);
   await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Wyloguj się" }).click();

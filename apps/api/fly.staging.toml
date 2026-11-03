@@ -1,6 +1,9 @@
 # Fly.io, staging (T-010; deployment.md, ADR 0006). Obraz podaje scripts/deploy.sh (--image
 # ghcr.io/tombraz/lista-zakupow:<sha>), więc ten plik nie buduje niczego.
-# Sekrety (fly secrets, nie tutaj): DATABASE_URL (Neon lista-staging, sslmode=require), BETTER_AUTH_SECRET.
+# Sekrety (fly secrets, nie tutaj): DATABASE_URL (Neon lista-staging, sslmode=require), BETTER_AUTH_SECRET,
+# BREVO_API_KEY (klucz Brevo staging), MAIL_FROM (zweryfikowany w Brevo adres właściciela — dana
+# osobowa, repo jest publiczne) i ALERT_EMAIL (adres alarmów do właściciela, T-088). Bez nich API
+# z MAILER=brevo nie wystartuje (T-055, T-088).
 app = "lista-staging"
 primary_region = "fra"
 
@@ -17,6 +20,8 @@ primary_region = "fra"
   # Proxy Fly łączy się z maszyną z adresów 172.16.x.x (remoteAddress w logach staging, 2026-10-29)
   # i ustawia X-Forwarded-For; bez tego limity per IP liczyłyby adres proxy dla wszystkich.
   TRUSTED_PROXIES = "172.16.0.0/16"
+  # Mail resetu hasła przez Brevo HTTP API (deployment.md, T-055).
+  MAILER = "brevo"
 
 [http_service]
   internal_port = 8080

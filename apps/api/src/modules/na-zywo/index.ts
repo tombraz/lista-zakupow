@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { LiveHub } from "./domain/hub";
 import { liveRoutes, type LiveRouteDeps } from "./http/routes";
 
-export type { Live } from "./domain/hub";
+export type { Live, LiveHub } from "./domain/hub";
 export type { LiveSession } from "./http/routes";
 
 /** Hub zmian na żywo jednej instancji API (ADR 0003); tworzony przed modułami, które publikują. */

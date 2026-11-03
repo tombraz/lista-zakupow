@@ -21,6 +21,8 @@ export interface LiveRouteDeps {
   origin: string;
   /** Sesja z ciasteczka albo 401 (`konta`); nigdy z adresu (TH-16). */
   sessionOf: (request: FastifyRequest, reply: FastifyReply) => Promise<LiveSession>;
+  /** TH-28: sesja połączenia nadal istnieje i nie wygasła (`konta`). */
+  sessionActive: (sessionId: string) => Promise<boolean>;
   /** `requireListAccess` modułu `listy`; brak dostępu = `DomainError("not_found")`. */
   requireListAccess: (userId: string, listId: string) => Promise<void>;
 }
@@ -95,7 +97,7 @@ function serve(
     socket.close(POLICY_VIOLATION);
     return;
   }
-  const beat = heartbeat(socket, connection);
+  const beat = heartbeat(socket, connection, sessionCheck(deps, connection, request));
   const budget = new MessageBudget(() => Date.now());
   // `ws` zamyka 1009 po wiadomości ponad `maxPayload` i zgłasza to jako błąd gniazda.
   socket.on("error", (error: Error & { code?: string }) => {
@@ -143,7 +145,7 @@ async function handle(
   message: LiveClientMessage,
   connection: LiveConnection,
   request: FastifyRequest,
-  { hub, requireListAccess }: LiveRouteDeps,
+  { hub, sessionActive, requireListAccess }: LiveRouteDeps,
 ) {
   if (message.type === "pong") return;
   const { listId } = message;
@@ -151,14 +153,58 @@ async function handle(
     hub.unsubscribe(connection, listId);
     return;
   }
+  // TH-28: sesja mogła wygasnąć albo zniknąć z bazy od otwarcia połączenia.
+  if (!(await sessionActive(connection.sessionId))) {
+    endConnection(hub, connection);
+    return;
+  }
+  const pending = hub.requestSubscription(connection, listId);
   try {
     await requireListAccess(connection.userId, listId);
   } catch (error) {
+    pending.cancel();
     if (!(error instanceof DomainError)) throw error;
     logSecurityEvent(request, error);
     connection.send({ type: "error", code: "not_found", listId });
     return;
   }
-  hub.subscribe(connection, listId);
-  connection.send({ type: "subscribed", listId });
+  // `revoke` w trakcie sprawdzenia: dostęp odczytany sprzed usunięcia członkostwa (MC-03).
+  connection.send(
+    pending.confirm()
+      ? { type: "subscribed", listId }
+      : { type: "error", code: "not_found", listId },
+  );
+}
+
+/**
+ * TH-28: okresowa kontrola sesji przy pingu, w tle — wolna baza nie wstrzymuje pingów innych
+ * połączeń; najwyżej jedno zapytanie naraz na połączenie (AC2 T-056).
+ */
+function sessionCheck(
+  { hub, sessionActive }: LiveRouteDeps,
+  connection: LiveConnection,
+  request: FastifyRequest,
+) {
+  let checking = false;
+  return () => {
+    if (checking) return;
+    checking = true;
+    sessionActive(connection.sessionId)
+      .then((active) => {
+        if (!active) endConnection(hub, connection);
+      })
+      .catch(() => {
+        // Baza niedostępna: połączenie zostaje, kolejna kontrola przy następnym pingu.
+        request.log.error({ event: "live_session_check_failed" }, "live session check failed");
+      })
+      .finally(() => {
+        checking = false;
+      });
+  };
+}
+
+/** Sesja się skończyła: bez dalszych zdarzeń od razu, zamknięcie 1008 jak przy wylogowaniu. */
+function endConnection(hub: LiveHub, connection: LiveConnection): void {
+  hub.detach(connection);
+  connection.close(POLICY_VIOLATION);
 }

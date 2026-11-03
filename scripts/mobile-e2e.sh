@@ -14,6 +14,8 @@ API_ORIGIN=http://127.0.0.1:3000
 export API_URL=http://10.0.2.2:3000
 export DATABASE_URL=${DATABASE_URL:-postgres://lista:lista@localhost:5442/lista}
 export APP_ORIGIN=${APP_ORIGIN:-$API_ORIGIN}
+# Mail resetu hasła (F-03): Mailpit z docker-compose.yml, jak w `pnpm dev`.
+export MAILPIT_URL=${MAILPIT_URL:-http://localhost:8025}
 RESULTS=apps/mobile/e2e/results
 
 step() { echo "# $1"; }

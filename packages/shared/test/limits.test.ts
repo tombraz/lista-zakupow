@@ -10,6 +10,9 @@ describe("RATE_LIMITS (MC-04, MC-05, TH-06, TH-09, TH-13)", () => {
       signInPerIp: { windowSeconds: 60, max: 10 },
       signInFailuresPerAccount: { windowSeconds: 900, max: 5 },
       signUpPerIp: { windowSeconds: 3600, max: 5 },
+      // T-053 (TH-10): reset 3 na e-mail w 15 min (właściciel 2026-11-01); per IP 3/min (Better Auth).
+      passwordResetPerIp: { windowSeconds: 60, max: 3 },
+      passwordResetPerEmail: { windowSeconds: 900, max: 3 },
       // api.md: `GET /health/ready` 30/min per IP.
       healthReadyPerIp: { windowSeconds: 60, max: 30 },
       // TH-06, TH-13: progi z T-008 (threat-model.md: „konkretne progi w tasku”).

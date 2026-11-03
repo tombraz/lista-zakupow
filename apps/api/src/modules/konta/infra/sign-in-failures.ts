@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import { RATE_LIMITS } from "@lista/shared";
 import { and, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -15,16 +14,7 @@ const WINDOW_MS = windowSeconds * 1000;
  * równoległe żądania nie przejdą obok limitu; próba, która nie okazała się porażką, wraca.
  */
 export class SignInFailures {
-  constructor(
-    private readonly db: NodePgDatabase,
-    private readonly secret: string,
-  ) {}
-
-  /** Pseudonim konta do licznika i logu `security` (bez e-maila, TH-21). */
-  accountKey(email: string): string {
-    const normalized = email.trim().toLowerCase();
-    return createHmac("sha256", this.secret).update(normalized).digest("base64url");
-  }
+  constructor(private readonly db: NodePgDatabase) {}
 
   /** Zalicza próbę z góry; `false`, gdy limit konta jest już wyczerpany. */
   async reserve(accountKey: string): Promise<boolean> {

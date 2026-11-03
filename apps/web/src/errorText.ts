@@ -12,3 +12,9 @@ const COMMON: Partial<Record<RequestErrorCode, string>> = {
 export function errorText(code: RequestErrorCode, texts: ErrorTexts): string {
   return texts[code] ?? COMMON[code] ?? texts.otherwise;
 }
+
+/**
+ * Błąd `invalid` pola tekstu widocznego dla innych (imię, nazwa listy i pozycji, notatka): znaki
+ * ukryte, sterujące albo zmieniające kierunek tekstu (TH-29; copy zatwierdzone 2026-11-01).
+ */
+export const HIDDEN_CHARACTERS_TEXT = "Usuń niewidoczne lub specjalne znaki.";

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Item } from "./items";
 import type { Person } from "./person";
-import { requiredName } from "./text";
+import { requiredName, withoutNul } from "./text";
 
 export type { Person };
 
@@ -12,6 +12,13 @@ export const LIST_NAME_MAX_LENGTH = 100;
 export const listNameRequestSchema = z.object({ name: requiredName(LIST_NAME_MAX_LENGTH) });
 
 export type ListNameRequest = z.input<typeof listNameRequestSchema>;
+
+/**
+ * Identyfikator domownika z adresu (`…/members/:userId`). Better Auth daje tekst, nie UUID;
+ * PostgreSQL nie przyjmie NUL, więc taki tekst nie trafia do zapytania. Długość ogranicza
+ * `maxParamLength` Fastify (100 znaków, dłuższy adres = 414).
+ */
+export const personIdSchema = z.string().min(1).refine(withoutNul, { error: "invalid" });
 
 /** Rola domownika na liście (słownik BRD: właściciel, uczestnik). */
 export type ListRole = "owner" | "participant";
@@ -37,4 +44,15 @@ export interface ListDetails {
   members: Person[];
   /** Nieodhaczone od najnowszej (data-model.md, „Kolejność”). */
   items: Item[];
+}
+
+/** Uczestnik na SC-07; `email` tylko w odpowiedzi dla właściciela listy (F-13, TH-19). */
+export interface Participant extends Person {
+  email?: string;
+}
+
+/** `GET /api/v1/lists/:listId/members`: uczestnicy w kolejności dołączenia (api.md, „Listy”). */
+export interface ListMembers {
+  owner: Person;
+  participants: Participant[];
 }

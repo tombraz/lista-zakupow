@@ -38,6 +38,8 @@ Mobile używa Jest zamiast Vitest, bo preset Expo i React Native Testing Library
 
 Mocki tylko na granicach systemu: dostawca maili (lokalnie Mailpit, w testach przechwytujący adapter), zegar (wygasanie linków i resetu), losowość tokenów. Nigdy nie mockujemy własnych modułów ani bazy w testach integracyjnych.
 
+Bez stałej pauzy przed asercją (`pause`, `setTimeout`, `waitForTimeout`). Test czeka na sygnał, że praca się skończyła: `gated-pool` (`held(n)`, `release()`), obietnicę adaptera (np. mailer: „wysłano” albo „pominięto”), `vi.waitFor` na liczniku albo stan na ekranie. Asercja negatywna („mail nie wyszedł”, „zapytań było 2”) jest ważna tylko po sygnale końca pracy. Po stałej pauzie przechodzi, gdy niechciane zdarzenie przyjdzie później, a na wolnym CI pozytywna asercja pada przed czasem. Czasu zegarowego nie mierzymy; opóźnienie sprawdzamy kolejnością zdarzeń (przegląd E-02, C3; poprawki istniejących testów w T-082).
+
 ## Testy bezpieczeństwa
 
 - Każda trasa dotykająca danych list ma negatywne testy autoryzacji na seamie API: **inny zalogowany domownik** (404), **anonim** (401), **uczestnik przy akcji właściciela** (403) — dla odczytu, zmiany, usunięcia i przeglądu (lista list nie zawiera cudzych list).

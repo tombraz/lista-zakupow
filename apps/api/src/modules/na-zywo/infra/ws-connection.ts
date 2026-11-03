@@ -25,12 +25,14 @@ export class WsConnection implements LiveConnection {
 
 /**
  * Bicie serca (architecture.md, „Zmiany na żywo”): `ping` co 25 s; bez `pong` w ciągu 10 s
- * połączenie jest zrywane. Zwraca `pong()` (wołany przy wiadomości klienta) i `stop()`.
+ * połączenie jest zrywane. Przy każdym pingu `onPing` (okresowa kontrola sesji, TH-28). Zwraca
+ * `pong()` (wołany przy wiadomości klienta) i `stop()`.
  */
-export function heartbeat(socket: WebSocket, connection: LiveConnection) {
+export function heartbeat(socket: WebSocket, connection: LiveConnection, onPing: () => void) {
   let deadline: NodeJS.Timeout | undefined;
   const interval = setInterval(() => {
     connection.send({ type: "ping" });
+    onPing();
     deadline ??= setTimeout(() => {
       socket.terminate();
     }, LIVE_LIMITS.pongTimeoutSeconds * 1000);

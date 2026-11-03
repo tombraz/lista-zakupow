@@ -47,6 +47,7 @@ describe("e-mails seen by a participant (TH-19)", () => {
     await live.next("item.upserted");
     await read(asTomek("GET", "/api/v1/lists"));
     await read(asTomek("GET", `/api/v1/lists/${list.id}`));
+    await read(asTomek("GET", `/api/v1/lists/${list.id}/members`));
 
     const seen = [...bodies, ...live.received().map((message) => JSON.stringify(message))];
     expect(seen.join("\n")).toContain("Ania");

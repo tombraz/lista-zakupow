@@ -1,9 +1,10 @@
 import { z } from "zod";
 import type { Item } from "./items";
+import { withoutNul } from "./text";
 
 // Identyfikator listy z wiadomości klienta: niepoprawny daje `not_found` jak w HTTP, więc schemat
-// ogranicza tylko długość (TH-25), a nie format.
-const listId = z.string().min(1).max(100);
+// ogranicza tylko długość (TH-25), a nie format. NUL odrzuca od razu: baza go nie przyjmie (T-070).
+const listId = z.string().min(1).max(100).refine(withoutNul);
 
 const clientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("subscribe"), listId }),

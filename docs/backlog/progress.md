@@ -18,3 +18,44 @@
 2026-10-29 13:44 | T-010 | user | ANSWER | token Fly + karta + GHCR publiczny; run 40872833932 próba 3: image/staging/zap zielone
 2026-10-29 14:40 | T-010 | implementer | IN_QA | deploy na lista-staging.fly.dev z migracjami/smoke/ZAP zielony; błędna migracja zatrzymuje wdrożenie; AC6 w deployment.md
 2026-10-29 15:14 | T-010 | qa | PASS | 0/0/2 minor; S-01-01 done; EPIC_UAT_READY; flaky InvitationScreen.entry trzyma ci-ok na czerwono
+2026-11-01 19:04 | T-053 | implementer | IN_QA | reset hasła: request-password-reset + Mailpit, limity 3/min IP i 3/15 min e-mail; 551 vitest + 52 E2E
+2026-11-01 19:18 | T-053 | qa | PASS | 0/0/2 minor; stary komunikat SC-03 po błędzie walidacji, kropka po linku w mailu; flaky j02 SEC3
+2026-11-01 19:49 | T-054 | implementer | IN_QA | nowe hasło z linku SC-03 krok 2; reset usuwa sesje i zamyka WS 1008; testy zielone
+2026-11-01 19:58 | T-054 | qa | PASS | 0/0/3 minor; stare linki resetu działają po udanym resecie, passwordChanged w invitationContext, brak aktualizacji docs architektury
+2026-11-01 20:16 | T-055 | implementer | NEEDS_USER | BrevoMailer gotowy; pyta o sekrety staging (BREVO_API_KEY, MAIL_FROM) i sposób sprawdzenia AC4
+2026-11-01 20:16 | T-055 | user | ANSWER | sekrety Brevo z --stage teraz; AC1–AC3/SEC1 do QA, AC4 + deployment.md po merge na main
+2026-11-01 20:19 | T-055 | implementer | IN_QA | BrevoMailer AC1–AC3/SEC1 do QA; AC4 i SEC2 po merge na main
+2026-11-01 20:24 | T-055 | qa | PASS | 0/0/2 minor; STORY S-02-01 FAILED: AC4 (mail na staging) dopiero po merge; proponowany task weryfikacji w story.md
+2026-11-01 20:53 | T-056 | implementer | IN_QA | revoke anuluje oczekujący subscribe; sesja sprawdzana przy subscribe i co ping (1008)
+2026-11-01 20:59 | T-056 | qa | PASS | 0/0/1 minor; unsubscribe w trakcie oczekującego subscribe go nie anuluje
+2026-11-01 21:22 | T-057 | implementer | IN_QA | GET /lists/:id/members + sekcja uczestników SC-07 (e-maile tylko u właściciela); 605 vitest + 58 E2E
+2026-11-01 21:37 | T-057 | qa | PASS | 0/0/2 minor; api.md Person.email vs Participant, test E2E 7 bez dowodu red; kontenery Docker QA do usunięcia ręcznie
+2026-11-01 21:58 | T-060 | implementer | NEEDS_USER | walidacja Cc/Cf/bidi + NFKC w kluczu gotowe; pyta o migrację name_key (TS vs SQL) i 409 vs 400 dla Mleko+U+200B
+2026-11-01 21:58 | T-060 | user | ANSWER | migracja danych krokiem TS (data_migration); duplikat 409 wygrywa dla nazw pozycji; fokus na podsumowaniu SC-02
+2026-11-01 22:14 | T-060 | implementer | IN_QA | odrzucanie Cc/Cf/bidi, 409 dla wariantów NFKC/ukrytych znaków, krok TS 0007_name_key_nfkc; 814 testów zielone
+2026-11-01 22:26 | T-060 | qa | PASS | 0/0/4 minor; U+2028/2029 przechodzą, tagi po 🏴 bez limitu; docs data-model/SC-02/05/06/TH-29 do uzupełnienia przez właściciela
+2026-11-01 23:27 | T-063 | implementer | IN_QA | pasek Brak połączenia + blokada zapisów, po powrocie reconnect i refetch; check + 64 E2E zielone
+2026-11-01 23:36 | T-063 | qa | PASS | 0/0/3 minor; S-02-04 done; offline do 35 s bez internetu, SC-08 bez paska wbrew design, tekst Połączenie przywrócone. do akceptacji
+2026-11-02 00:06 | T-058 | implementer | IN_QA | usuwanie uczestnika z SC-07 (DELETE members/:userId 204), revoke na żywo, member_removed w logu
+2026-11-02 00:12 | T-058 | qa | FAIL | userId w DELETE members/:userId bez walidacji: %00 daje 500 zamiast 404 (SEC3)
+2026-11-02 00:17 | T-058 | implementer | IN_QA | fix QA #1: walidacja userId personIdSchema, NUL daje 404; 842 testy zielone
+2026-11-02 08:19 | T-058 | qa | PASS | 0/0/1 minor; member_removed logowany po withdrawAccess (log ginie przy błędzie powiadomienia); %C0%80 daje FST_ERR_BAD_URL bez kopert
+2026-11-02 08:59 | T-059 | implementer | IN_QA | opuszczenie listy z SC-07 (POST leave), access.revoked na wszystkie połączenia, właściciel 403 owner_cannot_leave
+2026-11-02 09:17 | T-059 | qa | PASS | 0/0/4 minor; S-02-02 done; flaky connection.test.tsx (reconnect 1000 ms vs waitFor), flaky E2E sc07:64, brak tekstu błędu w Copy SC-07
+2026-11-02 10:17 | T-061 | implementer | IN_QA | PATCH /me zmiana imienia (TH-29), members.changed + lists.changed do współdzielących, formularz SC-09
+2026-11-02 10:39 | T-061 | qa | PASS | 0/0/4 minor; api.md members.changed bez zmiany imienia, zdublowany typ NameChanged, 500 gdy announce padnie po commicie
+2026-11-02 11:38 | T-062 | implementer | IN_QA | DELETE /me usuwa konto w transakcji, po commicie zdarzenia + 1008; SC-09 sekcja usuwania; 912 testów + 74 E2E
+2026-11-02 12:01 | T-062 | qa | PASS | 0/0/3 minor; S-02-03 done; 500 zamiast 404 przy wyścigu FK, flaky test SC-09 pod obciążeniem, powód accountDeleted zostaje w cache
+2026-11-02 12:34 | T-064 | implementer | IN_QA | codzienne sprzątanie w procesie API (partie 1000, marker cleanup_run, nadrabianie po starcie); 934 testy zielone
+2026-11-02 12:47 | T-064 | qa | PASS | 0/0/1 minor; data-model.md bez cleanup_run i reguły rate_limit 1 h; DELETE partiami bez indeksu na kolumnach wygaśnięcia
+2026-11-02 19:08 | T-065 | implementer | FAILED | Docker nie działa, auto-mode zablokował start Docker Desktop; brak testów Testcontainers, nic nie zaimplementowano
+2026-11-02 19:26 | T-065 | implementer | IN_QA | metrics.sql: aktywni członkowie i dni wspólnych zakupów tygodniowo; 3 testy Testcontainers w READ ONLY
+2026-11-02 19:31 | T-065 | qa | PASS | 0/0/2 minor; S-02-05 done; puste tygodnie bez wiersza (zamiast 0), test AC3 łapie słowa kluczowe w komentarzach
+2026-11-03 06:22 | T-088 | implementer | NEEDS_USER | alert mailem (okno 15 min, bez danych osobowych); AC7 wymaga fly secrets set ALERT_EMAIL na staging
+2026-11-03 08:06 | T-088 | user | ANSWER | ALERT_EMAIL ustawiony na staging (--stage)
+2026-11-03 08:10 | T-088 | implementer | IN_QA | AC7 ALERT_EMAIL Staged na staging; wiersz deployment.md jako propozycja w Evidence
+2026-11-03 08:14 | T-088 | qa | NEEDS_USER | 0/0/0; AC7: brak wpisów ALERT_EMAIL w docs/architecture (deployment/architecture/pipeline/backend), implementer nie może ich edytować
+2026-11-03 08:15 | T-088 | user | ANSWER | odczyt A: implementer nanosi 4 wpisy docs/architecture, QA fail AC7
+2026-11-03 08:19 | T-088 | qa | FAIL | AC7: brak wpisów ALERT_EMAIL w deployment/architecture/pipeline/backend.md (odczyt A); kod OK; flaky routes-nul SEC1 /22021/
+2026-11-03 08:23 | T-088 | implementer | IN_QA | fix QA #1: wpisy ALERT_EMAIL/alert w deployment, architecture, pipeline, backend.md; kod bez zmian
+2026-11-03 08:26 | T-088 | qa | PASS | 0/0/1 minor; docs domknięte; flaky routes-nul (T-070); nieudana wysyłka alertu też otwiera okno 15 min (E-03)

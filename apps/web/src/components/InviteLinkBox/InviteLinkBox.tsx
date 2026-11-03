@@ -62,7 +62,7 @@ export function InviteLinkBox(props: InviteLinkBoxProps) {
         <Button ref={copyRef} variant="secondary" onClick={() => void copy()}>
           {props.copyLabel}
         </Button>
-        <Button variant="danger" loading={props.revoking ?? false} onClick={props.onRevoke}>
+        <Button variant="danger" writes loading={props.revoking ?? false} onClick={props.onRevoke}>
           {props.revokeLabel}
         </Button>
       </div>

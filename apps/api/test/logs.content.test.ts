@@ -30,6 +30,8 @@ describe("content in logs (TH-21)", () => {
       item: marker("Poz"),
       note: marker("Notatka"),
       failure: marker("Awaria"),
+      newName: marker("Im"),
+      refusedName: marker("Zle"),
     };
     const logs = captureLogs();
     const app = buildTestApp(db.pool, { logger: { level: "info", stream: logs.stream } });
@@ -89,13 +91,19 @@ describe("content in logs (TH-21)", () => {
     live.close();
 
     const asGuest = requestsAs(app, guest);
-    for (const url of ["/api/v1/me", "/api/v1/lists", `/api/v1/lists/${list.id}`])
+    const members = `/api/v1/lists/${list.id}/members`;
+    expect((await asOwner("GET", members)).statusCode).toBe(200);
+    for (const url of ["/api/v1/me", "/api/v1/lists", `/api/v1/lists/${list.id}`, members])
       expect((await asGuest("GET", url)).statusCode).toBe(200);
     const tooLong = `${m.item}${"x".repeat(200)}`;
     expect(
       (await asGuest("POST", `/api/v1/lists/${list.id}/items`, { name: tooLong })).statusCode,
     ).toBe(400);
     expect((await asGuest("GET", "/api/v1/test/failing")).statusCode).toBe(500);
+    // T-061: zmiana imienia (udana i odrzucona) bez imienia w logu.
+    expect((await asGuest("PATCH", "/api/v1/me", { name: m.newName })).statusCode).toBe(200);
+    const refusedName = `${m.refusedName}${"x".repeat(30)}`;
+    expect((await asGuest("PATCH", "/api/v1/me", { name: refusedName })).statusCode).toBe(400);
 
     expect(logs.lines.length).toBeGreaterThan(0);
     const all = logs.lines.join("\n").toLowerCase();

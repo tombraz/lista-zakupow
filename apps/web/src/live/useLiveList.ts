@@ -2,9 +2,10 @@ import type { ListDetails, ListEvent, LiveServerMessage } from "@lista/shared";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { deleteListKey } from "../lists/deleteListKey";
 import { listKey } from "../lists/useList";
+import { membersKey } from "../lists/useMembers";
 import { LISTS_KEY } from "../lists/useLists";
+import { isExitingOnItsOwn } from "../lists/ownExit";
 import { removeItems, upsertNewer } from "../screens/SC-06-lista/itemsCache";
 import { useLive } from "./LiveProvider";
 
@@ -39,9 +40,9 @@ export function useLiveList(listId: string) {
       }, HIGHLIGHT_MS);
     };
     const leave = () => {
-      // Właściciel sam usuwa listę: DeleteListDialog prowadzi na SC-05 bez komunikatu.
+      // Sam usuwa listę albo z niej wychodzi: na SC-05 prowadzi zapis, bez komunikatu.
       const list = client.getQueryData<ListDetails>(listKey(listId));
-      if (!list || client.isMutating({ mutationKey: deleteListKey(listId) }) > 0) return;
+      if (!list || isExitingOnItsOwn(client, listId)) return;
       client.removeQueries({ queryKey: listKey(listId) });
       void client.invalidateQueries({ queryKey: LISTS_KEY, exact: true });
       const state: RemovedListState = { removedList: list.name };
@@ -113,8 +114,9 @@ function applyListEvent(client: QueryClient, event: ListEvent): string | null {
       );
       return null;
     default:
-      // `members.changed`: uczestnicy z API (SC-06 okno usunięcia, SC-07).
+      // `members.changed`: uczestnicy z API (SC-06 okno usunięcia, SC-07 „Na liście”).
       void client.invalidateQueries({ queryKey: listKey(listId), exact: true });
+      void client.invalidateQueries({ queryKey: membersKey(listId) });
       return null;
   }
 }

@@ -24,6 +24,7 @@ export function NewListForm({ onCancel, onLimitReached }: NewListFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const form = useListNameForm({
+    fieldRef: inputRef,
     save: createList,
     onSaved: (list: ListSummary) => {
       void client.invalidateQueries({ queryKey: LISTS_KEY });
@@ -63,7 +64,7 @@ export function NewListForm({ onCancel, onLimitReached }: NewListFormProps) {
         placeholder={messages.new.placeholder}
         state={form}
       />
-      <Button type="submit" loading={form.pending} onKeyDown={closeOnEscape}>
+      <Button type="submit" writes loading={form.pending} onKeyDown={closeOnEscape}>
         {messages.new.submit}
       </Button>
       <Button variant="secondary" onClick={onCancel} onKeyDown={closeOnEscape}>

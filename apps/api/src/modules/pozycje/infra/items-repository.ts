@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne, sql, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { alias } from "drizzle-orm/pg-core";
 import { item, shoppingList, user } from "../../../db/schema";
@@ -94,6 +94,21 @@ export class DrizzleItemsRepository implements ItemsRepository {
       if (violates(error, NAME_KEY_UNIQUE)) return "duplicate";
       throw error;
     }
+  }
+
+  async nameKeyTaken(listId: string, nameKey: string, exceptItemId?: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: item.id })
+      .from(item)
+      .where(
+        and(
+          eq(item.listId, listId),
+          eq(item.nameKey, nameKey),
+          exceptItemId === undefined ? undefined : ne(item.id, exceptItemId),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
   }
 
   async delete(listId: string, itemId: string): Promise<boolean> {

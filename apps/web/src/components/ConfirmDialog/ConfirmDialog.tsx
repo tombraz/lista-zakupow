@@ -36,7 +36,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
     >
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       <div className={styles.actions}>
-        <Button variant="danger" loading={pending} onClick={props.onConfirm}>
+        <Button variant="danger" writes loading={pending} onClick={props.onConfirm}>
           {confirmLabel}
         </Button>
         <Button ref={cancelRef} variant="secondary" onClick={props.onCancel}>

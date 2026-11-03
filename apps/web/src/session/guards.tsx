@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router";
-import { afterEntry } from "../invitations/invitationContext";
+import { afterEntry, type EntryState } from "../invitations/invitationContext";
 import { LiveProvider } from "../live/LiveProvider";
-import { useEndSessionOnUnauthenticated, useSession } from "./useSession";
+import { useEndSessionOnUnauthenticated, useSession, useSessionEnd } from "./useSession";
 
 /**
  * Trasy dla zalogowanych; anonim trafia na SC-01 i po zalogowaniu wraca (ia.md, „Nawigacja”).
@@ -11,10 +11,14 @@ import { useEndSessionOnUnauthenticated, useSession } from "./useSession";
 export function RequireSession() {
   const session = useSession();
   const location = useLocation();
+  const ended = useSessionEnd();
   useEndSessionOnUnauthenticated();
   if (session.isPending) return <main aria-busy="true" />;
   if (!session.data) {
-    return <Navigate to="/logowanie" replace state={{ from: location.pathname }} />;
+    // Po usunięciu konta SC-01 z komunikatem i bez powrotu na ekran konta, którego już nie ma.
+    const state: EntryState | { from: string } =
+      ended === "accountDeleted" ? { accountDeleted: true } : { from: location.pathname };
+    return <Navigate to="/logowanie" replace state={state} />;
   }
   return (
     <LiveProvider>

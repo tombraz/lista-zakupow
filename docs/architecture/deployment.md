@@ -19,7 +19,7 @@ Ustalane z właścicielem 2026-10-26 (`/ci-cd`). Stos: `tech-stack.md`. Pipeline
 | Kopie zapasowe | raz dziennie, przechowywane 7 dni, przetestowane odtworzenie (N-03) |
 | Alarmy | mail do właściciela przy awarii (N-03) |
 | Domena | **brak własnej domeny** (projekt testowy). Web i API pod jednym adresem dostawcy (`*.fly.dev`) — warunek ciasteczka sesji first-party (ADR 0006) |
-| Mail | tylko mail resetu hasła (F-03), kilka miesięcznie; nadawca: zweryfikowany adres właściciela w Brevo |
+| Mail | mail resetu hasła (F-03), kilka miesięcznie, oraz alarmy do właściciela (N-03, `ALERT_EMAIL`): najwyżej 1 na zdarzenie / 15 min, w skrajnym przypadku ≤ 96 na dobę, zwykle 0 — mieści się w 300/dzień Brevo; nadawca: zweryfikowany adres właściciela w Brevo |
 | Dystrybucja mobile | Android: APK z EAS internal distribution (bez sklepu). iOS: domownicy z iPhone'em używają web; aplikacja iOS budowana i testowana, nie dystrybuowana (ADR 0008) |
 | Repozytorium | publiczne na GitHub (ADR 0007, zmienione przez właściciela 2026-10-26): ochrona `main`, środowiska z akceptacją, CodeQL i secret scanning bez opłat |
 | Środowiska | local, staging, produkcja. Podglądy per PR: nie (Fly i Neon nie dają ich za darmo w jednym kroku; security review i UAT na staging) |
@@ -73,8 +73,11 @@ Mail na staging: Brevo z osobnym kluczem API, ten sam zweryfikowany nadawca.
 | `NEON_API_KEY` (gałąź-kopia przed migracją produkcji) | `deploy.yml` | GitHub Environment `production` | raz w roku |
 | `DATABASE_URL` | API | sekrety Fly (`fly secrets`) per aplikacja | przy zmianie hasła bazy |
 | `BETTER_AUTH_SECRET` | API (sesje) | sekrety Fly per aplikacja | przy podejrzeniu wycieku (wylogowuje wszystkich) |
-| `BREVO_API_KEY` | API (mail resetu) | sekrety Fly per aplikacja | raz w roku |
+| `BREVO_API_KEY` | API (mail resetu, alarmy) | sekrety Fly per aplikacja | raz w roku |
+| `ALERT_EMAIL` | API (adres alarmów do właściciela, T-088) | sekrety Fly per aplikacja (staging, produkcja); lokalnie `.env` | przy zmianie adresu |
 | `EXPO_TOKEN` | `mobile.yml` | sekret repozytorium | raz w roku |
+
+`ALERT_EMAIL` — adres alarmów do właściciela (T-088): wymagany przy `MAILER=brevo` (bez niego API nie wystartuje), lokalnie przy `MAILER=mailpit` opcjonalny (bez niego alarm jest tylko w logu).
 
 Zmienne API (nie sekrety, T-004): `APP_ORIGIN` — publiczny adres aplikacji (zaufany `Origin`, `Secure` ciasteczka przy `https://`), wymagany — bez niego API nie wystartuje; `TRUSTED_PROXIES` — adresy / CIDR proxy Fly przed API (Fastify `trustProxy`), bez nich limity per IP liczą adres proxy dla wszystkich; na Fly `172.16.0.0/16` (ustalone 2026-10-29, „Środowiska”). Migracje (`db:migrate`) potrzebują tylko `DATABASE_URL`.
 

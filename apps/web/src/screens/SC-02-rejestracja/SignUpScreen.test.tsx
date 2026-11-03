@@ -184,6 +184,7 @@ describe("SC-02 Rejestracja", () => {
     expect(screen.getByRole("textbox", { name: "E-mail" })).toHaveValue("Ania@Example.com");
   });
 
+  // T-060 AC4: NUL to znak sterujący, więc ten sam komunikat co dla innych ukrytych znaków.
   it("explains under „Imię” that a pasted NUL character cannot be saved (T-026)", async () => {
     const requests = signUpAnswers(200, { user: ANIA });
     const user = userEvent.setup();
@@ -196,7 +197,7 @@ describe("SC-02 Rejestracja", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("Popraw 1 pole");
     expect(screen.getByLabelText("Imię")).toHaveAccessibleDescription(
-      expect.stringContaining("Wpisz imię") as string,
+      expect.stringContaining("Usuń niewidoczne lub specjalne znaki.") as string,
     );
     expect(requests).toEqual([]);
   });
@@ -214,6 +215,25 @@ describe("SC-02 Rejestracja", () => {
     expect(screen.getByLabelText("Imię")).toHaveAccessibleDescription(
       expect.stringContaining("Imię może mieć najwyżej 30 znaków") as string,
     );
+  });
+
+  it("asks to remove hidden characters from the name the API refuses (T-060 AC4)", async () => {
+    signUpAnswers(400, { error: { code: "validation_failed", fields: { name: "invalid" } } });
+    const user = userEvent.setup();
+    renderApp("/rejestracja");
+    await screen.findByLabelText("Imię");
+    await fillValidForm(user);
+
+    await user.click(screen.getByRole("button", { name: "Załóż konto" }));
+
+    const summary = await screen.findByRole("alert");
+    expect(summary).toHaveTextContent("Popraw 1 pole");
+    expect(summary).toHaveFocus();
+    expect(screen.getByLabelText("Imię")).toHaveAccessibleDescription(
+      expect.stringContaining("Usuń niewidoczne lub specjalne znaki.") as string,
+    );
+    await user.click(screen.getByRole("link", { name: "Usuń niewidoczne lub specjalne znaki." }));
+    expect(screen.getByLabelText("Imię")).toHaveFocus();
   });
 
   it("explains the sign-up limit and a network failure", async () => {

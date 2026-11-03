@@ -26,6 +26,7 @@ export function RenameSheet({ list, onClose, returnFocus }: RenameSheetProps) {
   const [failure, setFailure] = useState<RequestErrorCode | null>(null);
   const form = useListNameForm({
     initial: list.name,
+    fieldRef: inputRef,
     save: (name) => renameList(list.id, name),
     onSaved: (renamed: ListSummary) => {
       client.setQueryData<ListDetails>(listKey(list.id), (current) =>
@@ -56,7 +57,7 @@ export function RenameSheet({ list, onClose, returnFocus }: RenameSheetProps) {
       >
         {failure && <InlineAlert tone="error">{saveErrorText(failure)}</InlineAlert>}
         <ListNameField ref={inputRef} label={messages.rename.label} state={form} />
-        <Button type="submit" loading={form.pending}>
+        <Button type="submit" writes loading={form.pending}>
           {messages.rename.save}
         </Button>
         <Button variant="secondary" onClick={onClose}>

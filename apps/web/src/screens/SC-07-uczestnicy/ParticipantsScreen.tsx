@@ -1,8 +1,12 @@
-import { BUSINESS_LIMITS, type Invitation, type ListDetails } from "@lista/shared";
+import {
+  BUSINESS_LIMITS,
+  type Invitation,
+  type ListDetails,
+  type ListMembers,
+} from "@lista/shared";
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AppBar } from "../../components/AppBar/AppBar";
-import { Avatar } from "../../components/Avatar/Avatar";
 import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { InviteLinkBox } from "../../components/InviteLinkBox/InviteLinkBox";
@@ -11,12 +15,15 @@ import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { Toast, useToast } from "../../components/Toast/Toast";
 import { useLimitFocus } from "../../components/useFocus";
 import { useList } from "../../lists/useList";
+import { useMembers } from "../../lists/useMembers";
 import { useLiveList } from "../../live/useLiveList";
+import { LeaveList } from "./LeaveList";
+import { Members } from "./Members";
 import { createErrorText, messages, revokeErrorText } from "./messages";
 import styles from "./ParticipantsScreen.module.css";
 import { useInvitationChanges, useInvitations } from "./useInvitations";
 
-/** SC-07: uczestnicy i (właściciel) linki zaproszeń. Sekcja uczestników w pełni — E-02. */
+/** SC-07: kto ma dostęp do listy i (właściciel) linki zaproszeń. */
 export function ParticipantsScreen() {
   const { listId = "" } = useParams();
   const page = useParticipantsPage(listId);
@@ -33,11 +40,25 @@ export function ParticipantsScreen() {
             <Link to="/listy">{messages.backToLists}</Link>
           </>
         )}
-        {page.status === "ready" && <Members list={page.list} />}
-        {page.status === "ready" && page.links && (
-          <Invitations list={page.list} links={page.links} />
-        )}
+        {page.status === "ready" && <ReadyPage page={page} />}
       </main>
+    </>
+  );
+}
+
+/** Osoby na liście, potem (uczestnik) „Opuść listę” albo (właściciel) „Zaproszenia”. */
+function ReadyPage({ page }: { page: Extract<ParticipantsPage, { status: "ready" }> }) {
+  return (
+    <>
+      <Members list={page.list} members={page.members} />
+      {page.list.role === "participant" && <LeaveList list={page.list} />}
+      {page.links && (
+        <Invitations
+          listId={page.list.id}
+          participantCount={page.members.participants.length}
+          links={page.links}
+        />
+      )}
     </>
   );
 }
@@ -45,60 +66,67 @@ export function ParticipantsScreen() {
 type ParticipantsPage =
   | { status: "loading" | "noAccess" }
   | { status: "failed"; retry: () => void }
-  | { status: "ready"; list: ListDetails; links: Invitation[] | undefined };
+  | {
+      status: "ready";
+      list: ListDetails;
+      members: ListMembers;
+      links: Invitation[] | undefined;
+    };
 
-/** Lista i (właściciel) jej aktywne linki; uczestnik linków nie pobiera (403, TH-02). */
+/** Lista, jej uczestnicy i (właściciel) aktywne linki; uczestnik linków nie pobiera (403, TH-02). */
 function useParticipantsPage(listId: string): ParticipantsPage {
   const list = useList(listId);
+  const members = useMembers(listId);
   useLiveList(listId);
   const isOwner = list.data?.role === "owner";
   const invitations = useInvitations(listId, isOwner);
+  const { retrying, retry } = useRetry([
+    list.refetch,
+    members.refetch,
+    ...(isOwner ? [invitations.refetch] : []),
+  ]);
   // MC-01: cudza lista jak na SC-06 — bez nazwy i treści.
   if (list.noAccess) return { status: "noAccess" };
-  if (list.isError || invitations.isError) {
-    const retry = () => {
-      void list.refetch();
-      if (isOwner) void invitations.refetch();
-    };
+  if (retrying || [list, members, invitations].some((query) => query.isError)) {
     return { status: "failed", retry };
   }
-  if (!list.data || (isOwner && !invitations.data)) return { status: "loading" };
-  return { status: "ready", list: list.data, links: invitations.data };
+  if (!list.data || !members.data || (isOwner && !invitations.data)) return { status: "loading" };
+  return { status: "ready", list: list.data, members: members.data, links: invitations.data };
 }
 
-/** W E-01 tylko wiersz właściciela; lista uczestników z e-mailami i usuwaniem — E-02. */
-function Members({ list }: { list: ListDetails }) {
-  const isOwner = list.role === "owner";
-  return (
-    <section className={styles.section} aria-labelledby="members-heading">
-      <h2 id="members-heading" className={styles.heading}>
-        {messages.members(list.members.length)}
-      </h2>
-      <ul className={styles.people}>
-        <li className={styles.person}>
-          <Avatar person={list.owner} index={0} />
-          <span>
-            <span className={styles.name}>{list.owner.name}</span>
-            <span className={styles.role}>
-              {isOwner ? `${messages.owner} · ${messages.you}` : messages.owner}
-            </span>
-          </span>
-        </li>
-      </ul>
-      {isOwner && list.members.length === 0 && <p className={styles.empty}>{messages.empty}</p>}
-    </section>
-  );
+/**
+ * „Spróbuj ponownie”: zapytanie bez danych wraca przy ponowieniu do stanu „pending”, więc
+ * `retrying` trzyma komunikat błędu do końca ponowienia — fokus nie spada z przycisku na `body`
+ * (WCAG 2.4.3).
+ */
+function useRetry(refetches: (() => Promise<unknown>)[]) {
+  const [retrying, setRetrying] = useState(false);
+  const retry = () => {
+    setRetrying(true);
+    void Promise.allSettled(refetches.map((refetch) => refetch())).then(() => {
+      setRetrying(false);
+    });
+  };
+  return { retrying, retry };
 }
 
-function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }) {
+function Invitations({
+  listId,
+  participantCount,
+  links,
+}: {
+  listId: string;
+  participantCount: number;
+  links: Invitation[];
+}) {
   const createRef = useRef<HTMLButtonElement>(null);
   const [focusCopyOf, setFocusCopyOf] = useState<string>();
   const [announcement, setAnnouncement] = useState("");
   const toast = useToast();
-  const full = list.members.length >= BUSINESS_LIMITS.participantsPerList;
+  const full = participantCount >= BUSINESS_LIMITS.participantsPerList;
   // Pełna lista wyłącza „Utwórz link”, więc fokus idzie na ostrzeżenie (T-025).
   const limitRef = useLimitFocus(full, createRef);
-  const changes = useInvitationChanges(list.id, {
+  const changes = useInvitationChanges(listId, {
     onCreated: setFocusCopyOf,
     onRevoked: () => {
       setAnnouncement(messages.revoked);
@@ -123,13 +151,7 @@ function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }
           {messages.limit}
         </InlineAlert>
       )}
-      {failure && (
-        <InlineAlert tone="error">
-          {failure.action === "create"
-            ? createErrorText(failure.code)
-            : revokeErrorText(failure.code)}
-        </InlineAlert>
-      )}
+      {failure && <InvitationFailure failure={failure} />}
       {links.map((link) => (
         <InviteLinkBox
           key={link.id}
@@ -149,6 +171,7 @@ function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }
       ))}
       <Button
         ref={createRef}
+        writes
         disabled={full}
         loading={changes.create.isPending}
         onClick={() => {
@@ -163,6 +186,19 @@ function Invitations({ list, links }: { list: ListDetails; links: Invitation[] }
       </p>
       <Toast text={toast.text} />
     </section>
+  );
+}
+
+/** Błąd utworzenia albo unieważnienia linku. */
+function InvitationFailure({
+  failure,
+}: {
+  failure: NonNullable<ReturnType<typeof useInvitationChanges>["failure"]>;
+}) {
+  return (
+    <InlineAlert tone="error">
+      {failure.action === "create" ? createErrorText(failure.code) : revokeErrorText(failure.code)}
+    </InlineAlert>
   );
 }
 

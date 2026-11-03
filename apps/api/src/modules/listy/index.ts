@@ -13,10 +13,12 @@ import {
   type ListPeople,
   type RequiredRole,
 } from "./domain/lists";
+import { announceDeletedPerson, announceRenamedPerson } from "./http/person-events";
 import { listRoutes } from "./http/routes";
 import {
   DrizzleListsRepository,
   insertParticipant,
+  listsWithPeopleOf,
   type Transaction,
 } from "./infra/lists-repository";
 
@@ -62,6 +64,15 @@ export function listsModule(
 ): Lists {
   const repository = new DrizzleListsRepository(drizzle(pool), items);
   listRoutes(app, accounts, repository, { items, live });
+  // F-16: imię widać przy pozycjach i uczestnikach list osoby, więc jej listy odświeżają się.
+  accounts.announceNameChanges((userId) => announceRenamedPerson(live, repository, userId));
+  // F-04: kto traci listy usuwanego konta albo widzi je na swoich — zebrane przed usunięciem.
+  accounts.announceAccountDeletions(async (tx, userId) => {
+    const lists = await listsWithPeopleOf(tx, userId);
+    return () => {
+      announceDeletedPerson(live, lists, userId);
+    };
+  });
   return listsApi(repository);
 }
 

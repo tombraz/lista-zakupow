@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useLocation } from "react-router";
+import { AuthForm } from "../../components/AuthPage/AuthForm";
 import { AuthPage } from "../../components/AuthPage/AuthPage";
 import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
@@ -7,7 +8,12 @@ import { PasswordField } from "../../components/PasswordField/PasswordField";
 import { TextField } from "../../components/TextField/TextField";
 import { useFocusTargets } from "../../components/useFocus";
 import { EntryLink } from "../../invitations/EntryLink";
-import { emailOf, invitationOf } from "../../invitations/invitationContext";
+import {
+  accountDeletedOf,
+  emailOf,
+  invitationOf,
+  passwordChangedOf,
+} from "../../invitations/invitationContext";
 import { formErrorText, messages } from "./messages";
 import styles from "./SignInScreen.module.css";
 import { useSignInForm } from "./useSignInForm";
@@ -27,6 +33,12 @@ export function SignInScreen() {
 
   return (
     <AuthPage title={messages.title}>
+      {passwordChangedOf(state) && (
+        <InlineAlert tone="success">{messages.passwordChanged}</InlineAlert>
+      )}
+      {accountDeletedOf(state) && (
+        <InlineAlert tone="success">{messages.accountDeleted}</InlineAlert>
+      )}
       {invitation && (
         <InlineAlert tone="info">{messages.invitation(invitation.listName)}</InlineAlert>
       )}
@@ -35,14 +47,7 @@ export function SignInScreen() {
           {formErrorText(form.formError)}
         </InlineAlert>
       )}
-      <form
-        className={styles.form}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          form.submit();
-        }}
-      >
+      <AuthForm onSubmit={form.submit}>
         <TextField
           ref={emailRef}
           label={messages.email.label}
@@ -67,7 +72,15 @@ export function SignInScreen() {
         <Button type="submit" loading={form.pending}>
           {messages.submit}
         </Button>
-      </form>
+      </AuthForm>
+      <EntryLink
+        className={styles.forgot}
+        to="/reset-hasla"
+        email={form.values.email}
+        invitation={invitation}
+      >
+        {messages.forgot}
+      </EntryLink>
       <div className={styles.register}>
         <p>{messages.noAccount}</p>
         <EntryLink

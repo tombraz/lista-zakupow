@@ -1,15 +1,23 @@
 export { healthReadyResponseSchema, type HealthReadyResponse } from "./health";
 export {
+  accountDeletionRequestSchema,
   fieldErrors,
   meResponseSchema,
   NAME_MAX_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  passwordResetRequestSchema,
+  passwordResetSchema,
+  nameChangeRequestSchema,
   signInRequestSchema,
   signUpRequestSchema,
   TERMS_VERSION,
+  type AccountDeletionRequest,
   type FieldErrorCode,
   type Me,
+  type NameChangeRequest,
+  type PasswordReset,
+  type PasswordResetRequest,
   type SignInRequest,
   type SignUpRequest,
 } from "./api/account";
@@ -19,6 +27,7 @@ export {
   ITEM_NAME_MAX_LENGTH,
   ITEM_NOTE_MAX_LENGTH,
   normalizeItemName,
+  onlyItemNameInvalid,
   updateItemRequestSchema,
   type ClearCheckedResponse,
   type CreateItemRequest,
@@ -37,6 +46,7 @@ export {
   HTTP_LIMITS,
   INVITATION_VALIDITY_DAYS,
   LIVE_LIMITS,
+  PASSWORD_RESET_VALIDITY_SECONDS,
   RATE_LIMITS,
   type LimitKey,
   type RateLimit,
@@ -51,9 +61,13 @@ export {
 export {
   LIST_NAME_MAX_LENGTH,
   listNameRequestSchema,
+  personIdSchema,
   type ListDetails,
+  type ListMembers,
   type ListNameRequest,
   type ListRole,
   type ListSummary,
+  type Participant,
   type Person,
 } from "./api/lists";
+export { withoutNul } from "./api/text";

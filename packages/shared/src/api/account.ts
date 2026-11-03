@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requiredName } from "./text";
+import { requiredName, withoutNul } from "./text";
 
 export const NAME_MAX_LENGTH = 30;
 export const PASSWORD_MIN_LENGTH = 8;
@@ -16,7 +16,8 @@ const consent = z.literal(true, { error: "required" });
 
 const name = requiredName(NAME_MAX_LENGTH);
 
-const signUpEmail = z
+// Ta sama skrzynka bez względu na wielkość liter i spacje (rejestracja, reset hasła).
+const accountEmail = z
   .string({ error: "required" })
   .trim()
   .min(1, { error: "required" })
@@ -30,7 +31,7 @@ const newPassword = z
 
 export const signUpRequestSchema = z.object({
   name,
-  email: signUpEmail,
+  email: accountEmail,
   password: newPassword,
   termsAccepted: consent,
   ageConfirmed: consent,
@@ -46,6 +47,35 @@ export const signInRequestSchema = z.object({
 });
 
 export type SignInRequest = z.input<typeof signInRequestSchema>;
+
+// F-03: `redirectTo` z api.md jest przyjmowany, ale pomijany — link w mailu zawsze na originie
+// aplikacji (TH-14), więc schemat go nie przepuszcza dalej.
+export const passwordResetRequestSchema = z.object({ email: accountEmail });
+
+export type PasswordResetRequest = z.input<typeof passwordResetRequestSchema>;
+
+// F-03: nowe hasło z linku resetu; token z adresu strony `/reset-hasla?token=`.
+export const passwordResetSchema = z.object({
+  token: z
+    .string({ error: "required" })
+    .min(1, { error: "required" })
+    .refine(withoutNul, { error: "invalid" }),
+  newPassword,
+});
+
+export type PasswordReset = z.input<typeof passwordResetSchema>;
+
+// F-16: zmiana imienia (SC-09); inne pola żądania (np. `email`) schemat pomija.
+export const nameChangeRequestSchema = z.object({ name });
+
+export type NameChangeRequest = z.input<typeof nameChangeRequestSchema>;
+
+// F-04: usunięcie konta tylko z wyraźnym potwierdzeniem (api.md, „Konto”).
+export const accountDeletionRequestSchema = z.object({
+  confirm: z.literal(true, { error: "required" }),
+});
+
+export type AccountDeletionRequest = z.input<typeof accountDeletionRequestSchema>;
 
 export const meResponseSchema = z.object({
   id: z.string(),

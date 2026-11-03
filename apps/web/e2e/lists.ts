@@ -9,6 +9,7 @@ export function api(page: Page) {
   const headers = { origin: new URL(page.url()).origin };
   return {
     post: (url: string, data: object) => page.request.post(url, { data, headers }),
+    patch: (url: string, data: object) => page.request.patch(url, { data, headers }),
     delete: (url: string) => page.request.delete(url, { headers }),
   };
 }

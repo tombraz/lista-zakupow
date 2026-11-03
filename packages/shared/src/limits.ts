@@ -8,6 +8,10 @@ export const RATE_LIMITS = {
   signInPerIp: { windowSeconds: 60, max: 10 },
   signInFailuresPerAccount: { windowSeconds: 15 * 60, max: 5 },
   signUpPerIp: { windowSeconds: 60 * 60, max: 5 },
+  // TH-10: próg Better Auth dla resetu; przed licznikiem e-maila, bo ten pisze do bazy (TH-27).
+  passwordResetPerIp: { windowSeconds: 60, max: 3 },
+  // TH-10: zalewanie jednej skrzynki z wielu adresów; zatwierdził właściciel 2026-11-01 (T-053).
+  passwordResetPerEmail: { windowSeconds: 15 * 60, max: 3 },
   // Odpytuje bazę; zapas dla smoke testu i ręcznych sprawdzeń (CodeQL js/missing-rate-limiting).
   healthReadyPerIp: { windowSeconds: 60, max: 30 },
   // TH-06: podgląd i przyjęcie zaproszenia (osobno) — odgadywanie tokenu.
@@ -35,6 +39,9 @@ export type LimitKey =
   | keyof typeof BUSINESS_LIMITS
   | keyof typeof HTTP_LIMITS
   | keyof typeof LIVE_LIMITS;
+
+/** F-03: link resetu hasła działa 1 godzinę od prośby. */
+export const PASSWORD_RESET_VALIDITY_SECONDS = 60 * 60;
 
 /** F-11: link zaproszenia działa 7 dni od utworzenia. */
 export const INVITATION_VALIDITY_DAYS = 7;

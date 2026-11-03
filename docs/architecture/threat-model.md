@@ -80,7 +80,7 @@ flowchart LR
 | TH-17 | J-01 / API | S | sesja nie wygasa lub działa po wylogowaniu / usunięciu konta | średnie | sesje w bazie, wygasanie 30 dni, wylogowanie usuwa sesję i zamyka WS, usunięcie konta kasuje sesje | testy integracyjne: po wylogowaniu 401 i zamknięte WS | task | Session Management |
 | TH-18 | J-01 / API | I | usunięcie konta zostawia dane (listy, sesje) albo usuwa cudze pozycje | średnie | jedna transakcja usunięcia wg `data-model.md` (kaskady i `SET NULL`) | test integracyjny F-04 | task | Data Protection |
 | TH-19 | J-02 / API | I | e-mail uczestników widoczny dla innych uczestników (F-13) albo przy pozycjach (F-10) | średnie | e-mail tylko w odpowiedzi `members` dla właściciela; `Item` zawiera tylko `id` i `name` autora | test integracyjny kształtu odpowiedzi dla uczestnika | task | Data Protection |
-| TH-20 | wszystkie / API | T | wstrzyknięcie SQL, niepoprawne dane wejściowe | niskie | Drizzle z parametrami, zakaz SQL składanego z tekstu; zod na każdej trasie | lint (zakaz `sql.raw` z danymi), testy walidacji | ci | Validation and Business Logic |
+| TH-20 | wszystkie / API | T | wstrzyknięcie SQL, niepoprawne dane wejściowe | niskie | Drizzle z parametrami, zakaz SQL składanego z tekstu; zod na każdej trasie | lint (zakaz `sql.raw` z danymi), testy walidacji, test inwentarza tras z NUL (`apps/api/test/routes-nul.test.ts`: każda trasa `/api/*` i wiadomość WS, T-070) | ci | Validation and Business Logic |
 | TH-21 | wszystkie / logi | I, R | dane osobowe lub sekrety w logach; brak śladu zdarzeń bezpieczeństwa | średnie | redakcja pino; log `security` z identyfikatorami | test redakcji; przegląd logów w QA | task | Security Logging |
 | TH-22 | łańcuch dostaw | T, E | podatna lub złośliwa zależność; sekret w repozytorium | średnie | lockfile w repo; skan zależności (blokuje high/critical) i sekretów w CI; Dependabot / Renovate | kroki w `pipeline.md` | ci | Configuration |
 | TH-23 | mobile | I | sekret w paczce aplikacji; logi debug w buildzie | niskie | aplikacja zawiera tylko publiczny adres API; brak kluczy; build bez logów debug | skan sekretów w CI; przegląd w QA | ci | Configuration |
@@ -122,6 +122,7 @@ Domena nie jest wysokiego ryzyka (BRD §8b): bez płatności, danych zdrowotnych
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-02 | T-070: TH-20 „Weryfikacja” — test inwentarza tras z NUL w każdym parametrze ścieżki i polu tekstowym treści oraz w `listId` wiadomości WS. |
 | 2026-10-31 | T-050: TH-15 „Weryfikacja” — lint obejmuje też wstawianie HTML do DOM poza Reactem, każda reguła z fixture (`lint-security.test.mjs`). |
 | 2026-10-31 | `/security-review E-01`: dodane TH-26 (rozjazd ścieżki w kontrolach), TH-27 (zapisy przed limitem), TH-28 (WS po końcu sesji), TH-29 (podszywanie Unicode); `docs/security/reviews/E-01-2026-10-31-1.md`. |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |

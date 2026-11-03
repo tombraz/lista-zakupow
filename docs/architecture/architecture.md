@@ -47,6 +47,8 @@ flowchart LR
 
 API działa jako **jedna instancja** (ADR 0003): rozsyłanie zdarzeń na żywo odbywa się w pamięci procesu. Odrzucone jako zbędne dla wymagań: mikroserwisy, kolejka wiadomości, Redis/cache, osobny serwis realtime, BFF dla mobile.
 
+Na jednej instancji opiera się też kolejka resetów hasła per konto (`konta/infra/reset-tokens.ts`, `ResetTokens.exclusive`, T-075): resety jednego konta idą po kolei w pamięci procesu, więc z dwóch linków zużytych naraz hasło zmienia tylko jeden. Przy więcej niż jednej instancji API trzeba ją zastąpić blokadą w bazie (np. `pg_advisory_xact_lock` na identyfikatorze konta).
+
 ## Moduły (granice domenowe)
 
 Moduły w `apps/api/src/modules/<moduł>`. Każdy moduł ma warstwę domenową (reguły, bez Fastify i Drizzle) i adaptery (trasy HTTP, repozytoria). Kierunek zależności sprawdzany w CI (`CODING_STANDARDS.md`).
@@ -266,6 +268,7 @@ sequenceDiagram
 - **Logi:** pino w formacie JSON; każde żądanie ma `requestId`. Logujemy identyfikatory (użytkownik, lista), kody błędów, czasy. Nigdy: e-maile, imiona, nazwy list i pozycji, hasła, tokeny, ciasteczka (redakcja nagłówków `authorization`, `cookie`, pól `password`, `token`).
 - **Zdarzenia bezpieczeństwa** (log `security`): nieudane logowanie, przekroczenie limitu, odmowa dostępu do listy, zmiana hasła, usunięcie konta, usunięcie uczestnika.
 - **Healthcheck:** `GET /health` (proces) i `GET /health/ready` (połączenie z bazą); alarm mailowy z monitoringu hostingu.
+- **Alarm mailowy z API:** wybrane zdarzenia `error` dają mail do właściciela (`ALERT_EMAIL`, `apps/api/src/owner-alerts.ts`), tym samym dostawcą co mail resetu (Brevo; N-02 — bez nowego podmiotu). Najwyżej jeden mail na zdarzenie w 15 min, z liczbą pominiętych zdarzeń. Okno jest w pamięci procesu (jedna instancja, ADR 0003); restart API zeruje okno (akceptowane). Treść tylko z identyfikatorami i kodem błędu (TH-21). Wysyłka w tle, nie opóźnia odpowiedzi; błąd wysyłki → log `owner_alert_failed`. Teraz: `reset_tokens_revoke_failed` (T-088).
 - **Śledzenie błędów:** brak zewnętrznego narzędzia; błędy 5xx w logach hostingu. Aplikacja mobilna: błędy krytyczne widoczne w logach urządzenia podczas testów.
 - **Miary sukcesu (BRD §10):** zapytania SQL w `apps/api/scripts/metrics.sql` na tabeli aktywności dziennej (moduł `statystyki`, `data-model.md`), uruchamiane ręcznie po 4 tygodniach.
 
@@ -284,5 +287,7 @@ Otwarte:
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-03 | T-088: „Obserwowalność”: alarm mailowy z API do właściciela (`ALERT_EMAIL`, okno 15 min w pamięci procesu). |
+| 2026-11-02 | T-075: kolejka resetów hasła per konto w pamięci procesu — zależna od jednej instancji API (ADR 0003). |
 | 2026-10-27 | T-004: kody `invalid_credentials` (401) i `invalid_origin` (403). |
 | 2026-10-26 | `/ci-cd`: bez własnej domeny — web serwowany przez API pod jednym originem, CORS wyłączony (ADR 0006). |

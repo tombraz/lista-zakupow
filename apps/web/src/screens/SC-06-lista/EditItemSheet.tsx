@@ -8,7 +8,7 @@ import styles from "./ListScreen.module.css";
 import { itemNameErrorText, itemNoteErrorText, messages, saveErrorText } from "./messages";
 import { useEditItem, type EditCallbacks, type EditItemState } from "./useEditItem";
 
-interface EditItemSheetProps extends EditCallbacks {
+interface EditItemSheetProps extends Omit<EditCallbacks, "fields"> {
   listId: string;
   item: Item;
   /** Pozycje listy: lokalne sprawdzenie duplikatu nazwy (F-09). */
@@ -21,8 +21,10 @@ interface EditItemSheetProps extends EditCallbacks {
 export function EditItemSheet(props: EditItemSheetProps) {
   const { listId, item, items, returnFocus, onSaved, onRemoved } = props;
   const nameRef = useRef<HTMLInputElement>(null);
+  const noteRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const edit = useEditItem(listId, item, items, { onSaved, onRemoved });
+  const fields = { name: nameRef, note: noteRef };
+  const edit = useEditItem(listId, item, items, { onSaved, onRemoved, fields });
   return (
     <Modal
       role="dialog"
@@ -35,7 +37,7 @@ export function EditItemSheet(props: EditItemSheetProps) {
       {edit.deletedElsewhere ? (
         <DeletedElsewhere closeRef={closeRef} onClose={edit.removed} />
       ) : (
-        <EditForm edit={edit} nameRef={nameRef} onCancel={onSaved} />
+        <EditForm edit={edit} nameRef={nameRef} noteRef={noteRef} onCancel={onSaved} />
       )}
     </Modal>
   );
@@ -44,10 +46,11 @@ export function EditItemSheet(props: EditItemSheetProps) {
 interface EditFormProps {
   edit: EditItemState;
   nameRef: RefObject<HTMLInputElement | null>;
+  noteRef: RefObject<HTMLInputElement | null>;
   onCancel: () => void;
 }
 
-function EditForm({ edit, nameRef, onCancel }: EditFormProps) {
+function EditForm({ edit, nameRef, noteRef, onCancel }: EditFormProps) {
   const { form } = edit;
   return (
     <form
@@ -70,18 +73,25 @@ function EditForm({ edit, nameRef, onCancel }: EditFormProps) {
         }}
       />
       <TextField
+        ref={noteRef}
         label={messages.add.noteLabel}
         value={form.note}
         maxChars={ITEM_NOTE_MAX_LENGTH}
-        error={form.fields.note && itemNoteErrorText()}
+        error={form.fields.note && itemNoteErrorText(form.fields.note)}
         onChange={(event) => {
           form.setNote(event.target.value);
         }}
       />
-      <Button type="submit" loading={edit.saving} disabled={edit.removing}>
+      <Button type="submit" writes loading={edit.saving} disabled={edit.removing}>
         {messages.editSheet.save}
       </Button>
-      <Button variant="danger" loading={edit.removing} disabled={edit.saving} onClick={edit.remove}>
+      <Button
+        variant="danger"
+        writes
+        loading={edit.removing}
+        disabled={edit.saving}
+        onClick={edit.remove}
+      >
         {messages.editSheet.delete}
       </Button>
       <Button variant="secondary" onClick={onCancel}>

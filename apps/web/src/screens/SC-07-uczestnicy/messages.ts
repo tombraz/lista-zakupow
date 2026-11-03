@@ -27,6 +27,21 @@ export const messages = {
   copyManually: "Skopiuj link ręcznie.",
   revoke: "Unieważnij",
   revoked: "Link unieważniony",
+  remove: {
+    action: "Usuń",
+    label: (name: string) => `Usuń ${name} z listy`,
+    question: (name: string) => `Usunąć ${name} z listy?`,
+    consequence: "Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną.",
+    // Spoza tabeli Copy SC-07; zatwierdził właściciel 2026-11-01 (T-058 AC4).
+    failed: "Nie udało się usunąć. Spróbuj ponownie.",
+  },
+  leave: {
+    action: "Opuść listę",
+    question: (listName: string) => `Opuścić listę „${listName}”?`,
+    consequence: "Żeby wrócić, potrzebujesz nowego zaproszenia.",
+    confirm: "Opuść",
+  },
+  cancel: "Anuluj",
   limit: "Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę.",
 };
 
@@ -36,6 +51,11 @@ export function createErrorText(code: RequestErrorCode): string {
     rate_limited: "Utworzono zbyt wiele linków. Spróbuj ponownie za godzinę.",
     otherwise: "Nie udało się utworzyć linku. Spróbuj ponownie.",
   });
+}
+
+// Spoza tabeli Copy SC-07, wzorem pozostałych błędów zapisu („Nie udało się …. Spróbuj ponownie.”).
+export function leaveErrorText(code: RequestErrorCode): string {
+  return errorText(code, { otherwise: "Nie udało się opuścić listy. Spróbuj ponownie." });
 }
 
 export function revokeErrorText(code: RequestErrorCode): string {

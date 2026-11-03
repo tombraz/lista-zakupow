@@ -65,7 +65,11 @@ function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof us
   const [boughtOpen, setBoughtOpen] = useState(false);
   return (
     <>
-      <main className={styles.page} aria-busy={list.isPending || undefined}>
+      <main
+        className={styles.page}
+        aria-busy={list.isPending || undefined}
+        tabIndex={scrollFocus(list.data)}
+      >
         <JoinedNotice />
         {list.isPending && <Skeleton rows={5} variant="row" />}
         {list.isError && (
@@ -108,6 +112,15 @@ function ListBody({ listId, list }: { listId: string; list: ReturnType<typeof us
       />
     </>
   );
+}
+
+/**
+ * Pusta lista nie ma w `main` nic fokusowalnego, a przy wąskim ekranie, 200% tekstu i pasku
+ * „Brak połączenia” `main` się przewija: bez fokusu klawiatura go nie przewinie (WCAG 2.1.1,
+ * axe `scrollable-region-focusable`; T-063).
+ */
+function scrollFocus(list: ListDetails | undefined): 0 | undefined {
+  return list?.items.length === 0 ? 0 : undefined;
 }
 
 /**

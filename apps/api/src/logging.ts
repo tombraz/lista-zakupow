@@ -173,3 +173,39 @@ export function logLimitEvent(
   if (!request.server.limitLogWindow.take(subject, limit)) return;
   securityEvent(request, event, { ...ids, limit });
 }
+
+export interface ErrorSummary {
+  type: string;
+  code?: string;
+  stack?: string;
+  cause?: ErrorSummary;
+}
+
+// Komunikat wyjątku może nieść SQL z parametrami (DrizzleQueryError, błąd pg z wartością
+// pola), czyli treść użytkownika: do logu tylko typ, kod i ramki stosu (architecture.md, „Logi”).
+export function errorSummary(error: unknown): ErrorSummary {
+  if (!(error instanceof Error)) return { type: typeof error };
+  const code = (error as { code?: unknown }).code;
+  const frames = error.stack
+    ?.split("\n")
+    .filter((line) => /^\s+at /.test(line))
+    .join("\n");
+  return {
+    type: error.constructor.name,
+    ...(typeof code === "string" ? { code } : {}),
+    ...(frames ? { stack: frames } : {}),
+    ...(error.cause === undefined ? {} : { cause: errorSummary(error.cause) }),
+  };
+}
+
+/**
+ * Błąd wysyłki maila do logu: typ i status dostawcy, nigdy komunikat (bywa z adresem lub treścią,
+ * TH-21).
+ */
+export function deliveryFailure(error: unknown): { error: string; status?: number } {
+  const status = (error as { status?: unknown } | null)?.status;
+  return {
+    error: error instanceof Error ? error.name : typeof error,
+    ...(typeof status === "number" ? { status } : {}),
+  };
+}

@@ -16,11 +16,14 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 ## Gdzie jest kod
 
-- `apps/api/src/db/schema.ts` — schemat Drizzle (`user`, `session`, `account`, `verification`, `rate_limit`, `sign_in_failure`, `shopping_list`, `list_member`, `item`, `list_daily_activity`, `invitation`; tabele kolejnych modułów dochodzą w taskach); `src/db/uuid.ts` — `uuidv7()` dla kluczy UUID (PostgreSQL 17 nie ma wbudowanego)
-- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa, `0001_konta.sql` tabele Better Auth + zgody, `0002_sign_in_failure.sql`, `0003_listy.sql` listy i członkostwa, `0004_pozycje.sql` pozycje z `UNIQUE (list_id, name_key)` i `CHECK` długości, `0005_statystyki.sql` aktywność dzienna z PK `(list_id, day, user_id)` i indeksem `user_id`, `0006_zaproszenia.sql` linki z unikalnym `token`, indeksami `list_id` i `used_by`) i `meta/_journal.json`
+- `apps/api/src/db/schema.ts` — schemat Drizzle (`user`, `session`, `account`, `verification`, `rate_limit`, `sign_in_failure`, `shopping_list`, `list_member`, `item`, `list_daily_activity`, `invitation`, `data_migration`, `cleanup_run` — jeden wiersz z początkiem ostatniego sprzątania, T-064; tabele kolejnych modułów dochodzą w taskach); `src/db/uuid.ts` — `uuidv7()` dla kluczy UUID (PostgreSQL 17 nie ma wbudowanego)
+- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa, `0001_konta.sql` tabele Better Auth + zgody, `0002_sign_in_failure.sql`, `0003_listy.sql` listy i członkostwa, `0004_pozycje.sql` pozycje z `UNIQUE (list_id, name_key)` i `CHECK` długości, `0005_statystyki.sql` aktywność dzienna z PK `(list_id, day, user_id)` i indeksem `user_id`, `0006_zaproszenia.sql` linki z unikalnym `token`, indeksami `list_id` i `used_by`, `0007_data_migration.sql` tabela wykonanych kroków danych, `0008_sprzatanie.sql` tabela `cleanup_run` z `CHECK (id = 1)`) i `meta/_journal.json`
 - `apps/api/drizzle.config.ts` — konfiguracja drizzle-kit
 - `apps/api/src/db/pool.ts` — pula `pg` (bezczynne połączenia zamykane po 30 s)
-- `apps/api/src/db/migrate.ts`, `migrate-cli.ts` — uruchamianie migracji
+- `apps/api/src/db/migrate.ts`, `migrate-cli.ts` — uruchamianie migracji: SQL, potem kroki danych w TS
+- `apps/api/src/db/data-migrations/` — kroki migracji danych liczone kodem z `packages/shared` (`index.ts`: lista kroków, każdy raz dzięki wierszowi `data_migration` w tej samej transakcji; `0007-name-key-nfkc.ts` — przeliczenie `item.name_key`, T-060); test `apps/api/test/name-key-migration.test.ts`
+- `apps/api/scripts/metrics.sql` — zapytania miar sukcesu (tylko `SELECT`, definicje w komentarzu pliku; test `apps/api/test/metrics.test.ts`, T-065)
+- `apps/api/src/db/retention.ts` — usuwanie wierszy po terminie partiami po 1000 (`ctid`), reguły terminów w `modules/<moduł>/infra/retention.ts` (T-064)
 - `apps/api/test/global-setup.ts`, `test/database.ts` — kontener testowy, baza-szablon, `useTestDatabase()`
 - repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`, `lockList(tx, listId)` — blokada wiersza `shopping_list` w transakcji innego modułu (eksport z `listy/index.ts`), `insertParticipant` — limit 20 uczestników pod tą blokadą; `pozycje/infra/items-repository.ts` — limit 500 z `SELECT … FOR UPDATE` na wierszu `shopping_list`, duplikat przez `ON CONFLICT (list_id, name_key) DO NOTHING` przy dodaniu i naruszenie `item_list_id_name_key_unique` (23505) przy zmianie nazwy; `statystyki/infra/activity-repository.ts` — licznik odhaczeń `INSERT … ON CONFLICT DO UPDATE SET checks = checks + 1`; `zaproszenia/infra/invitations-repository.ts` — przyjęcie: warunkowy `UPDATE invitation … RETURNING list_id` i `Lists.join` w jednej transakcji, limit tworzenia linków liczony pod `lockList`)
 
@@ -32,6 +35,7 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 | wygeneruj migrację | `pnpm --filter @lista/api db:generate` (pusta własna: `pnpm --filter @lista/api exec drizzle-kit generate --custom --name=<nazwa>`) | korzeń repo |
 | uruchom migracje | `pnpm --filter @lista/api db:migrate` | korzeń repo |
 | testy warstwy | `pnpm vitest run --project api` (Testcontainers, wymaga działającego Dockera) | korzeń repo |
+| miary sukcesu (BRD §10, T-065) | lokalnie: `psql "$DATABASE_URL" -f apps/api/scripts/metrics.sql` (bez lokalnego psql: `docker exec -i lista-zakupow-postgres-1 psql -U lista -d lista -f - < apps/api/scripts/metrics.sql`); produkcja: rolą tylko do odczytu Neon (albo z `PGOPTIONS='-c default_transaction_read_only=on'`) i jej connection string zamiast `$DATABASE_URL`, lub treść pliku wklejona w Neon SQL Editor; wynik: tydzień + liczby, bez danych osobowych | korzeń repo |
 
 Wymaga `DATABASE_URL` w `.env` (skopiuj `.env.example`; lokalnie `postgres://lista:lista@localhost:5442/lista`) albo w zmiennej środowiskowej.
 
@@ -72,6 +76,7 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-02 | T-064: `cleanup_run`, migracja `0008_sprzatanie`, `db/retention.ts`. |
 | 2026-10-29 | T-021: izolacja testów — `DELETE` zamiast `TRUNCATE`, dane testów limitów jednym `INSERT … SELECT`. |
 | 2026-10-28 | T-008: `invitation`, migracja `0006_zaproszenia`, `lockList`. |
 | 2026-10-28 | T-007: `list_daily_activity`, migracja `0005_statystyki`. |

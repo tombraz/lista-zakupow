@@ -5,11 +5,15 @@ import { mkdirSync, openSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { POSTGRES_IMAGE } from "../../api/test/database-constants";
+import { startMailpit } from "../../api/test/mailpit";
+import { MAILPIT_PORT } from "./mailpit";
 
 const apiDir = fileURLToPath(new URL("../../api", import.meta.url));
 const port = process.env["E2E_PORT"] ?? "3100";
 
 const container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
+// Mail resetu hasła (F-03) trafia do Mailpita, jak lokalnie; testy czytają go przez API Mailpita.
+const mailpit = await startMailpit(MAILPIT_PORT);
 const env = {
   ...process.env,
   DATABASE_URL: container.getConnectionUri(),
@@ -19,6 +23,7 @@ const env = {
   BETTER_AUTH_SECRET: randomBytes(32).toString("base64url"),
   // Playwright łączy się z 127.0.0.1; każdy test podaje własny adres klienta (fixtures.ts).
   TRUSTED_PROXIES: "127.0.0.1",
+  MAILPIT_URL: mailpit.url,
 };
 
 // pnpm na Windows to skrypt .cmd, który wymaga powłoki.
@@ -36,7 +41,7 @@ const api = spawn("node", ["dist/server.js"], {
 
 async function stop(): Promise<void> {
   api.kill();
-  await container.stop();
+  await Promise.all([container.stop(), mailpit.stop()]);
   process.exit(0);
 }
 process.once("SIGINT", () => void stop());

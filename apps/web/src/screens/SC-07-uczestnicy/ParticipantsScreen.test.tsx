@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { aList, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
+import { aList, ANIA, apiError, detailsOf, listHandlers, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
 import { heldResponse } from "../../../test/held";
 import { renderApp, sessionIs } from "../../../test/render";
@@ -22,7 +22,7 @@ async function showParticipants(
   const list = aList({ name: "Dom", ...options.list });
   const links = { current: options.links ?? [] };
   server.use(
-    http.get(`*/api/v1/lists/${list.id}`, () => HttpResponse.json(detailsOf(list))),
+    ...listHandlers(list),
     http.get(`*/api/v1/lists/${list.id}/invitations`, () => HttpResponse.json(links.current)),
   );
   renderApp(`/listy/${list.id}/uczestnicy`);
@@ -378,7 +378,7 @@ describe("SC-07 invitations of the owner", () => {
     };
     server.use(
       http.post(`*/api/v1/lists/${list.id}/invitations`, () => {
-        server.use(http.get(`*/api/v1/lists/${list.id}`, () => HttpResponse.json(detailsOf(full))));
+        server.use(...listHandlers(full));
         return apiError(409, { code: "limit_reached", limit: "participants" });
       }),
     );
@@ -409,11 +409,7 @@ describe("SC-07 invitations of the owner", () => {
       const { user, list } = await showParticipants();
       server.use(
         http.post(`*/api/v1/lists/${list.id}/invitations`, () => {
-          server.use(
-            http.get(`*/api/v1/lists/${list.id}`, () =>
-              HttpResponse.json(detailsOf({ ...list, members: twenty })),
-            ),
-          );
+          server.use(...listHandlers({ ...list, members: twenty }));
           return apiError(409, { code: "limit_reached", limit: "participants" });
         }),
       );
@@ -461,7 +457,7 @@ describe("SC-07 invitations of the owner", () => {
     const user = userEvent.setup();
     const list = aList({ name: "Dom" });
     server.use(
-      http.get(`*/api/v1/lists/${list.id}`, () => HttpResponse.json(detailsOf(list))),
+      ...listHandlers(list),
       http.get(`*/api/v1/lists/${list.id}/invitations`, () => apiError(500, { code: "internal" }), {
         once: true,
       }),

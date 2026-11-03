@@ -1,4 +1,5 @@
 import type { LiveServerMessage } from "@lista/shared";
+import { act } from "@testing-library/react";
 import { liveLink, server } from "./msw-server";
 
 type Client = Parameters<
@@ -36,4 +37,11 @@ export function liveServer() {
       for (const client of open) client.close();
     },
   };
+}
+
+/** Przeglądarka traci albo odzyskuje sieć (zdarzenie `offline` / `online` okna; T-063). */
+export function browserGoes(state: "offline" | "online") {
+  act(() => {
+    window.dispatchEvent(new Event(state));
+  });
 }

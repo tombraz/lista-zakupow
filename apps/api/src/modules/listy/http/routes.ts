@@ -1,14 +1,25 @@
-import { listNameRequestSchema, type ListDetails, type ListSummary } from "@lista/shared";
+import {
+  listNameRequestSchema,
+  personIdSchema,
+  type ListDetails,
+  type ListMembers,
+  type ListSummary,
+} from "@lista/shared";
 import type { FastifyInstance } from "fastify";
+import { DomainError } from "../../../domain-error";
 import { validate } from "../../../http/validate";
+import { securityEvent } from "../../../logging";
 import type { Accounts } from "../../konta";
 import type { Live } from "../../na-zywo";
 import {
   createList,
   deleteList,
   everyone,
+  leaveList,
   listOf,
   listsOf,
+  membersOf,
+  removeParticipant,
   renameList,
   requireListAccess,
   type ListItems,
@@ -18,6 +29,10 @@ import {
 
 interface ListParams {
   Params: { listId: string };
+}
+
+interface MemberParams {
+  Params: { listId: string; userId: string };
 }
 
 /** Lista w kształcie odpowiedzi API (api.md, „Listy”). */
@@ -40,6 +55,8 @@ export function listRoutes(
   repository: ListsRepository,
   { items, live }: { items: ListItems; live: Live },
 ): void {
+  memberRoutes(app, accounts, repository, live);
+
   app.get("/api/v1/lists", async (request, reply) => {
     const user = await accounts.requireUser(request, reply);
     const lists = await listsOf(repository, user.id);
@@ -91,4 +108,60 @@ export function listRoutes(
     live.notify(people, { type: "lists.changed" });
     return reply.code(204).send();
   });
+}
+
+/** F-13: uczestnicy listy (SC-07), ich usunięcie przez właściciela i opuszczenie listy. */
+function memberRoutes(
+  app: FastifyInstance,
+  accounts: Accounts,
+  repository: ListsRepository,
+  live: Live,
+): void {
+  app.get<ListParams>("/api/v1/lists/:listId/members", async (request, reply) => {
+    const user = await accounts.requireUser(request, reply);
+    const access = await requireListAccess(repository, user.id, request.params.listId, "member");
+    return (await membersOf(repository, access)) satisfies ListMembers;
+  });
+
+  app.delete<MemberParams>("/api/v1/lists/:listId/members/:userId", async (request, reply) => {
+    const user = await accounts.requireUser(request, reply);
+    const { listId, userId } = request.params;
+    // Identyfikator, którego baza nie przyjmie, nie należy do nikogo na liście: 404 jak nieznany.
+    if (!personIdSchema.safeParse(userId).success) throw new DomainError("not_found");
+    const access = await requireListAccess(repository, user.id, listId, "owner");
+    await removeParticipant(repository, access, userId);
+    await withdrawAccess(live, repository, access.listId, userId);
+    // TH-21: ślad odebrania dostępu, same identyfikatory (architecture.md, „Obserwowalność”).
+    securityEvent(request, "member_removed", {
+      listId: access.listId,
+      userId: user.id,
+      removedUserId: userId,
+    });
+    return reply.code(204).send();
+  });
+
+  app.post<ListParams>("/api/v1/lists/:listId/leave", async (request, reply) => {
+    const user = await accounts.requireUser(request, reply);
+    const access = await requireListAccess(repository, user.id, request.params.listId, "member");
+    await leaveList(repository, access, user.id);
+    await withdrawAccess(live, repository, access.listId, user.id);
+    return reply.code(204).send();
+  });
+}
+
+/**
+ * Po zatwierdzonym usunięciu członkostwa: MC-03 (TH-04) — subskrypcja byłego uczestnika znika,
+ * zanim pójdzie kolejne zdarzenie listy; reszta listy odświeża uczestników, a SC-05 wszystkich
+ * dotkniętych (lista znika u byłego uczestnika, zmienia się liczba osób u pozostałych, F-14).
+ */
+async function withdrawAccess(
+  live: Live,
+  repository: ListsRepository,
+  listId: string,
+  userId: string,
+): Promise<void> {
+  live.revoke(userId, listId);
+  live.publish({ type: "members.changed", listId });
+  const people = everyone(await repository.peopleWithAccess(listId));
+  live.notify([userId, ...people], { type: "lists.changed" });
 }

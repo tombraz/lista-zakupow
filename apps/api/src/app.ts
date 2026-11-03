@@ -2,15 +2,16 @@ import { HTTP_LIMITS } from "@lista/shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { systemClock, type Clock } from "./clock";
+import { createOwnerAlerts } from "./owner-alerts";
 import { securityHeaders } from "./http/security-headers";
 import { trustedOrigin } from "./http/trusted-origin";
 import { webApp } from "./http/web-app";
 import { limitLogWindow, loggingOptions, type LogSettings } from "./logging";
-import { apiErrors } from "./http/api-error";
+import { apiErrors, frameworkErrors } from "./http/api-error";
 import { healthRoutes } from "./modules/health";
-import { accountRoutes, type AuthSettings } from "./modules/konta";
+import { accountRoutes, type AuthSettings, type Mailer } from "./modules/konta";
 import { listsModule } from "./modules/listy";
-import { createLiveHub, liveModule } from "./modules/na-zywo";
+import { createLiveHub, liveModule, type LiveHub } from "./modules/na-zywo";
 import { createItems, itemsModule } from "./modules/pozycje";
 import { invitationsModule } from "./modules/zaproszenia";
 
@@ -21,14 +22,25 @@ export interface AppOptions {
   /** Adresy / CIDR zaufanych proxy przed API; od nich adres klienta dla limitów per IP. */
   trustedProxies?: string;
   logger?: LogSettings;
+  /** Dostawca maili (mail resetu hasła, F-03); testy podają adapter przechwytujący. */
+  mailer: Mailer;
+  /**
+   * N-03: adres alarmów do właściciela projektu (`ALERT_EMAIL`); bez niego alarm tylko w logu
+   * (lokalnie, T-088).
+   */
+  alertEmail?: string;
   /** Czas dla domeny (odhaczenie, aktywność dzienna, wygasanie zaproszeń); testy podają własny. */
   clock?: Clock;
+  /** Hub zmian na żywo; testy podają własny, żeby wołać `revoke` jak moduł bez trasy (T-056). */
+  live?: LiveHub;
 }
 
 export function buildApp(options: AppOptions): FastifyInstance {
   const app = Fastify({
     ...loggingOptions(options.logger),
     bodyLimit: HTTP_LIMITS.bodyBytes,
+    // T-086: błędy routera (zły zapis adresu, za długi parametr) w formacie błędu API.
+    frameworkErrors,
     ...(options.trustedProxies ? { trustProxy: options.trustedProxies } : {}),
   });
   const clock = options.clock ?? systemClock;
@@ -38,8 +50,17 @@ export function buildApp(options: AppOptions): FastifyInstance {
   securityHeaders(app);
   trustedOrigin(app, options.auth.origin);
   healthRoutes(app, options.pool);
-  const live = createLiveHub();
-  const accounts = accountRoutes(app, options.pool, options.auth, live);
+  const live = options.live ?? createLiveHub();
+  const accounts = accountRoutes(app, options.pool, options.auth, {
+    live,
+    mailer: options.mailer,
+    clock,
+    ownerAlerts: createOwnerAlerts({
+      mailer: options.mailer,
+      to: options.alertEmail,
+      log: app.log,
+    }),
+  });
   // Pozycje zależą od dostępu do listy, a szczegóły listy pokazują pozycje (ListItems).
   const lists = listsModule(app, options.pool, accounts, {
     items: createItems(options.pool),
@@ -60,6 +81,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
       const { user, sessionId } = await accounts.requireSession(request, reply);
       return { userId: user.id, sessionId };
     },
+    sessionActive: (sessionId) => accounts.sessionActive(sessionId),
     requireListAccess: async (userId, listId) => {
       await lists.requireListAccess(userId, listId, "member");
     },

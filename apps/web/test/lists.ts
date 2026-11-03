@@ -1,4 +1,4 @@
-import type { Item, ListDetails, ListSummary, Me } from "@lista/shared";
+import type { Item, ListDetails, ListMembers, ListSummary, Me } from "@lista/shared";
 import { http, HttpResponse } from "msw";
 import { server } from "./msw-server";
 
@@ -26,6 +26,38 @@ export function aList(overrides: Partial<ListSummary> = {}): ListSummary {
 export function detailsOf(list: ListSummary, items: Item[] = []): ListDetails {
   const { id, name, role, owner, members } = list;
   return { id, name, role, owner, members, items };
+}
+
+/** Adres osoby w odpowiedzi `GET …/members` dla właściciela (`<imię>@example.com`). */
+export const emailOf = (person: { name: string }) =>
+  `${person.name.toLocaleLowerCase("pl-PL")}@example.com`;
+
+/**
+ * Uczestnicy listy w kształcie `GET /api/v1/lists/:listId/members`, jak odpowiada serwer:
+ * e-maile tylko w odpowiedzi dla właściciela (F-13, TH-19).
+ */
+export function membersOf(list: ListSummary): ListMembers {
+  const withEmail = list.role === "owner";
+  return {
+    owner: list.owner,
+    participants: list.members.map((person) =>
+      withEmail ? { ...person, email: emailOf(person) } : person,
+    ),
+  };
+}
+
+/**
+ * `GET /api/v1/lists/:listId` i `GET …/members` odpowiadają tą samą listą (SC-07); funkcja
+ * podaje stan z chwili żądania (zmiana „na serwerze” w trakcie testu).
+ */
+export function listHandlers(list: ListSummary | (() => ListSummary)) {
+  const current = typeof list === "function" ? list : () => list;
+  return [
+    http.get(`*/api/v1/lists/${current().id}`, () => HttpResponse.json(detailsOf(current()))),
+    http.get(`*/api/v1/lists/${current().id}/members`, () =>
+      HttpResponse.json(membersOf(current())),
+    ),
+  ];
 }
 
 /** Nieodhaczona pozycja dodana przez Anię, w kształcie `Item` z API. */

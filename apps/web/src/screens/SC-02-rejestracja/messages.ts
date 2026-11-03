@@ -1,6 +1,7 @@
 import type { FieldErrorCode } from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
 import { errorText } from "../../errorText";
+import { NAME_ERROR_TEXTS } from "../../session/personName";
 
 export type SignUpField = "name" | "email" | "password" | "termsAccepted" | "ageConfirmed";
 
@@ -26,11 +27,7 @@ export const messages = {
 
 /** Kod błędu pola z API lub schematu → tekst pod polem. */
 export const fieldMessages: Record<SignUpField, Partial<Record<FieldErrorCode, string>>> = {
-  name: {
-    required: "Wpisz imię",
-    invalid: "Wpisz imię",
-    too_long: "Imię może mieć najwyżej 30 znaków",
-  },
+  name: NAME_ERROR_TEXTS,
   email: { required: "Wpisz poprawny adres e-mail", invalid: "Wpisz poprawny adres e-mail" },
   password: {
     required: "Hasło musi mieć co najmniej 8 znaków",

@@ -1,4 +1,6 @@
 import {
+  passwordResetRequestSchema,
+  passwordResetSchema,
   signInRequestSchema,
   signUpRequestSchema,
   type ErrorCode,
@@ -9,18 +11,29 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
-import { logLimitEvent, securityEvent } from "../../../logging";
+import { errorSummary, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
+import type { PasswordResetRequests } from "../infra/password-reset-requests";
+import type { ResetTokens } from "../infra/reset-tokens";
 import type { SignInFailures } from "../infra/sign-in-failures";
 
 interface AuthDeps {
   auth: Auth;
+  /** Pseudonim e-maila do liczników i logu `security` (TH-21). */
+  accountKey: (email: string) => string;
   failures: SignInFailures;
+  resetRequests: PasswordResetRequests;
+  /** F-03, TH-10: resety konta po kolei, po udanym reszta linków konta przestaje działać. */
+  resetTokens: ResetTokens;
   /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
   invitationOnSignUp: () => InvitationOnSignUp | undefined;
   /** TH-17: po wylogowaniu zamyka połączenia na żywo tej sesji (`na-zywo.closeSession`). */
   onSignedOut: (sessionId: string) => void;
+  /** TH-28: reset usunął wszystkie sesje konta; zamyka ich połączenia na żywo (`na-zywo`). */
+  onPasswordReset: (userId: string) => void;
+  /** T-088 (N-03): pozostałe linki konta nie zostały unieważnione — alarm do właściciela. */
+  onLinksNotRevoked: (userId: string, errorCode: string) => void;
 }
 
 /** Przyjmuje zaproszenie dla nowego konta; błąd zaproszenia wraca w treści, nie jako status. */
@@ -31,6 +44,9 @@ const AUTH_ERRORS: Record<string, [status: number, code: ErrorCode]> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: [409, "email_taken"],
   // F-02, TH-11: ten sam kod dla nieznanego e-maila i złego hasła.
   INVALID_EMAIL_OR_PASSWORD: [401, "invalid_credentials"],
+  // F-03: link resetu użyty, wygasły, nieznany albo konta usuniętego w międzyczasie.
+  INVALID_TOKEN: [400, "invalid_token"],
+  USER_NOT_FOUND: [400, "invalid_token"],
 };
 
 const STATUS_CODES: Record<number, ErrorCode> = {
@@ -51,7 +67,7 @@ interface AuthUser {
  * odpowiedzi w formacie API, bez tokenu sesji w treści (TH-16).
  */
 export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string): void {
-  const { auth, failures } = deps;
+  const { auth, failures, resetRequests } = deps;
   app.post("/api/auth/sign-up/email", async (request, reply) => {
     const { name, email, password, invitationToken } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
@@ -70,7 +86,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     await perIpRateLimit(scope);
     scope.post("/api/auth/sign-in/email", perIp("signInPerIp"), async (request, reply) => {
       const credentials = validate(signInRequestSchema, request.body);
-      const accountKey = failures.accountKey(credentials.email);
+      const accountKey = deps.accountKey(credentials.email);
       if (!(await failures.reserve(accountKey))) {
         logLimitEvent(request, "rate_limited", "signInFailuresPerAccount", {
           ids: { accountKey },
@@ -89,7 +105,27 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
       }
       return relay(response, reply);
     });
+
+    // F-03: 200 zawsze (TH-11); mail wysyła `sendResetPassword` w tle. TH-27: limit per IP
+    // (w pamięci) przed licznikiem e-maila, który pisze do bazy.
+    scope.post(
+      "/api/auth/request-password-reset",
+      perIp("passwordResetPerIp"),
+      async (request, reply) => {
+        const { email } = validate(passwordResetRequestSchema, request.body);
+        const accountKey = deps.accountKey(email);
+        if (!(await resetRequests.take(accountKey))) {
+          logLimitEvent(request, "rate_limited", "passwordResetPerEmail", { ids: { accountKey } });
+          throw new ApiError(429, "rate_limited");
+        }
+        const response = await forward(auth, origin, request, { email });
+        if (response.status === 429) logLimitEvent(request, "rate_limited", "passwordResetPerIp");
+        return relay(response, reply);
+      },
+    );
   });
+
+  newPasswordRoute(app, deps, origin);
 
   app.post("/api/auth/sign-out", async (request, reply) => {
     const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
@@ -99,11 +135,60 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
   });
 }
 
+/** F-03: nowe hasło z linku resetu; TH-10 / TH-28: koniec sesji konta i ich połączeń na żywo. */
+function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string): void {
+  const { auth } = deps;
+  app.post("/api/auth/reset-password", async (request, reply) => {
+    const body = validate(passwordResetSchema, request.body);
+    // Właściciel tokenu przed jego zużyciem: po sukcesie wiadomo, czyje sesje usunął Better Auth.
+    const userId = await resetTokenOwner(auth, body.token);
+    const response = userId
+      ? await deps.resetTokens.exclusive(userId, async () => {
+          const result = await forward(auth, origin, request, body);
+          if (result.ok) await revokeOtherLinks(request, deps, userId);
+          return result;
+        })
+      : await forward(auth, origin, request, body);
+    if (response.ok && userId) {
+      logSecurity(request, "password_reset", { userId });
+      deps.onPasswordReset(userId);
+    }
+    return relay(response, reply);
+  });
+}
+
+/**
+ * T-087: hasło już zmienione i sesje usunięte (transakcja Better Auth), więc błąd sprzątania
+ * pozostałych linków nie może przerwać logu `password_reset` ani zamknięcia połączeń (TH-28).
+ * Linki i tak wygasają po 1 h (F-03); błąd tylko w logu, bez tokenów (TH-21).
+ */
+async function revokeOtherLinks(
+  request: FastifyRequest,
+  deps: Pick<AuthDeps, "resetTokens" | "onLinksNotRevoked">,
+  userId: string,
+) {
+  try {
+    await deps.resetTokens.revokeAll(userId);
+  } catch (error) {
+    const summary = errorSummary(error);
+    request.log.error(
+      { event: "reset_tokens_revoke_failed", userId, err: summary },
+      "revoking reset links failed",
+    );
+    deps.onLinksNotRevoked(userId, errorCodeOf(summary));
+  }
+}
+
+/** Kod błędu z najgłębszej przyczyny (np. `57P01` z pg), bez komunikatu (TH-21). */
+function errorCodeOf(summary: ErrorSummary): string {
+  return (summary.cause && errorCodeOf(summary.cause)) ?? summary.code ?? summary.type;
+}
+
 // architecture.md, „Obserwowalność”: zdarzenia bezpieczeństwa tylko z identyfikatorami.
 function logSecurity(
   request: FastifyRequest,
-  event: "sign_in_failed",
-  ids: { accountKey: string },
+  event: "sign_in_failed" | "password_reset",
+  ids: { accountKey: string } | { userId: string },
 ) {
   securityEvent(request, event, ids);
 }
@@ -118,6 +203,13 @@ async function lostEmailRace(auth: Auth, response: Response, email: string): Pro
   if (body.code !== "FAILED_TO_CREATE_USER") return false;
   const { internalAdapter } = await auth.$context;
   return (await internalAdapter.findUserByEmail(email.toLowerCase())) !== null;
+}
+
+/** Konto, dla którego wydano token resetu (`verification` Better Auth), albo `null`. */
+async function resetTokenOwner(auth: Auth, token: string): Promise<string | null> {
+  const { internalAdapter } = await auth.$context;
+  const verification = await internalAdapter.findVerificationValue(`reset-password:${token}`);
+  return verification?.value ?? null;
 }
 
 function forward(auth: Auth, origin: string, request: FastifyRequest, body: object) {
