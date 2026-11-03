@@ -170,3 +170,12 @@ fly secrets list -a lista-staging   # do Evidence: sama nazwa, bez wartości
 **Alternatywa:** oddać task do QA od razu, z nieodhaczonym AC7, a sekret ustawić i sprawdzić razem z `BREVO_API_KEY` / `MAIL_FROM` przed merge E-02 (jak T-055; T-069 AC1 i tak sprawdza `ALERT_EMAIL` w `fly secrets list`).
 
 Answer: Właściciel ustawił sekret 2026-11-03: fly secrets set --stage ALERT_EMAIL=... -a lista-staging (staged, zadziała przy następnym wdrożeniu). Sprawdź fly secrets list, zapisz nazwę w Evidence, odhacz AC7 i oddaj do QA.
+
+## Open question
+
+**QA (2026-11-03) — decyzja właściciela przed werdyktem.** Kod i testy sprawdzone niezależnie: `pnpm check` exit 0 (147 plików / 1160 testów + mobile 10/10), testy taska 8/8 i `config.test.ts` zielone; mutacje gryzą (usunięcie wywołania `onLinksNotRevoked` → 7/8 testów czerwonych; okno 14 min zamiast 15 → test AC2 czerwony; przywrócone, `git status` czysty). AC1–AC6, SEC1, SEC2 spełnione; w kodzie nie znalazłem błędów blokujących.
+
+Otwarte jest tylko AC7 (odhaczone przez implementera, ale niespełnione w części dokumentacyjnej): kryterium wymaga, żeby **`deployment.md` (tabela zmiennych)** opisywał `ALERT_EMAIL` — `grep ALERT docs/architecture/deployment.md` nic nie zwraca. Także „Implementation notes” i DoD wymagają wpisów w `architecture.md` „Obserwowalność” i `pipeline.md` „Monitoring i alarmy” (oraz notatki „restart API zeruje okno” z QA planu); żaden nie został naniesiony. Implementer w trybie autonomicznym ma zakaz edycji `docs/architecture/` (poza przewodnikami warstw), więc task i reguły implementera sobie przeczą — zwrot `fail` skończyłby się tą samą blokadą. Gotowe teksty wpisów są w Evidence („Proponowane zmiany dokumentów architektury”). T-069 nie obejmuje tych wpisów (jego AC3 wymienia tylko `MAILER` / `MAIL_FROM`).
+
+- **Odczyt A (rekomendacja):** zgoda właściciela, żeby implementer w tym tasku naniósł cztery proponowane wpisy (`deployment.md` — zmienna `ALERT_EMAIL` i budżet Brevo, `architecture.md`, `pipeline.md`, pułapka w `backend.md`), jak przy T-010. Werdykt QA: `fail` (AC7) → poprawka samej dokumentacji → ponowne QA. Dokumenty są prawdziwe w chwili merge E-02.
+- **Odczyt B:** wpisy dokumentacji to praca właściciela / innego taska (np. dopisać do T-069 AC3 `ALERT_EMAIL` oraz wpisy w `architecture.md` i `pipeline.md`). Werdykt QA: `pass`, z brakiem dokumentacji jako follow-up.
