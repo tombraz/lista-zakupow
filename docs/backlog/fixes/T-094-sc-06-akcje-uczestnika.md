@@ -4,7 +4,7 @@ title: "SC-06: uczestnik ma ikonę „Uczestnicy” i „Opuść listę” w men
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
@@ -57,7 +57,17 @@ related_tasks: [T-005, T-057, T-059]
 
 ## Root cause
 
+T-005 (E-01) zbudował menu „Więcej opcji” tylko dla właściciela, bo uczestników jeszcze nie było, a wyjście z listy przekazał do E-02. T-008 dodał ikonę „Uczestnicy” wewnątrz tego samego warunku `role === "owner"`; T-057/T-059 zbudowały SC-07 uczestnika, ale nie wróciły do SC-06. Testy nie złapały, bo utrwalały błąd: `ListScreen.test.tsx` („does not offer a participant rename or delete”) i `ParticipantsScreen.test.tsx` („absent for a participant”) sprawdzały **brak** akcji u uczestnika, a E2E T-059 wchodziło na SC-07 przez `goto`.
+
+Inne wystąpienia: brak (jedyne akcje AppBar zależne od roli są w `ListScreen.tsx`). `MoreMenu` nie miał stanu „bez połączenia” — dodany `writes` w akcji (jak `Button`), użyty tylko dla „Opuść listę”; pozycje właściciela otwierają arkusz/okno, w którym zapis jest już blokowany offline.
+
 ## Evidence
+
+- Red: `ListScreen.leave.test.tsx` — 7/7 failed, np. `Unable to find an accessible element with the role "link" and name "Uczestnicy"`, `… role "button" and name "Więcej opcji"`.
+- Green: 7/7 passed. Poprawione testy utrwalające błąd: `ListScreen.test.tsx` (SEC2 — uczestnik ma menu tylko z „Opuść listę”), `ParticipantsScreen.test.tsx` („SC-06 Uczestnicy icon” — link także dla uczestnika).
+- Wyjście: jedno okno `LeaveListDialog` (`SC-07-uczestnicy/LeaveList.tsx`) z `useLeaveList` dla SC-07 i SC-06.
+- Pełny Vitest: 152 pliki, 1191 testów passed; `pnpm typecheck`, `pnpm lint`, `pnpm design-check`, build web — OK.
+- E2E `sc07-uczestnicy`, `j02-listy`, `brak-polaczenia`: 24 passed (nowy „SC-06 participant leaves the list from „Więcej opcji”” z axe na otwartym menu; T-057 wchodzi na SC-07 przez SC-05 → SC-06 → ikona).
 
 ## Prevention
 
