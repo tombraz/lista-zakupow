@@ -75,6 +75,8 @@ Przed zmianą: `pnpm vitest run --project api live` — 16 plików, 58 testów z
 
 Linia w `backend.md`: zdarzenia członkostwa tylko przez funkcję modułu `listy` (przegląd, „Proposals”).
 
+Co by temu zapobiegło: wspólna funkcja od pierwszej ścieżki i automatyczna kontrola, że nikt nie składa sekwencji obok niej. Stan: wpis w „Pułapkach” `backend.md` jest (z przeglądu E-02, teraz z nazwą `announceAccessChanges`). Propozycja tańszej trwałej kontroli: reguła eslint `no-restricted-syntax` blokująca `*.revoke(…)` i literał `type: "members.changed"` / `"list.deleted"` poza `listy/domain/membership-events.ts`, z fixture w `scripts/test/lint-security.test.mjs` — do decyzji użytkownika.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
