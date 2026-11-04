@@ -1,26 +1,26 @@
 ---
 id: T-092
-title: "Lint: zakaz stałej pauzy przed asercją w testach API"
+title: "Lint: zakaz stałej pauzy przed asercją w testach API i web"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
 status: todo           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-090, T-091]
-layers: [backend]
+layers: [backend, web]
 requirements: []
 threats: []
 screens: []
 related_tasks: [T-082]
 ---
 
-# T-092 Lint: zakaz stałej pauzy przed asercją w testach API
+# T-092 Lint: zakaz stałej pauzy przed asercją w testach API i web
 
 ## Report
 
 Źródło: T-082 („Prevention”), przegląd E-02 C3 („Proposals”). Gałąź: `fix/T-092-<slug>` z `main` po T-090 i T-091 (i po merge PR #14).
 
 - **Actual:** zasada „bez stałej pauzy przed asercją” (`testing-strategy.md:41`) jest tylko opisem; nic nie pada, gdy nowy test jej nie spełnia (powtarzające się ustalenie: przegląd E-02, T-082).
-- **Expected:** `pnpm lint` pada na stałą pauzę w `apps/api/test/**/*.test.ts`.
+- **Expected:** `pnpm lint` pada na stałą pauzę w `apps/api/test/**/*.test.ts` oraz w testach `apps/web` (`apps/web/src/**/*.test.tsx`, `apps/web/test/**`). Zakres web dodany po przeglądzie `docs/reviews/E-02-2026-11-04-1.md`, C9 (zaakceptowane przez właściciela 2026-11-04).
 
 ## Acceptance criteria
 
@@ -28,6 +28,7 @@ related_tasks: [T-082]
 - [ ] AC2: Given import `pause` (lub `expectSilence`, jeśli zostało) z `./live` w pliku `*.test.ts`, then błąd lintu. — verified by: jak AC1
 - [ ] AC3: Given `rejects.toThrow("still open")`, then błąd lintu. — verified by: jak AC1
 - [ ] AC4: Given helpery testowe (`live.ts`, `gated-pool.ts`, `brevo.ts`) z limitem czasu jako wykrywaczem awarii, then nie są objęte regułą. — verified by: `pnpm lint` zielony na repo
+- [ ] AC6: Given test `apps/web` ze stałą pauzą przed negatywną asercją, then błąd lintu; istniejące wystąpienia (`apps/web/src/screens/SC-07-uczestnicy/ParticipantsScreen.live.test.tsx:90`, `apps/web/src/live/useLiveList.test.tsx:119`) przepisane na sygnał (`waitFor`, sztuczny zegar). — verified by: test reguły na fiksturze + `pnpm lint` na repo
 - [ ] AC5: No regression in: `pnpm lint`, `pnpm test`; `eslint.directives.config.js` (bez wyłączeń inline) nadal przechodzi.
 
 ## TDD plan
@@ -45,7 +46,7 @@ related_tasks: [T-082]
 ## QA plan
 
 - **Regression:** `pnpm check` w całości.
-- **Edge cases:** pauza zapisana inaczej (`setTimeout` z `node:timers/promises`, `wait` przez `bind`) — co reguła łapie, a czego nie, opisane w Evidence; `apps/web` i `apps/mobile` poza zakresem (osobna propozycja, jeśli QA znajdzie tam ten wzorzec).
+- **Edge cases:** pauza zapisana inaczej (`setTimeout` z `node:timers/promises`, `wait` przez `bind`) — co reguła łapie, a czego nie, opisane w Evidence; `apps/mobile` poza zakresem (osobna propozycja, jeśli QA znajdzie tam ten wzorzec).
 - **Platforms:** CI.
 
 ## Implementation notes
