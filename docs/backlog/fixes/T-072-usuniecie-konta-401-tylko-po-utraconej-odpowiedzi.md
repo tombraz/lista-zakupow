@@ -70,6 +70,12 @@ related_tasks: [T-062]
 
 ## Prevention
 
+**Co by temu zapobiegło?** Test 401 po zwykłej porażce (brakowało go w T-062) i asercja, która nie przechodzi „na pusto”. Brak komunikatu sukcesu sprawdzany zaraz po wejściu na SC-01 jest zawsze zielony, bo tekst pojawia się dopiero po `SUCCESS_ANNOUNCE_DELAY_MS` (T-071).
+
+- Rozważone: `SUCCESS_ANNOUNCE_DELAY_MS = 0` w testach. Odrzucone po eksperymencie: przy opóźnieniu 0, błędnym hooku i starej asercji test dalej przechodził (3/3), bo tekst przychodzi w kolejnym zadaniu pętli zdarzeń. Opóźnienia nie da się usunąć całkiem, bo testy T-071 wymagają pustego regionu przed tekstem.
+- Zastosowane (zgoda użytkownika 2026-11-04): wpis w „Pułapkach” `docs/architecture/layers/web.md`.
+- Do decyzji (automatyczna kontrola): `InlineAlert` oznacza region czekający na tekst (np. `data-pending`), a helper testów `successSettled()` czeka, aż żaden region `status` nie czeka; asercje braku sukcesu po nim mają sens. Do tego przegląd C8 (wspólny helper „już zrobione przy ponowieniu” dla mutacji usuwających) — przez `/plan-backlog`.
+
 Przegląd C8: jedna decyzja „już zrobione przy ponowieniu” dla wszystkich mutacji usuwających (wspólny helper w `api/`).
 
 ## Incident note
