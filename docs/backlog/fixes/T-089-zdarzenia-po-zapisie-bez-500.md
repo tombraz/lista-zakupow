@@ -4,7 +4,7 @@ title: "Zdarzenia na żywo po zapisie: błąd rozesłania nie daje 500 w żadnej
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: [T-076]
 layers: [backend]
 requirements: [F-05, F-12, F-13, F-14]
@@ -84,3 +84,37 @@ Poprawka: `afterCommit(log, announce)` przeniesiony do `apps/api/src/http/after-
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+Środowisko: lokalnie, Docker (Testcontainers), gałąź `epic/E-02-konto-i-uczestnicy` @ ba8fac0.
+
+**Odtworzenie:** `pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality` (depcruise 0 naruszeń), `pnpm build`, `pnpm backlog-check` — bez błędów. `pnpm test` — 151 plików / 1181 testów zielonych. `node scripts/test/lint-security.test.mjs` — 0 FAIL, w tym 4 przypadki T-089 (`live.notify`/`publish`/`revoke`, `announceAccessChanges` poza `afterCommit` padają; w `afterCommit` przechodzą).
+
+**Kryteria:**
+
+| AC | Wynik | Jak sprawdzone |
+| --- | --- | --- |
+| AC1 | pass | 14 nowych testów (`lists|items|invitations.announce-failure.test.ts`) sprawdza status, zapis w bazie, jeden wpis poziomu 50 `live_announce_failed` z `err.type` i brak komunikatu błędu, nazw, imion, e-maili w całym logu; obejmuje wszystkie 7 miejsc z raportu, także `notify` po udanym `publish` i błąd bazy w `peopleWithAccess` (`failingPool`). |
+| AC2 | pass | Przegląd: jeden `afterCommit` w `apps/api/src/http/after-commit.ts`; prywatna kopia w `me-routes.ts` usunięta, `me-routes.ts` używa wspólnego. |
+| AC3 | pass | Blok `apps/api/src/modules/*/http/**/*.ts` w `eslint.config.js` powtarza wszystkie wcześniejsze listy API (SAFE, CLOCK, LIMIT_LOG, RAW_URL), więc nic nie zostało zgubione; fixture w `lint-security.test.mjs` padają; `pnpm lint` zielony na całym repo. |
+| AC4 | pass | `announceAccessChanges` bez zmian (diff); `live.*.test.ts` zielone. Dodatkowo próba QA poniżej. |
+| AC5 | pass | Pełny zestaw zielony (w tym `live.lists`, `live.items`, `live.revoke`, `live.remove-member`, `live.leave`, `live.name`, `live.delete-account`, `me.name.announce-failure`). |
+
+**Jakość testów (spot-check):**
+- `afterCommit` zmieniony tak, by po logu rzucał dalej → 16 z 16 testów `announce-failure` czerwonych (także T-076). Przywrócone (`git checkout`).
+- Kod produkcyjny `apps/api/src` cofnięty do 005b64e^ przy nowych testach → 14 z 14 czerwonych, zgodnie z Evidence. Przywrócone.
+- Testy przez trasy HTTP i `buildTestApp(pool, { live })`, bez `vi.mock` modułów projektu; oczekiwania jako literały.
+
+**Root cause:** wyjaśnia, dlaczego testy nie wykryły błędu (każdy test tras miał działający hub; pomocnik był prywatny i nic nie wymuszało użycia).
+
+**Eksploracja i bezpieczeństwo (TH-04):** tymczasowy test (usunięty po uruchomieniu): hub z zawodzącym `notify`, Tomek subskrybuje listę przez WebSocket, Ania usuwa go z listy → 204, Tomek dostaje `access.revoked`; potem Ania dodaje pozycję (201) i zmienia nazwę (200) — Tomek nie dostaje `item.upserted` ani `list.updated`, `GET` listy → 404. Drugi test: przy zawodzącym hubie obca osoba dostaje 404 na `DELETE`/`PATCH` cudzej listy (bez zmiany w bazie), a bez sesji żądanie jest odrzucone (403 `invalid_origin` przed sprawdzeniem sesji, bo bez nagłówka `Origin`). Nie da się wykorzystać.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Lint (AC3) | Reguła łapie tylko wywołania `x.publish(…)`/`announceAccessChanges(…)`; ominąć ją można aliasem (`const { publish } = live; publish(e)`) albo wywołaniem z funkcji pomocniczej poza `modules/*/http`. | `eslint.config.js` `API_AFTER_COMMIT_SYNTAX`: selektor `callee.property.name` | Akceptowalne dla reguły selektorowej; ewentualnie dopisać w `backend.md`, że rozsyłanie żyje tylko w `http/`. |
+| 2 | minor | Lint (AC3) | Selektor `callee.property.name=/^(publish|notify|revoke)$/` obejmuje każdy obiekt w `modules/*/http`, np. przyszłe `tokens.revoke(…)` dostanie fałszywy alarm z komunikatem o zdarzeniach na żywo. | jw. | Zawęzić do `callee.object.name=/^live$/` (albo `deps.live`), jeśli alarm się pojawi. |
+| 3 | minor | Kod | `afterCommit(log, announce: () => unknown)` — typ `unknown` przyjmie też funkcję zwracającą nieoczekiwaną wartość; `() => void | Promise<void>` mówi więcej. | `apps/api/src/http/after-commit.ts:10` | Typ zwrotny `void | Promise<void>`. |
+| 4 | note | TH-04 (istniejące) | Przy `list-deleted` `announceOnList` woła `publish` przed `revoke`; gdy `publish` rzuci, `revoke` uczestników usuniętej listy się nie wykona (subskrypcje zostają w pamięci). Brak skutku dla dostępu, bo lista nie istnieje i nie ma już zdarzeń, ale to sprzątanie zależy od huba. Zachowanie sprzed T-089, nie zmienione. | `listy/domain/membership-events.ts` `announceOnList` | Rozważyć `revoke` w `finally` albo przed `publish` (z `list.deleted` wysłanym wcześniej do subskrybentów). |
