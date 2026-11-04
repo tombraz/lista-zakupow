@@ -4,13 +4,13 @@ title: "Usunięcie uczestnika: zdarzenie member_removed w logu i 204 niezależni
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-14]
 threats: [TH-21, TH-04]
 screens: [SC-07]
-related_tasks: [T-058]
+related_tasks: [T-058, T-089, T-076]
 ---
 
 # T-077 Usunięcie uczestnika: zdarzenie member_removed w logu niezależnie od rozesłania zdarzeń
@@ -46,13 +46,19 @@ related_tasks: [T-058]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+Od T-058 (usunięcie uczestnika) trasa `DELETE …/members/:userId` wołała `withdrawAccess` (odczyt `peopleWithAccess` i rozesłanie zdarzeń) wprost po zatwierdzonym `DELETE`, bez obsługi błędu, a `securityEvent("member_removed")` stał dopiero po nim — wyjątek z bazy albo huba szedł do globalnej obsługi błędów (500) i pomijał ślad TH-21. Testy tego nie wykryły, bo każdy test trasy miał działającą bazę i hub. Przyczynę usunęło już T-089 (005b64e): `withdrawAccess` idzie przez `afterCommit`, więc błąd trafia tylko do logu, a `member_removed` i 204 następują zawsze; `revoke` w `announceAccessChanges` idzie synchronicznie przed odczytem osób (MC-03). T-089 testowało tę trasę z zawodzącym hubem; T-077 dodaje dokładny przypadek z AC1 — błąd bazy w `peopleWithAccess` — i sprawdza `revoke` oraz pola `member_removed`.
+
+**Zmiana kodu produkcyjnego:** brak (naprawione w T-089). **Inne wystąpienia:** `POST …/leave` korzysta z tego samego `withdrawAccess` (pokryte testem T-089); reguła lintu `API_AFTER_COMMIT_SYNTAX` pilnuje pozostałych tras.
 
 ## Evidence
 
+- Test: `apps/api/test/lists.announce-failure.test.ts` › „DELETE /api/v1/lists/:listId/members/:userId answers 204, logs member_removed and revokes when reading the people fails” (`failingPool` na zapytaniu `peopleWithAccess`, hub z podsłuchem `revoke`, `captureLogs`).
+- Na kodzie produkcyjnym sprzed T-089 (`apps/api/src` z 005b64e^, osobny worktree): czerwony — `AssertionError: expected 500 to be 204`.
+- Na HEAD (29e6153): zielony; `pnpm check` (format, lint, typy, depcruise, backlog, testy) i `pnpm build` bez błędów; `pnpm test` — 151 plików / 1182 testy zielone (w tym `live.remove-member`, `lists.remove-member*`, T-058, T-059).
+
 ## Prevention
 
-Rozważyć razem z T-074 (jedna funkcja zdarzeń członkostwa).
+**Co by temu zapobiegło:** jeden wymuszony pomocnik „po zatwierdzeniu” i testy tras z zawodzącym hubem/bazą. Zrobione w T-089: `src/http/after-commit.ts`, reguła eslint `API_AFTER_COMMIT_SYNTAX`, wpis w „Pułapkach” `layers/backend.md`, `test/failing-live.ts`. Nowej prewencji nie proponuję; jedyna luka (ślad bezpieczeństwa po rozesłaniu) jest teraz pokryta testem T-077.
 
 ## Incident note
 
