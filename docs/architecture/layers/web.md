@@ -42,7 +42,6 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Cel | Komenda | Skąd |
 | --- | --- | --- |
-| 2026-11-04 | T-072: „Pułapki” — brak komunikatu sukcesu zaraz po wejściu na ekran nie jest dowodem; sprawdzaj stan wejścia. |
 | install | `pnpm install`; tokeny ponownie: `pnpm --filter @lista/tokens build` | korzeń repo |
 | uruchom lokalnie | `pnpm dev` (Vite `http://localhost:5173`, proxy `/api` i `/health` do API) | korzeń repo |
 | type check / lint | `pnpm typecheck` / `pnpm lint`; kolory na sztywno `pnpm design-check` | korzeń repo |
@@ -111,6 +110,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 | Data | Zmiana |
 | --- | --- |
 | 2026-11-04 | T-078: „Pułapki” — komunikat po końcu sesji jednorazowy: tylko w `location.state`, powód poza nim zużywany przy pierwszym przekierowaniu; test drugiego wejścia sprawdza `from`. |
+| 2026-11-04 | T-072: „Pułapki” — brak komunikatu sukcesu zaraz po wejściu na ekran nie jest dowodem; sprawdzaj stan wejścia. |
 | 2026-11-03 | T-071: „Pułapki” i „Gdzie jest kod” — `InlineAlert tone="success"` ze stałym regionem, `test/announcements.ts`, lint `WEB_SUCCESS_ALERT_SYNTAX`. |
 | 2026-11-02 | T-083: „Pułapki” — test czekający na ponowne połączenie `LiveSocket` z backoffem: sztuczny zegar z jawnym przesunięciem albo jawny limit `waitFor`. |
 | 2026-11-02 | Przegląd E-02 (`docs/reviews/E-02-2026-11-02-1.md`): „Pułapki” — komunikat sukcesu w stałym regionie `role="status"`; lint na warunkowe `InlineAlert tone="success"` w T-071. |
