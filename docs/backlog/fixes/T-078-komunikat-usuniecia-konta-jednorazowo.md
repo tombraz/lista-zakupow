@@ -4,7 +4,7 @@ title: "SC-01: „Konto zostało usunięte.” pokazane raz, nie przy każdym p�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-04]
@@ -49,9 +49,15 @@ related_tasks: [T-062, T-018]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+Od T-062 (0c44e62) `endSession("accountDeleted")` zapisuje powód w cache zapytań (`SESSION_END_KEY`), a `RequireSession` czyta go przy każdym przekierowaniu anonima; usuwało go tylko ustawienie sesji przy logowaniu (`useSetSession`). Powód nie był więc jednorazowy: każde późniejsze wejście na chroniony adres w tej karcie (nawigacja w aplikacji, przycisk wstecz) znów dawało SC-01 z „Konto zostało usunięte.” i bez `from`. Testy tego nie wykryły, bo test T-062 po usunięciu sprawdzał tylko ścieżkę `/logowanie` po przejściu na `/listy`, a nie stan wejścia (`accountDeleted` kontra `from`).
+
+**Poprawka:** `useSessionEnd` (`apps/web/src/session/useSession.ts`) zużywa powód — usuwa go z cache w efekcie po renderze, który zbudował przekierowanie (efekt, nie render: podwójny render StrictMode zgubiłby komunikat). Komunikat na SC-01 zostaje, bo jest w `location.state`. **Inne wystąpienia:** brak — inne komunikaty wejścia (reset hasła, zaproszenie) idą tylko przez `location.state`, który jest jednorazowy z natury.
 
 ## Evidence
+
+- Test: `apps/web/src/session/sessionEnded.test.tsx` › „after the account was deleted › shows the deletion message once; a later protected address leads to plain SC-01 with `from` (AC1)”.
+- Przed poprawką: czerwony — `AssertionError: expected { accountDeleted: true } to deeply equal { from: '/listy' }`.
+- Po poprawce: zielony; `pnpm check` (format, lint, typy, depcruise, backlog, testy) exit 0 — 151 plików / 1183 testy web+api, mobile 10/10; `pnpm build` bez błędów. Regresja: `AccountScreen.delete.test.tsx` (T-062), `sessionEnded.test.tsx` (T-018), `SignInScreen.test.tsx` (komunikat po resecie) zielone.
 
 ## Prevention
 
