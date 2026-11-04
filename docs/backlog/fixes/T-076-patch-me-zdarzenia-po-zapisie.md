@@ -4,7 +4,7 @@ title: "PATCH /api/v1/me: błąd rozesłania zdarzeń nie zamienia zapisanego im
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-16]
@@ -68,3 +68,26 @@ Poprawka: `afterCommit` w `me-routes.ts` łapie błąd rozesłania i loguje `liv
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+Zakres: commit 63a2a5e (`me-routes.ts`, `test/me.name.announce-failure.test.ts`, `api.md`).
+
+Odtworzenie: `pnpm install --frozen-lockfile` bez zmian; `pnpm vitest run --project api me` — 17 plików / 52 testy zielone; `pnpm test` — 148 plików / 1167 testów zielonych; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` bez błędów.
+
+Kryteria:
+
+- AC1 **pass** — test „answers 200 with the new name…” sprawdza 200, treść odpowiedzi, imię w bazie (`GET /api/v1/me`), dokładnie jeden wpis poziomu 50 `live_announce_failed` z `err.type` i brak imienia (starego i nowego), e-maila i komunikatu błędu w całym logu.
+- AC2 **pass** — `api.md:31` wymienia `400, 401 (konto usunięte w międzyczasie)`.
+- AC3 **pass** — testy T-061 (`me.name*.test.ts`, `live.name.test.ts`, `logs.content.test.ts`, `visible-text.security.test.ts`) zielone w pełnym przebiegu.
+
+Spot-check: usunięcie `try/catch` w `afterCommit` → oba testy pliku czerwone (`expected 500 to be 200`, `expected 500 to be 204`), zgodnie z czerwonym dowodem w „Evidence”. Przywrócone, `git status` czysty. „Root cause” wyjaśnia, czemu testy nie wykryły błędu (zawsze działający hub).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Testy | Ścieżka 401 w `PATCH /api/v1/me` (konto usunięte między `requireUser` a `renameUser`) nie ma testu; zadanie tylko ją dokumentuje. | `grep` w `apps/api/test/me*.ts` — brak przypadku `renameUser` → `null` | Test integracyjny: konto usunięte po sprawdzeniu sesji → 401, brak zdarzeń. |
+| 2 | minor | Testy | Test `DELETE` sprawdza tylko liczbę wpisów błędu (`toHaveLength(1)`), nie `event` ani brak danych osobowych. | `me.name.announce-failure.test.ts:57` | Asercja `event: "live_announce_failed"` jak w teście PATCH. |
+| 3 | note | Architektura | Ten sam wzorzec (`await announceAccessChanges` po zatwierdzeniu bez obsługi błędu) zostaje w `listy/http/routes.ts:107`, `:163` i `zaproszenia/http/invitation-events.ts:24`; `afterCommit` jest prywatny w `me-routes.ts`. | „Root cause”, „Inne wystąpienia” | Osobne zadanie: wspólny pomocnik „po zatwierdzeniu” we wszystkich modułach. |
+| 4 | note | Dokumentacja | Sekcja „Prevention” pusta. | plik zadania | Propozycja reguły lub testu zapobiegającego (np. wspólny pomocnik + test z zawodzącym hubem dla każdej trasy publikującej). |
