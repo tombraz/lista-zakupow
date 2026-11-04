@@ -61,7 +61,7 @@ Od T-062 (0c44e62) `endSession("accountDeleted")` zapisuje powód w cache zapyta
 
 ## Prevention
 
-Przegląd C12: opisać w `web.md` jeden mechanizm komunikatu po końcu sesji.
+**Co by temu zapobiegło:** jedna zasada dla komunikatu po końcu sesji i test drugiego wejścia na chroniony adres, który sprawdza stan wejścia (`from`), a nie samą ścieżkę. Zrobione (zaakceptowane przez użytkownika): wpis w „Pułapkach” `docs/architecture/layers/web.md` (przegląd E-02, C12) — komunikat tylko w `location.state`, powód poza nim zużywany przy pierwszym przekierowaniu (efekt, nie render). Niezastosowane: `StrictMode` w `renderApp` (uwaga QA #1) — do ewentualnego zadania przez `/plan-backlog`.
 
 ## Incident note
 
