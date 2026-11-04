@@ -4,7 +4,7 @@ title: "listy: jedna funkcja zdarzeń na żywo przy utracie dostępu i zmianie c
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-05, F-14, F-04, F-16]
@@ -78,3 +78,32 @@ Linia w `backend.md`: zdarzenia członkostwa tylko przez funkcję modułu `listy
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+Zakres: commity `0111821`, `7eb7bbf` (bez `ea13706` — tylko status). Przebieg QA: `pnpm install --frozen-lockfile`, `pnpm check` (format, lint, typy, depcruise, backlog, 147 plików / 1165 testów web+api, mobile 10 testów) — zielone; `pnpm vitest run --project api live` — 16 plików, 58 testów zielonych.
+
+Kryteria:
+
+- AC1 — pass. `DELETE` listy (`http/routes.ts:104-107`) i usunięcie konta właściciela (`accountDeletionChanges` → `list-deleted`) idą przez `announceAccessChanges`; kolejność `list.deleted` → `revoke` → `lists.changed` taka jak przed zmianą (porównanie z usuniętym `person-events.ts` i starą trasą). Nowa asercja kolejności w `live.delete-account.test.ts` i `live.revoke.test.ts` gryzie (spot-check 3).
+- AC2 — pass. Usunięcie i opuszczenie (`withdrawAccess`), przyjęcie zaproszenia (`acceptAndAnnounce`), zmiana imienia (`renameChanges`) i usunięcie konta uczestnika (`members-changed` z `lostAccess`) — wszystkie przez jedną funkcję; `grep` nie znajduje innych miejsc `list.deleted` / `members.changed` / `revoke` członkostwa w `apps/api/src`. Pozostałe `lists.changed` (tworzenie, zmiana nazwy listy, pozycje) nie są zmianą dostępu — poza zakresem.
+- AC3 — pass. `announceNameChanges` używa `listsWithPeopleOf`; `ListWithPeople` zdefiniowany raz (`domain/membership-events.ts:5`), `infra` go importuje; typecheck zielony, `live.name.test.ts` (osoba na kilku listach, jedno `lists.changed` na osobę) zielony.
+- AC4 — pass. Wszystkie testy `live.*` oraz testy tras T-008, T-032, T-058, T-059, T-061, T-062 zielone w pełnym zestawie.
+
+Spot-checki (każdy cofnięty `git checkout`, `git status` czysty):
+
+1. Usunięta linia `live.revoke(change.lostAccess, …)` → 4 testy czerwone (`live.leave`, `live.remove-member`: dostęp i `members.changed`).
+2. `lostAccess` nie dodawany do odbiorców `lists.changed` (T-032) → te same 4 testy czerwone.
+3. Usunięte `revoke` wszystkich przy `list-deleted` → czerwone `live.delete-account` (kolejność) i `live.revoke` (TH-04).
+
+TH-04 (MC-03): próby z drugim kontem przez działającą aplikację (Fastify + prawdziwy WebSocket + Postgres w Testcontainers) w `live.revoke`, `live.leave`, `live.remove-member`, `live.delete-account`: ponowna subskrypcja po usunięciu listy / utracie dostępu odrzucona, zapisy i odczyty byłego uczestnika odrzucone. Spot-checki potwierdzają, że testy negatywne pilnują mitygacji. Nie do wykorzystania.
+
+Fix task: „Root cause” wyjaśnia, czemu testy nie łapały (zachowanie kopii poprawne, `next(type)` nie pilnował kolejności); testy charakteryzujące dopisane i gryzą (spot-check 3). Refaktoryzacja, więc brak czerwonego testu jest uzasadniony.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | backend / wydajność | Zmiana imienia woła teraz `listsWithPeopleOf` poza transakcją, a ta robi `SELECT … FOR UPDATE` na własnych listach osoby. `PATCH /me` czeka na ogłoszenie (`me-routes.ts:46`), więc może czekać za trwającą transakcją pozycji tej listy (`lockList`); blokada nie jest tu potrzebna. | `lists-repository.ts:66-70`, `listy/index.ts:76-78` | Odczyt bez blokady na ścieżce imienia (np. parametr / osobna funkcja bez `.for("update")`) albo świadoma decyzja w komentarzu, że czekanie jest akceptowalne. |
+| 2 | note | backend / projekt | `AccessChange.people` dopuszcza `Promise` — typ domeny niesie szczegół kolejności I/O (revoke przed odczytem z bazy). Działa i jest opisane, ale jest mniej oczywiste niż np. osobny krok `revoke` przed odczytem w funkcji. | `membership-events.ts:18-23`, `routes.ts:161-165` | Do rozważenia przy kolejnej zmianie tej funkcji. |
+| 3 | note | backend / zdarzenia | Przy przyjęciu linku `invitations.changed` do właściciela idzie teraz przed `members.changed` (odstępstwo opisane w „Root cause”); AC2 nie wymaga kolejności, zdarzenia dotyczą różnych widoków. | `invitation-events.ts:22-24`, `live.lists.test.ts:136-145` | Bez zmian; odnotowane. |
