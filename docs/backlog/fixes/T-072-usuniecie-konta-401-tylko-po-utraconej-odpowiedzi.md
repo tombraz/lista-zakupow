@@ -4,7 +4,7 @@ title: "SC-09: 401 przy usuwaniu konta to sukces tylko po utraconej odpowiedzi"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-04]
@@ -54,9 +54,19 @@ related_tasks: [T-062]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+`useDeleteAccount` (T-062) odróżniał „ponowienie po utraconej odpowiedzi” od zwykłego 401 licznikiem prób w `useRef`, który rósł przy każdej próbie i nigdy się nie zerował. Warunek `attempts > 1` mierzył więc „była jakaś wcześniejsza próba”, a nie „wcześniejsza próba straciła odpowiedź”. 401 po 500 albo po zamknięciu i ponownym otwarciu okna dawał „Konto zostało usunięte.”.
+
+**Dlaczego testy tego nie złapały:** T-062 testował tylko dwa przypadki (błąd sieci → 401 i 401 przy pierwszej próbie), bez 401 po zwykłej porażce. Do tego test „first attempt gets 401” sprawdzał brak komunikatu (`queryByText(...).toBeNull()`) zaraz po zmianie ścieżki. Od T-071 `InlineAlert` dostaje tekst sukcesu dopiero po `SUCCESS_ANNOUNCE_DELAY_MS` (100 ms), więc taki test przechodzi niezależnie od zachowania. Pierwsza wersja testów T-072 z tą samą asercją też była zielona przy błędnym kodzie.
+
+**Fix:** flaga `lostResponse` ustawiana tylko przy błędzie `network` i trwała w obrębie jednego okna potwierdzenia (sieć → 429 → 401 nadal liczy się jako usunięcie, bo utracona próba mogła konto usunąć). `reset` hooka (wywoływany przy otwarciu okna) ją zeruje. Testy sprawdzają stan wejścia SC-01 (`{ from: "/konto" }` od `RequireSession`), a nie brak tekstu.
+
+**Ten sam wzorzec gdzie indziej:** brak innych liczników prób. `useLeaveList` i `useRemoveParticipant` traktują `not_found` jako sukces bezwarunkowo: to idempotentne „już nie ma”, nie ta sama przyczyna (przegląd C8 proponuje wspólny helper, zob. Prevention).
 
 ## Evidence
+
+- Reproducing tests (`AccountScreen.delete.test.tsx`): „ends the session without the deletion message when 401 follows a server failure” (AC1) i „forgets a lost response after the dialog is closed and opened again” (AC3). Przed poprawką: `AssertionError: expected { accountDeleted: true } to deeply equal { from: '/konto' }`. AC2: istniejący test „goes to SC-01 with „Konto zostało usunięte.” when the retry of a lost response gets 401”.
+- Wzmocniony test „ends the session without the deletion message when the first attempt gets 401”: wspólna asercja `signInShownWithoutDeletion` (stan wejścia zamiast braku tekstu).
+- Po poprawce: `pnpm vitest run --project web --project shared --project tokens` 708/708, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` OK. Projekt `api` i E2E nie wystartowały lokalnie (Docker nie działa: brak bazy); zmiana dotyczy tylko `apps/web`.
 
 ## Prevention
 
