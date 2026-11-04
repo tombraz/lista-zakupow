@@ -28,7 +28,7 @@ Stan po T-004: API udostępnia z Better Auth tylko trasy z tabeli, które już m
 | Operacja | Trasa | Żądanie | Odpowiedź | Błędy |
 | --- | --- | --- | --- | --- |
 | Moje dane | `GET /api/v1/me` | — | `{ id, name, email }` | 401 |
-| Zmiana imienia (F-16) | `PATCH /api/v1/me` | `{ name }` | 200 `{ id, name, email }` | 400 |
+| Zmiana imienia (F-16) | `PATCH /api/v1/me` | `{ name }` | 200 `{ id, name, email }`; błąd rozesłania zdarzeń po zapisie tylko w logu | 400, 401 (konto usunięte w międzyczasie) |
 | Usunięcie konta (F-04) | `DELETE /api/v1/me` | `{ confirm: true }` | 204; zdarzenia `list.deleted` / `access.revoked` / `lists.changed` do dotkniętych osób; sesje zamknięte | 400 bez `confirm` |
 
 ## Listy (`listy`)
