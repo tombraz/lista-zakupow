@@ -4,7 +4,7 @@ title: "Zdarzenia na żywo po zapisie: błąd rozesłania nie daje 500 w żadnej
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-076]
 layers: [backend]
 requirements: [F-05, F-12, F-13, F-14]
@@ -63,9 +63,21 @@ related_tasks: [T-076, T-074, T-032]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego. Ta sama przyczyna co T-076.>
+Ta sama przyczyna co T-076: od T-009 (zmiany na żywo, 35e0400; dalej T-032, T-058, T-059, T-074) trasy list, pozycji i zaproszeń wołały rozesłanie zdarzeń na żywo (`live.publish`/`notify`, `announceAccessChanges`, `peopleWithAccess`) wprost po zatwierdzonym zapisie, bez obsługi błędu, więc wyjątek z huba albo bazy szedł do globalnej obsługi błędów i dawał 500 przy zapisanej zmianie. Przy usunięciu uczestnika pomijał też zdarzenie `member_removed` w logu `security` (TH-21), a przy rejestracji z linku zamieniał założone konto w 500. Testy tego nie wykryły, bo każdy test tras używał działającego huba; pomocnik T-076 był prywatny w `me-routes.ts`, a nic nie wymuszało jego użycia.
+
+Poprawka: `afterCommit(log, announce)` przeniesiony do `apps/api/src/http/after-commit.ts` (bierze `request.log`, więc działa też w rejestracji z linku: `InvitationOnSignUp` dostaje `log`); używają go `me-routes.ts`, `listy/http/routes.ts` (utworzenie, zmiana nazwy, usunięcie, `withdrawAccess`), `pozycje/http/item-events.ts` (wszystkie cztery trasy pozycji), `zaproszenia/http/invitation-events.ts` (trasa i rejestracja) i `zaproszenia/http/routes.ts` (unieważnienie). W `withdrawAccess` odczyt osób (obietnica podana do `announceAccessChanges`) ma `.catch`, żeby błąd huba przed jej odczytaniem nie zostawił nieobsłużonego odrzucenia. Kolejność MC-03 bez zmian (`announceAccessChanges` nietknięte). Reguła eslint `API_AFTER_COMMIT_SYNTAX` (`eslint.config.js`, pliki `apps/api/src/modules/*/http/**/*.ts`): `announceAccessChanges(…)` i `*.publish|notify|revoke(…)` tylko wewnątrz argumentu `afterCommit(…)`.
+
+**Inne wystąpienia:** brak w `modules/*/http` (reguła lintu przechodzi na całym `apps/api/src`). `listy/index.ts` woła `announceAccessChanges` z funkcji podawanych do `konta` (`nameChanged`, `accountDeleting`) — te wywołuje `me-routes.ts` przez `afterCommit`, więc reguła ich nie obejmuje celowo (nie są trasą).
 
 ## Evidence
+
+- Testy odtwarzające (przed poprawką wszystkie czerwone: `AssertionError: expected 500 to be 201|200|204`, 14 z 14):
+  - `apps/api/test/lists.announce-failure.test.ts` — `POST /api/v1/lists`, `PATCH /api/v1/lists/:listId` (hub; tylko `notify` po udanym `publish`; błąd bazy w `peopleWithAccess` przez `failingPool`), `DELETE /api/v1/lists/:listId`, `DELETE …/members/:userId` (także `member_removed` w logu `security`), `POST …/leave`.
+  - `apps/api/test/items.announce-failure.test.ts` — `POST …/items`, `PATCH …/items/:itemId`, `POST …/items/clear-checked`, `DELETE …/items/:itemId`.
+  - `apps/api/test/invitations.announce-failure.test.ts` — `POST /api/v1/invitations/:token/accept`, rejestracja z `invitationToken`, `DELETE …/invitations/:invitationId`.
+  - Każdy sprawdza status, zapis w bazie, dokładnie jeden wpis poziomu 50 `live_announce_failed` z `err.type` i brak w logu komunikatu błędu, nazw list i pozycji, imion i e-maili (`test/failing-live.ts` `expectOneAnnounceFailure`).
+- Reguła lintu: `scripts/test/lint-security.test.mjs` — `live.notify`, `live.publish`, `live.revoke` i `announceAccessChanges` poza `afterCommit` w `listy/http/routes.ts` padają z komunikatem T-089; te same wywołania w `afterCommit` przechodzą.
+- Po poprawce: `pnpm vitest run --project api announce-failure` — 4 pliki / 16 testów zielonych; `pnpm test` — 151 plików / 1181 testów zielonych (w tym `live.*.test.ts`: MC-03, T-032, T-061, T-062, T-074); `node scripts/test/lint-security.test.mjs` — 0 FAIL; `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm quality`, `pnpm backlog-check`, `pnpm build` bez błędów.
 
 ## Prevention
 
