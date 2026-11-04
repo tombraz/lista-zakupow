@@ -50,7 +50,7 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 
 ## Zasady bezpieczeństwa
 
-- Tylko zapytania parametryzowane przez Drizzle; `sql.raw` z danymi użytkownika zakazany (TH-20).
+- Tylko zapytania parametryzowane przez Drizzle; `sql.raw` z danymi użytkownika zakazany (TH-20). Wyjątek: kroki migracji danych (`src/db/data-migrations/`, ADR 0009) działają na `PoolClient` z `pg` w transakcji kroku i używają surowego `client.query` — zawsze z parametrami `$n` dla wartości; w tekst zapytania wolno wstawić tylko stałe z kodu (np. nazwę ograniczenia), nigdy dane z bazy ani z żądania.
 - Każde zapytanie o pozycje, członkostwa i zaproszenia zawiera `list_id` z już sprawdzonego dostępu, nigdy samo `id` z żądania (TH-01).
 - Ograniczenia `CHECK` długości dublują zod celowo: baza jest ostatnią linią obrony (TH-13, TH-20).
 - Kaskady i `SET NULL` zgodne z `data-model.md`; zmiana kaskady wymaga testu F-04 (TH-18).
@@ -76,6 +76,7 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-04 | T-081: „Zasady bezpieczeństwa”: wyjątek dla surowych zapytań `pg` w krokach migracji danych (ADR 0009). |
 | 2026-11-02 | T-064: `cleanup_run`, migracja `0008_sprzatanie`, `db/retention.ts`. |
 | 2026-10-29 | T-021: izolacja testów — `DELETE` zamiast `TRUNCATE`, dane testów limitów jednym `INSERT … SELECT`. |
 | 2026-10-28 | T-008: `invitation`, migracja `0006_zaproszenia`, `lockList`. |

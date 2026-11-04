@@ -86,7 +86,7 @@ Stan po T-006: dodawanie, edycja nazwy i notatki oraz usuwanie działają (odhac
 | serwer → klient | `items.cleared` | `listId`, `itemIds` | usuń odhaczone |
 | serwer → klient | `list.updated` | `listId`, `name` | zmiana nazwy |
 | serwer → klient | `list.deleted` | `listId` | usunięcie listy |
-| serwer → klient | `members.changed` | `listId` | dołączenie, usunięcie, opuszczenie (klient pobiera uczestników) |
+| serwer → klient | `members.changed` | `listId` | dołączenie, usunięcie, opuszczenie, zmiana imienia osoby z dostępem, usunięcie konta uczestnika (klient pobiera od nowa szczegóły listy z pozycjami i uczestników) |
 | serwer → klient | `invitations.changed` | `listId` | tylko do właściciela: link użyty lub unieważniony |
 | serwer → klient | `access.revoked` | `listId` | utrata dostępu (MC-03) |
 | serwer → klient | `lists.changed` | — | kanał użytkownika: odśwież SC-05 |
