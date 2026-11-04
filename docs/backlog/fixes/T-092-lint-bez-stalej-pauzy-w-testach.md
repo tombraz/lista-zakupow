@@ -17,7 +17,7 @@ related_tasks: [T-082]
 
 ## Report
 
-Źródło: T-082 („Prevention”), przegląd E-02 C3 („Proposals”). Gałąź: `fix/T-092-<slug>` z `main` po T-090 i T-091.
+Źródło: T-082 („Prevention”), przegląd E-02 C3 („Proposals”). Gałąź: `fix/T-092-<slug>` z `main` po T-090 i T-091 (i po merge PR #14).
 
 - **Actual:** zasada „bez stałej pauzy przed asercją” (`testing-strategy.md:41`) jest tylko opisem; nic nie pada, gdy nowy test jej nie spełnia (powtarzające się ustalenie: przegląd E-02, T-082).
 - **Expected:** `pnpm lint` pada na stałą pauzę w `apps/api/test/**/*.test.ts`.

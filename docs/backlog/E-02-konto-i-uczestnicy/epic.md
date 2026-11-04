@@ -5,7 +5,7 @@ status: in-uat    # todo | in-progress | in-uat | done
 approved: 2026-11-01    # date the user approved this epic's tasks (set by /plan-backlog)
 change:                # brownfield only: the change ID this epic implements (C-NN)
 branch: epic/E-02-konto-i-uczestnicy
-pr: https://github.com/tombraz/lista-zakupow/pull/13
+pr: https://github.com/tombraz/lista-zakupow/pull/14
 requirements: [F-03, F-04, F-13, F-15, F-16, N-02]
 ---
 

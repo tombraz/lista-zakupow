@@ -17,7 +17,7 @@ related_tasks: [T-082]
 
 ## Report
 
-Źródło: T-082 („Root cause”, inne wystąpienia), przegląd `docs/reviews/E-02-2026-11-02-1.md`, C3. Gałąź: `fix/T-091-<slug>` z `main` po merge E-02 (PR #13).
+Źródło: T-082 („Root cause”, inne wystąpienia), przegląd `docs/reviews/E-02-2026-11-02-1.md`, C3. Gałąź: `fix/T-091-<slug>` z `main` po merge poprawek E-02 (PR #14).
 
 - **Actual:**
   - `live.heartbeat.test.ts:36, 40` — `pause(100)` po `pong`; `:43`, `:53` — `closed(200|100)` z `rejects.toThrow("still open")`.

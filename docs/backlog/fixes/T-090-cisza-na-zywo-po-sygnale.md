@@ -17,7 +17,7 @@ related_tasks: [T-082]
 
 ## Report
 
-Źródło: T-082 („Root cause”, inne wystąpienia), przegląd `docs/reviews/E-02-2026-11-02-1.md`, C3. Gałąź: `fix/T-090-<slug>` z `main` po merge E-02 (PR #13).
+Źródło: T-082 („Root cause”, inne wystąpienia), przegląd `docs/reviews/E-02-2026-11-02-1.md`, C3. Gałąź: `fix/T-090-<slug>` z `main` po merge poprawek E-02 (PR #14).
 
 - **Actual:** `LiveClient.expectSilence(ms = 300)` (`apps/api/test/live.ts`) czeka stały czas i sprawdza, że nie przyszło zdarzenie. Zdarzenie wysłane po 300 ms (regresja, wolne CI) przechodzi niezauważone; każde wywołanie dokłada 300 ms do testu. Wystąpienia: `live.authz.test.ts:62`, `live.heartbeat.test.ts:32`, `live.leave.test.ts:72`, `live.limits.test.ts:168`, `live.lists.test.ts:66, 77, 78, 188`, `live.name.test.ts:67, 89`, `live.remove-member.test.ts:65`, `live.revoke.test.ts:55, 106, 133`, `live.rollback.test.ts:47`.
 - **Expected:** asercja negatywna dopiero po sygnale, że praca, która mogła wysłać zdarzenie, się skończyła (`testing-strategy.md:41`, `CODING_STANDARDS.md` „Niestabilny test”).
