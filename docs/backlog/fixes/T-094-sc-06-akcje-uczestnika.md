@@ -4,7 +4,7 @@ title: "SC-06: uczestnik ma ikonę „Uczestnicy” i „Opuść listę” w men
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
@@ -105,3 +105,23 @@ Eksploracja / TH-04 (tymczasowy spec Playwright, usunięty): po „Opuść list�
 | 4 | note | Dokumentacja | `docs/architecture/layers/web.md` nie wspomina `LeaveListDialog` (SC-07) ani nowego `writes` w `MenuAction` (`MoreMenu`). | `web.md:26` | Mapa modułów aktualna |
 
 Do zmiany (fail): nr 1 — sformatować `ListScreen.tsx` Prettierem i potwierdzić `pnpm format:check`. Nr 2–4 opcjonalnie w tej samej rundzie.
+
+## QA round 2 (2026-11-04)
+
+Verdict: pass
+
+Środowisko: lokalnie, Windows, `75cac70`, `pnpm install --frozen-lockfile` (bez zmian w plikach śledzonych), Postgres + Mailpit z `docker compose`, `pnpm build`.
+
+Wyniki: `pnpm format:check` — „All matched files use Prettier code style!” (nr 1 z rundy 1 naprawiony); `pnpm typecheck`, `pnpm lint`, `pnpm quality` (jscpd 0 klonów, depcruise 0 naruszeń), `pnpm design-check` (0 hard-coded) — OK. Vitest `--maxWorkers=4`: 152 pliki / 1191 testów passed. E2E `sc07-uczestnicy`, `j02-listy`, `brak-polaczenia` (komputer + telefon): 24 passed.
+
+Zmiany rundy (`18d5762`): Prettier na `ListScreen.tsx`; `LeaveListDialog` + `leaveMessages`/`leaveErrorText` i `useLeaveList` przeniesione do `apps/web/src/lists/` — SC-06 nie importuje już z katalogu SC-07 (`grep` potwierdza brak importów między ekranami); komentarz w `ParticipantsScreen.test.tsx` poprawiony; `web.md` zaktualizowany. Testy nie zostały osłabione (jedyna zmiana w testach to komentarz).
+
+Kryteria: AC1–AC5 — pass (zachowanie bez zmian względem rundy 1, potwierdzone ponownie testami komponentu i E2E przez UI, z axe na otwartym menu).
+
+Spot-check (przywrócony, `git status` czysty): `onConfirm` w `lists/LeaveListDialog.tsx` bez `leave.mutate()` → 10 testów `ListScreen.leave` + `ParticipantsScreen.leave` czerwonych. Wspólne okno jest pokryte z obu ekranów.
+
+TH-04: mitygacja sprawdzona w rundzie 1 (404 na odczyt/zapis/`members`/`leave` po wyjściu); ta runda nie zmienia API ani autoryzacji — negatywne testy API zielone w pełnym przebiegu.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Testy / stabilność | Pełny `pnpm vitest run` z domyślną liczbą wątków na tej maszynie dał raz 13 niepowodzeń przez timeouty (5 s test / 10 s hook, np. `ListScreen.check.test.tsx`, `sessionEnded.test.tsx`, `AccountScreen.delete.test.tsx`) — pliki niezwiązane z taskiem; z `--maxWorkers=4` wszystko zielone. | JUnit: `tests="1194" failures="13"`, komunikaty „Test timed out in 5000ms”, „Hook timed out in 10000ms” | Stabilny pełny przebieg niezależnie od obciążenia (limit wątków lub `pool: 'vmThreads'` w `vitest.config.ts`) |
