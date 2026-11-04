@@ -74,9 +74,10 @@ related_tasks: [T-062]
 
 - Rozważone: `SUCCESS_ANNOUNCE_DELAY_MS = 0` w testach. Odrzucone po eksperymencie: przy opóźnieniu 0, błędnym hooku i starej asercji test dalej przechodził (3/3), bo tekst przychodzi w kolejnym zadaniu pętli zdarzeń. Opóźnienia nie da się usunąć całkiem, bo testy T-071 wymagają pustego regionu przed tekstem.
 - Zastosowane (zgoda użytkownika 2026-11-04): wpis w „Pułapkach” `docs/architecture/layers/web.md`.
-- Do decyzji (automatyczna kontrola): `InlineAlert` oznacza region czekający na tekst (np. `data-pending`), a helper testów `successSettled()` czeka, aż żaden region `status` nie czeka; asercje braku sukcesu po nim mają sens. Do tego przegląd C8 (wspólny helper „już zrobione przy ponowieniu” dla mutacji usuwających) — przez `/plan-backlog`.
+- Odrzucone (decyzja użytkownika 2026-11-04): oznaczenie regionu czekającego na tekst w `InlineAlert` (np. `data-pending`) i helper testów `successSettled()`. To nie jest kontrola automatyczna: działa tylko, gdy ktoś użyje helpera, czyli daje tyle co wpis w „Pułapkach”, a lint nie odróżni asercji braku sukcesu od innych `queryByText(...).toBeNull()`. W testach web było tylko jedno inne sprawdzenie braku komunikatu sukcesu (zmiana imienia na SC-09) i działa ono poprawnie, bo jego region jest już zamontowany. Do tego atrybut w kodzie produkcyjnym tylko dla testów. Wrócić do tego, jeśli ten sam błąd pojawi się drugi raz.
+- Odrzucone (decyzja użytkownika 2026-11-04): wspólny helper „już zrobione przy ponowieniu” dla mutacji usuwających (przegląd C8). Reguły są celowo różne: `useLeaveList` i `useRemoveParticipant` traktują `not_found` jako sukces bezwarunkowo (idempotentne „celu już nie ma”), a `useDeleteAccount` uznaje 401 za sukces tylko po utraconej odpowiedzi. Bez tego warunku pokazuje fałszywe „Konto zostało usunięte.”. Wspólny helper musiałby mieć oba tryby i łatwo byłoby wybrać zły (ten błąd był właśnie pomyleniem tych dwóch reguł). Komentarze w hookach i testy przy każdym z nich chronią lepiej niż abstrakcja na trzy wywołania.
 
-Przegląd C8: jedna decyzja „już zrobione przy ponowieniu” dla wszystkich mutacji usuwających (wspólny helper w `api/`).
+Pierwotna propozycja przeglądu (C8): jedna decyzja „już zrobione przy ponowieniu” dla wszystkich mutacji usuwających (wspólny helper w `api/`) — odrzucona, zob. wyżej.
 
 ## Incident note
 
