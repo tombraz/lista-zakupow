@@ -4,7 +4,7 @@ title: "SC-01: „Konto zostało usunięte.” pokazane raz, nie przy każdym p�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-04]
@@ -66,3 +66,19 @@ Przegląd C12: opisać w `web.md` jeden mechanizm komunikatu po końcu sesji.
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+Kryteria:
+
+- **AC1 — pass.** Test `sessionEnded.test.tsx` › „after the account was deleted…” sprawdza komunikat, `location.state` `{ accountDeleted: true }`, a po wejściu na `/listy` SC-01 z `{ from: "/listy" }`. Spot-check: bez `removeQueries` w `useSessionEnd` test czerwony (`expected { accountDeleted: true } to deeply equal { from: '/listy' }`), po przywróceniu zielony. Dodatkowy tymczasowy test QA (usunięty) w `StrictMode` z historią `/listy` → `/konto`: komunikat zostaje na SC-01 po podwójnym renderze i efektach; przycisk wstecz → SC-01 bez komunikatu, z `from: "/listy"`.
+- **AC2 — pass.** `pnpm check` exit 0 (format, lint, typy, jscpd, depcruise, design-check, backlog, workflow, 151 plików / 1183 testy web+api, mobile 10/10). Zielone m.in. `AccountScreen.delete.test.tsx` (T-062), `sessionEnded.test.tsx` (T-018, 401, wylogowanie w innej karcie), `SignInScreen.test.tsx` (reset hasła).
+
+Przegląd: zmiana minimalna (14 linii w `useSession.ts`), zgodna z opisaną przyczyną; komentarz wyjaśnia wybór efektu zamiast renderu. Root cause wyjaśnia, czemu test T-062 tego nie złapał. Brak zmian UI, brak nowych powierzchni ataku (`threats: []`). Odświeżenie strony: cache znika, komunikat zostaje tylko z `history.state` SC-01 — zgodnie z oczekiwaniem.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Testy | `renderApp` nie owija aplikacji w `StrictMode`, choć `main.tsx` go używa; zachowanie zależne od efektów (jak ta poprawka) sprawdzono w StrictMode tylko ręcznie przez QA. | `apps/web/test/render.tsx:38`, `apps/web/src/main.tsx:15` | Rozważyć `StrictMode` w `renderApp`, by testy odpowiadały uruchomieniu w przeglądarce. |
+| 2 | note | E2E | Nie uruchomiono `j01-usuniecie-konta.spec.ts` (Playwright, wymaga usług); ścieżka pokryta testami RTL. | — | Przebieg e2e w CI. |
