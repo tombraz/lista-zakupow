@@ -25,7 +25,7 @@ related_tasks: [T-058, T-059]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given usunięcie uczestnika kończy się `rate_limited` albo błędem sieci, then przy wierszu osoby pojawia się tekst dla tego kodu (wspólny z `errorText`), a nie ogólny. — verified by: test ekranu (MSW)
+- [ ] AC1: Given usunięcie uczestnika kończy się błędem, then tekst błędu powstaje z kodu przez `errorText`: błąd sieci → wspólny „Brak połączenia. Sprawdź internet i spróbuj ponownie.”, każdy kod bez tekstu ekranu → „Nie udało się usunąć. Spróbuj ponownie.”. (`rate_limited` nie dotyczy: trasa nie zwraca 429, `api.md:44`; zawężone po QA round 1 #1, decyzja właściciela 2026-11-04.) — verified by: test ekranu (MSW)
 - [ ] AC2: No regression in: T-058 (wszystkie AC), ponowienie po 404 jako sukces.
 
 ## TDD plan
@@ -34,7 +34,7 @@ related_tasks: [T-058, T-059]
 
 | # | Test | Level | Framework | Proves |
 | --- | --- | --- | --- | --- |
-| 1 | 429 / błąd sieci → tekst właściwy dla kodu | component | Vitest + RTL + MSW | AC1 |
+| 1 | błąd sieci → wspólny tekst z `errorText` (500 → tekst domyślny: istniejący test T-058) | component | Vitest + RTL + MSW | AC1 |
 
 **Run:** `pnpm vitest run --project web SC-07`
 
@@ -62,9 +62,11 @@ Inne wystąpienia: brak — pozostałe hooki zapisu web (`useCheckItem`, `useEdi
 
 Co by zapobiegło: hook zapisu, który zamienia błąd na flagę (`boolean` / samo id) zamiast trzymać `RequestErrorCode`, oraz testy stanu błędu tylko z 500 — dla 500 tekst domyślny i tekst według kodu są takie same, więc błąd jest niewidoczny.
 
-Propozycje (czekają na decyzję właściciela):
+Propozycje:
 1. Wpis „Pitfalls” w `docs/architecture/layers/web.md`: hook zapisu trzyma kod błędu (`RequestErrorCode`), nie flagę; tekst tylko przez `<akcja>ErrorText(code)` → `errorText`; test stanu błędu ekranu obejmuje błąd sieci (`HttpResponse.error()`), nie tylko 500.
 2. (Opcjonalnie, automatycznie) reguła ESLint `no-restricted-syntax` zabraniająca w `apps/web/src/screens/**/*.tsx` atrybutu `error=` z wyrażeniem warunkowym, którego gałąź to `messages.*` — wąska, ale łapie dokładnie ten wzorzec.
+
+Decyzja właściciela (2026-11-04): przyjęty pkt 1 (wpis w „Pułapki” `web.md`). Pkt 2 odrzucony — reguła pilnowałaby jednej składni, łatwo ją obejść, a przy jednym wystąpieniu koszt utrzymania przewyższa korzyść. Uwaga QA #1: plan i AC1 zawężone do błędu sieci (brak testu 429, bo trasa nie zwraca 429). Uwaga QA #2: bez wspólnego tekstu dla `rate_limited` — trasy z 429 mają własne teksty z czasem oczekiwania.
 
 ## Incident note
 
