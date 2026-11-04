@@ -75,6 +75,8 @@ Historia zmian dopisana w `architecture.md`, `backend.md`, `web.md`, `db.md` (`a
 
 ## Prevention
 
+Co by zapobiegło: automatyczna kontrola zgodności dokumentów z kodem (np. skrypt CI sprawdzający, że nazwy w backtickach w `docs/architecture/**` i `docs/adr/` istnieją w kodzie) — zaproponowana, właściciel jej teraz nie wybrał (ten sam problem w T-080). Przyjęte (2026-11-04): wpis w „Pułapkach” `layers/backend.md` i `layers/web.md` — zmiana zdarzenia, danych, zależności modułów lub nazwy aktualizuje w tym samym tasku `api.md`, `data-model.md`, `architecture.md` i ADR.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
