@@ -473,7 +473,8 @@ describe("SC-07 invitations of the owner", () => {
 
 // SEC3 (TH-02): ikona „Uczestnicy” na SC-06 tylko dla właściciela.
 describe("SC-06 Uczestnicy icon", () => {
-  it("is a link to SC-07 for the owner and absent for a participant", async () => {
+  // SC-06 Layout pkt 1: ikona dla każdej osoby z dostępem (T-094; wcześniej tylko właściciel).
+  it("is a link to SC-07 for the owner and for a participant", async () => {
     sessionIs(ANIA);
     const own = aList({ name: "Dom" });
     const shared = aList({ name: "Działka", role: "participant", owner: TOMEK });
@@ -492,6 +493,9 @@ describe("SC-06 Uczestnicy icon", () => {
 
     renderApp(`/listy/${shared.id}`);
     await screen.findByRole("heading", { level: 1, name: "Działka" });
-    expect(screen.queryByRole("link", { name: "Uczestnicy" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Uczestnicy" })).toHaveAttribute(
+      "href",
+      `/listy/${shared.id}/uczestnicy`,
+    );
   });
 });

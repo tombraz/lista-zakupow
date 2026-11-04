@@ -40,7 +40,12 @@ test("SC-07 shows who is on the list, e-mails only to the owner, joins live", as
   await expect(members(page).getByText(tomek.email)).toBeVisible();
   await expectNoAxeViolations(page);
 
-  await tomek.page.goto(`/listy/${list.id}/uczestnicy`);
+  // T-094 AC4: uczestnik dochodzi do SC-07 przez UI: SC-05 → SC-06 → ikona „Uczestnicy”.
+  await tomek.page.reload();
+  await tomek.page.getByRole("link", { name: /^Dom/ }).click();
+  await expect(tomek.page.getByRole("heading", { level: 1, name: "Dom" })).toBeVisible();
+  await tomek.page.getByRole("link", { name: "Uczestnicy" }).click();
+  await expect(tomek.page.getByRole("heading", { level: 1, name: "Uczestnicy" })).toBeVisible();
   const tomeksView = members(tomek.page);
   await expect(tomeksView.getByRole("listitem")).toHaveText([/^AAniawłaściciel$/, /^TTomekTy$/]);
   await expect(tomek.page.getByText(/@example\.com/)).toHaveCount(0);
@@ -170,5 +175,36 @@ test("SC-07 participant leaves the list; the other tab lands on SC-05 and the ow
     LIVE,
   );
   await otherTab.close();
+  await tomek.client.close();
+});
+
+// T-094 AC4 (F-13, SC-06 „Więcej opcji”): uczestnik opuszcza listę z menu SC-06.
+test("SC-06 participant leaves the list from „Więcej opcji”", async ({ page, browser }) => {
+  const list = await openNewList(page, "Dom");
+  const tomek = await joinWithLink(page, browser, list.id, "Tomek");
+  const tab = tomek.page;
+  await tab.reload();
+  await tab.getByRole("link", { name: /^Dom/ }).click();
+  await expect(tab.getByRole("heading", { level: 1, name: "Dom" })).toBeVisible();
+
+  const more = tab.getByRole("button", { name: "Więcej opcji" });
+  await more.click();
+  await expect(tab.getByRole("button", { name: "Zmień nazwę listy" })).toHaveCount(0);
+  await expect(tab.getByRole("button", { name: "Usuń listę" })).toHaveCount(0);
+  await expectNoAxeViolations(tab);
+  await tab.getByRole("button", { name: "Opuść listę" }).click();
+  const dialog = tab.getByRole("alertdialog", { name: "Opuścić listę „Dom”?" });
+  await expect(dialog.getByRole("button", { name: "Anuluj" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Anuluj" }).click();
+  await expect(more).toBeFocused();
+
+  await more.click();
+  await tab.getByRole("button", { name: "Opuść listę" }).click();
+  await dialog.getByRole("button", { name: "Opuść" }).click();
+
+  await expect(tab.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
+  expect(new URL(tab.url()).pathname).toBe("/listy");
+  await expect(tab.getByText("Dom", { exact: true })).toHaveCount(0);
+  await expectNoAxeViolations(tab);
   await tomek.client.close();
 });
