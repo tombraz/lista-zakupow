@@ -4,7 +4,7 @@ title: "PATCH /api/v1/me: błąd rozesłania zdarzeń nie zamienia zapisanego im
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-16]
@@ -50,9 +50,18 @@ related_tasks: [T-061]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+T-061 (cc6cfda) dodał `await nameChanged(user.id)` po zatwierdzonym `UPDATE` bez obsługi błędu, więc wyjątek z rozesłania (baza w `listsWithPeopleOf`, hub na żywo) szedł do globalnej obsługi błędów i dawał 500, choć zapis już się udał. Ten sam wzorzec był w `DELETE /api/v1/me` (`await announce()`), gdzie wyjątek pomijał dodatkowo `closeUser` (TH-17: połączenia na żywo usuniętego konta zostawały otwarte). Testy go nie wykryły, bo każdy test tras `me` używał prawdziwego, działającego huba; żaden nie podstawiał rozesłania, które zawodzi.
+
+Poprawka: `afterCommit` w `me-routes.ts` łapie błąd rozesłania i loguje `live_announce_failed` z `errorSummary` (typ i stos, bez komunikatu, imienia i e-maila); odpowiedź odzwierciedla zapis. `api.md`: wiersz „Zmiana imienia” wymienia 400 i 401.
+
+**Inne wystąpienia (ta sama przyczyna, inny moduł; nie naprawione tutaj):** `await announceAccessChanges(...)` po zatwierdzeniu w `listy/http/routes.ts:107` (usunięcie listy), `listy/http/routes.ts:163` (usunięcie/opuszczenie przez uczestnika) i `zaproszenia/http/invitation-events.ts:24` (przyjęcie zaproszenia). Propozycja: osobne zadanie przez `/plan-backlog` — wspólny pomocnik „po zatwierdzeniu” zamiast kopii w każdym module.
 
 ## Evidence
+
+- Test odtwarzający: `apps/api/test/me.name.announce-failure.test.ts`
+  - „answers 200 with the new name and logs the failure without the name or the e-mail” — przed poprawką: `AssertionError: expected 500 to be 200`.
+  - „answers 204 to DELETE /api/v1/me and still closes the account's live connections” — przed poprawką: `AssertionError: expected 500 to be 204`.
+- Po poprawce: oba zielone; `pnpm test` 148 plików / 1167 testów zielonych; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` bez błędów.
 
 ## Prevention
 
