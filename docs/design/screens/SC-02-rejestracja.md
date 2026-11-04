@@ -70,6 +70,7 @@ Jak SC-01 (jasne tło, kolumna `content-max`).
 | consent.age | Mam ukończone 16 lat. |
 | submit | Załóż konto |
 | haveAccount | Masz już konto? Zaloguj się |
+| invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: imię; zatwierdzone 2026-11-01, T-060) |
 | error.emailTaken | Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło. |
 | info.invite | Po założeniu konta dołączysz do listy „{nazwa}”. |
 

@@ -82,7 +82,7 @@ describe("password reset request limits (SEC2, SEC3)", () => {
   });
 
   it("answers 429 to the 4th request for one e-mail from different IPs and sends no 4th mail", async () => {
-    const { mailer, sent } = capturingMailer();
+    const { mailer, requested, sent } = capturingMailer();
     const app = buildTestApp(db.pool, { mailer });
     const ania = await createUser(app);
 
@@ -103,8 +103,8 @@ describe("password reset request limits (SEC2, SEC3)", () => {
     expect(more.map((response) => response.statusCode)).toEqual([429, 429, 429, 429, 429]);
     // SEC3 (TH-27): prośby ponad limit e-maila nie piszą tokenów ani liczników.
     expect(await preAuthRows()).toEqual(before);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(sent).toHaveLength(3);
+    // Wysyłka zaczyna się przed odpowiedzią (password-reset.test.ts, SEC1): nie ma czwartej.
+    expect(requested).toHaveLength(3);
     await app.close();
   });
 

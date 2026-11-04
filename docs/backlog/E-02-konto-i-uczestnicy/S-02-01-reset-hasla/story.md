@@ -2,7 +2,7 @@
 id: S-02-01
 epic: E-02
 title: Reset hasła mailem (web)
-status: in-progress    # todo | in-progress | done
+status: done    # todo | in-progress | done
 requirements: [F-03]
 screens: [SC-03, SC-01, SC-02]
 ---
@@ -13,12 +13,12 @@ screens: [SC-03, SC-01, SC-02]
 
 ## Acceptance criteria (business)
 
-- [ ] Given istniejące konto, when domownik poprosi o reset dla swojego e-maila, then dostaje mail z linkiem do ustawienia nowego hasła (lokalnie w Mailpit, na staging w prawdziwej skrzynce).
-- [ ] Given dowolny e-mail, when ktoś poprosi o reset, then komunikat w aplikacji jest taki sam niezależnie od tego, czy konto istnieje.
-- [ ] Given link resetu, when domownik ustawi nowe hasło (co najmniej 8 znaków), then loguje się nowym hasłem, a stare przestaje działać.
-- [ ] Given link resetu użyty albo starszy niż 1 godzina, when ktoś go otworzy, then nie może ustawić hasła i widzi „Ten link wygasł albo został już użyty.”.
-- [ ] Given zbyt wiele próśb o reset, when ktoś prosi dalej, then dostaje „Zbyt wiele próśb o reset…” i mail nie wychodzi (MC-04).
-- [ ] Given domownik zalogowany na innym urządzeniu, when zresetuje hasło, then tamte sesje i ich połączenia na żywo przestają działać.
+- [x] Given istniejące konto, when domownik poprosi o reset dla swojego e-maila, then dostaje mail z linkiem do ustawienia nowego hasła (lokalnie w Mailpit, na staging w prawdziwej skrzynce).
+- [x] Given dowolny e-mail, when ktoś poprosi o reset, then komunikat w aplikacji jest taki sam niezależnie od tego, czy konto istnieje.
+- [x] Given link resetu, when domownik ustawi nowe hasło (co najmniej 8 znaków), then loguje się nowym hasłem, a stare przestaje działać.
+- [x] Given link resetu użyty albo starszy niż 1 godzina, when ktoś go otworzy, then nie może ustawić hasła i widzi „Ten link wygasł albo został już użyty.”.
+- [x] Given zbyt wiele próśb o reset, when ktoś prosi dalej, then dostaje „Zbyt wiele próśb o reset…” i mail nie wychodzi (MC-04).
+- [x] Given domownik zalogowany na innym urządzeniu, when zresetuje hasło, then tamte sesje i ich połączenia na żywo przestają działać.
 
 ## Tasks
 
@@ -41,3 +41,7 @@ Wszystkie taski `done`. Kryteria 2–6 i część 1 (mail w Mailpit lokalnie) po
 **Proponowany task:** „Weryfikacja maila resetu przez Brevo na staging” (`depends_on: [T-055]`, `layers: [infra]`): po wdrożeniu — sekrety `BREVO_API_KEY`, `MAIL_FROM` (`fly secrets list` bez wartości), reset dla konta testowego, mail w skrzynce / spamie, czas dostarczenia, czy Brevo przyjmuje nadawcę z darmowej poczty; zielony skan sekretów w CI; wpis w `deployment.md` (zmienne `MAILER`, `MAIL_FROM`; zamknięcie „Wysyłka Brevo bez własnej domeny”). Zamyka AC4 i SEC2 z T-055.
 
 **Zaplanowano (2026-11-01, `/plan-backlog`):** T-069 — weryfikacja po merge E-02 na `main` (decyzja właściciela: bez ręcznego wdrażania gałęzi epiku, zasada z T-013 bez zmian).
+
+## Story acceptance (QA, 2026-11-03, po T-069)
+
+Wszystkie taski `done`. Luka z 2026-11-01 zamknięta: kryterium 1 „na staging w prawdziwej skrzynce” — mail resetu przez Brevo doszedł do skrzynki odbiorczej Gmaila od razu, link na `lista-staging.fly.dev` ustawił nowe hasło, stare przestało działać (relacja właściciela, T-069; inni dostawcy poczty nieprzetestowani — `deployment.md`). QA na staging: ten sam komunikat (200 `{}`) dla nieistniejącego e-maila bez wpisu w logach, czwarta prośba w oknie → 429 `rate_limited` (kryteria 2 i 5), sekrety `BREVO_API_KEY` / `MAIL_FROM` wdrożone, klucz nie występuje w repo ani w obrazie. Kryteria 2–6 potwierdzone wcześniej testami T-053/T-054/T-055; `pnpm check` na `17fa726` zielony (1160 testów vitest, jest 10/10). Story `done`.

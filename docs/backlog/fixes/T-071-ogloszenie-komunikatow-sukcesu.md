@@ -4,7 +4,7 @@ title: "SC-03 i SC-01: komunikaty sukcesu ogłaszane czytnikowi ekranu (stały r
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-03, F-04]
@@ -31,10 +31,10 @@ related_tasks: [T-053, T-054, T-062]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-03 krok 1, when „Wyślij link” kończy się sukcesem (także drugi raz z tym samym adresem), then tekst trafia do regionu `role="status"`, który był w drzewie przed zdarzeniem; fokus zostaje na przycisku. — verified by: test komponentu
-- [ ] AC2: Given wejście na SC-01 po resecie hasła albo po usunięciu konta, then komunikat jest w regionie `role="status"` obecnym w drzewie przed wpisaniem tekstu (albo jest ogłaszany innym udokumentowanym sposobem, który działa przy fokusie na polu e-mail). — verified by: test komponentu
-- [ ] AC3: Given `eslint.config.js`, then `no-restricted-syntax` w `apps/web/src` odrzuca `InlineAlert` z `tone="success"` montowany warunkowo (`cond && <InlineAlert tone="success">`, operator `?:`), z komunikatem odsyłającym do `web.md`, „Pułapki”. Wyjątki tylko przez `eslint.config.js`, nie komentarzem. — verified by: `pnpm lint` zielony po poprawce; kontrola ręczna: przywrócony warunkowy alert daje błąd lintu (Evidence), zmiana cofnięta
-- [ ] AC4: No regression in: błąd logowania na SC-01 (`role="alert"`, fokus na alercie), zaproszenie na SC-01, axe w E2E.
+- [x] AC1: Given SC-03 krok 1, when „Wyślij link” kończy się sukcesem (także drugi raz z tym samym adresem), then tekst trafia do regionu `role="status"`, który był w drzewie przed zdarzeniem; fokus zostaje na przycisku. — verified by: test komponentu
+- [x] AC2: Given wejście na SC-01 po resecie hasła albo po usunięciu konta, then komunikat jest w regionie `role="status"` obecnym w drzewie przed wpisaniem tekstu (albo jest ogłaszany innym udokumentowanym sposobem, który działa przy fokusie na polu e-mail). — verified by: test komponentu
+- [x] AC3: Given `eslint.config.js`, then `no-restricted-syntax` w `apps/web/src` odrzuca `InlineAlert` z `tone="success"` montowany warunkowo (`cond && <InlineAlert tone="success">`, operator `?:`), z komunikatem odsyłającym do `web.md`, „Pułapki”. Wyjątki tylko przez `eslint.config.js`, nie komentarzem. — verified by: `pnpm lint` zielony po poprawce; kontrola ręczna: przywrócony warunkowy alert daje błąd lintu (Evidence), zmiana cofnięta
+- [x] AC4: No regression in: błąd logowania na SC-01 (`role="alert"`, fokus na alercie), zaproszenie na SC-01, axe w E2E.
 
 ## TDD plan
 
@@ -55,9 +55,27 @@ related_tasks: [T-053, T-054, T-062]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+`InlineAlert` jest regionem live, a ekrany montowały go warunkowo razem z tekstem (`cond && <InlineAlert tone="success">`, `?:`): region wstawiony do drzewa już z treścią zwykle nie jest ogłaszany, a ponowne wysłanie na SC-03 nie zmieniało treści, więc też nie było ogłoszenia. Wzorzec wszedł z T-008 (`JoinedNotice` na SC-06), T-053 (SC-03), T-054 i T-062 (SC-01). Testy nie złapały tego, bo sprawdzały tylko stan DOM po fakcie (`findByRole("status")` z tekstem), a jsdom nie odróżnia regionu wstawionego z treścią od zmiany treści w istniejącym regionie. Nie było helpera, który by to sprawdzał.
+
+Inne wystąpienia: `JoinedNotice` na SC-06 („Dołączyłeś(-aś) do listy…”). Ta sama przyczyna i ta sama warstwa, mała zmiana, więc poprawione w tym zadaniu. Warunkowe `InlineAlert tone="info"` (SC-01 zaproszenie, SC-05 `RemovedNotice`) i ostrzeżenia nie są komunikatami sukcesu po zdarzeniu i zostają poza zakresem: SC-05 i SC-06 ustawiają fokus na nagłówek, a ostrzeżenia limitu dostają fokus.
 
 ## Evidence
+
+**Poprawka:** `InlineAlert` z `tone="success"` zawsze renderuje region `role="status"`. Przy pustej treści (`null`, `false`, `""`) region jest pusty i ukryty wizualnie (`.empty` → `visuallyHidden`, bez miejsca w układzie). Tekst podany już przy montowaniu pojawia się po `SUCCESS_ANNOUNCE_DELAY_MS` (100 ms), więc region jest w drzewie dostępności przed treścią. SC-03 krok 1 czyści `sentTo` przy każdym wysłaniu: region jest pusty w czasie wysyłki, a ten sam tekst po sukcesie znowu zostaje ogłoszony. SC-01 ma jeden region sukcesu (`entryNotice`). SC-06 `JoinedNotice` renderuje alert zawsze.
+
+**Helper testowy:** `apps/web/test/announcements.ts`, `statusAnnouncements()` (MutationObserver). Zapisuje tylko zmianę treści regionu `status`, który był już w drzewie, czyli to, co czytnik ekranu ogłosi.
+
+**Red (przed poprawką)**, `pnpm vitest run --project web SC-03 SC-01 SC-08`:
+- `SC-03 … announces „sent” from a status region present before sending, again for the same address (T-071)` → `AssertionError: expected [] to deeply equal [ Array(1) ]`
+- `SC-01 … after a password reset announces the message from a status region present before it (T-071)` → `AssertionError: expected [] to deeply equal [ Array(1) ]`
+- `SC-01 … after an account deletion announces …` → `AssertionError: expected [] to deeply equal [ 'Konto zostało usunięte.' ]`
+- `SC-08 … joining opens SC-06 with „Dołączyłeś(-aś)…” …` (dodana asercja) → `AssertionError: expected [] to include 'Dołączyłeś(-aś) do listy „Dom”.'`
+
+**Green:** wszystkie 4 przechodzą. Zmienione stare asercje: `findByRole("status")` zwracało od razu pusty region, więc test najpierw czeka na tekst (`findByText`), a potem sprawdza region (`NewPasswordStep.test.tsx` ×6, `AccountScreen.delete.test.tsx` ×1). E2E `j01-reset-hasla.spec.ts:43`: `toHaveCount(0)` → `toBeEmpty()`, bo region jest stale w drzewie.
+
+**AC3, kontrola ręczna:** w `RequestLinkStep.tsx` chwilowo przywrócono `{form.sentTo !== null && (<InlineAlert tone="success">…)}` oraz `{… ? null : <InlineAlert tone="success">…}`. `eslint` zgłosił `28:46` i `29:51 error InlineAlert tone="success" renderuj zawsze… no-restricted-syntax` (2 errors). Zmianę cofnięto. Reguła jest w `WEB_SUCCESS_ALERT_SYNTAX` w `eslint.config.js`, we wszystkich trzech blokach `apps/web/src`. Nie da się jej wyłączyć komentarzem (przebieg `--no-inline-config`).
+
+**Statyczne i pełne:** `pnpm check` exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, 1163 testy + mobile). `pnpm build` OK. E2E całość: 74 passed (5.2 min, telefon + komputer, axe w J-01 reset/nowe hasło/usunięcie konta).
 
 ## Prevention
 
@@ -66,3 +84,26 @@ Zaakceptowane przez właściciela 2026-11-02: linia w `web.md`, „Pułapki” (
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-03)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Lint (AC3) | `WEB_SUCCESS_ALERT_SYNTAX` catches only `cond && <InlineAlert tone="success">` and `?:` directly around the element. It does not catch `tone={"success"}`, a wrapper (`cond && <div><InlineAlert tone="success">…</div>`) or an early `return null` before the alert. | Selector `LogicalExpression > JSXElement > JSXOpeningElement[name.name='InlineAlert'] > JSXAttribute[...value.value='success']` in `eslint.config.js` | AC3 asks only for `&&` and `?:`, so this passes. A broader selector (any `InlineAlert` with `tone` success under a `LogicalExpression`/`ConditionalExpression` ancestor in JSX) would close the gap. |
+| 2 | note | Accessibility | Manual screen-reader check (NVDA/VoiceOver) from the QA plan not verifiable here: no screen reader in this environment. The 100 ms `SUCCESS_ANNOUNCE_DELAY_MS` is a heuristic for when Chrome has registered the region; it is reasonable but not proven with a real reader. | DOM behaviour verified with `statusAnnouncements()` and E2E; no SR run | One manual NVDA + Chrome pass on SC-03 (two sends with the same address) and SC-01 after reset during UAT. |
+
+**Reproduce:** `pnpm check` exit 0 (format, lint incl. `--no-inline-config` pass, typecheck, design-check, backlog-check, 147 files / 1163 web+api tests, mobile 10 tests). `pnpm vitest run --project web SC-03 SC-01 SC-08 SC-09`: 72 passed. E2E (`E2E_MAILPIT_PORT=3199`, port 3125 held by a leftover container) `j01-reset-hasla j01-nowe-haslo j01-usuniecie-konta j04-zaproszenie`, phone + desktop: 14 passed (incl. axe on SC-07/SC-08 and SC-01 after deletion).
+
+**Acceptance criteria:**
+- AC1 pass: `PasswordResetScreen.test.tsx` „announces „sent” … again for the same address” asserts two announcements from a pre-existing region and focus on the button. Spot-check: removing `setSentTo(null)` → `expected [ Array(1) ] to deeply equal [ …(2) ]`.
+- AC2 pass: `SignInScreen.test.tsx` both cases assert announcement, region text and focus on „E-mail”. Spot-check: `useReady(false)` (no deferral) → both SC-01 tests, SC-03 test and SC-08 joined test fail (4 failed).
+- AC3 pass: restored `cond && <InlineAlert tone="success">` in SC-01 and `?:` form in SC-06 JoinedNotice → 2 `no-restricted-syntax` errors with the T-071 message. An `eslint-disable-next-line no-restricted-syntax` silences the first pass but the `pnpm lint` second pass (`eslint.directives.config.js --no-inline-config`) reports `Disabling 'no-restricted-syntax' is not allowed`. All spot-check edits reverted.
+- AC4 pass: SC-01 error/invitation tests green in the full suite; E2E reset, new password, deletion, invitation flows with axe green.
+
+**Test quality:** Red evidence recorded for all 4 tests; my spot-checks confirm they bite. Assertions use literal texts from the spec. Changed old assertions (`findByRole("status")` → `findByText` then region) are equivalent or stronger, not weaker. `statusAnnouncements()` correctly ignores a region inserted already filled (mutation target is the parent, outside the region).
+
+**Code review:** Change is minimal and in scope; JoinedNotice on SC-06 is the same root cause, justified in Root cause. Empty variant reconciles to the same `<div>` as the filled one, so the region stays in the tree. CSS via `composes: visuallyHidden`, no hard-coded values. `web.md` „Pułapki” and code map updated. Root cause explains why the old tests missed it.
+
+**Security:** UI-only, no data, no threats listed; nothing logged.

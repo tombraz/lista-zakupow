@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -106,4 +106,26 @@ describe("session ended while signed in", () => {
       expect(screen.getByRole("heading", { level: 1, name: "Moje listy" })).toBeVisible();
     });
   }
+});
+
+// T-078 (F-04, SC-09): „Konto zostało usunięte.” tylko zaraz po usunięciu konta.
+describe("after the account was deleted", () => {
+  it("shows the deletion message once; a later protected address leads to plain SC-01 with `from` (AC1)", async () => {
+    sessionIs(ANIA);
+    listsAre([aList({ name: "Dom" })]);
+    server.use(http.delete("*/api/v1/me", () => new HttpResponse(null, { status: 204 })));
+    const user = userEvent.setup();
+    const { router } = renderApp("/konto");
+    await user.click(await screen.findByRole("button", { name: "Usuń konto" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Usunąć konto na zawsze?" });
+    await user.click(within(dialog).getByRole("button", { name: "Usuń konto" }));
+    expect(await screen.findByText("Konto zostało usunięte.")).toBeVisible();
+    expect(router.state.location.state).toEqual({ accountDeleted: true });
+
+    await act(() => router.navigate("/listy"));
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Zaloguj się" })).toBeVisible();
+    expect(router.state.location.pathname).toBe("/logowanie");
+    expect(router.state.location.state).toEqual({ from: "/listy" });
+  });
 });

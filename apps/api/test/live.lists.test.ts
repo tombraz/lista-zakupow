@@ -133,7 +133,16 @@ describe("list, invitation and user channel events (AC2, F-05, F-11, F-12)", () 
     await anias.next("lists.changed");
     await tomeks.next("lists.changed");
     await cecylias.next("lists.changed");
-    expect(tomeks.received().map(({ type }) => type)).not.toContain("invitations.changed");
+    // T-074: kolejność zdarzeń przyjęcia linku.
+    expect(tomeks.received().map(({ type }) => type)).toEqual([
+      "subscribed",
+      "members.changed",
+      "lists.changed",
+    ]);
+    expect(anias.received().map(({ type }) => type)).toEqual([
+      "invitations.changed",
+      "lists.changed",
+    ]);
   });
 
   it("accepting a link while signing up announces the newcomer too", async () => {

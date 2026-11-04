@@ -50,9 +50,19 @@ export function useEndSession() {
   };
 }
 
-/** Powód ostatniego końca sesji w tej karcie albo `undefined` (zwykłe wylogowanie, 401). */
+/**
+ * Powód ostatniego końca sesji w tej karcie albo `undefined` (zwykłe wylogowanie, 401).
+ * Jednorazowy: po przekierowaniu, które go odczytało, znika, więc kolejne wejście na chroniony
+ * adres to zwykłe wejście bez sesji (z `from`, T-078). Usuwa go efekt, nie render: podwójny
+ * render (StrictMode) zgubiłby komunikat.
+ */
 export function useSessionEnd(): SessionEnd | undefined {
-  return useQueryClient().getQueryData<SessionEnd>(SESSION_END_KEY);
+  const client = useQueryClient();
+  const ended = client.getQueryData<SessionEnd>(SESSION_END_KEY);
+  useEffect(() => {
+    if (ended) client.removeQueries({ queryKey: SESSION_END_KEY });
+  }, [client, ended]);
+  return ended;
 }
 
 const isUnauthenticated = (error: unknown) =>

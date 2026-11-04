@@ -1,6 +1,7 @@
 import { accountDeletionRequestSchema, nameChangeRequestSchema, type Me } from "@lista/shared";
 import type { FastifyInstance } from "fastify";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { afterCommit } from "../../../http/after-commit";
 import { ApiError } from "../../../http/api-error";
 import { validate } from "../../../http/validate";
 import { securityEvent } from "../../../logging";
@@ -15,7 +16,10 @@ export type NameChanged = (userId: string) => Promise<void>;
  * F-04: w transakcji usunięcia konta (przed usunięciem) zbiera, kto traci listy domownika
  * albo widzi go na swoich; zwraca rozesłanie zdarzeń, wołane po zatwierdzeniu (moduł `listy`).
  */
-export type AccountDeleting = (tx: AccountTransaction, userId: string) => Promise<() => void>;
+export type AccountDeleting = (
+  tx: AccountTransaction,
+  userId: string,
+) => Promise<() => Promise<void>>;
 
 interface MeDependencies {
   auth: Auth;
@@ -40,7 +44,7 @@ export function meRoutes(app: FastifyInstance, deps: MeDependencies): void {
     const renamed = await renameUser(db, user.id, name);
     // Konto usunięte między sprawdzeniem sesji a zapisem: jak brak sesji.
     if (!renamed) throw new ApiError(401, "unauthenticated");
-    await nameChanged(user.id);
+    await afterCommit(request.log, () => nameChanged(user.id));
     return renamed satisfies Me;
   });
 
@@ -55,7 +59,7 @@ export function meRoutes(app: FastifyInstance, deps: MeDependencies): void {
     // TH-21: ślad usunięcia konta, sam identyfikator (architecture.md, „Obserwowalność”).
     securityEvent(request, "account_deleted", { userId: user.id });
     // Zdarzenia dopiero po zatwierdzeniu transakcji (layers/backend.md).
-    announce();
+    await afterCommit(request.log, announce);
     deps.closeUser(user.id);
     return reply.code(204).send();
   });

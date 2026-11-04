@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
+import { statusAnnouncements } from "../../../test/announcements";
 import { aList, ANIA, apiError, detailsOf, TOMEK } from "../../../test/lists";
 import { server } from "../../../test/msw-server";
 import { heldResponse } from "../../../test/held";
@@ -89,10 +90,15 @@ describe("SC-08 Zaproszenie", () => {
     );
     acceptIs(() => HttpResponse.json({ listId: list.id }));
     const { router } = renderApp(["/listy", PAGE]);
+    const announced = statusAnnouncements();
 
     await user.click(await screen.findByRole("button", { name: "Dołącz do listy" }));
 
     expect(await screen.findByText("Dołączyłeś(-aś) do listy „Dom”.")).toBeVisible();
+    // T-071: region `status` był na SC-06 przed tekstem, więc czytnik go ogłasza.
+    await waitFor(() => {
+      expect(announced).toContain("Dołączyłeś(-aś) do listy „Dom”.");
+    });
     expect(router.state.location.pathname).toBe(`/listy/${list.id}`);
     expect(router.state.historyAction).toBe("REPLACE");
     await router.navigate(-1);

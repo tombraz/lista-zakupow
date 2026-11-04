@@ -1,7 +1,8 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
+import { statusAnnouncements } from "../../../test/announcements";
 import { heldResponse, type HeldResponse } from "../../../test/held";
 import { server } from "../../../test/msw-server";
 import { renderApp, sessionIs } from "../../../test/render";
@@ -75,6 +76,25 @@ describe("SC-03 Reset hasła, krok 1", () => {
     expect(sendButton()).not.toHaveAttribute("aria-disabled");
     expect(screen.getByLabelText("E-mail")).toBeVisible();
     expect(requests).toEqual([{ email: "ania@example.com" }]);
+  });
+
+  it("announces „sent” from a status region present before sending, again for the same address (T-071)", async () => {
+    resetAnswers([OK]);
+    const user = userEvent.setup();
+    renderApp({ pathname: "/reset-hasla", state: { email: "ania@example.com" } });
+    await screen.findByLabelText("E-mail");
+    const announced = statusAnnouncements();
+
+    await user.click(sendButton());
+    await waitFor(() => {
+      expect(announced).toEqual([SENT("ania@example.com")]);
+    });
+    await user.click(sendButton());
+
+    await waitFor(() => {
+      expect(announced).toEqual([SENT("ania@example.com"), SENT("ania@example.com")]);
+    });
+    expect(sendButton()).toHaveFocus();
   });
 
   it("explains the limit and a network failure, and clears them after a successful request (AC4)", async () => {

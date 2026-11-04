@@ -7,7 +7,7 @@ import {
   type SignUpInvitation,
 } from "@lista/shared";
 import { fromNodeHeaders } from "better-auth/node";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ApiError } from "../../../http/api-error";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
@@ -37,7 +37,11 @@ interface AuthDeps {
 }
 
 /** Przyjmuje zaproszenie dla nowego konta; błąd zaproszenia wraca w treści, nie jako status. */
-export type InvitationOnSignUp = (userId: string, token: string) => Promise<SignUpInvitation>;
+export type InvitationOnSignUp = (
+  userId: string,
+  token: string,
+  log: FastifyBaseLogger,
+) => Promise<SignUpInvitation>;
 
 // Kody Better Auth, które klient musi rozróżnić; resztę mapuje sam status HTTP.
 const AUTH_ERRORS: Record<string, [status: number, code: ErrorCode]> = {
@@ -76,7 +80,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     const accept = deps.invitationOnSignUp();
     if (invitationToken === undefined || !accept) return relay(response, reply);
     return relay(response, reply, async (user) => ({
-      invitation: await accept(user.id, invitationToken),
+      invitation: await accept(user.id, invitationToken, request.log),
     }));
   });
 

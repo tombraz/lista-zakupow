@@ -11,6 +11,8 @@ F-09: nie można dodać ani zmienić nazwy pozycji na nazwę innej pozycji listy
 
 Kolumna `item.name_key` = nazwa po `trim`, normalizacji NFC i `toLocaleLowerCase('pl-PL')`, liczona jedną funkcją w `packages/shared`; `UNIQUE (list_id, name_key)`. Naruszenie indeksu → 409 `duplicate_item`. Klient sprawdza duplikat lokalnie tą samą funkcją dla szybkiej informacji, ale rozstrzyga baza.
 
+> Aktualizacja 2026-11-04 (T-081): od T-060 funkcja `normalizeItemName` używa NFKC i usuwa znaki `Default_Ignorable_Code_Point` (TH-29); istniejące klucze przeliczył krok migracji danych (ADR 0009). Aktualna reguła: `data-model.md`, „Ograniczenia i niezmienniki”.
+
 ## Rozważane alternatywy
 
 - **`lower(name)` w indeksie funkcyjnym:** wynik zależy od collation bazy i ustawień hostingu; ryzyko różnic dla polskich znaków między lokalną bazą a produkcją.

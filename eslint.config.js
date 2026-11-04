@@ -105,6 +105,16 @@ const API_LIMIT_LOG_SYNTAX = [
   },
 ];
 
+// T-089 (T-076): zdarzenia na żywo po zatwierdzonym zapisie z tras modułów tylko w `afterCommit`
+// (src/http/after-commit.ts): jego błąd idzie do logu, nie zamienia zapisanej zmiany w 500.
+const AFTER_COMMIT_ONLY = ":not(CallExpression[callee.name='afterCommit'] CallExpression)";
+const AFTER_COMMIT_MESSAGE =
+  "Zdarzenia na żywo po zapisie przez afterCommit(request.log, () => …) z src/http/after-commit.ts: błąd rozesłania nie może dać 500 (T-089, layers/backend.md „Pułapki”).";
+const API_AFTER_COMMIT_SYNTAX = [
+  `CallExpression[callee.name='announceAccessChanges']${AFTER_COMMIT_ONLY}`,
+  `CallExpression[callee.property.name=/^(publish|notify|revoke)$/]${AFTER_COMMIT_ONLY}`,
+].map((selector) => ({ selector, message: AFTER_COMMIT_MESSAGE }));
+
 // TH-26 (T-049): router dopasowuje trasę po zdekodowanej ścieżce, więc decyzje na surowym adresie
 // rozjeżdżają się z trasą. Wyjątek: handler 404 w `http/web-app.ts` (brak dopasowanej trasy).
 const API_RAW_URL_SYNTAX = [
@@ -155,6 +165,15 @@ const WEB_ENTRY_LINK_SYNTAX = [
       "SC-01 ↔ SC-02 przez EntryLink (invitations/EntryLink.tsx): zwykły Link gubi wpisany e-mail i zaproszenie (T-028, layers/web.md „Pułapki”).",
   },
 ];
+
+// T-071: sukces w regionie `status` obecnym przed tekstem; wstawiony już z treścią nie jest ogłaszany.
+const SUCCESS_ALERT =
+  "JSXElement > JSXOpeningElement[name.name='InlineAlert'] > JSXAttribute[name.name='tone'][value.value='success']";
+const WEB_SUCCESS_ALERT_SYNTAX = ["LogicalExpression", "ConditionalExpression"].map((parent) => ({
+  selector: `${parent} > ${SUCCESS_ALERT}`,
+  message:
+    'InlineAlert tone="success" renderuj zawsze, a warunek daj w treści ({cond && tekst}): region status wstawiony z tekstem nie jest ogłaszany (T-071, layers/web.md „Pułapki”).',
+}));
 
 // TH-16: token sesji w aplikacji mobilnej tylko w expo-secure-store, nigdy w AsyncStorage.
 // Zapis pod kluczem związanym z sesją: literał albo szablon zaczynający się od takiej nazwy.
@@ -337,6 +356,20 @@ export default tseslint.config(
     },
   },
   {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza reguły API (T-089).
+    files: ["apps/api/src/modules/*/http/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...API_CLOCK_SYNTAX,
+        ...API_LIMIT_LOG_SYNTAX,
+        ...API_RAW_URL_SYNTAX,
+        ...API_AFTER_COMMIT_SYNTAX,
+      ],
+    },
+  },
+  {
     // Handler 404 nie ma dopasowanej trasy: tylko surowy adres wybiera SPA albo JSON (bez API_RAW_URL_SYNTAX).
     files: ["apps/api/src/http/web-app.ts"],
     rules: {
@@ -372,6 +405,7 @@ export default tseslint.config(
         ...WEB_SESSION_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
         ...WEB_ENTRY_LINK_SYNTAX,
+        ...WEB_SUCCESS_ALERT_SYNTAX,
       ],
     },
   },
@@ -385,6 +419,7 @@ export default tseslint.config(
         ...SAFE_SYNTAX,
         ...WEB_SESSION_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
+        ...WEB_SUCCESS_ALERT_SYNTAX,
       ],
     },
   },
@@ -398,6 +433,7 @@ export default tseslint.config(
         ...SAFE_SYNTAX,
         ...WEB_MUTATE_SYNTAX,
         ...WEB_ENTRY_LINK_SYNTAX,
+        ...WEB_SUCCESS_ALERT_SYNTAX,
       ],
     },
   },

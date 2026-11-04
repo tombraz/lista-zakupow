@@ -81,7 +81,8 @@ export function itemRoutes(
     const { item, created } = await addItem(repository, actor, input);
     const body = itemResponse(item);
     // Ponowione żądanie z tym samym `id` niczego nie zmienia (F-15).
-    if (created) await publish({ type: "item.upserted", listId: access.listId, item: body });
+    if (created)
+      await publish(request.log, { type: "item.upserted", listId: access.listId, item: body });
     return reply.code(created ? 201 : 200).send(body);
   });
 
@@ -89,7 +90,11 @@ export function itemRoutes(
     const user = await accounts.requireUser(request, reply);
     const access = await lists.requireListAccess(user.id, request.params.listId, "member");
     const deletedIds = await clearChecked(repository, access);
-    await publish({ type: "items.cleared", listId: access.listId, itemIds: deletedIds });
+    await publish(request.log, {
+      type: "items.cleared",
+      listId: access.listId,
+      itemIds: deletedIds,
+    });
     return { deletedIds } satisfies ClearCheckedResponse;
   });
 
@@ -108,7 +113,7 @@ export function itemRoutes(
     const access = await lists.requireListAccess(user.id, listId, "member");
     const actor = { access, userId: user.id, clock };
     const item = itemResponse(await changeItem(repository, actor, itemId, input));
-    await publish({ type: "item.upserted", listId: access.listId, item });
+    await publish(request.log, { type: "item.upserted", listId: access.listId, item });
     return item;
   });
 
@@ -117,7 +122,7 @@ export function itemRoutes(
     const access = await lists.requireListAccess(user.id, request.params.listId, "member");
     const { itemId } = request.params;
     await deleteItem(repository, access, itemId);
-    await publish({ type: "item.deleted", listId: access.listId, itemId });
+    await publish(request.log, { type: "item.deleted", listId: access.listId, itemId });
     return reply.code(204).send();
   });
 }

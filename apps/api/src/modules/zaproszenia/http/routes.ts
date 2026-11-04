@@ -4,6 +4,7 @@ import {
   type InvitationPreview,
 } from "@lista/shared";
 import type { FastifyInstance } from "fastify";
+import { afterCommit } from "../../../http/after-commit";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import type { Accounts } from "../../konta";
 import type { Lists } from "../../listy";
@@ -73,7 +74,9 @@ function ownerRoutes(app: FastifyInstance, deps: InvitationRoutesDeps): void {
       const access = await lists.requireListAccess(user.id, request.params.listId, "owner");
       await revokeInvitation(invitations, access.listId, request.params.invitationId);
       // F-11: unieważniony link znika też z innych otwartych SC-07 właściciela.
-      live.notify([user.id], { type: "invitations.changed", listId: access.listId });
+      await afterCommit(request.log, () => {
+        live.notify([user.id], { type: "invitations.changed", listId: access.listId });
+      });
       return reply.code(204).send();
     },
   );
@@ -86,8 +89,7 @@ const LOOKUP_LIMIT = perIp("invitationLookupPerIp");
  * per IP (licznik w pamięci, jedna instancja API — ADR 0003), osobno dla każdej trasy.
  */
 async function tokenRoutes(scope: FastifyInstance, deps: InvitationRoutesDeps): Promise<void> {
-  const { accounts, invitations } = deps;
-  const events = { live: deps.live, lists: deps.lists };
+  const { accounts, invitations, live, lists } = deps;
   await perIpRateLimit(scope);
 
   // Publiczna (SC-08): także bez sesji.
@@ -102,6 +104,7 @@ async function tokenRoutes(scope: FastifyInstance, deps: InvitationRoutesDeps): 
     async (request, reply) => {
       const user = await accounts.requireUser(request, reply);
       const { token } = request.params;
+      const events = { live, lists, log: request.log };
       const listId = await acceptAndAnnounce(invitations, events, token, user.id);
       return { listId } satisfies AcceptInvitationResponse;
     },

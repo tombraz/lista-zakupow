@@ -15,6 +15,8 @@ PostgreSQL, schemat w Drizzle (`apps/api/src/db/schema.ts`), migracje SQL w repo
 | `item` | pozycja (`checked_at` = odhaczenie) |
 | `invitation` | link zaproszenia |
 | `list_daily_activity` | dane do miar sukcesu |
+| `data_migration` | wykonane kroki migracji danych w TS (ADR 0009) |
+| `cleanup_run` | początek ostatniego codziennego sprzątania (jeden wiersz, T-064) |
 
 ## Encje i relacje
 
@@ -99,7 +101,7 @@ erDiagram
 | --- | --- |
 | E-mail unikalny (F-01) | unikalny indeks na `user.email` (zapisywany małymi literami przez Better Auth) |
 | Imię 1–30, nazwa listy 1–100, nazwa pozycji 1–100, notatka ≤ 200 (F-01, F-05, F-07, F-16) | schematy zod w `packages/shared` + `CHECK (char_length(...) BETWEEN ...)` w bazie |
-| Duplikat pozycji bez rozróżniania wielkości liter, także wśród odhaczonych (F-09) | `name_key` = nazwa po `trim`, normalizacji Unicode NFC i `toLocaleLowerCase('pl-PL')` (funkcja w `packages/shared`); `UNIQUE (list_id, name_key)`. Zmiana nazwy tej samej pozycji na inną wielkość liter nie narusza indeksu (ten sam wiersz) |
+| Duplikat pozycji bez rozróżniania wielkości liter, także wśród odhaczonych (F-09) | `name_key` = `normalizeItemName` (`packages/shared/src/api/items.ts`): `trim`, normalizacja Unicode NFKC, usunięcie znaków `Default_Ignorable_Code_Point`, ponowny `trim` i `toLocaleLowerCase('pl-PL')` (TH-29, T-060; istniejące klucze przeliczył krok `0007_name_key_nfkc`, ADR 0009); `UNIQUE (list_id, name_key)`. Zmiana nazwy tej samej pozycji na inną wielkość liter nie narusza indeksu (ten sam wiersz) |
 | Limit 50 list na właściciela (F-05) | w transakcji: `SELECT … FOR UPDATE` na wierszu `user`, liczenie, `INSERT` |
 | Limit 500 pozycji na listę (F-07) | w transakcji: `SELECT … FOR UPDATE` na wierszu `shopping_list`, liczenie, `INSERT` |
 | Limit 20 uczestników (F-12) | jak wyżej, w transakcji przyjęcia zaproszenia |
@@ -131,11 +133,11 @@ BRD N-02: bez dodatkowych działań dostosowujących do RODO (pilotaż, ryzyko R
 | członkostwo | `list_member` | udostępnianie | do opuszczenia, usunięcia, usunięcia listy | kaskada |
 | linki zaproszeń | `invitation` | F-11, F-12 | usuwane codziennie 30 dni po wygaśnięciu | kaskada z listą |
 | aktywność dzienna | `list_daily_activity` | miary sukcesu (BRD §10) | 90 dni, usuwane codziennie | kaskada z listą i kontem |
-| tokeny resetu, liczniki limitów | `verification`, `rate_limit`, `sign_in_failure` (pseudonim e-maila) | F-03, MC-04, MC-05 | do wygaśnięcia; usuwane codziennie (`rate_limit` sprząta też Better Auth) | — |
+| tokeny resetu, liczniki limitów | `verification`, `rate_limit`, `sign_in_failure` (pseudonim e-maila) | F-03, MC-04, MC-05 | do wygaśnięcia; usuwane codziennie. Wiersz `rate_limit` nie zapisuje swojego okna, więc znika po najdłuższym oknie limitów w tej tabeli (`signInPerIp`, `signUpPerIp`, `passwordResetPerIp`, `passwordResetPerEmail` z `RATE_LIMITS`; teraz 1 h), jak w sprzątaniu samego Better Auth; `sign_in_failure` po oknie `signInFailuresPerAccount` (`konta/infra/retention.ts`) | — |
 | logi | hosting | diagnostyka | wg hostingu (`/ci-cd`), bez danych osobowych poza identyfikatorami | — |
 | kopie bazy | hosting | N-03 | 7 dni | wygasają same |
 
-Eksport danych: poza zakresem (BRD §11). Sprzątanie: zadanie w procesie API raz dziennie (bez osobnej infrastruktury cron).
+Eksport danych: poza zakresem (BRD §11). Sprzątanie: zadanie w procesie API raz dziennie (bez osobnej infrastruktury cron); początek ostatniego przebiegu w tabeli `cleanup_run (id = 1, started_at)`, żeby po uśpieniu maszyny zaległe sprzątanie ruszyło po starcie, i to tylko raz (T-064).
 
 ## Migracje
 
@@ -143,3 +145,4 @@ Eksport danych: poza zakresem (BRD §11). Sprzątanie: zadanie w procesie API ra
 - Migracje uruchamiane automatycznie przed startem nowej wersji API (krok wdrożenia w `/ci-cd`); testy integracyjne uruchamiają wszystkie migracje na czystej bazie w kontenerze.
 - Tylko migracje do przodu; zmiany niszczące (usunięcie kolumny) w dwóch krokach: najpierw kod przestaje używać kolumny, potem migracja ją usuwa.
 - Tabele Better Auth tworzone z jego schematu (CLI Better Auth generuje schemat Drizzle) i rozszerzane własnymi kolumnami w tej samej migracji.
+- Migracje danych liczone kodem z `packages/shared` to kroki TS po migracjach SQL (`apps/api/src/db/data-migrations/`, ADR 0009); tabela `data_migration (name PK, applied_at)` zapisuje wykonane kroki, wiersz wstawiany w tej samej transakcji co zmiana danych, więc każdy krok wykonuje się raz.

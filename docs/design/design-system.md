@@ -168,6 +168,7 @@ Rodzina: `typography.family.base` (systemowa bezszeryfowa). Rozmiary w px skaluj
 ### Pasek „brak połączenia” (OfflineBanner)
 - **Używany na:** SC-05–SC-09
 - **Budowa:** pod paskiem nagłówka, tło `surface.inverse`: „Brak połączenia. Zmiany nie są zapisywane.”
+- **Powrót sieci:** pasek znika; czytnik ekranu ogłasza „Połączenie przywrócone.” (tekst ukryty wizualnie; zatwierdzone 2026-11-04, T-080)
 - **Dostępność:** `role="status"`; pojawienie i zniknięcie ogłaszane; nie zasłania treści (przesuwa ją)
 
 ### Komunikat chwilowy (Toast)

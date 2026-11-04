@@ -55,11 +55,11 @@ Moduły w `apps/api/src/modules/<moduł>`. Każdy moduł ma warstwę domenową (
 
 | Moduł | Posiada (słownik) | Udostępnia | Zależy od |
 | --- | --- | --- | --- |
-| `konta` | domownik (imię, e-mail, zgody), sesja | rejestracja, logowanie, wylogowanie, reset hasła (przez Better Auth), `GET/PATCH /me`, usunięcie konta (F-04, F-16); `requireUser()` dla tras | `listy` (usunięcie konta), `na-zywo` |
-| `listy` | lista, właściciel, uczestnik (członkostwo) | CRUD list, przegląd list (F-05, F-06), uczestnicy (F-13); **`requireListAccess(userId, listId, rola)` — jedyne miejsce sprawdzania dostępu do listy** | `na-zywo` |
+| `konta` | domownik (imię, e-mail, zgody), sesja | rejestracja, logowanie, wylogowanie, reset hasła (przez Better Auth), `GET/PATCH /me`, usunięcie konta (F-04, F-16); `requireUser()` dla tras; `announceNameChanges` / `announceAccountDeletions` — rejestracja obsługi zdarzeń po zmianie imienia i usunięciu konta (odwrócenie zależności: podaje ją `listy`) | `na-zywo` |
+| `listy` | lista, właściciel, uczestnik (członkostwo) | CRUD list, przegląd list (F-05, F-06), uczestnicy (F-13); **`requireListAccess(userId, listId, rola)` — jedyne miejsce sprawdzania dostępu do listy**; `announceAccessChanges` — jedyne miejsce zdarzeń na żywo po zmianie dostępu (T-074) | `konta` (`requireUser`, rejestracja obsługi zmiany imienia i usunięcia konta), `na-zywo` |
 | `pozycje` | pozycja, odhaczenie, blokada duplikatu | CRUD pozycji, odhaczanie, usuń odhaczone (F-07…F-10) | `listy` (dostęp), `na-zywo` |
 | `zaproszenia` | link zaproszenia | tworzenie, unieważnianie, podgląd i przyjęcie zaproszenia (F-11, F-12) | `listy` (dostęp, członkostwo, limit 20), `na-zywo` |
-| `na-zywo` | subskrypcja, zdarzenie | WebSocket `/api/v1/live`, `publish(zdarzenie)`, `revoke(userId, listId)`, `closeSession(sessionId)` (F-14, MC-03) | `listy` (sprawdzenie dostępu przy subskrypcji) |
+| `na-zywo` | subskrypcja, zdarzenie | WebSocket `/api/v1/live`, `publish(zdarzenie)`, `revoke(userId, listId)`, `closeSession(sessionId)`, `closeUser(userId)` — reset hasła i usunięcie konta (F-14, MC-03, TH-28) | `listy` (sprawdzenie dostępu przy subskrypcji) |
 | `statystyki` | aktywność dzienna listy | zapis aktywności przy odhaczeniu; zapytania SQL miar sukcesu (BRD §10) | — |
 
 Front (web i mobile) dzieli się według ekranów z IA; logika pobierania danych w hookach (TanStack Query), komponenty tylko renderują.
@@ -287,6 +287,7 @@ Otwarte:
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-04 | T-081: „Moduły”: `listy` zależy od `konta` (odwrócenie przez `announceNameChanges` / `announceAccountDeletions`), nie odwrotnie; `closeUser` w `na-zywo`. |
 | 2026-11-03 | T-088: „Obserwowalność”: alarm mailowy z API do właściciela (`ALERT_EMAIL`, okno 15 min w pamięci procesu). |
 | 2026-11-02 | T-075: kolejka resetów hasła per konto w pamięci procesu — zależna od jednej instancji API (ADR 0003). |
 | 2026-10-27 | T-004: kody `invalid_credentials` (401) i `invalid_origin` (403). |

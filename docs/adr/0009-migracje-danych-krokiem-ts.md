@@ -30,4 +30,5 @@ Migracje danych, które muszą liczyć wartości kodem z `packages/shared`, są 
 - Obraz z `release_command` musi zawierać skompilowany kod `packages/shared` używany przez kroki.
 - Krok już zmergowany do `main` jest niezmienny, tak jak migracja SQL (`layers/db.md`). Zmiana reguły oznacza nowy krok.
 - Przy pierwszym kroku zaktualizować `layers/db.md` (pliki, polecenia, historia) i `data-model.md` (tabela `data_migration`).
+- Krok dostaje `PoolClient` z `pg` (transakcja razem z wpisem do `data_migration`) i pisze surowe zapytania `client.query` z parametrami `$n` — wyjątek od „tylko zapytania przez Drizzle” opisany w `layers/db.md`, „Zasady bezpieczeństwa” (dopisane 2026-11-04, T-081).
 - Wrócić do decyzji, gdy krok na dużej tabeli przestanie mieścić się w limicie czasu `release_command`.

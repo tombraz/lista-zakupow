@@ -72,7 +72,9 @@ describe("SC-03 Reset hasła, krok 2", () => {
 
     await user.click(saveButton());
 
-    expect(await screen.findByRole("status")).toHaveTextContent(CHANGED);
+    expect(await screen.findByText(CHANGED)).toBeVisible();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CHANGED);
     expect(requests).toEqual([{ token: TOKEN, newPassword: "nowe haslo 123" }]);
   });
 
@@ -102,7 +104,8 @@ describe("SC-03 Reset hasła, krok 2", () => {
     expect(saveButton()).toHaveAttribute("aria-disabled", "true");
     expect(saveButton()).toHaveFocus();
     held.release();
-    expect(await screen.findByRole("status")).toHaveTextContent(CHANGED);
+    expect(await screen.findByText(CHANGED)).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(CHANGED);
     expect(screen.getByRole("heading", { level: 1, name: "Zaloguj się" })).toBeVisible();
     expect(requests).toEqual([{ token: TOKEN, newPassword: "nowe hasło ąę" }]);
     expect(router.state.location.pathname).toBe("/logowanie");
@@ -146,7 +149,8 @@ describe("SC-03 Reset hasła, krok 2", () => {
     expect(saveButton()).toHaveFocus();
     expect(passwordField()).toHaveValue("nowe haslo 123");
     await user.click(saveButton());
-    expect(await screen.findByRole("status")).toHaveTextContent(CHANGED);
+    expect(await screen.findByText(CHANGED)).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(CHANGED);
     expect(requests).toHaveLength(2);
   });
 
@@ -194,7 +198,9 @@ describe("SC-03 Reset hasła, krok 2", () => {
 
     await user.click(saveButton());
 
-    expect(await screen.findByRole("status")).toHaveTextContent(CHANGED);
+    expect(await screen.findByText(CHANGED)).toBeVisible();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CHANGED);
     expect(requests).toEqual([{ token: TOKEN, newPassword: "nowe haslo 123" }]);
   });
 
@@ -225,7 +231,9 @@ describe("SC-03 Reset hasła, krok 2", () => {
     });
     held.release();
 
-    expect(await screen.findByRole("status")).toHaveTextContent(CHANGED);
+    expect(await screen.findByText(CHANGED)).toBeVisible();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CHANGED);
     expect(requests).toHaveLength(1);
   });
 
@@ -240,7 +248,9 @@ describe("SC-03 Reset hasła, krok 2", () => {
 
     await user.click(saveButton());
 
-    expect(await screen.findByRole("status")).toHaveTextContent(CHANGED);
+    expect(await screen.findByText(CHANGED)).toBeVisible();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CHANGED);
     expect(router.state.location.pathname).toBe("/logowanie");
   });
 });

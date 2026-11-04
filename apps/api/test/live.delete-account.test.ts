@@ -73,6 +73,13 @@ describe("deleting an account live", () => {
     expect(await watching.next("list.deleted")).toEqual({ type: "list.deleted", listId: home.id });
     await watching.next("lists.changed");
     await overview.next("lists.changed");
+    // MC-03 (TH-04): subskrypcja znika po `list.deleted`, zanim pójdzie `lists.changed` (T-074).
+    expect(watching.received().map(({ type }) => type)).toEqual([
+      "subscribed",
+      "list.deleted",
+      "access.revoked",
+      "lists.changed",
+    ]);
     watching.send({ type: "subscribe", listId: home.id });
     expect(await watching.next("error")).toEqual({
       type: "error",
@@ -103,7 +110,11 @@ describe("deleting an account live", () => {
         listId: plot.id,
       });
       await socket.next("lists.changed");
-      expect(socket.received().map(({ type }) => type)).not.toContain("list.deleted");
+      expect(socket.received().map(({ type }) => type)).toEqual([
+        "subscribed",
+        "members.changed",
+        "lists.changed",
+      ]);
       socket.close();
     }
   });

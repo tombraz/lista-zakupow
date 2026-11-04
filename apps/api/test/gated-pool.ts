@@ -16,6 +16,8 @@ export interface GatedPool {
   held(count: number, timeoutMs?: number): Promise<void>;
   /** Pasujące zapytania wysłane do bazy od utworzenia puli. */
   queries(): number;
+  /** Pasujące zapytania, których wynik oddano już wywołującemu. */
+  answered(): number;
 }
 
 /**
@@ -27,6 +29,7 @@ export function gatedPool(pool: Pool, matches: RegExp): GatedPool {
   let open: () => void = () => undefined;
   let waiting = 0;
   let sent = 0;
+  let delivered = 0;
   const watchers = new Set<() => void>();
   const query = pool.query.bind(pool) as Query;
 
@@ -35,11 +38,13 @@ export function gatedPool(pool: Pool, matches: RegExp): GatedPool {
     sent += 1;
     const result = await query(...args);
     const until = gate;
-    if (!until) return result;
-    waiting += 1;
-    for (const watch of watchers) watch();
-    await until;
-    waiting -= 1;
+    if (until) {
+      waiting += 1;
+      for (const watch of watchers) watch();
+      await until;
+      waiting -= 1;
+    }
+    delivered += 1;
     return result;
   };
 
@@ -78,6 +83,7 @@ export function gatedPool(pool: Pool, matches: RegExp): GatedPool {
         watch();
       }),
     queries: () => sent,
+    answered: () => delivered,
   };
 }
 

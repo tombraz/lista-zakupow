@@ -65,10 +65,13 @@ Jak SC-01. Dwa widoki pod jednym ekranem:
 | step1.title | Reset hasła |
 | step1.intro | Podaj e-mail konta. Wyślemy link do ustawienia nowego hasła. |
 | step1.submit | Wyślij link |
+| step1.email.invalid | Wpisz poprawny adres e-mail (zatwierdzone 2026-11-04, T-080) |
+| step1.error | Nie udało się wysłać linku. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
 | step1.sent | Jeśli konto z adresem {e-mail} istnieje, wysłaliśmy na nie link. Link jest ważny 1 godzinę. |
 | back | Wróć do logowania |
 | step2.title | Ustaw nowe hasło |
 | step2.submit | Zapisz hasło |
+| step2.error | Nie udało się zapisać hasła. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
 | step2.invalid | Ten link wygasł albo został już użyty. |
 | step2.resend | Wyślij nowy link |
 | mail.subject | Reset hasła — Wspólna lista zakupów |

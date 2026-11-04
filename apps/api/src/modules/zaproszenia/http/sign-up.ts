@@ -11,11 +11,11 @@ import { acceptAndAnnounce, type InvitationEvents } from "./invitation-events";
  */
 export function acceptOnSignUp(
   invitations: InvitationsContext,
-  events: InvitationEvents,
+  events: Omit<InvitationEvents, "log">,
 ): InvitationOnSignUp {
-  return async (userId, token): Promise<SignUpInvitation> => {
+  return async (userId, token, log): Promise<SignUpInvitation> => {
     try {
-      return { listId: await acceptAndAnnounce(invitations, events, token, userId) };
+      return { listId: await acceptAndAnnounce(invitations, { ...events, log }, token, userId) };
     } catch (error) {
       if (error instanceof DomainError) return domainErrorBody(error);
       throw error;

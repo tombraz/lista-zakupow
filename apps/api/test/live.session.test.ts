@@ -4,7 +4,7 @@ import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
 import { gatedPool } from "./gated-pool";
-import { connectLive, liveUrl, pause, type LiveClient } from "./live";
+import { connectLive, liveUrl, type LiveClient } from "./live";
 
 const TIMERS = ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] as const;
 const PING_MS = 25_000;
@@ -70,24 +70,32 @@ describe("live connection of an ended session (T-056, SEC2, TH-28)", () => {
     for (const { cookie } of people)
       clients.push(await connectLive(url, { cookie, keepPings: true }));
     const before = sessions.queries();
+    const answeredBefore = sessions.answered();
 
     sessions.hold();
     await vi.advanceTimersByTimeAsync(PING_MS);
     for (const client of clients) await answerPing(client);
     await sessions.held(2);
-    await pause(100);
+    // `onPing` biegnie w tym samym wywołaniu co wysłanie pingu: odebrany ping to sygnał, że
+    // serwer już zdecydował o zapytaniu (wolna baza nie wstrzymuje pingów, drugiego nie ma).
     await vi.advanceTimersByTimeAsync(PING_MS);
     for (const client of clients) await answerPing(client);
     expect(sessions.queries() - before).toBe(2);
 
     sessions.release();
-    await pause(100);
+    await vi.waitFor(() => {
+      expect(sessions.answered() - answeredBefore).toBe(2);
+    });
     await vi.advanceTimersByTimeAsync(PING_MS);
     for (const client of clients) await answerPing(client);
-    await pause(100);
     expect(sessions.queries() - before).toBe(4);
+    // Sesje aktywne: po wynikach kontroli połączenia zostają — dostają kolejny ping.
+    await vi.waitFor(() => {
+      expect(sessions.answered() - answeredBefore).toBe(4);
+    });
+    await vi.advanceTimersByTimeAsync(PING_MS);
     for (const client of clients) {
-      await expect(client.closed(100)).rejects.toThrow("still open");
+      await answerPing(client);
       client.close();
     }
   });

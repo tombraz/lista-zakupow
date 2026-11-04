@@ -18,6 +18,13 @@ import { formErrorText, messages } from "./messages";
 import styles from "./SignInScreen.module.css";
 import { useSignInForm } from "./useSignInForm";
 
+/** Komunikat po resecie hasła albo po usunięciu konta; `null` — zwykłe wejście. */
+function entryNotice(state: unknown): string | null {
+  if (passwordChangedOf(state)) return messages.passwordChanged;
+  if (accountDeletedOf(state)) return messages.accountDeleted;
+  return null;
+}
+
 export function SignInScreen() {
   const state: unknown = useLocation().state;
   const invitation = invitationOf(state);
@@ -33,12 +40,7 @@ export function SignInScreen() {
 
   return (
     <AuthPage title={messages.title}>
-      {passwordChangedOf(state) && (
-        <InlineAlert tone="success">{messages.passwordChanged}</InlineAlert>
-      )}
-      {accountDeletedOf(state) && (
-        <InlineAlert tone="success">{messages.accountDeleted}</InlineAlert>
-      )}
+      <InlineAlert tone="success">{entryNotice(state)}</InlineAlert>
       {invitation && (
         <InlineAlert tone="info">{messages.invitation(invitation.listName)}</InlineAlert>
       )}

@@ -79,26 +79,24 @@ describe("password reset request (AC1)", () => {
 
   // TH-11: odpowiedź nie zdradza, czy konto istnieje — ani treścią, ani czasem.
   it("answers identically for an existing and an unknown e-mail, without waiting for the mail (SEC1)", async () => {
-    const MAIL_DELAY_MS = 2000;
-    const { mailer, sent } = capturingMailer({ delayMs: MAIL_DELAY_MS });
+    // Dostarczenie wstrzymane do `release()`: odpowiedź przed nim dowodzi, że nie czeka na mail.
+    const { mailer, requested, sent, release } = capturingMailer({ hold: true });
     const app = buildTestApp(db.pool, { mailer });
     const ania = await createUser(app);
 
-    const started = performance.now();
     const existing = await requestReset(app, ania.email);
-    const elapsed = performance.now() - started;
     const unknown = await requestReset(app, "nikt-taki@example.com");
 
-    expect(elapsed).toBeLessThan(MAIL_DELAY_MS / 2);
+    // Wysyłka zaczyna się przed odpowiedzią — na tym opierają się testy „mail nie wyszedł”.
+    expect(requested.map((mail) => mail.to)).toEqual([ania.email]);
+    expect(sent).toEqual([]);
     expect(unknown.statusCode).toBe(existing.statusCode);
     expect(unknown.body).toBe(existing.body);
     expect(stableHeaders(unknown.headers)).toEqual(stableHeaders(existing.headers));
-    await vi.waitFor(
-      () => {
-        expect(sent.map((mail) => mail.to)).toEqual([ania.email]);
-      },
-      { timeout: MAIL_DELAY_MS * 2 },
-    );
+    release();
+    await vi.waitFor(() => {
+      expect(sent.map((mail) => mail.to)).toEqual([ania.email]);
+    });
     const { rows } = await db.pool.query<{ value: string }>(
       "SELECT value FROM verification WHERE identifier LIKE 'reset-password:%'",
     );
@@ -108,7 +106,7 @@ describe("password reset request (AC1)", () => {
 
   // SEC5 (TH-14): prośba tylko z originu aplikacji; link w mailu zawsze na APP_ORIGIN.
   it("refuses a foreign or missing Origin with 403 before writing anything", async () => {
-    const { mailer, sent } = capturingMailer();
+    const { mailer, requested } = capturingMailer();
     const app = buildTestApp(db.pool, { mailer });
     const ania = await createUser(app);
     const before = await db.pool.query("SELECT key FROM rate_limit ORDER BY key");
@@ -131,8 +129,8 @@ describe("password reset request (AC1)", () => {
       before.rows,
     );
     expect((await db.pool.query("SELECT 1 FROM verification")).rows).toEqual([]);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(sent).toEqual([]);
+    // Wysyłka zaczyna się przed odpowiedzią (SEC1): po odpowiedzi bez niej mail już nie wyjdzie.
+    expect(requested).toEqual([]);
     await app.close();
   });
 

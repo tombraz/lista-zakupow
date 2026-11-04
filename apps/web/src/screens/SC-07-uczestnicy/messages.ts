@@ -32,7 +32,7 @@ export const messages = {
     label: (name: string) => `Usuń ${name} z listy`,
     question: (name: string) => `Usunąć ${name} z listy?`,
     consequence: "Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną.",
-    // Spoza tabeli Copy SC-07; zatwierdził właściciel 2026-11-01 (T-058 AC4).
+    // Copy SC-07 `remove.error` (T-058 AC4).
     failed: "Nie udało się usunąć. Spróbuj ponownie.",
   },
   leave: {
@@ -53,9 +53,13 @@ export function createErrorText(code: RequestErrorCode): string {
   });
 }
 
-// Spoza tabeli Copy SC-07, wzorem pozostałych błędów zapisu („Nie udało się …. Spróbuj ponownie.”).
+// Copy SC-07 `leave.error` (T-080).
 export function leaveErrorText(code: RequestErrorCode): string {
   return errorText(code, { otherwise: "Nie udało się opuścić listy. Spróbuj ponownie." });
+}
+
+export function removeErrorText(code: RequestErrorCode): string {
+  return errorText(code, { otherwise: messages.remove.failed });
 }
 
 export function revokeErrorText(code: RequestErrorCode): string {
