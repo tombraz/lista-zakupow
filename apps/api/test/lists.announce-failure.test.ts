@@ -114,6 +114,45 @@ describe("list routes when the live announcement fails", () => {
     await app.close();
   });
 
+  // T-077 AC1 (TH-21, TH-04): błąd bazy w `peopleWithAccess` po zatwierdzonym usunięciu.
+  it("DELETE /api/v1/lists/:listId/members/:userId answers 204, logs member_removed and revokes when reading the people fails", async () => {
+    const peopleQuery = /^select "user_id" from "list_member" where "list_member"."list_id" = \$1$/;
+    const live = failingLive();
+    const revoked: [string, string][] = [];
+    const revoke = live.revoke.bind(live);
+    live.revoke = (userId, listId) => {
+      revoked.push([userId, listId]);
+      revoke(userId, listId);
+    };
+    const { app, logs, ania, bartek, list, personal } = await setUp(
+      live,
+      failingPool(db.pool, peopleQuery),
+    );
+
+    const response = await requestsAs(app, ania)(
+      "DELETE",
+      `/api/v1/lists/${list.id}/members/${bartek.id}`,
+    );
+
+    expect(response.statusCode).toBe(204);
+    expect(
+      (await db.pool.query("SELECT user_id FROM list_member WHERE list_id = $1", [list.id])).rows,
+    ).toEqual([]);
+    expect(revoked).toEqual([[bartek.id, list.id]]);
+    expect(logs.security()).toContainEqual(
+      expect.objectContaining({
+        event: "member_removed",
+        listId: list.id,
+        userId: ania.id,
+        removedUserId: bartek.id,
+      }),
+    );
+    const failures = logs.entries().filter((entry) => entry["level"] === 50);
+    expect(failures.map((entry) => entry["event"])).toEqual(["live_announce_failed"]);
+    for (const value of personal) expect(logs.lines.join("\n")).not.toContain(value);
+    await app.close();
+  });
+
   it("POST /api/v1/lists/:listId/leave answers 204 and the participant is gone", async () => {
     const { app, logs, bartek, list, personal } = await setUp();
 
