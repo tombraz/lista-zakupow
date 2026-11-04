@@ -71,6 +71,13 @@ Inne wystąpienia: inne teksty błędów spoza Copy z wcześniejszych epików (n
 
 ## Prevention
 
+Czego zabrakło: sprawdzenia, że każdy tekst w `apps/web/src` jest w tabeli Copy. Do tego dochodziła praktyka zapisywania zatwierdzenia tylko w AC taska.
+
+- **Przyjęte i zastosowane (2026-11-04):** wpis w „Pułapki” w `docs/architecture/layers/web.md`. Nowy tekst nie jest wymyślany wzorem sąsiednich. Zatwierdza go właściciel i trafia do Copy w tym samym tasku, a komentarz w kodzie wskazuje klucz Copy.
+- **Przyjęte, do zaplanowania przez `/plan-backlog`:** automatyczny test (CI) porównujący teksty z `apps/web/src/**/messages.ts`, `errorText.ts` i komponentów (np. OfflineBanner) z tabelami Copy w `docs/design/screens/SC-xx` i `design-system.md`. Wymaga dwóch zmian:
+  1. przeniesienia adnotacji („zatwierdzone …, T-NNN”) z kolumny Text do osobnej kolumny, żeby tekst dał się porównać dosłownie,
+  2. zatwierdzenia przez właściciela starszych tekstów spoza Copy (patrz Root cause: `loadError`, błędy zapisu SC-01, SC-02, SC-05, SC-06, SC-07 i SC-09) albo jawnej listy wyjątków, bo inaczej test od razu będzie czerwony.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
