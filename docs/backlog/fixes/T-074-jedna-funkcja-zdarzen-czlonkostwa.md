@@ -4,7 +4,7 @@ title: "listy: jedna funkcja zdarzeń na żywo przy utracie dostępu i zmianie c
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-05, F-14, F-04, F-16]
@@ -53,9 +53,23 @@ related_tasks: [T-058, T-059, T-061, T-062, T-008, T-032]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+Każda ścieżka zmiany członkostwa (T-008/T-032 usunięcie listy, T-058/T-059 usunięcie i opuszczenie, T-012 przyjęcie zaproszenia, T-061 imię, T-062 usunięcie konta) dopisała w swoim zadaniu własną kopię sekwencji zdarzeń w warstwie `http`, bo nie było wspólnej funkcji, do której można by sięgnąć — każde zadanie dodawało „swoje” zdarzenia obok trasy. Testy tego nie łapały, bo sprawdzają zachowanie (jakie zdarzenia dochodzą), a kopie zachowywały się poprawnie; dodatkowo `LiveClient.next(type)` bierze pierwszą wiadomość danego typu z kolejki, więc większość testów nie pilnowała nawet kolejności (`revoke` przed `lists.changed` przy usunięciu konta, przyjęcie linku).
+
+Zmiana: `apps/api/src/modules/listy/domain/membership-events.ts` — `announceAccessChanges(live, changes, skip?)` (jedyne miejsce `list.deleted` / `revoke` / `members.changed` / `lists.changed` po zmianie dostępu) oraz `accountDeletionChanges` (decyzja „własna lista / cudza” przeniesiona z `http` do domeny) i `renameChanges`; jeden typ `ListWithPeople` (w domenie, `infra` go importuje). `http/person-events.ts` usunięty; po zmianie imienia `listsWithPeopleOf(db, userId)` zamiast `listsOf` (poza transakcją blokada `FOR UPDATE` trwa tylko do końca zapytania). Funkcja jest asynchroniczna (osoby po usunięciu członkostwa mogą jeszcze iść z bazy, `revoke` idzie bez czekania), więc `AccountDeleting` w `konta` zwraca `() => Promise<void>`, a `DELETE /me` czeka na nią przed `closeUser`.
+
+Odstępstwo w kolejności: przy przyjęciu linku `invitations.changed` do właściciela idzie teraz przed `members.changed` (wcześniej po), bo osoby listy są potrzebne do obu i są pobierane przed wspólną funkcją. Zdarzenia są niezależne (SC-07 vs widok listy); u uczestników i u właściciela bez subskrypcji kolejność bez zmian.
+
+Inne wystąpienia: `pozycje/http/item-events.ts` i `zaproszenia/http/routes.ts` wysyłają zdarzenia pozycji / linków, nie członkostwa — poza zakresem.
 
 ## Evidence
+
+Refaktoryzacja bez zmiany zachowania, więc bez testu „czerwonego”; najpierw dopisane asercje kolejności (testy charakteryzujące), zielone przed i po zmianie:
+
+- `live.delete-account.test.ts` › „sends list.deleted and lists.changed to the participants…” — `["subscribed", "list.deleted", "access.revoked", "lists.changed"]`;
+- `live.delete-account.test.ts` › „tells the other lists of the account members.changed…” — `["subscribed", "members.changed", "lists.changed"]`;
+- `live.lists.test.ts` › „accepting a link: …” — uczestnik `["subscribed", "members.changed", "lists.changed"]`, właściciel `["invitations.changed", "lists.changed"]`.
+
+Przed zmianą: `pnpm vitest run --project api live` — 16 plików, 58 testów zielonych. Po zmianie: to samo; `pnpm check` (format, lint, typy, depcruise, backlog, 1165 testów) i `pnpm build` zielone.
 
 ## Prevention
 

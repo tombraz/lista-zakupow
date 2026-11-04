@@ -1,4 +1,4 @@
-import { everyone, type Lists } from "../../listy";
+import { announceAccessChanges, type Lists } from "../../listy";
 import type { Live } from "../../na-zywo";
 import { acceptInvitation, type InvitationsContext } from "../domain/invitations";
 
@@ -19,9 +19,8 @@ export async function acceptAndAnnounce(
   userId: string,
 ): Promise<string> {
   const listId = await acceptInvitation(invitations, token, userId);
-  live.publish({ type: "members.changed", listId });
   const people = await lists.peopleWithAccess(listId);
   if (people) live.notify([people.ownerId], { type: "invitations.changed", listId });
-  live.notify(everyone(people), { type: "lists.changed" });
+  await announceAccessChanges(live, [{ kind: "members-changed", listId, people }]);
   return listId;
 }

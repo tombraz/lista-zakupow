@@ -13,7 +13,11 @@ import {
   type ListPeople,
   type RequiredRole,
 } from "./domain/lists";
-import { announceDeletedPerson, announceRenamedPerson } from "./http/person-events";
+import {
+  accountDeletionChanges,
+  announceAccessChanges,
+  renameChanges,
+} from "./domain/membership-events";
 import { listRoutes } from "./http/routes";
 import {
   DrizzleListsRepository,
@@ -31,6 +35,9 @@ export type {
   RequiredRole,
 } from "./domain/lists";
 export { everyone } from "./domain/lists";
+export type { AccessChange, ListEvents } from "./domain/membership-events";
+/** Jedyne miejsce zdarzeń na żywo po zmianie dostępu do list (TH-04, MC-03, F-14). */
+export { announceAccessChanges } from "./domain/membership-events";
 export type { Transaction } from "./infra/lists-repository";
 /** Blokada wiersza listy w transakcji innego modułu (limity pozycji i linków). */
 export { lockList } from "./infra/lists-repository";
@@ -62,16 +69,17 @@ export function listsModule(
   accounts: Accounts,
   { items, live }: { items: ListItems; live: Live },
 ): Lists {
-  const repository = new DrizzleListsRepository(drizzle(pool), items);
+  const db = drizzle(pool);
+  const repository = new DrizzleListsRepository(db, items);
   listRoutes(app, accounts, repository, { items, live });
   // F-16: imię widać przy pozycjach i uczestnikach list osoby, więc jej listy odświeżają się.
-  accounts.announceNameChanges((userId) => announceRenamedPerson(live, repository, userId));
+  accounts.announceNameChanges(async (userId) => {
+    await announceAccessChanges(live, renameChanges(await listsWithPeopleOf(db, userId)));
+  });
   // F-04: kto traci listy usuwanego konta albo widzi je na swoich — zebrane przed usunięciem.
   accounts.announceAccountDeletions(async (tx, userId) => {
     const lists = await listsWithPeopleOf(tx, userId);
-    return () => {
-      announceDeletedPerson(live, lists, userId);
-    };
+    return () => announceAccessChanges(live, accountDeletionChanges(lists, userId), userId);
   });
   return listsApi(repository);
 }

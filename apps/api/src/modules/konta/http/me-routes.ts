@@ -15,7 +15,10 @@ export type NameChanged = (userId: string) => Promise<void>;
  * F-04: w transakcji usunięcia konta (przed usunięciem) zbiera, kto traci listy domownika
  * albo widzi go na swoich; zwraca rozesłanie zdarzeń, wołane po zatwierdzeniu (moduł `listy`).
  */
-export type AccountDeleting = (tx: AccountTransaction, userId: string) => Promise<() => void>;
+export type AccountDeleting = (
+  tx: AccountTransaction,
+  userId: string,
+) => Promise<() => Promise<void>>;
 
 interface MeDependencies {
   auth: Auth;
@@ -55,7 +58,7 @@ export function meRoutes(app: FastifyInstance, deps: MeDependencies): void {
     // TH-21: ślad usunięcia konta, sam identyfikator (architecture.md, „Obserwowalność”).
     securityEvent(request, "account_deleted", { userId: user.id });
     // Zdarzenia dopiero po zatwierdzeniu transakcji (layers/backend.md).
-    announce();
+    await announce();
     deps.closeUser(user.id);
     return reply.code(204).send();
   });

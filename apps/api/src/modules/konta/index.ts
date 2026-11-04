@@ -105,7 +105,7 @@ export function accountRoutes(
     db,
     nameChanged: (userId) => nameChanged?.(userId),
     accountDeleting: async (tx, userId) =>
-      (await accountDeleting?.(tx, userId)) ?? (() => undefined),
+      (await accountDeleting?.(tx, userId)) ?? (() => Promise.resolve()),
     closeUser: (userId) => {
       live.closeUser(userId);
     },

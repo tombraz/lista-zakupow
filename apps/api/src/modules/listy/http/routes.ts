@@ -26,6 +26,7 @@ import {
   type ListsRepository,
   type ListView,
 } from "../domain/lists";
+import { announceAccessChanges } from "../domain/membership-events";
 
 interface ListParams {
   Params: { listId: string };
@@ -100,12 +101,10 @@ export function listRoutes(
   app.delete<ListParams>("/api/v1/lists/:listId", async (request, reply) => {
     const user = await accounts.requireUser(request, reply);
     const access = await requireListAccess(repository, user.id, request.params.listId, "owner");
-    const people = everyone(await repository.peopleWithAccess(access.listId));
+    const people = await repository.peopleWithAccess(access.listId);
     await deleteList(repository, access);
     // F-05, MC-03 (TH-04): po `list.deleted` subskrypcje listy znikają, zanim pójdzie cokolwiek dalej.
-    live.publish({ type: "list.deleted", listId: access.listId });
-    for (const userId of people) live.revoke(userId, access.listId);
-    live.notify(people, { type: "lists.changed" });
+    await announceAccessChanges(live, [{ kind: "list-deleted", listId: access.listId, people }]);
     return reply.code(204).send();
   });
 }
@@ -150,8 +149,7 @@ function memberRoutes(
 }
 
 /**
- * Po zatwierdzonym usunięciu członkostwa: MC-03 (TH-04) — subskrypcja byłego uczestnika znika,
- * zanim pójdzie kolejne zdarzenie listy; reszta listy odświeża uczestników, a SC-05 wszystkich
+ * Po zatwierdzonym usunięciu członkostwa: reszta listy odświeża uczestników, a SC-05 wszystkich
  * dotkniętych (lista znika u byłego uczestnika, zmienia się liczba osób u pozostałych, F-14).
  */
 async function withdrawAccess(
@@ -160,8 +158,9 @@ async function withdrawAccess(
   listId: string,
   userId: string,
 ): Promise<void> {
-  live.revoke(userId, listId);
-  live.publish({ type: "members.changed", listId });
-  const people = everyone(await repository.peopleWithAccess(listId));
-  live.notify([userId, ...people], { type: "lists.changed" });
+  // Osoby po zmianie jeszcze z bazy, a subskrypcja byłego uczestnika znika od razu (MC-03).
+  const people = repository.peopleWithAccess(listId);
+  await announceAccessChanges(live, [
+    { kind: "members-changed", listId, people, lostAccess: userId },
+  ]);
 }

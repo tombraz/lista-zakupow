@@ -12,6 +12,7 @@ import type {
   Person,
   ShoppingList,
 } from "../domain/lists";
+import type { ListWithPeople } from "../domain/membership-events";
 
 /** Transakcja wołającego (inny moduł): zmiana razem z jego zapisem albo wcale. */
 export type Transaction = Pick<NodePgDatabase, "select" | "insert">;
@@ -52,15 +53,11 @@ export async function insertParticipant(
   return "joined";
 }
 
-/** Lista z osobami, które mają do niej dostęp. */
-export interface ListWithPeople extends ListPeople {
-  listId: string;
-}
-
 /**
- * F-04: listy, do których domownik ma dostęp, z osobami na nich — w transakcji usunięcia konta,
- * przed usunięciem. Własne listy zablokowane do końca transakcji, więc nikt nie dołączy do nich
- * niezauważony (dołączenie blokuje wiersz listy, `insertParticipant`).
+ * Listy, do których domownik ma dostęp, z osobami na nich. F-04: w transakcji usunięcia konta,
+ * przed usunięciem — własne listy zablokowane do końca transakcji, więc nikt nie dołączy do nich
+ * niezauważony (dołączenie blokuje wiersz listy, `insertParticipant`). F-16: poza transakcją
+ * blokada trwa tylko do końca zapytania.
  */
 export async function listsWithPeopleOf(
   tx: Pick<NodePgDatabase, "select">,
