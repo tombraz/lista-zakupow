@@ -4,7 +4,7 @@ title: "listy: jedna funkcja zdarzeń na żywo przy utracie dostępu i zmianie c
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-05, F-14, F-04, F-16]
