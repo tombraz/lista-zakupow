@@ -60,6 +60,12 @@ Inne wystąpienia: brak — pozostałe hooki zapisu web (`useCheckItem`, `useEdi
 
 ## Prevention
 
+Co by zapobiegło: hook zapisu, który zamienia błąd na flagę (`boolean` / samo id) zamiast trzymać `RequestErrorCode`, oraz testy stanu błędu tylko z 500 — dla 500 tekst domyślny i tekst według kodu są takie same, więc błąd jest niewidoczny.
+
+Propozycje (czekają na decyzję właściciela):
+1. Wpis „Pitfalls” w `docs/architecture/layers/web.md`: hook zapisu trzyma kod błędu (`RequestErrorCode`), nie flagę; tekst tylko przez `<akcja>ErrorText(code)` → `errorText`; test stanu błędu ekranu obejmuje błąd sieci (`HttpResponse.error()`), nie tylko 500.
+2. (Opcjonalnie, automatycznie) reguła ESLint `no-restricted-syntax` zabraniająca w `apps/web/src/screens/**/*.tsx` atrybutu `error=` z wyrażeniem warunkowym, którego gałąź to `messages.*` — wąska, ale łapie dokładnie ten wzorzec.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
