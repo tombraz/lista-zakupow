@@ -65,6 +65,14 @@ Poprawka: `afterCommit` w `me-routes.ts` łapie błąd rozesłania i loguje `liv
 
 ## Prevention
 
+**Co by temu zapobiegło:** jeden wspólny pomocnik „zdarzenia po zatwierdzeniu” (łapie błąd, loguje `errorSummary`) używany przez każdą trasę rozsyłającą zdarzenia na żywo, plus test z hubem, który zawodzi, dla każdej takiej trasy (seam: `buildTestApp({ live })`). Te same przyczyny są jeszcze w `listy/http/routes.ts:107`, `:163` i `zaproszenia/http/invitation-events.ts:24`.
+
+Propozycje dla użytkownika (w kolejności preferencji):
+1. Zadanie przez `/plan-backlog`: wspólny pomocnik w warstwie backend + testy z zawodzącym hubem dla trzech pozostałych tras; ewentualnie reguła lintu (`no-restricted-syntax`) zabraniająca `await announceAccessChanges(` poza pomocnikiem.
+2. Wpis w „Pitfalls” w `docs/architecture/layers/backend.md`: „Zdarzenia po zatwierdzeniu nie mogą zmienić wyniku zapisu — błąd tylko do logu, kolejne kroki (np. `closeUser`) muszą się wykonać.”
+
+Decyzja użytkownika: _oczekuje_.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
