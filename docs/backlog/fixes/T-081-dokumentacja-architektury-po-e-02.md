@@ -4,7 +4,7 @@ title: "Dokumentacja architektury i API zgodna z kodem po E-02"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-074, T-076, T-078]
 layers: [backend, web, db]
 requirements: []
@@ -78,3 +78,31 @@ Historia zmian dopisana w `architecture.md`, `backend.md`, `web.md`, `db.md` (`a
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+Zakres: commit `cc8f6b9` (tylko dokumenty: `api.md`, `architecture.md`, `data-model.md`, `layers/backend.md`, `layers/db.md`, `layers/web.md`, ADR 0004, ADR 0009). Każdy zmieniony wiersz porównany z kodem w HEAD (`297c88d`).
+
+| # | Punkt „Actual” | Wynik | Dowód w kodzie |
+| --- | --- | --- | --- |
+| 1 | `members.changed` w `api.md` | pass | `listy/index.ts:76-83` (`renameChanges`, `accountDeletionChanges` przez `announceAccessChanges`), `membership-events.ts:56`; `useLiveList.ts:116-120` unieważnia `listKey` i `membersKey` |
+| 2 | `name_key` w `data-model.md` + notatka ADR 0004 | pass | `packages/shared/src/api/items.ts:9,17-18` (trim, NFKC, `Default_Ignorable_Code_Point`, trim, lower pl-PL); krok `name: "0007_name_key_nfkc"` |
+| 3 | tabele `data_migration`, `cleanup_run` | pass | `db/schema.ts:233-246` (`name` PK, `applied_at`; `id = 1` check, `started_at`) |
+| 4 | retencja `rate_limit` | pass | `konta/infra/retention.ts:10-16`; `limits.ts`: max(60 s, 1 h, 60 s, 15 min) = 1 h |
+| 5 | `errorSummary` w `backend.md` | pass | `logging.ts:186`, `api-error.ts:81,104` |
+| 6 | `trusted-origin.ts` i `/api/auth/*` | pass | `http/trusted-origin.ts:8-11` (`PUBLIC_AUTH_ROUTES`) |
+| 7 | zależności modułów, `closeUser` | pass | `konta/index.ts` nie importuje z `listy`; `listy/index.ts` woła `accounts.announce*`; `closeUser` w `konta/index.ts:64,93` i `me-routes.ts` |
+| 8 | mechanizm komunikatu SC-01 w `web.md` | pass | `useSession.ts:9,26,61-63`; `guards.tsx:20`; `invitationContext.ts:14-22,53,58`; `SignInScreen.tsx:23-24`; `useNewPassword.ts:35` |
+| 9 | wyjątek surowego `pg` w `db.md` / ADR 0009 | pass | `data-migrations/index.ts:16-29`, `0007-name-key-nfkc.ts:32,55` (w tekście tylko stała `UNIQUE_KEY`), `:64,78` z parametrami |
+
+- AC1: pass. Historia zmian dopisana w `architecture.md`, `backend.md`, `db.md`, `web.md`; `api.md` i `data-model.md` historii nie prowadzą (sprawdzone grep). Pozostałe wzmianki o NFC (ADR 0004 §Decyzja, ADR 0009 o ręcznym powrocie do starego klucza) są poprawne historycznie.
+- AC2: pass. `pnpm format:check` — „All matched files use Prettier code style!”; `pnpm backlog-check` — „OK: no errors” (uruchomione przez QA).
+- Pełny zestaw testów, typecheck i lint nie uruchomione: commit nie zmienia kodu ani konfiguracji (`git show --stat` — tylko `docs/`).
+- Root cause: wyjaśnia, dlaczego nic tego nie wychwyciło (brak testów zgodności dokumentów z kodem, brak historii w `api.md`/`data-model.md`). Test reprodukujący nie dotyczy (zmiana dokumentów).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | proces | Sekcja „Prevention” pusta, choć Root cause wskazuje brak automatycznej kontroli zgodności dokumentów z kodem. | plik zadania, `## Prevention` | Wpis prewencji (np. jak w T-080: „Pułapki” + pomysł na kontrolę). |
+| 2 | note | dokumentacja | Wiersz `konta` w tabeli modułów `architecture.md` jest długi; opis odwrócenia zależności mógłby trafić do akapitu pod tabelą. | `architecture.md:58` | — |
