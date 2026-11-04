@@ -1,9 +1,10 @@
 import { accountDeletionRequestSchema, nameChangeRequestSchema, type Me } from "@lista/shared";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { afterCommit } from "../../../http/after-commit";
 import { ApiError } from "../../../http/api-error";
 import { validate } from "../../../http/validate";
-import { errorSummary, securityEvent } from "../../../logging";
+import { securityEvent } from "../../../logging";
 import { requireUser } from "./require-user";
 import type { Auth } from "../infra/auth";
 import { deleteAccount, renameUser, type AccountTransaction } from "../infra/users";
@@ -43,7 +44,7 @@ export function meRoutes(app: FastifyInstance, deps: MeDependencies): void {
     const renamed = await renameUser(db, user.id, name);
     // Konto usunięte między sprawdzeniem sesji a zapisem: jak brak sesji.
     if (!renamed) throw new ApiError(401, "unauthenticated");
-    await afterCommit(request, () => nameChanged(user.id));
+    await afterCommit(request.log, () => nameChanged(user.id));
     return renamed satisfies Me;
   });
 
@@ -58,26 +59,8 @@ export function meRoutes(app: FastifyInstance, deps: MeDependencies): void {
     // TH-21: ślad usunięcia konta, sam identyfikator (architecture.md, „Obserwowalność”).
     securityEvent(request, "account_deleted", { userId: user.id });
     // Zdarzenia dopiero po zatwierdzeniu transakcji (layers/backend.md).
-    await afterCommit(request, announce);
+    await afterCommit(request.log, announce);
     deps.closeUser(user.id);
     return reply.code(204).send();
   });
-}
-
-/**
- * Zdarzenia na żywo po zatwierdzonym zapisie (layers/backend.md): ich błąd nie zmienia wyniku
- * zapisu w 500, tylko trafia do logu — sam typ i stos, bez imienia i e-maila (T-076).
- */
-async function afterCommit(
-  request: FastifyRequest,
-  announce: () => Promise<void> | undefined,
-): Promise<void> {
-  try {
-    await announce();
-  } catch (error) {
-    request.log.error(
-      { event: "live_announce_failed", err: errorSummary(error) },
-      "live events not sent",
-    );
-  }
 }

@@ -14,6 +14,14 @@ const web = "apps/web/src/components/AddBar/AddBar.tsx";
 const mobile = "apps/mobile/src/screens/start/StartScreen.tsx";
 const api = "apps/api/src/modules/listy/infra/lists-repository.ts";
 const schema = "apps/api/src/db/schema.ts";
+const apiRoutes = "apps/api/src/modules/listy/http/routes.ts";
+// T-089: rozesłanie zdarzeń na żywo z trasy modułu tylko w afterCommit.
+const liveRoute = (body) =>
+  `import type { FastifyBaseLogger } from "fastify";\n` +
+  `import type { Live } from "../../na-zywo";\n` +
+  `declare function afterCommit(log: FastifyBaseLogger, announce: () => unknown): Promise<void>;\n` +
+  `declare function announceAccessChanges(live: Live, changes: unknown[]): Promise<void>;\n` +
+  `export async function route(live: Live, log: FastifyBaseLogger, userId: string) { ${body} }`;
 const shared = "packages/shared/src/api/account.ts";
 
 const SECURITY_RULES = [
@@ -79,6 +87,34 @@ const rejected = [
     "TH-20",
     'import { sql } from "drizzle-orm";\nexport const byName = (name: string) => sql.raw(name);',
   ],
+  [
+    "live.notify poza afterCommit",
+    apiRoutes,
+    syntax,
+    "T-089",
+    liveRoute('live.notify([userId], { type: "lists.changed" });'),
+  ],
+  [
+    "live.publish poza afterCommit",
+    apiRoutes,
+    syntax,
+    "T-089",
+    liveRoute('live.publish({ type: "list.deleted", listId: userId });'),
+  ],
+  [
+    "live.revoke poza afterCommit",
+    apiRoutes,
+    syntax,
+    "T-089",
+    liveRoute("live.revoke(userId, userId);"),
+  ],
+  [
+    "announceAccessChanges poza afterCommit",
+    apiRoutes,
+    syntax,
+    "T-089",
+    liveRoute("await announceAccessChanges(live, []);"),
+  ],
   ["localStorage", web, "no-restricted-globals", "TH-16", show('localStorage.setItem("x", name);')],
   [
     "sessionStorage",
@@ -110,6 +146,13 @@ const accepted = [
     show('el.textContent = name; el.insertAdjacentText("beforeend", name);'),
   ],
   ["odczyt innerHTML", web, "export const size = (el: HTMLElement) => el.innerHTML.length;"],
+  [
+    "zdarzenia na żywo w afterCommit",
+    apiRoutes,
+    liveRoute(
+      'await afterCommit(log, async () => { live.notify([userId], { type: "lists.changed" }); await announceAccessChanges(live, []); });',
+    ),
+  ],
 ];
 
 async function errors(file, source) {

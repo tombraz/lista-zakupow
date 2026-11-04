@@ -105,6 +105,16 @@ const API_LIMIT_LOG_SYNTAX = [
   },
 ];
 
+// T-089 (T-076): zdarzenia na żywo po zatwierdzonym zapisie z tras modułów tylko w `afterCommit`
+// (src/http/after-commit.ts): jego błąd idzie do logu, nie zamienia zapisanej zmiany w 500.
+const AFTER_COMMIT_ONLY = ":not(CallExpression[callee.name='afterCommit'] CallExpression)";
+const AFTER_COMMIT_MESSAGE =
+  "Zdarzenia na żywo po zapisie przez afterCommit(request.log, () => …) z src/http/after-commit.ts: błąd rozesłania nie może dać 500 (T-089, layers/backend.md „Pułapki”).";
+const API_AFTER_COMMIT_SYNTAX = [
+  `CallExpression[callee.name='announceAccessChanges']${AFTER_COMMIT_ONLY}`,
+  `CallExpression[callee.property.name=/^(publish|notify|revoke)$/]${AFTER_COMMIT_ONLY}`,
+].map((selector) => ({ selector, message: AFTER_COMMIT_MESSAGE }));
+
 // TH-26 (T-049): router dopasowuje trasę po zdekodowanej ścieżce, więc decyzje na surowym adresie
 // rozjeżdżają się z trasą. Wyjątek: handler 404 w `http/web-app.ts` (brak dopasowanej trasy).
 const API_RAW_URL_SYNTAX = [
@@ -342,6 +352,20 @@ export default tseslint.config(
         ...API_CLOCK_SYNTAX,
         ...API_LIMIT_LOG_SYNTAX,
         ...API_RAW_URL_SYNTAX,
+      ],
+    },
+  },
+  {
+    // Nadpisanie no-restricted-syntax zastępuje listę, więc powtarza reguły API (T-089).
+    files: ["apps/api/src/modules/*/http/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...API_CLOCK_SYNTAX,
+        ...API_LIMIT_LOG_SYNTAX,
+        ...API_RAW_URL_SYNTAX,
+        ...API_AFTER_COMMIT_SYNTAX,
       ],
     },
   },
