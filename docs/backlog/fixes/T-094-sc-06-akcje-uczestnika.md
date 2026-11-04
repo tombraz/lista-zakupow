@@ -4,7 +4,7 @@ title: "SC-06: uczestnik ma ikonę „Uczestnicy” i „Opuść listę” w men
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
@@ -76,3 +76,31 @@ Propozycje z przeglądu (P1): kontrola przekazań „to E-xx” w `backlog-check
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: fail
+
+Środowisko: lokalnie, Windows, `24d4c6d`, `pnpm install --frozen-lockfile`, `pnpm services:up` (Postgres, Mailpit), build web + api.
+
+Wyniki: Vitest 152 pliki / 1191 testów passed; `pnpm typecheck`, `pnpm lint`, `pnpm quality` (jscpd 0 klonów, depcruise 0 naruszeń), `pnpm design-check` (0 HARD-CODED), `pnpm test:mobile` (10) — OK. E2E `sc07-uczestnicy`, `j02-listy`, `brak-polaczenia` (komputer + telefon): 24 passed. **`pnpm format:check` (krok CI „Format (Prettier)”, `.github/workflows/ci.yml:90`) — czerwony** dla zatwierdzonej treści `ListScreen.tsx` (sprawdzone na blobie z `HEAD` przez `prettier --stdin-filepath`, więc nie wynika z CRLF w lokalnym checkout).
+
+Kryteria:
+- AC1 — pass: `ListScreen.leave.test.tsx` „links „Uczestnicy” to SC-07” (href `/listy/{id}/uczestnicy`); właściciel bez zmian (`ParticipantsScreen.test.tsx`, `ListScreen.test.tsx`).
+- AC2 — pass: menu uczestnika tylko „Opuść listę”; E2E też sprawdza brak „Zmień nazwę listy” / „Usuń listę”.
+- AC3 — pass: sukces (`REPLACE` na `/listy`, „Dom” znika), „Anuluj” → fokus na „Więcej opcji”, 500 → `leave.error` w oknie i ponowienie, błąd sieci → „Brak połączenia”, offline → `aria-disabled` + opis bannera, bez okna. Jedno `LeaveListDialog` + `useLeaveList` dla SC-06 i SC-07.
+- AC4 — pass: oba E2E wchodzą przez UI (SC-05 → SC-06 → ikona / menu), axe na otwartym menu i po wyjściu, bez `goto` na ekran docelowy.
+- AC5 — pass: E2E T-057, T-059 (druga karta), J-02 (menu właściciela), F-15 offline zielone.
+
+Spot-checki (przywrócone, `git status` czysty): przywrócenie warunku `list?.role === "owner" &&` w `ListBar` → 7/7 testów `ListScreen.leave.test.tsx` czerwonych; `const offline = false` w `MoreMenu` → test offline czerwony. Testy gryzą.
+
+Eksploracja / TH-04 (tymczasowy spec Playwright, usunięty): po „Opuść listę” z menu SC-06 były uczestnik dostaje `GET /lists/{id}` 404, `POST …/items` 404, `GET …/members` 404, ponowne `POST …/leave` 404; „Wstecz” w przeglądarce zostaje na SC-05. Właściciel usuwa uczestnika przy otwartym menu SC-06 → uczestnik ląduje na SC-05 (≤ 5 s). Lista w trakcie ładowania: `list &&` — brak akcji AppBar. Mitygacji nie da się obejść; negatywne testy API (`lists.leave.authz.test.ts`, `live.leave.test.ts`) zielone.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | CI / format | Zatwierdzony `apps/web/src/screens/SC-06-lista/ListScreen.tsx` nie przechodzi Prettiera; krok CI „Format (Prettier)” będzie czerwony. Evidence taska nie wymienia `format:check`. | `git show HEAD:…/ListScreen.tsx \| prettier --stdin-filepath …` → linie 53–57: trójargumentowy z `( <OwnerMenu …/> ) : ( <ParticipantMenu …/> )` Prettier składa do jednej linii `{list.role === "owner" ? <OwnerMenu list={list} /> : <ParticipantMenu list={list} />}` | `pnpm format:check` zielony (uruchom `pnpm exec prettier --write apps/web/src/screens/SC-06-lista/ListScreen.tsx`) |
+| 2 | minor | Testy / komentarz | Nieaktualny komentarz nad `describe("SC-06 Uczestnicy icon")`: „SEC3 (TH-02): ikona „Uczestnicy” na SC-06 tylko dla właściciela.” — po T-094 ikona jest dla każdej osoby z dostępem. | `ParticipantsScreen.test.tsx:474` | Komentarz zgodny z SC-06 Layout pkt 1 |
+| 3 | minor | Architektura / granice modułów | SC-06 importuje `LeaveListDialog` z katalogu innego ekranu (`../SC-07-uczestnicy/LeaveList`) — jedyny taki import między ekranami. Wspólne okno wyjścia lepiej trzymać poza ekranami (np. `lists/`), razem z `useLeaveList`. | `ListScreen.tsx:12`; `grep 'from "../SC-' apps/web/src/screens` | Wspólny kod dwóch ekranów poza `screens/SC-xx` |
+| 4 | note | Dokumentacja | `docs/architecture/layers/web.md` nie wspomina `LeaveListDialog` (SC-07) ani nowego `writes` w `MenuAction` (`MoreMenu`). | `web.md:26` | Mapa modułów aktualna |
+
+Do zmiany (fail): nr 1 — sformatować `ListScreen.tsx` Prettierem i potwierdzić `pnpm format:check`. Nr 2–4 opcjonalnie w tej samej rundzie.
