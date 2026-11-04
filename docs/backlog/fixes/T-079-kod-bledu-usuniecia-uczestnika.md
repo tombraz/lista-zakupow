@@ -4,7 +4,7 @@ title: "SC-07: błąd usunięcia uczestnika pokazuje tekst według kodu błędu"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-14]
