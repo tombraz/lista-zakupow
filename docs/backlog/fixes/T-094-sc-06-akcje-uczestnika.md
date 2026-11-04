@@ -4,7 +4,7 @@ title: "SC-06: uczestnik ma ikonę „Uczestnicy” i „Opuść listę” w men
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
@@ -68,6 +68,7 @@ Inne wystąpienia: brak (jedyne akcje AppBar zależne od roli są w `ListScreen.
 - Wyjście: jedno okno `LeaveListDialog` (`SC-07-uczestnicy/LeaveList.tsx`) z `useLeaveList` dla SC-07 i SC-06.
 - Pełny Vitest: 152 pliki, 1191 testów passed; `pnpm typecheck`, `pnpm lint`, `pnpm design-check`, build web — OK.
 - E2E `sc07-uczestnicy`, `j02-listy`, `brak-polaczenia`: 24 passed (nowy „SC-06 participant leaves the list from „Więcej opcji”” z axe na otwartym menu; T-057 wchodzi na SC-07 przez SC-05 → SC-06 → ikona).
+- QA runda 1 (poprawki): `pnpm format:check` przed poprawką — 4 pliki niesformatowane (red), po `prettier --write` — „All matched files use Prettier code style!”. `LeaveListDialog` i `useLeaveList` przeniesione do `apps/web/src/lists/` (bez importu SC-06 → SC-07); komentarz w `ParticipantsScreen.test.tsx` poprawiony; `web.md` „Gdzie jest kod” zaktualizowany. Vitest 1191 passed, typecheck, lint, build OK; E2E `sc07-uczestnicy` 10 passed (`E2E_MAILPIT_PORT=3135` — port 3125 zajęty przez pozostawiony kontener Mailpit).
 
 ## Prevention
 
