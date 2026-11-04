@@ -68,6 +68,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | you | Ty |
 | remove | Usuń (nazwa dostępna: „Usuń {imię} z listy”) |
 | remove.confirm | Usunąć {imię} z listy? Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną. |
+| remove.error | Nie udało się usunąć. Spróbuj ponownie. (w ConfirmDialog; zatwierdzone 2026-11-01, T-058) |
 | invites | Zaproszenia |
 | invite.create | Utwórz link zaproszenia |
 | invite.hint | Link działa dla jednej osoby przez 7 dni. Wyślij go SMS-em lub komunikatorem. |
@@ -78,6 +79,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | invite.revoked | Link unieważniony |
 | leave | Opuść listę |
 | leave.confirm | Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia. |
+| leave.error | Nie udało się opuścić listy. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
 | empty | Nikt jeszcze nie dołączył. Utwórz link i wyślij go domownikowi. |
 | limit | Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę. |
 

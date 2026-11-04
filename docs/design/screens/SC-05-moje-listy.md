@@ -70,6 +70,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-05 Moje listy”
 | new.placeholder | np. Zakupy na tydzień |
 | new.submit | Utwórz |
 | cancel | Anuluj |
+| invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: nazwa listy; zatwierdzone 2026-11-01, T-060) |
 | empty.text | Nie masz jeszcze żadnej listy. |
 | empty.cta | Utwórz pierwszą listę |
 | limit | Masz już 50 list — to limit. Usuń listę, której nie używasz, żeby utworzyć nową. |

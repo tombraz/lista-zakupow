@@ -14,3 +14,4 @@ design_tool: repo
 | 2026-10-26 | Kierunek wizualny: **B · Sklep** z dwiema zmianami z A — pole dodawania na dole ekranu (pod kciukiem), wiersze ok. 60 px (≈7 pozycji na ekranie). C odrzucony: tryby „Planuję / W sklepie” to pojęcie spoza BRD, większy zakres, ryzyko przypadkowego odhaczenia. Prototyp: `prototypes/directions.html`. |
 | 2026-10-26 | Edycja pozycji w arkuszu od dołu (dotknięcie nazwy); usuwanie pozycji tylko w arkuszu, bez gestów przesuwania. Sekcja „Kupione” domyślnie zwinięta. Cel dotyku 48 px. |
 | 2026-10-26 | Nazwa listy do 100 znaków (BRD v1.3). Projekt (IA, design system, SC-01…SC-09, prototyp `core-flow.html`) zatwierdzony przez właściciela. |
+| 2026-11-04 | Copy E-02 uzupełnione (T-080): błędy spoza tabel Copy zatwierdzone przez właściciela i dopisane do SC-02, SC-03, SC-05, SC-06, SC-07 i OfflineBanner w `design-system.md`. |

@@ -101,6 +101,7 @@ Menu „Więcej opcji”: właściciel — „Zmień nazwę listy”, „Usuń l
 | menu.delete | Usuń listę |
 | menu.leave | Opuść listę |
 | delete.confirm | Usunąć listę „{nazwa}”? Zniknie też u {n} uczestników. |
+| invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: nazwa i notatka pozycji; zatwierdzone 2026-11-01, T-060) |
 | noAccess | Nie masz dostępu do tej listy. |
 | saveError | Nie udało się zapisać zmiany. Spróbuj ponownie. |
 
