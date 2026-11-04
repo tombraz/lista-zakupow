@@ -35,6 +35,19 @@ async function openDialog() {
   return { ...view, dialog, confirm };
 }
 
+/**
+ * SC-01 po zwykłym końcu sesji (`RequireSession`, T-018): powrót na SC-09 po zalogowaniu, bez
+ * „Konto zostało usunięte.”. Stan wejścia, nie brak tekstu: sukces dostaje tekst dopiero po
+ * `SUCCESS_ANNOUNCE_DELAY_MS` (T-071), więc sam brak tekstu zaraz po wejściu niczego nie dowodzi (T-072).
+ */
+async function signInShownWithoutDeletion(router: {
+  state: { location: { pathname: string; state: unknown } };
+}) {
+  expect(await screen.findByRole("heading", { level: 1, name: "Zaloguj się" })).toBeVisible();
+  expect(router.state.location.pathname).toBe("/logowanie");
+  expect(router.state.location.state).toEqual({ from: "/konto" });
+}
+
 /** Ania: właścicielka „Dom”, uczestniczka „Działka” Tomka. */
 function aniasLists() {
   listsAre([
@@ -150,10 +163,42 @@ describe("SC-09 Konto: deleting the account", () => {
 
     await user.click(confirm);
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/logowanie");
-    });
-    expect(screen.queryByText("Konto zostało usunięte.")).toBeNull();
+    await signInShownWithoutDeletion(router);
+  });
+
+  // T-072 AC1: 401 po zwykłej porażce (500) to koniec sesji, nie usunięcie konta.
+  it("ends the session without the deletion message when 401 follows a server failure", async () => {
+    const sent = deletion([
+      () => apiError(500, { code: "internal" }),
+      () => apiError(401, { code: "unauthenticated" }),
+    ]);
+    const { user, router, dialog, confirm } = await openDialog();
+    await user.click(confirm);
+    await within(dialog).findByRole("alert");
+
+    await user.click(confirm);
+
+    await signInShownWithoutDeletion(router);
+    expect(sent).toHaveLength(2);
+  });
+
+  // T-072 AC3: ponowne otwarcie okna zaczyna stan prób od nowa.
+  it("forgets a lost response after the dialog is closed and opened again", async () => {
+    const sent = deletion([
+      () => HttpResponse.error(),
+      () => apiError(401, { code: "unauthenticated" }),
+    ]);
+    const { user, router, trigger, dialog, confirm } = await openDialog();
+    await user.click(confirm);
+    await within(dialog).findByRole("alert");
+    await user.click(within(dialog).getByRole("button", { name: "Anuluj" }));
+
+    await user.click(trigger);
+    const reopened = await screen.findByRole("alertdialog", { name: "Usunąć konto na zawsze?" });
+    await user.click(within(reopened).getByRole("button", { name: "Usuń konto" }));
+
+    await signInShownWithoutDeletion(router);
+    expect(sent).toHaveLength(2);
   });
 
   it("makes „Usuń konto” inactive offline", async () => {
