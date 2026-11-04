@@ -81,6 +81,13 @@ Poprawka: `afterCommit(log, announce)` przeniesiony do `apps/api/src/http/after-
 
 ## Prevention
 
+**Co by temu zapobiegło:** jeden pomocnik „po zatwierdzeniu” wymuszony automatycznie zamiast kopii w modułach. Zrobione w tym zadaniu (zaakceptowane przy T-076, 2026-11-04):
+
+1. Kontrola automatyczna: reguła eslint `API_AFTER_COMMIT_SYNTAX` (`modules/*/http/**`) z fixture w `scripts/test/lint-security.test.mjs`; testy z zawodzącym hubem dla każdej trasy rozsyłającej (`test/failing-live.ts`).
+2. „Pułapki” w `layers/backend.md` wskazują `src/http/after-commit.ts` i regułę.
+
+Propozycje z QA rundy 1 (czekają na decyzję użytkownika): zawężenie selektora do obiektu `live` przy pierwszym fałszywym alarmie (#2); `revoke` przy `list-deleted` niezależny od błędu `publish` (#4, zachowanie sprzed T-089).
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
