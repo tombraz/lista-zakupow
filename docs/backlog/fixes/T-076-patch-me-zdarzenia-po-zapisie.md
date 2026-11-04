@@ -71,7 +71,7 @@ Propozycje dla użytkownika (w kolejności preferencji):
 1. Zadanie przez `/plan-backlog`: wspólny pomocnik w warstwie backend + testy z zawodzącym hubem dla trzech pozostałych tras; ewentualnie reguła lintu (`no-restricted-syntax`) zabraniająca `await announceAccessChanges(` poza pomocnikiem.
 2. Wpis w „Pitfalls” w `docs/architecture/layers/backend.md`: „Zdarzenia po zatwierdzeniu nie mogą zmienić wyniku zapisu — błąd tylko do logu, kolejne kroki (np. `closeUser`) muszą się wykonać.”
 
-Decyzja użytkownika: _oczekuje_.
+Decyzja użytkownika (2026-11-04): obie przyjęte. Wpis w „Pułapkach” `layers/backend.md` dodany; pomocnik, testy pozostałych tras i reguła lintu — T-089 (przegląd wykazał 7 miejsc, nie 3).
 
 ## Incident note
 

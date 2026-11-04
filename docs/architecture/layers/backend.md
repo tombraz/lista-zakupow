@@ -104,6 +104,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 - Better Auth zużywa tylko podany token z tabeli `verification` (`consumeVerificationValue`); pozostałe tokeny tego samego konta zostają ważne do wygaśnięcia. Reguła „link jednorazowy na konto” (reset hasła, F-03, TH-10) wymaga własnego unieważnienia pozostałych tokenów po udanej operacji i serializacji operacji jednego konta, bo dwa różne tokeny zużyte naraz przechodzą oba. Test jednorazowości obejmuje drugi token tego samego konta i dwa różne tokeny zużyte naraz, nie tylko ponowne użycie tego samego. Reset unieważniał tylko użyty link, a starszy link z maila nadal zmieniał hasło (T-075; `konta/infra/reset-tokens.ts`).
 - Gdy Better Auth zatwierdził już zmianę (reset hasła: nowe hasło, usunięte sesje), dalsze kroki w moście (sprzątanie, zapytania do bazy) nie mogą przerwać zdarzenia w logu `security` ani zamknięcia połączeń na żywo (TH-28). Błąd takiego kroku łapać i logować (`errorSummary`, bez tokenów), albo wykonać ten krok po logu i zamknięciu połączeń. Odpowiedź ma oddawać wynik operacji Better Auth. Test wstrzykuje błąd zapytania pulą z `test/failing-pool.ts` (bez `vi.mock`). Unieważnienie pozostałych linków resetu stało przed `logSecurity` i `onPasswordReset`, więc błąd DELETE dawał 500 przy zmienionym haśle i zostawiał otwarte połączenia konta (T-087).
 - Mail z kroku po zatwierdzeniu w Better Auth (alarm do właściciela, `ownerAlerts.raise`) wysyłać w tle, bez `await` w trasie i w kolejce `ResetTokens.exclusive`; `raise` nie rzuca, a błąd wysyłki loguje jako `owner_alert_failed`. Test z mailerem wstrzymanym do zwolnienia sprawdza, że odpowiedź nie czeka na mail (T-088, `test/password-reset.owner-alert.test.ts`).
+- Zdarzenia na żywo po zatwierdzonym zapisie (`announceAccessChanges`, `nameChanged`, rozesłanie przy usunięciu konta) nie mogą zmienić wyniku zapisu: błąd rozesłania łapać i logować (`errorSummary`, bez imion i e-maili), odpowiedź oddaje wynik zapisu, a kolejne kroki (np. `closeUser`) wykonują się mimo błędu. Test podstawia hub, który zawodzi (`buildTestApp(pool, { live })`, `live.publish` rzuca), bez `vi.mock`. `PATCH /api/v1/me` dawał 500 przy zapisanym imieniu, a `DELETE /api/v1/me` pomijał `closeUser` usuniętego konta (T-076, `konta/http/me-routes.ts` `afterCommit`, `test/me.name.announce-failure.test.ts`); pozostałe trasy: T-089.
 
 ## Skille i źródła
 
@@ -114,6 +115,7 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-04 | T-076: „Pułapki”: błąd zdarzeń na żywo po zatwierdzeniu tylko do logu; kolejne kroki się wykonują; test z zawodzącym hubem. |
 | 2026-11-04 | T-074: „Gdzie jest kod”: `domain/membership-events.ts` (`announceAccessChanges`) zamiast `http/person-events.ts`; „Pułapki”: nazwa funkcji. |
 | 2026-11-03 | T-088: „Pułapki”: mail alarmu po zatwierdzeniu w Better Auth wysyłany w tle, bez `await` w kolejce resetów. |
 | 2026-11-02 | T-087: „Pułapki”: krok mostu po zatwierdzeniu w Better Auth nie przerywa logu `security` ani zamknięcia połączeń; `test/failing-pool.ts`. |
