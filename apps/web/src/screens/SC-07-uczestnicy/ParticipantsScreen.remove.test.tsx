@@ -162,6 +162,22 @@ describe("SC-07 removing a participant fails", () => {
     expect(removals).toEqual([TOMEK.id, TOMEK.id]);
   });
 
+  // T-079: tekst według kodu błędu, przez wspólne `errorText`.
+  it("shows the connection text when the request fails on the network", async () => {
+    const { user } = await ownersParticipants([TOMEK, OLA], () =>
+      Promise.resolve(HttpResponse.error()),
+    );
+
+    await user.click(removeButton("Tomek"));
+    await user.click(dialog("Tomek").getByRole("button", { name: "Usuń" }));
+
+    expect(
+      await dialog("Tomek").findByText("Brak połączenia. Sprawdź internet i spróbuj ponownie."),
+    ).toBeVisible();
+    expect(screen.queryByText("Nie udało się usunąć. Spróbuj ponownie.")).not.toBeInTheDocument();
+    expect(rows()).toHaveLength(3);
+  });
+
   it("makes „Usuń” inactive without a connection and opens no dialog (T-015, T-063)", async () => {
     const { removals, user } = await ownersParticipants([TOMEK]);
 
@@ -216,12 +232,14 @@ describe("SC-07 removing a participant while things change", () => {
 
     await user.click(removeButton("Tomek"));
     await user.click(dialog("Tomek").getByRole("button", { name: "Usuń" }));
-    await dialog("Tomek").findByText("Nie udało się usunąć. Spróbuj ponownie.");
+    await dialog("Tomek").findByText("Brak połączenia. Sprawdź internet i spróbuj ponownie.");
     await user.click(dialog("Tomek").getByRole("button", { name: "Usuń" }));
 
     expect(await screen.findByRole("region", { name: "Na liście (1 z 20)" })).toBeVisible();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(screen.queryByText("Nie udało się usunąć. Spróbuj ponownie.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Brak połączenia. Sprawdź internet i spróbuj ponownie."),
+    ).not.toBeInTheDocument();
     expect(removals).toEqual([TOMEK.id, TOMEK.id]);
     await waitFor(() => {
       expect(removeButton("Ola")).toHaveFocus();

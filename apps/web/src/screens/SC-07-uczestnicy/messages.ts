@@ -58,6 +58,10 @@ export function leaveErrorText(code: RequestErrorCode): string {
   return errorText(code, { otherwise: "Nie udało się opuścić listy. Spróbuj ponownie." });
 }
 
+export function removeErrorText(code: RequestErrorCode): string {
+  return errorText(code, { otherwise: messages.remove.failed });
+}
+
 export function revokeErrorText(code: RequestErrorCode): string {
   return errorText(code, { otherwise: "Nie udało się unieważnić linku. Spróbuj ponownie." });
 }

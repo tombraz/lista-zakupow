@@ -4,7 +4,7 @@ title: "SC-07: błąd usunięcia uczestnika pokazuje tekst według kodu błędu"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-14]
@@ -46,9 +46,17 @@ related_tasks: [T-058, T-059]
 
 ## Root cause
 
-<Do uzupełnienia przez implementującego.>
+T-058 (e76d67d) zapisywał w `useRemoveParticipant` tylko `person.id` nieudanej próby, a `Members.tsx` wstawiał stały `messages.remove.failed` — kod błędu ginął w `onError`, więc ominięto `errorText` (CODING_STANDARDS.md:35). Testy T-058 sprawdzały tylko błąd 500 i ponowienie po zerwanym połączeniu; ten drugi utrwalał wręcz ogólny tekst dla błędu `network`, więc nic nie pilnowało mapowania kodu.
+
+Poprawka: hook pamięta `{ userId, code }` i zwraca `error(person)` = `removeErrorText(code)` (`messages.ts`, przez `errorText`, jak `leaveErrorText`). `rate_limited`: trasa `DELETE …/members/:userId` nie zwraca 429 (`api.md:44`), a `errorText` nie ma dla niego wspólnego tekstu, więc trafia do tekstu domyślnego „Nie udało się usunąć. Spróbuj ponownie.” — tak samo jak opuszczenie listy. Własnego tekstu dla 429 nie dodano (brak copy i brak takiej odpowiedzi API).
+
+Inne wystąpienia: brak — pozostałe hooki zapisu web (`useCheckItem`, `useEditItem`, `useInvitations`, `useLeaveList`, SC-01…SC-09) przekazują kod do `errorText`.
 
 ## Evidence
+
+- Red: `ParticipantsScreen.remove.test.tsx` › „SC-07 removing a participant fails › shows the connection text when the request fails on the network” — `Unable to find an element with the text: Brak połączenia. Sprawdź internet i spróbuj ponownie.` (dialog pokazywał „Nie udało się usunąć. Spróbuj ponownie.”).
+- Green: ten sam test przechodzi. Zaktualizowane oczekiwanie w „removes the row without an error when the retry after a lost response gets 404” (pierwsza próba to błąd sieci → teraz tekst o połączeniu; ponowienie z 404 nadal kończy się sukcesem bez błędu).
+- `pnpm test`: 151 plików, 1184 testy — pass. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — pass.
 
 ## Prevention
 

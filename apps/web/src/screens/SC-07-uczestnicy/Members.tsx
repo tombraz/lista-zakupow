@@ -130,7 +130,7 @@ function RemoveDialog(props: {
       confirmLabel={messages.remove.action}
       cancelLabel={messages.cancel}
       pending={removal.isRemoving(person)}
-      error={removal.failed(person) ? messages.remove.failed : null}
+      error={removal.error(person)}
       onConfirm={() => {
         props.onConfirm();
         removal.remove(person);

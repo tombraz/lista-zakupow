@@ -1,11 +1,12 @@
 import type { ListDetails, ListMembers, Participant } from "@lista/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { asRequestError } from "../../api/client";
+import { asRequestError, type RequestErrorCode } from "../../api/client";
 import { removeParticipant } from "../../api/lists";
 import { useGuardedMutation } from "../../api/useGuardedMutation";
 import { listKey } from "../../lists/useList";
 import { membersKey } from "../../lists/useMembers";
+import { removeErrorText } from "./messages";
 
 /**
  * F-13: właściciel usuwa uczestnika. Bez optymistycznych zmian (F-15): wiersz znika po odpowiedzi
@@ -18,7 +19,7 @@ export function useRemoveParticipant(
   onRemoved: (person: Participant, remaining: number) => void,
 ) {
   const client = useQueryClient();
-  const [failed, setFailed] = useState<string>();
+  const [failed, setFailed] = useState<{ userId: string; code: RequestErrorCode }>();
   const removal = useGuardedMutation(
     {
       mutationFn: async (person: Participant) => {
@@ -29,13 +30,13 @@ export function useRemoveParticipant(
         }
       },
       onMutate: (person) => {
-        setFailed((current) => (current === person.id ? undefined : current));
+        setFailed((current) => (current?.userId === person.id ? undefined : current));
       },
       onSuccess: (_, person) => {
         onRemoved(person, dropParticipant(client, listId, person.id));
       },
-      onError: (_, person) => {
-        setFailed(person.id);
+      onError: (error, person) => {
+        setFailed({ userId: person.id, code: asRequestError(error).code });
       },
     },
     (person) => person.id,
@@ -45,7 +46,9 @@ export function useRemoveParticipant(
       removal.mutate(person);
     },
     isRemoving: (person: Participant) => removal.isLocked(person.id),
-    failed: (person: Participant) => failed === person.id,
+    /** Tekst błędu ostatniej nieudanej próby usunięcia tej osoby albo `null`. */
+    error: (person: Participant) =>
+      failed?.userId === person.id ? removeErrorText(failed.code) : null,
   };
 }
 
