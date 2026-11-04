@@ -4,7 +4,7 @@ title: "SC-09: 401 przy usuwaniu konta to sukces tylko po utraconej odpowiedzi"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-04]
@@ -75,3 +75,29 @@ Przegląd C8: jedna decyzja „już zrobione przy ponowieniu” dla wszystkich m
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Behaviour | `lostResponse` stays set for the whole dialog, so network error → 500 → 401 still shows „Konto zostało usunięte.”. If the lost attempt had deleted the account, the retry would get 401, not 500, so a 500 in between suggests the account still exists. Rare; the documented rule (any lost response in this dialog) is defensible. | `useDeleteAccount.ts`: the flag is only cleared by `reset` | Optional: clear the flag on any non-401 server response, or leave it as is and keep the comment. |
+| 2 | note | Design | `useDeleteAccount` returns a new `reset` function on every render. It is only called from an event handler (`DeleteAccount.tsx`), so this is harmless today. | `{ ...mutation, reset: () => ... }` | Only matters if `reset` ever goes into hook dependencies. |
+| 3 | note | Evidence | The author did not run E2E (Docker was down). QA started Docker and ran the full E2E suite. | see Reproduce | none |
+
+**Reproduce:** `pnpm vitest run --project web SC-09`: 28 passed. `pnpm vitest run --project web --project shared --project tokens`: 43 files / 708 tests passed. `pnpm typecheck`, `pnpm lint` (incl. `--no-inline-config` pass) and `pnpm format:check` OK. `E2E_MAILPIT_PORT=3199 pnpm test:e2e`: 74 passed (phone + desktop, incl. `j01-usuniecie-konta`).
+
+**Acceptance criteria:**
+- AC1 pass: test „ends the session without the deletion message when 401 follows a server failure” checks the SC-01 entry state `{ from: "/konto" }` (the plain `RequireSession` path), not just a missing text.
+- AC2 pass: test „…retry of a lost response gets 401” checks the message, `/logowanie`, no „Nie udało się” and 2 requests.
+- AC3 pass: test „forgets a lost response after the dialog is closed and opened again” (network error → Anuluj → reopen → 401 ⇒ plain end of session). `DeleteAccount.tsx` calls `removal.reset()` when the dialog opens.
+- AC4 pass: the T-062 component tests pass, and the full E2E suite, including account deletion, is green.
+
+**Spot-checks (each reverted, `git status` clean):** restoring the pre-fix hook fails AC1 + AC3. Removing `lostResponse.current = false` from `reset` fails AC3. Removing the `network` flag fails AC2. The tests bite.
+
+**Code review:** the change is small and limited to the hook, and the comment is updated. No scope creep. A network error is `ApiRequestError(0, "network")` (`api/client.ts`), which matches the check. Double submit is still blocked by `useGuardedMutation`. Cancel is blocked while a request is pending, so `reset` cannot race an in-flight request. The edge cases from the QA plan behave as follows. 429 before 401: the flag is kept after a network error, so 401 counts as deleted, as documented. 429 → 401 without a lost response: plain end of session. Two fast clicks: guarded.
+
+**Root cause:** it explains why the T-062 tests missed the bug: no case of 401 after an ordinary failure, and an absence assertion that went blind because of T-071's 100 ms delay. Red evidence is given for the reproducing tests.
+
+**Security/a11y:** no new UI, no new data, no threats listed. No server-side change.
