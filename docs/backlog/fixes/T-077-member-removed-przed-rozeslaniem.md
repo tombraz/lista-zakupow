@@ -4,7 +4,7 @@ title: "Usunięcie uczestnika: zdarzenie member_removed w logu i 204 niezależni
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-14]
@@ -63,3 +63,23 @@ Od T-058 (usunięcie uczestnika) trasa `DELETE …/members/:userId` wołała `wi
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-04)
+
+Verdict: pass
+
+Zakres: zmiana tylko w teście (`194732a`, `apps/api/test/lists.announce-failure.test.ts`); kod produkcyjny naprawiony wcześniej w T-089 (`withdrawAccess` przez `afterCommit`, `routes.ts:139-176`).
+
+- Odtworzenie: `pnpm vitest run --project api members announce-failure` — 5 plików / 20 testów zielonych; `pnpm check` (format, lint, typy, depcruise, backlog, testy) — 151 plików / 1182 testy web+api zielone, mobile 10/10.
+- AC1 — **pass**. Test podmienia `failingPool` tylko na zapytaniu `peopleWithAccess` (asercja „dokładnie jeden `live_announce_failed`” dowodzi, że błąd faktycznie wystąpił), sprawdza 204, brak członkostwa w bazie, `revoke` = `[[bartek, list]]`, `member_removed` z `listId`/`userId`/`removedUserId` i brak danych osobowych w logu.
+- AC2 — **pass**. `lists.remove-member*.test.ts`, `live.remove-member.test.ts`, `lists.leave*`, `live.leave` (T-058, T-059) zielone w pełnym przebiegu.
+- Spot-checki (każdy cofnięty, `git status` czysty):
+  1. `revoke` uzależnione od odczytu osób (`membership-events.ts:55`) → nowy test czerwony: `expected [] to deeply equal [ [ …(2) ] ]` (TH-04 pilnowane).
+  2. Usunięte `securityEvent("member_removed")` → 2 testy czerwone: `expected [] to deep equally contain ObjectContaining{…}` (TH-21 pilnowane).
+  3. `withdrawAccess` bez `afterCommit` → 3 testy czerwone: `expected 500 to be 204` (zgodne z czerwonym dowodem w Evidence).
+- Root cause: wyjaśnia, czemu testy tego nie złapały (zawsze działająca baza i hub) — kompletne.
+- Bezpieczeństwo / TH-21, TH-04: negatywne testy autoryzacji trasy istnieją (`lists.remove-member.authz.test.ts`: 403 dla uczestnika, 404 bez dostępu, 401 anonimowo); ślad bezpieczeństwa bez imion i e-maili (asercja w nowym teście). Brak nowej powierzchni ataku — zmiana wyłącznie testowa.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Testy | W nowym teście podsłuch `revoke` jest zrobiony ręcznym nadpisaniem metody huba; ten sam wzorzec może się przydać w innych testach `announce-failure`. | `lists.announce-failure.test.ts:120-125` | Ewentualnie pomocnik w `test/failing-live.ts`, gdy pojawi się drugie użycie. |
