@@ -471,9 +471,8 @@ describe("SC-07 invitations of the owner", () => {
   });
 });
 
-// SEC3 (TH-02): ikona „Uczestnicy” na SC-06 tylko dla właściciela.
+// SC-06 Layout pkt 1: ikona „Uczestnicy” dla każdej osoby z dostępem (T-094).
 describe("SC-06 Uczestnicy icon", () => {
-  // SC-06 Layout pkt 1: ikona dla każdej osoby z dostępem (T-094; wcześniej tylko właściciel).
   it("is a link to SC-07 for the owner and for a participant", async () => {
     sessionIs(ANIA);
     const own = aList({ name: "Dom" });

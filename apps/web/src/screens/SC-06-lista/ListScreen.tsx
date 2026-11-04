@@ -7,9 +7,9 @@ import { LoadError } from "../../components/LoadError/LoadError";
 import { MoreMenu } from "../../components/MoreMenu/MoreMenu";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { joinedListOf } from "../../invitations/invitationContext";
+import { LeaveListDialog } from "../../lists/LeaveListDialog";
 import { useList } from "../../lists/useList";
 import { useLiveList } from "../../live/useLiveList";
-import { LeaveListDialog } from "../SC-07-uczestnicy/LeaveList";
 import { AddItemBar } from "./AddItemBar";
 import { DeleteListDialog } from "./DeleteListDialog";
 import { Items } from "./Items";
@@ -50,11 +50,7 @@ function ListBar({ list }: { list: ListDetails | undefined }) {
               label={messages.participants}
               icon="👥"
             />
-            {list.role === "owner" ? (
-              <OwnerMenu list={list} />
-            ) : (
-              <ParticipantMenu list={list} />
-            )}
+            {list.role === "owner" ? <OwnerMenu list={list} /> : <ParticipantMenu list={list} />}
           </>
         )
       }
