@@ -4,7 +4,7 @@ title: "API: jeden kształt logu dla błędów po zapisie i w tle (event + err)"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: []
@@ -92,3 +92,25 @@ Jedno miejsce kształtu (`logFailure` / `bestEffort` w `src/logging.ts`) i punkt
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-05)
+
+Verdict: pass
+
+Reprodukcja (czysty stan, `pnpm install --frozen-lockfile`): `pnpm check` — exit 0 (format, lint, typecheck, jscpd, depcruise, design-check, backlog-check, workflow-check, vitest 154 pliki / 1242 testy, jest mobile 10 testów). Instalacja nie zmieniła plików śledzonych.
+
+Kryteria:
+
+- **AC1 — pass.** Testy 1–5 czytane i uruchomione: każdy filtruje po stałym `event` i sprawdza `level` 50 oraz pełny kształt `err` (`toEqual` na `err`, nie `objectContaining`), `status` dostawcy obok. Spot-check: usunięcie `err` z `logFailure` → 6 z 6 testów T-098 czerwonych (`brevo-mailer.reset`, oba przypadki `owner-alert`, oba nowe w `live.session`, nie-`Error` w `password-reset.logs`); przywrócone, `git status` czysty.
+- **AC2 — pass.** `afterCommit` i `revokeOtherLinks` wołają `bestEffort`; grep `log.error` / `try` w `apps/api/src`: poza `logging.ts` tylko handler 500 w `api-error.ts`. Spot-check: `bestEffort` rzuca zamiast logować → 25 testów czerwonych (`*.announce-failure`, `password-reset.owner-alert`); przywrócone.
+- **AC3 — pass.** `backend.md` „Pułapki” — jeden punkt z kształtem, listą nazw `event` i regułą `logFailure` / `bestEffort`; „Gdzie jest kod” i historia zaktualizowane.
+- **AC4 — pass.** T-053, T-087, T-088 (okno 15 min), T-089 zielone w pełnym przebiegu; TH-21: testy sprawdzają brak e-maila, tokenu i komunikatu bazy (`connection terminated`, `Failed query`, `expires_at`); `errorSummary` nie przenosi komunikatu (pierwsza linia stosu odfiltrowana), pola kontekstu to tylko `userId`, `table`, `alert`, `status`.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | „Root cause” nie mówi, dlaczego istniejące testy nie złapały defektu (wymóg dla `kind: fix`). Testy przypinały wtedy właśnie te kształty (`source: "mailer"`, `error`), bo żadna reguła nie definiowała wspólnego kształtu. | sekcja „Root cause” | Jedno zdanie o tym w „Root cause”. |
+| 2 | minor | docs | `architecture.md:24` (dostawca maili) wymienia w logu tylko `owner_alert_failed`; błąd maila resetu ma teraz `password_reset_mail_failed`. | `docs/architecture/architecture.md:24` | Dopisać `password_reset_mail_failed`. |
+| 3 | note | TDD | Test 5 (nie-`Error`) nie ma czerwonego śladu dla asercji `err` — opisane w Evidence jako przypięcie przypadku z planu QA; na starym kodzie i tak by padł (`source` zamiast `event`). Akceptowane. | Evidence, tabela TDD, wiersz 5 | — |
+| 4 | note | ops | Zmiana `source: "mailer"` → `event: "password_reset_mail_failed"` i `msg` = nazwa zdarzenia: filtr lub alarm na hostingu po starym polu przestanie działać. | `konta/index.ts:134` | Sprawdzić filtry logów na hostingu przed wdrożeniem. |
+| 5 | note | zakres | Dwa wpisy `warn` z surowym `err` i bez `event` (`app.ts:97`, `modules/health/http/routes.ts:19`) poza zakresem, jak zgłosił autor. | grep `log.warn` | Ewentualnie osobny fix, decyzja właściciela. |
+| 6 | note | prevention | Ten sam rodzaj uwagi pojawił się w dwóch przeglądach (E-02 2026-11-02 C7, 2026-11-04 C4). Reguła tylko w dokumencie. | `docs/reviews/E-02-2026-11-02-1.md:82`, `E-02-2026-11-04-1.md:92` | Reguła eslint: zakaz `log.error(...)` poza `src/logging.ts` i `http/api-error.ts` (propozycja z „Prevention”). |
