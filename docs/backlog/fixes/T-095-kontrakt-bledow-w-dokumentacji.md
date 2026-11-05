@@ -94,3 +94,5 @@ Verdict: pass
 - AC5 pass: `backend.md:108` odsyła do testu; `pnpm check` zielony.
 
 **Fix task:** „Root cause” wyjaśnia, czemu testy nie złapały rozjazdu (sprawdzały odpowiedzi API, nie dokumenty). Red evidence z 6 porażkami w „Evidence”. Zmiana `ErrorCode` na `as const` zachowuje typy (typecheck zielony). Bez zakresu ponad zadanie. Bezpieczeństwo: brak zmian w kodzie wykonawczym API; `threats: []`.
+
+**Po QA round 1 (uwaga 1, decyzja właściciela 2026-11-05):** sekcję i nagłówek tabeli błędów sprawdza osobny test „architecture.md: sekcja „Konwencje API i błędów” ma tabelę z kolumną `code`”, a dokumenty są czytane dopiero w testach (bez `expect` w ciele `describe`). Reprodukcja przed zmianą: nagłówek `| HTTP | Kod | Kiedy |` → `FAIL test/error-codes-docs.test.ts`, `Tests no tests`; po zmianie → `× architecture.md: sekcja … ma tabelę z kolumną code`, 17 nazwanych porażek. `pnpm check` exit 0 (1224 testy). Uwaga 2 bez zmian (zgodna z AC4).

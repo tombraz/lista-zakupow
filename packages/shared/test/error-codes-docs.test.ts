@@ -31,19 +31,21 @@ function codesIn(cells: string[]): Set<string> {
   );
 }
 
-/** Kody z kolumny `code` tabeli błędów w sekcji „Konwencje API i błędów” `architecture.md`. */
-function architectureErrorTableCodes(): Set<string> {
+const ERROR_TABLE_HEADER = ["HTTP", "`code`", "Kiedy"];
+
+/**
+ * Tabela błędów z sekcji „Konwencje API i błędów” w `architecture.md`. Bez `expect` i czytana
+ * dopiero w teście: brak sekcji lub inny nagłówek ma paść w nazwanym teście, nie przy zbieraniu
+ * testów pliku (QA T-095).
+ */
+function architectureErrorTable(): { header: string[] | undefined; codes: Set<string> } {
   const text = doc("architecture.md");
   const start = text.indexOf("## Konwencje API i błędów");
-  expect(start, "brak sekcji „Konwencje API i błędów” w architecture.md").toBeGreaterThanOrEqual(0);
+  if (start === -1) return { header: undefined, codes: new Set() };
   const end = text.indexOf("\n## ", start + 1);
   const [header, ...rows] = tableCells(text.slice(start, end === -1 ? undefined : end));
-  expect(header, "brak tabeli błędów w „Konwencje API i błędów”").toEqual([
-    "HTTP",
-    "`code`",
-    "Kiedy",
-  ]);
-  return codesIn(rows.map((row) => row[1] ?? ""));
+  if (header?.join("|") !== ERROR_TABLE_HEADER.join("|")) return { header, codes: new Set() };
+  return { header, codes: codesIn(rows.map((row) => row[1] ?? "")) };
 }
 
 function apiTableCodes(): Set<string> {
@@ -51,14 +53,18 @@ function apiTableCodes(): Set<string> {
 }
 
 describe("kody błędów API w dokumentacji (T-095)", () => {
-  const architecture = architectureErrorTableCodes();
-  const api = apiTableCodes();
+  it("architecture.md: sekcja „Konwencje API i błędów” ma tabelę z kolumną `code`", () => {
+    expect(architectureErrorTable().header, "brak sekcji albo inny nagłówek tabeli błędów").toEqual(
+      ERROR_TABLE_HEADER,
+    );
+  });
 
   it.each(ERROR_CODES)("architecture.md: tabela błędów ma wiersz dla `%s`", (code) => {
-    expect(architecture.has(code), `brak \`${code}\` w kolumnie \`code\` tabeli błędów`).toBe(true);
+    const { codes } = architectureErrorTable();
+    expect(codes.has(code), `brak \`${code}\` w kolumnie \`code\` tabeli błędów`).toBe(true);
   });
 
   it.each(ERROR_CODES)("api.md: tabela opisuje `%s`", (code) => {
-    expect(api.has(code), `brak \`${code}\` w żadnej tabeli api.md`).toBe(true);
+    expect(apiTableCodes().has(code), `brak \`${code}\` w żadnej tabeli api.md`).toBe(true);
   });
 });
