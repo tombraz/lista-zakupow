@@ -18,7 +18,11 @@ type Respond = (userId: string, removeOnServer: () => void) => Promise<Response 
  * z której odpowiadają szczegóły i uczestnicy; osoba spoza listy = 404, jak w API.
  * `respond` może podmienić odpowiedź (opóźnić, zerwać, odmówić).
  */
-async function ownersParticipants(members: ListSummary["members"], respond?: Respond) {
+async function ownersParticipants(
+  members: ListSummary["members"],
+  respond?: Respond,
+  { strict = false } = {},
+) {
   sessionIs(ANIA);
   const live = liveServer();
   let list = aList({ name: "Dom", members });
@@ -42,7 +46,7 @@ async function ownersParticipants(members: ListSummary["members"], respond?: Res
       return new HttpResponse(null, { status: 204 });
     }),
   );
-  renderApp(`/listy/${list.id}/uczestnicy`);
+  renderApp(`/listy/${list.id}/uczestnicy`, { strict });
   await screen.findByRole("region", { name: `Na liście (${String(members.length)} z 20)` });
   return { list, live, removals, removeOnServer, user: userEvent.setup() };
 }
@@ -261,5 +265,57 @@ describe("SC-07 removing a participant while things change", () => {
     await waitFor(() => {
       expect(removeButton("Ola")).toHaveFocus();
     });
+  });
+
+  // T-097: zamknięcie okna i fokus w efekcie; podwójny render StrictMode nie gubi następnego wiersza.
+  it("moves focus to the next row in StrictMode when that participant left meanwhile", async () => {
+    const { list, live, removeOnServer, user } = await ownersParticipants([TOMEK, OLA], undefined, {
+      strict: true,
+    });
+
+    await user.click(removeButton("Tomek"));
+    removeOnServer(TOMEK.id);
+    act(() => {
+      live.send({ type: "members.changed", listId: list.id });
+    });
+
+    expect(await screen.findByRole("region", { name: "Na liście (1 z 20)" })).toBeVisible();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(removeButton("Ola")).toHaveFocus();
+    });
+  });
+
+  it("moves focus to the „Na liście” heading in StrictMode when the last participant left meanwhile", async () => {
+    const { list, live, removeOnServer, user } = await ownersParticipants([TOMEK, OLA], undefined, {
+      strict: true,
+    });
+
+    await user.click(removeButton("Ola"));
+    removeOnServer(OLA.id);
+    act(() => {
+      live.send({ type: "members.changed", listId: list.id });
+    });
+
+    const heading = await screen.findByRole("heading", { level: 2, name: "Na liście (1 z 20)" });
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
+  });
+
+  it("keeps another participant's dialog open in StrictMode when someone else left", async () => {
+    const { list, live, removeOnServer, user } = await ownersParticipants([TOMEK, OLA], undefined, {
+      strict: true,
+    });
+
+    await user.click(removeButton("Ola"));
+    removeOnServer(TOMEK.id);
+    act(() => {
+      live.send({ type: "members.changed", listId: list.id });
+    });
+
+    expect(await screen.findByRole("region", { name: "Na liście (1 z 20)" })).toBeVisible();
+    expect(dialog("Ola").getByRole("button", { name: "Anuluj" })).toHaveFocus();
   });
 });

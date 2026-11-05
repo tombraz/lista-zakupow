@@ -1,5 +1,5 @@
 import type { ListDetails, ListMembers, Participant } from "@lista/shared";
-import { useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { Avatar } from "../../components/Avatar/Avatar";
 import { Button } from "../../components/Button/Button";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
@@ -35,10 +35,17 @@ export function Members({ list, members }: { list: ListDetails; members: ListMem
     setConfirming(person);
   };
   // Osoba z otwartego okna zniknęła sama (odeszła, usunięta w innej karcie): okno się zamyka.
-  if (confirming && !participants.some(({ id }) => id === confirming.id)) {
+  // W efekcie, nie w renderze: zamknięcie okna i przeniesienie fokusu to skutki uboczne, które
+  // podwójny render StrictMode by powtórzył (web.md „Pułapki”, T-097).
+  const vanished =
+    confirming && !participants.some(({ id }) => id === confirming.id) ? confirming : null;
+  useEffect(() => {
+    if (!vanished) return;
+    // Zmiana z zewnątrz (dane na żywo), nie zdarzenie użytkownika — nie ma handlera, w którym zamknąć okno.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfirming(null);
-    focusAfter(confirming);
-  }
+    focusAfter(vanished);
+  }, [vanished, focusAfter]);
 
   return (
     <section className={styles.section} aria-labelledby="members-heading">

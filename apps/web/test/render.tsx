@@ -28,8 +28,11 @@ export function sessionIs(user: Me | null) {
   );
 }
 
-/** Cała aplikacja (trasy jak w przeglądarce) od podanego adresu (ostatniego z historii). */
-export function renderApp(entry: InitialEntry | InitialEntry[]) {
+/**
+ * Cała aplikacja (trasy jak w przeglądarce) od podanego adresu (ostatniego z historii).
+ * `strict` — w `StrictMode` jak `main.tsx`: podwójny render wykrywa efekty uboczne w renderze (T-097).
+ */
+export function renderApp(entry: InitialEntry | InitialEntry[], { strict = false } = {}) {
   const initialEntries = Array.isArray(entry) ? entry : [entry];
   const router = createMemoryRouter(routes, {
     initialEntries,
@@ -39,6 +42,7 @@ export function renderApp(entry: InitialEntry | InitialEntry[]) {
     <QueryClientProvider client={testQueryClient()}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
+    { reactStrictMode: strict },
   );
   return { ...view, router };
 }
