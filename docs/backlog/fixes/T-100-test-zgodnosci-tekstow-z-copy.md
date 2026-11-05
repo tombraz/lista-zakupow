@@ -4,7 +4,7 @@ title: "Test zgodności tekstów ekranów web z tabelami Copy; uzupełnienie Cop
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: []
@@ -152,3 +152,30 @@ To zadanie jest prewencją dla klasy błędów z T-096.
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-05)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | dokumentacja testu (AC3, AC7) | Nagłówek `copyRegister.test.ts:10-11` mówi, że w module wspólnym „liczy się każdy literał użytej deklaracji”, gdy któryś wygląda na tekst. Kod (`copyRegister.ts:167`) filtruje każdy literał osobno (`literals.filter(looksLikeText)`), co pinuje test #9 (`"name"` odpada, `"Wpisz nazwę listy"` zostaje). Nagłówek pomija też regułę argumentów `new …(…)` (grupa C), a `web.md` twierdzi, że reguły „co nie jest tekstem” są w nagłówku. | odczyt kodu; test #9 | Nagłówek opisuje regułę per literał i wymienia regułę `new`. |
+| 2 | note | zasięg testu | Heurystyka `looksLikeText` i reguła `new` mogą przepuścić tekst UI w przyszłości: jedno słowo małymi literami bez polskich znaków we wspólnym `.ts` albo `new Error("…")` pokazany użytkownikowi. Dziś nic takiego nie ma. Sprawdzone: po wyłączeniu filtra test #1 zgłasza tylko literały techniczne (metody HTTP, ścieżki API, klucze zapytań, zdarzenia WebSocket, kody pól). | uruchomienie z `return literals`, plik przywrócony | Do rozważenia przy rozszerzaniu testu. |
+| 3 | note | AC1 | `pnpm --filter web test` z AC1 nie istnieje (pakiet `@lista/web` nie ma skryptu `test`). Evidence to odnotowuje. Właściwa komenda: `pnpm vitest run --project web`. | `apps/web/package.json` | Ewentualnie dodać skrypt `test` do `@lista/web`. |
+| 4 | note | parser Copy | Wiersz nagłówka i separatora tabeli Copy (`Text`, `---`) też trafiają do zbioru tekstów. Ryzyko fałszywie zielonego wyniku jest pomijalne. | `copyRegister.ts:328-341` | Opcjonalnie pomijać dwa pierwsze wiersze tabeli. |
+| 5 | note | zakres | Teksty w JSX (`.tsx`) są poza testem. Lista kandydatów jest w Evidence (np. `LeaveListDialog`, `OfflineBanner`, `PasswordField`, `LoadError`). | Evidence | Osobne zadanie, jeśli właściciel zechce. |
+
+Weryfikacja:
+
+- `pnpm install --frozen-lockfile` i `pnpm check` (format, lint, typecheck, jscpd, dependency-cruiser, design-check, backlog-check, testy) kończą się kodem 0. Web/api/shared: 154 pliki, 1236 testów. Mobile: 10 testów. Testy T-100: 12/12.
+- AC1 pass: test #1 obejmuje każdy `messages.ts` SC-01–SC-09 i sprawdza, że znalazł wszystkie 9 katalogów. Wykluczenia (#7) są składniowe.
+- AC2 pass: sprawdzone ręcznie. Dopisanie `rate_limited: "Za dużo żądań."` do `COMMON` w `errorText.ts` daje czerwony test na SC-01, 02, 03, 05, 06, 07, 08 i 09 (SC-04 nie importuje). Nierozpoznany import i ekran bez specyfikacji kończą się `throw` (#10).
+- AC3 pass: test #5 (`{n}` ↔ `${…}`, rozwinięcie `NAME_MAX_LENGTH`, `LIMITS.items`). Opis w nagłówku jest częściowo nieścisły (finding 1).
+- AC4 pass: po usunięciu wiersza `clearBought.confirm.cta` z SC-06 test jest czerwony z `SC-06 · screens/SC-06-lista/messages.ts · „Usuń kupione”`, razem z brakami z `errorText.ts` w jednym komunikacie, czyli wszystkie braki naraz. Test #6 sprawdza różnicę jednego znaku.
+- AC5 pass: przywrócenie `docs/design/screens` z `b42a3a4` daje dokładnie 95 braków, tyle co w Evidence. Próbka 22 wierszy z dopiskiem „z Layout/States, T-100”: każdy ma tekst opisany w Layout albo States swojej specyfikacji. Teksty grupy A mają dopisek „zatwierdzone 2026-11-05, T-100”.
+- AC6 pass: brak listy wyjątków, `skip` i pominiętych ekranów. Regułę `new` zatwierdził właściciel (grupa C).
+- AC7 pass: `docs/architecture/layers/web.md`, „Pułapki”, ze wzmianką o mobile (E-04), wpisem w „Historia zmian” i w „Gdzie jest kod”.
+- AC8 pass: `git diff --stat b42a3a4 3acd2ac -- apps/ packages/` pokazuje tylko 2 nowe pliki. Żaden `messages.ts` się nie zmienił.
+- Test quality: po wyłączeniu `gaps.push` (`copyRegister.ts:45`) 7 z 12 testów jest czerwonych, w tym wszystkie fikstury braków. Test #1 bez braków zostaje zielony, co jest poprawne. Czerwień udokumentowana dla #1, 2, 3, 5, 7, 8, 9, 12. Dla #4, 6, 10 i 11 Evidence wyjaśnia, dlaczego przeszły od razu, a #4 ma spot-check. Wartości oczekiwane to literały.
+- Fix task: Root cause (T-096) wyjaśnia, dlaczego nic tego nie wychwyciło: żaden test nie porównywał tekstów z kodu z Copy. Test #1 jest czerwony bez uzupełnienia Copy (95 braków, odtworzone).
+- UI, a11y i zagrożenia nie dotyczą (bez zmian w UI, `threats: []`). `git status` czysty po wszystkich spot-checkach.
