@@ -4,7 +4,7 @@ title: "SC-07: zamknięcie okna i fokus po zniknięciu osoby w efekcie, nie w re
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa         # todo | in-progress | in-qa | done | blocked
+status: done          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
@@ -77,3 +77,23 @@ Propozycja (do decyzji właściciela): testy ekranów, które przenoszą fokus p
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-05)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Prevention / lint | Sekcja „Prevention” i Evidence AC2 opierają ochronę na lincie `react-hooks/set-state-in-render`, ale reguła nie wykrywa starego wzorca (warunkowy `setState` w renderze to wzorzec dopuszczany przez Reacta). | Kod `Members.tsx` sprzed poprawki (`17834ba^`) przywrócony na chwilę: `pnpm exec eslint Members.tsx` → exit 0, brak zgłoszeń; plik przywrócony. | Prevention nie powinna obiecywać ochrony lintem; nawrót tego błędu złapie tylko przegląd kodu (albo własna reguła, np. zakaz wywołań `focus*`/mutacji refów w ciele komponentu). |
+| 2 | note | Testy / TDD | Nowe testy StrictMode są zielone na kodzie sprzed poprawki, więc nie odtwarzają błędu. AC1 to dopuszcza, a Evidence uczciwie opisuje dlaczego (React 19 porzuca render po `setState` w renderze). | Stare `Members.tsx` + `useRemovalFocus.ts` z `17834ba^` → `pnpm vitest run --project web SC-07`: 55/55 zielonych; pliki przywrócone. | — (zaakceptowane w ramach AC1). |
+| 3 | note | Web / UX | Po zniknięciu osoby okno zamyka się w efekcie, czyli o jeden commit później niż wcześniej. Okno z nieaktualną osobą może więc mignąć przez jedną klatkę. | Przegląd kodu `Members.tsx:40-48`. | Pomijalne. Gdyby było widoczne, można nie renderować okna, gdy `vanished` (`confirming && !vanished`). |
+| 4 | note | Weryfikacja | Nie sprawdzono w przeglądarce (dwie karty, odejście na żywo). Odpowiednikiem jest test w jsdom w `StrictMode`, tak jak w `main.tsx`. | — | — |
+
+Sprawdzone:
+- `pnpm install --frozen-lockfile`, `pnpm check`: exit 0, web 154 pliki / 1239 testów, mobile 10 testów. `pnpm build`: exit 0.
+- AC1 **pass**: testy 1–2 w `<StrictMode>` (`reactStrictMode` z RTL) sprawdzają, że okno jest zamknięte i fokus trafia na „Usuń Ola z listy” albo na nagłówek. Spot-check: po usunięciu `focusAfter(vanished)` z efektu oba testy padają (oraz dotychczasowy „closes the dialog … (members.changed)”). Po przywróceniu `git status` czysty.
+- AC2 **pass**: w ciele renderu `Members.tsx` nie ma `setState` ani `focusAfter`, tylko pochodna `vanished`. Wywołania są w `useEffect` i w handlerach. `eslint-disable-next-line react-hooks/set-state-in-effect` jest dozwolony przez `CODING_STANDARDS.md` (zakaz obejmuje tylko `no-restricted-*` i `eslint-comments/*`) i ma uzasadnienie.
+- AC3 **pass**: SC-07 55/55, pełny zestaw zielony.
+- Przypadki brzegowe: znika ostatni uczestnik (test 2); znika inna osoba, okno zostaje z fokusem na „Anuluj” (test 3). Własne usunięcie: bez optymistycznej zmiany (`useRemoveParticipant`), a `dropParticipant` i `onRemoved` idą w jednym wywołaniu z batchingiem. Efekt `vanished` nie odpala się więc przedwcześnie. Ewentualne podwójne `focusAfter` jest nieszkodliwe dzięki idempotencji.
+- `useRemovalFocus`: `orders` bez `delete` ma najwyżej tyle wpisów, ilu jest uczestników (≤ 20). Wpis nadpisuje `remember` przy każdym otwarciu okna.
+- Bez zmian UI i tokenów, `threats: []`. Root cause wyjaśnia, dlaczego testy go nie złapały (render bez StrictMode i zachowanie Reacta 19).
