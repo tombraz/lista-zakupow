@@ -64,10 +64,16 @@ Nie dopisałem ich, bo są opisane w specyfikacji ekranu, a AC1 dotyczy tekstów
 
 ## Prevention
 
-Co by temu zapobiegło: automatyczne sprawdzenie, że każdy tekst z `messages.ts` ekranu (i ze wspólnych modułów, których ekran używa) występuje w jego specyfikacji (`docs/design/screens/SC-xx-*.md`). Propozycja dla właściciela (2026-11-05), czeka na decyzję:
+Co by temu zapobiegło: automatyczne sprawdzenie, że każdy tekst ekranu ma wiersz w tabeli Copy jego specyfikacji.
 
-1. Reguła w `design-check` (albo test Vitest w `apps/web`): dla każdego `SC-xx/messages.ts` stałe teksty muszą wystąpić w tabeli Copy albo w Layout/States tego ekranu; wynik pokazuje brakujący tekst i ekran. Do ustalenia: czy wymagać wiersza w Copy (pełny rejestr), czy wystarczy Layout/States. Większa zmiana niż ta poprawka, więc jako zadanie przez `/plan-backlog`.
-2. Ręczne odświeżanie `UAT.md` zostaje. `/qa-task E-02` i tak aktualizuje go przed UAT.
+**Decyzja właściciela (2026-11-05):**
+
+1. Tabela Copy jest pełnym rejestrem tekstów ekranu. Tekst opisany tylko w Layout albo States nie wystarcza.
+2. Nowe zadanie (przez `/plan-backlog`, warstwa `web`): test Vitest w `apps/web`, w którym każda stała tekstowa z `SC-xx/messages.ts` ma wiersz w Copy swojego ekranu. Teksty ze wspólnych modułów (`session/personName.ts`, `errorText.ts`) muszą mieć wiersz na każdym ekranie, który ich używa. Teksty z parametrem test porównuje z szablonem w Copy (np. `{n}`). Komunikat błędu podaje ekran i brakujący tekst.
+3. To samo zadanie dopisuje 11 tekstów wymienionych w Evidence (test czerwony przed dopisaniem). Nie trzeba ich ponownie zatwierdzać, bo są już w zatwierdzonej specyfikacji ekranów. Dopisek: „z Layout/States, T-xxx”.
+4. Zakres: ekrany web. Aplikacja mobilna (E-04) dołączy do tej samej kontroli, gdy powstanie.
+
+`UAT.md` nadal odświeżamy ręcznie. `/qa-task E-02` aktualizuje go przed UAT.
 
 ## Incident note
 
