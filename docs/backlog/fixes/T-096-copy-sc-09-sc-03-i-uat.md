@@ -27,9 +27,9 @@ related_tasks: [T-054, T-060, T-061, T-080]
 
 ## Acceptance criteria
 
-- [ ] AC1: Copy SC-09 ma `name.invalid.hiddenChars` (lub klucz zgodny z SC-02) z dopiskiem „zatwierdzone <data>, T-060”; Copy SC-03 ma tekst limitu 128 znaków. Teksty zatwierdza właściciel przed wpisem. — verified by: przegląd QA (porównanie `messages.ts` z tabelami Copy SC-03 i SC-09)
-- [ ] AC2: `UAT.md` podaje aktualne statusy poprawek i odsyła do najnowszego przeglądu (`E-02-2026-11-04-1.md`) oraz otwartych zadań z niego. — verified by: przegląd QA
-- [ ] AC3: No regression in: teksty w kodzie bez zmian (zmienia się tylko dokumentacja).
+- [x] AC1: Copy SC-09 ma `name.invalid.hiddenChars` (lub klucz zgodny z SC-02) z dopiskiem „zatwierdzone <data>, T-060”; Copy SC-03 ma tekst limitu 128 znaków. Teksty zatwierdza właściciel przed wpisem. — verified by: przegląd QA (porównanie `messages.ts` z tabelami Copy SC-03 i SC-09)
+- [x] AC2: `UAT.md` podaje aktualne statusy poprawek i odsyła do najnowszego przeglądu (`E-02-2026-11-04-1.md`) oraz otwartych zadań z niego. — verified by: przegląd QA
+- [x] AC3: No regression in: teksty w kodzie bez zmian (zmienia się tylko dokumentacja).
 
 ## TDD plan
 
@@ -63,6 +63,11 @@ Edge cases: przegląd pozostałych tekstów z `messages.ts` SC-03 i SC-09, któr
 Nie dopisałem ich, bo są opisane w specyfikacji ekranu, a AC1 dotyczy tekstów bez żadnego opisu. Jedynym tekstem bez opisu był błąd wylogowania SC-09 i ten został dopisany.
 
 ## Prevention
+
+Co by temu zapobiegło: automatyczne sprawdzenie, że każdy tekst z `messages.ts` ekranu (i ze wspólnych modułów, których ekran używa) występuje w jego specyfikacji (`docs/design/screens/SC-xx-*.md`). Propozycja dla właściciela (2026-11-05), czeka na decyzję:
+
+1. Reguła w `design-check` (albo test Vitest w `apps/web`): dla każdego `SC-xx/messages.ts` stałe teksty muszą wystąpić w tabeli Copy albo w Layout/States tego ekranu; wynik pokazuje brakujący tekst i ekran. Do ustalenia: czy wymagać wiersza w Copy (pełny rejestr), czy wystarczy Layout/States. Większa zmiana niż ta poprawka, więc jako zadanie przez `/plan-backlog`.
+2. Ręczne odświeżanie `UAT.md` zostaje. `/qa-task E-02` i tak aktualizuje go przed UAT.
 
 ## Incident note
 
