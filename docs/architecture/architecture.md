@@ -14,12 +14,14 @@ flowchart LR
   d[Domownik] -->|przeglądarka| app[Wspólna lista zakupów]
   d -->|aplikacja Android / iOS| app
   app -->|mail z linkiem resetu hasła| mail[Dostawca maili transakcyjnych]
-  mail --> d
+  app -->|alarm z API| mail
+  mail -->|link resetu| d
+  mail -->|alarm z API| owner
   host[Monitoring hostingu] -->|alarm o awarii| owner[Właściciel projektu]
   host -.healthcheck.-> app
 ```
 
-- **Dostawca maili transakcyjnych** (wybór w `/ci-cd`): wysyła wyłącznie mail resetu hasła (F-03). Gdy nie działa, reset hasła jest niedostępny; reszta aplikacji działa. Odpowiedź na prośbę o reset jest i tak taka sama (bez zdradzania błędu wysyłki); błąd trafia do logów.
+- **Dostawca maili transakcyjnych** (wybór w `/ci-cd`): wysyła dwa rodzaje maili: mail z linkiem resetu hasła do domownika (F-03) i alarm z API do właściciela projektu („Obserwowalność”, T-088). Gdy nie działa, reset hasła i alarmy z API są niedostępne; reszta aplikacji działa. Odpowiedź na prośbę o reset jest i tak taka sama (bez zdradzania błędu wysyłki); błąd trafia do logów (`owner_alert_failed` dla alarmu).
 - **Monitoring hostingu** (wybór w `/ci-cd`): odpytuje `/health` i wysyła mail do właściciela projektu przy awarii (N-03).
 
 Brak innych systemów zewnętrznych: bez analityki, śledzenia błędów, push i płatności (N-02, BRD §11).
@@ -103,7 +105,9 @@ Dostęp do listy daje wyłącznie: `lista.owner_id = ja` albo wiersz członkostw
 
 | HTTP | `code` | Kiedy |
 | --- | --- | --- |
-| 400 | `validation_failed` | długości, puste pola, brak zgód (`fields` wskazuje pola) |
+| 400 | `validation_failed` | długości, puste pola, brak zgód (`fields` wskazuje pola); też zły JSON, pusta treść, zły zapis ścieżki (bez `fields`) |
+| 413, 414, 415 | `validation_failed` | treść ponad `HTTP_LIMITS.bodyBytes` (413, także zdarzenie `limit_reached` w logu `security`), parametr ścieżki dłuższy niż `maxParamLength` (414), nieobsługiwany `content-type` (415); bez `fields`, status z Fastify (T-086) |
+| 400 | `invalid_token` | link resetu hasła użyty, wygasły lub nieważny (F-03, T-054) |
 | 401 | `unauthenticated` | brak lub nieważna sesja |
 | 401 | `invalid_credentials` | zły e-mail lub hasło przy logowaniu (ten sam dla obu, F-02) |
 | 403 | `invalid_origin` | żądanie zmieniające stan z obcego `Origin` (TH-14) |
@@ -287,6 +291,7 @@ Otwarte:
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-05 | T-095: tabela błędów — `invalid_token` (400) i `validation_failed` także z 413/414/415; kontekst — dostawca maili wysyła też alarm z API do właściciela. Zgodność z `ERROR_CODES` sprawdza `packages/shared/test/error-codes-docs.test.ts`. |
 | 2026-11-04 | T-081: „Moduły”: `listy` zależy od `konta` (odwrócenie przez `announceNameChanges` / `announceAccountDeletions`), nie odwrotnie; `closeUser` w `na-zywo`. |
 | 2026-11-03 | T-088: „Obserwowalność”: alarm mailowy z API do właściciela (`ALERT_EMAIL`, okno 15 min w pamięci procesu). |
 | 2026-11-02 | T-075: kolejka resetów hasła per konto w pamięci procesu — zależna od jednej instancji API (ADR 0003). |

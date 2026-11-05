@@ -7,6 +7,20 @@ approved: 2026-10-26
 
 Zarys dla głównych ścieżek; taski doprecyzowują kształty. Kontrakt (typy żądań, odpowiedzi i zdarzeń + schematy zod) żyje w `packages/shared/src/api/` i jest importowany przez api, web i mobile. Konwencje i kody błędów: `architecture.md`, „Konwencje API i błędów”. Wszystkie trasy `/api/v1/*` wymagają sesji (401), chyba że zaznaczono inaczej.
 
+## Błędy wspólne
+
+Mogą wystąpić na każdej trasie (lub każdej z opisanej grupy), więc kolumny „Błędy” w tabelach tras ich nie powtarzają; pełna tabela kodów: `architecture.md`.
+
+| HTTP | Kod | Kiedy |
+| --- | --- | --- |
+| 400 | `validation_failed` | treść nie spełnia schematu (`fields`), zły JSON, pusta treść, zły zapis ścieżki |
+| 413, 414, 415 | `validation_failed` | treść ponad `HTTP_LIMITS.bodyBytes` (413), parametr ścieżki ponad `maxParamLength` (414), nieobsługiwany `content-type` (415); bez `fields` (T-086) |
+| 401 | `unauthenticated` | trasa `/api/v1/*` bez ważnej sesji (poza publicznymi) |
+| 403 | `invalid_origin` | `POST` / `PATCH` / `DELETE` z obcego `Origin` lub bez niego (TH-14) |
+| 404 | `not_found` | lista, pozycja, uczestnik lub link nie istnieje, identyfikator nie jest UUID albo brak dostępu (bez zdradzania istnienia) |
+| 429 | `rate_limited` | limit z `RATE_LIMITS`; trasy z limitem mają „429” w kolumnie „Błędy” |
+| 500 | `internal` (`requestId`) | błąd serwera; szczegóły tylko w logu |
+
 ## Konta (Better Auth, `/api/auth/*`)
 
 Nazwy tras Better Auth sprawdzić w dokumentacji wersji użytej w walking skeleton.
@@ -16,7 +30,7 @@ Nazwy tras Better Auth sprawdzić w dokumentacji wersji użytej w walking skelet
 | Rejestracja (F-01) | `POST /api/auth/sign-up/email` | `{ name, email, password, termsAccepted: true, ageConfirmed: true, invitationToken? }` | 200 `{ user }` + sesja | 400 `validation_failed`, 409 `email_taken`, 429 |
 | Logowanie (F-02) | `POST /api/auth/sign-in/email` | `{ email, password }` | 200 `{ user }` + sesja | 401 `invalid_credentials` (ten sam dla złego e-maila i hasła), 429 |
 | Wylogowanie (F-02) | `POST /api/auth/sign-out` | — | 200 | — |
-| Prośba o reset (F-03) | `POST /api/auth/request-password-reset` (publiczna) | `{ email, redirectTo }` | 200 zawsze | 429 |
+| Prośba o reset (F-03) | `POST /api/auth/request-password-reset` (publiczna) | `{ email }` (inne pola, np. `redirectTo`, ignorowane: link zawsze na `APP_ORIGIN`, T-053 SEC5) | 200 zawsze | 429 |
 | Nowe hasło (F-03) | `POST /api/auth/reset-password` (publiczna) | `{ token, newPassword }` | 200 | 400 `invalid_token` (użyty lub wygasły), 400 `validation_failed` |
 
 Zgody i 16+ są weryfikowane w hooku rejestracji Better Auth (brak = 400) i zapisywane w `user`.
@@ -29,7 +43,7 @@ Stan po T-004: API udostępnia z Better Auth tylko trasy z tabeli, które już m
 | --- | --- | --- | --- | --- |
 | Moje dane | `GET /api/v1/me` | — | `{ id, name, email }` | 401 |
 | Zmiana imienia (F-16) | `PATCH /api/v1/me` | `{ name }` | 200 `{ id, name, email }`; błąd rozesłania zdarzeń po zapisie tylko w logu | 400, 401 (konto usunięte w międzyczasie) |
-| Usunięcie konta (F-04) | `DELETE /api/v1/me` | `{ confirm: true }` | 204; zdarzenia `list.deleted` / `access.revoked` / `lists.changed` do dotkniętych osób; sesje zamknięte | 400 bez `confirm` |
+| Usunięcie konta (F-04) | `DELETE /api/v1/me` | `{ confirm: true }` | 204; zdarzenia `list.deleted` / `access.revoked` / `lists.changed` do dotkniętych osób; sesje zamknięte | 400 bez `confirm`, 401 (konto usunięte w międzyczasie, np. w drugiej karcie) |
 
 ## Listy (`listy`)
 

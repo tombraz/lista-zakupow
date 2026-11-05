@@ -21,7 +21,14 @@ export {
   type SignInRequest,
   type SignUpRequest,
 } from "./api/account";
-export type { ApiErrorBody, DomainErrorCode, ErrorCode, LimitName } from "./api/errors";
+export {
+  DOMAIN_ERROR_CODES,
+  ERROR_CODES,
+  type ApiErrorBody,
+  type DomainErrorCode,
+  type ErrorCode,
+  type LimitName,
+} from "./api/errors";
 export {
   createItemRequestSchema,
   ITEM_NAME_MAX_LENGTH,
