@@ -1,6 +1,6 @@
 # UAT E-02 Konto i zarządzanie udostępnianiem (web)
 
-Przygotował: QA (po T-069), 2026-11-03. Wykonuje: właściciel. Miejsce: staging `https://lista-staging.fly.dev` (workflow bez środowisk podglądowych — `docs/architecture/tech-stack.md`, „Git workflow”). Kolejność przed UAT: `/review-change E-02` (ostatni przegląd `docs/reviews/E-02-2026-11-02-1.md` ma `Verdict: fail` — potrzebna nowa runda z `pass`), `/security-review E-02` (brak przeglądu w `docs/security/reviews/`), potem `/qa-task E-02`.
+Przygotował: QA (po T-069), 2026-11-03. Wykonuje: właściciel. Miejsce: staging `https://lista-staging.fly.dev` (workflow bez środowisk podglądowych — `docs/architecture/tech-stack.md`, „Git workflow”). Kolejność przed UAT: `/review-change E-02` (ostatni przegląd `docs/reviews/E-02-2026-11-04-1.md`, runda 2, ma `Verdict: fail` — po zamknięciu jego zadań naprawczych potrzebna nowa runda z `pass`; stan na 2026-11-05), `/security-review E-02` (brak przeglądu w `docs/security/reviews/`), potem `/qa-task E-02`.
 
 ## Przed UAT (warunki z tego epiku)
 
@@ -28,7 +28,8 @@ Przygotuj dwa konta testowe z prawdziwymi skrzynkami (A — właściciel listy, 
 ## Znane ograniczenia
 
 - Wysyłka Brevo sprawdzona tylko w Gmailu (odbiorcza); inni dostawcy nieprzetestowani, ryzyko spamu (`deployment.md`, „Ryzyka”). Brevo przepisuje nadawcę na `<login>@<id>.brevosend.com`.
-- Przegląd kodu E-02 runda 1 (2026-11-02) `fail`; otwarte zadania naprawcze w `docs/backlog/fixes/`: T-070 (NUL w parametrach tras), T-071 (ogłaszanie komunikatów sukcesu), T-072, T-074, T-076–T-082, T-084 — wszystkie `todo`.
+- Przegląd kodu E-02 runda 1 (2026-11-02) `fail`: zadania naprawcze T-070–T-072, T-074 i T-076–T-082 `done` (PR #14 zmergowany 2026-11-04), tak samo poprawki z gałęzi epiku T-083, T-085–T-087 i T-089; T-084 nadal `todo`.
+- Przegląd kodu E-02 runda 2 (2026-11-04, `docs/reviews/E-02-2026-11-04-1.md`) `fail`; zadania naprawcze w `docs/backlog/fixes/` (PR #15): T-094 (SC-06: akcje uczestnika, blocker P1) i T-095 (kontrakt błędów) `done`; T-096 (Copy SC-03/SC-09 i ten stan UAT; status w `docs/backlog/fixes/T-096-copy-sc-09-sc-03-i-uat.md`); T-097 (fokus SC-07), T-098 (log błędów w tle), T-099 (`backlog-check`) `todo`. Z wcześniej otwartych: T-090–T-093 `todo` (T-092 rozszerzone na testy `apps/web`). Stan na 2026-11-05.
 - Poprawki z UAT E-01 nadal otwarte: T-052 (flake `57P01` w CI), T-066 (pusty `h1` SC-06), T-067 („Wszystko kupione” na pustej liście SC-05), T-068 (alert CodeQL w teście); T-047 zablokowane.
 - Staging usypia po kilku minutach bez ruchu; pierwsze żądanie trwa kilka sekund.
 - Poza zakresem: aplikacja mobilna (E-04), produkcja (E-03).

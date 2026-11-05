@@ -71,6 +71,7 @@ Jak SC-01. Dwa widoki pod jednym ekranem:
 | back | Wróć do logowania |
 | step2.title | Ustaw nowe hasło |
 | step2.submit | Zapisz hasło |
+| step2.password.tooLong | Hasło może mieć najwyżej 128 znaków (zatwierdzone 2026-11-05, T-096) |
 | step2.error | Nie udało się zapisać hasła. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
 | step2.invalid | Ten link wygasł albo został już użyty. |
 | step2.resend | Wyślij nowy link |

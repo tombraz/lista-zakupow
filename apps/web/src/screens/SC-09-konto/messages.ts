@@ -25,7 +25,7 @@ export const messages = {
   },
 };
 
-/** Błąd wylogowania → komunikat (tekst agenta; tabela „Copy” go nie ma). */
+/** Błąd wylogowania → komunikat (SC-09 „Error — wylogowanie”, Copy `logout.error`). */
 export function logoutErrorText(code: RequestErrorCode): string {
   return errorText(code, { otherwise: "Nie udało się wylogować. Spróbuj ponownie." });
 }

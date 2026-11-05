@@ -4,7 +4,7 @@ title: "Copy SC-09 i SC-03 dla brakujących tekstów; UAT E-02 aktualny"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-03, F-16]
@@ -43,7 +43,24 @@ Zadanie dokumentacyjne, bez testu automatycznego.
 
 ## Root cause
 
+Tabele Copy prowadzi się ręcznie, a teksty ekranu żyją w `messages.ts` i we wspólnych modułach (`session/personName.ts`, `errorText.ts`). Tekst znaków ukrytych zatwierdzono w T-060 dla SC-02, SC-05 i SC-06. SC-09 dostał go dopiero w T-061 przez wspólne `NAME_ERROR_TEXTS`, a T-080 przepisał do Copy tylko ekrany wymienione w T-060. Limit 128 znaków hasła wszedł do SC-03 w T-054 razem z błędami pola skopiowanymi z SC-02 (`messages.ts:20`), bez wpisu w specyfikacji. `UAT.md` powstał 2026-11-03 i nikt go nie odświeżył ani po rundzie 1 poprawek, ani po przeglądzie 2026-11-04. Nic tego nie wychwyciło, bo żaden test ani `design-check` nie porównuje tekstów z kodu z tabelami Copy, a zmiana statusu zadania nie przypomina o `UAT.md`.
+
 ## Evidence
+
+Teksty zatwierdzone przez właściciela 2026-11-05 (w tej sesji): oba wpisy z AC1 oraz dopisanie błędu wylogowania SC-09.
+
+Zmiany:
+- `SC-09-konto.md`, Copy: `name.invalid.hiddenChars` (tekst zatwierdzony 2026-11-01 w T-060, ten sam co SC-02) i `logout.error` „Nie udało się wylogować. Spróbuj ponownie.” (zatwierdzone 2026-11-05). States: „Error — imię” uzupełnione o tekst znaków ukrytych; nowy wiersz „Error — wylogowanie”.
+- `SC-03-reset-hasla.md`, Copy: `step2.password.tooLong` „Hasło może mieć najwyżej 128 znaków”.
+- `UAT.md`: odsyła do przeglądu `E-02-2026-11-04-1.md` (runda 2, `fail`), podaje statusy poprawek z rundy 1 (wszystkie `done` poza T-084) i zadania z rundy 2 (T-094, T-095 `done`; T-097–T-099 i T-090–T-093 `todo`).
+- `apps/web/src/screens/SC-09-konto/messages.ts:28`: tylko komentarz („tekst agenta; tabela „Copy” go nie ma” → odwołanie do `logout.error`), bo po dopisaniu do Copy byłby nieprawdziwy. Teksty bez zmian (AC3).
+
+Edge cases: przegląd pozostałych tekstów z `messages.ts` SC-03 i SC-09, które nie mają wiersza w tabeli Copy, choć są w specyfikacji ekranu (Layout albo States):
+- SC-03: „E-mail” (Layout 3), „Nowe hasło” i „Co najmniej 8 znaków.” (Layout krok 2), „Hasło musi mieć co najmniej 8 znaków” (States „Error — walidacja”), „Zbyt wiele próśb o reset. Spróbuj ponownie za kilka minut.” (States „Error — limit”).
+- SC-09: „Wstecz” (Layout 1), „Anuluj” (ConfirmDialog, Accessibility), „Wpisz imię” i „Imię może mieć najwyżej 30 znaków” (States „Error — imię”), „Nie udało się zapisać. Spróbuj ponownie.” (States „Error — zapis”).
+- Wspólny `network` z `errorText.ts` („Brak połączenia. Sprawdź internet i spróbuj ponownie.”) nie ma wpisu w Copy żadnego ekranu.
+
+Nie dopisałem ich, bo są opisane w specyfikacji ekranu, a AC1 dotyczy tekstów bez żadnego opisu. Jedynym tekstem bez opisu był błąd wylogowania SC-09 i ten został dopisany.
 
 ## Prevention
 
