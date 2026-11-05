@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from "fastify";
-import { deliveryFailure } from "./logging";
+import { deliveryFailure, logFailure } from "./logging";
 
 /**
  * N-03: tłumienie alarmów jednego zdarzenia — najwyżej jeden mail w tym oknie, żeby seria błędów
@@ -55,11 +55,11 @@ export function createOwnerAlerts(options: {
       const skipped = `Pominięte takie same zdarzenia od poprzedniego alarmu: ${String(window?.skipped ?? 0)}`;
       const mail = { to, subject: alert.subject, text: `${alert.text}\n\n${skipped}\n` };
       mailer.send(mail).catch((error: unknown) => {
-        // TH-21: bez adresu alarmu i treści — tylko zdarzenie i status dostawcy.
-        log.error(
-          { event: "owner_alert_failed", alert: alert.event, ...deliveryFailure(error) },
-          "owner alert not sent",
-        );
+        // TH-21: bez adresu alarmu i treści — zdarzenie, status dostawcy i `errorSummary`.
+        logFailure(log, "owner_alert_failed", error, {
+          alert: alert.event,
+          ...deliveryFailure(error),
+        });
       });
     },
   };

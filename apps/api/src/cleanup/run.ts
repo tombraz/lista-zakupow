@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyBaseLogger } from "fastify";
 import type { Pool } from "pg";
 import type { Clock } from "../clock";
-import { errorSummary } from "../logging";
+import { logFailure } from "../logging";
 import { cleanupRun } from "../db/schema";
 import { purgeExpiredData } from "./purge";
 
@@ -24,7 +24,7 @@ export async function cleanUpIfDue(
   if (lastStart) return new Date(lastStart.getTime() + CLEANUP_INTERVAL_MS);
   const result = await purgeExpiredData(pool, now);
   for (const { table, error } of result.failed) {
-    log.error({ event: "cleanup_failed", table, err: errorSummary(error) }, "cleanup failed");
+    logFailure(log, "cleanup_failed", error, { table });
   }
   log.info({ event: "cleanup", deleted: result.deleted }, "cleanup");
   return new Date(now.getTime() + CLEANUP_INTERVAL_MS);

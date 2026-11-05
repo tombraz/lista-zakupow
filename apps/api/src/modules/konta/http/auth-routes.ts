@@ -11,7 +11,7 @@ import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest }
 import { ApiError } from "../../../http/api-error";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
-import { errorSummary, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
+import { bestEffort, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
 import type { PasswordResetRequests } from "../infra/password-reset-requests";
@@ -171,16 +171,13 @@ async function revokeOtherLinks(
   deps: Pick<AuthDeps, "resetTokens" | "onLinksNotRevoked">,
   userId: string,
 ) {
-  try {
-    await deps.resetTokens.revokeAll(userId);
-  } catch (error) {
-    const summary = errorSummary(error);
-    request.log.error(
-      { event: "reset_tokens_revoke_failed", userId, err: summary },
-      "revoking reset links failed",
-    );
-    deps.onLinksNotRevoked(userId, errorCodeOf(summary));
-  }
+  const failure = await bestEffort(
+    request.log,
+    "reset_tokens_revoke_failed",
+    () => deps.resetTokens.revokeAll(userId),
+    { userId },
+  );
+  if (failure) deps.onLinksNotRevoked(userId, errorCodeOf(failure));
 }
 
 /** Kod błędu z najgłębszej przyczyny (np. `57P01` z pg), bez komunikatu (TH-21). */

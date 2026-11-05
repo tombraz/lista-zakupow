@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import type { Clock } from "../../clock";
-import { deliveryFailure } from "../../logging";
+import { deliveryFailure, logFailure } from "../../logging";
 import type { OwnerAlerts } from "../../owner-alerts";
 import type { Live } from "../na-zywo";
 import { authRoutes, type InvitationOnSignUp } from "./http/auth-routes";
@@ -131,10 +131,7 @@ export function accountRoutes(
 function sendResetMail(app: FastifyInstance, mailer: Mailer, origin: string): OnPasswordResetToken {
   return (email, token) => {
     mailer.send(passwordResetMail(origin, email, token)).catch((error: unknown) => {
-      app.log.error(
-        { source: "mailer", ...deliveryFailure(error) },
-        "password reset mail not sent",
-      );
+      logFailure(app.log, "password_reset_mail_failed", error, deliveryFailure(error));
     });
   };
 }

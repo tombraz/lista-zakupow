@@ -3,11 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildTestApp } from "./app";
 import { useTestDatabase } from "./database";
 import { createList, createUser } from "./factories";
+import { failingPool } from "./failing-pool";
 import { gatedPool } from "./gated-pool";
 import { connectLive, liveUrl, type LiveClient } from "./live";
+import { captureLogs } from "./logs";
 
 const TIMERS = ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] as const;
 const PING_MS = 25_000;
+
+/** Ramki stosu z `errorSummary` — treść zależy od maszyny. */
+const ANY_STACK: unknown = expect.any(String);
 
 // SEC2 (TH-28): koniec sesji inny niż wylogowanie (wygaśnięcie, usunięcie wiersza) też kończy WS.
 describe("live connection of an ended session (T-056, SEC2, TH-28)", () => {
@@ -58,6 +63,69 @@ describe("live connection of an ended session (T-056, SEC2, TH-28)", () => {
     await vi.advanceTimersByTimeAsync(1);
 
     expect(await anias.closed()).toBe(1008);
+  });
+
+  // T-098: błąd kontroli w tle ma kształt błędów w tle — `event` i `err` (`errorSummary`, bez
+  // komunikatu z bazy); połączenie zostaje do kolejnej kontroli.
+  it("logs a failed session check at the ping with event and err, and keeps the connection", async () => {
+    const logs = captureLogs();
+    // Tylko kontrola `sessionActive` (sesja ważna po `expires_at`), nie odczyt sesji przy upgrade.
+    const pool = failingPool(db.pool, /"session"\."expires_at" >/);
+    app = buildTestApp(pool, { logger: { level: "info", stream: logs.stream } });
+    const ania = await createUser(app);
+    const url = await liveUrl(app);
+    vi.useFakeTimers({ toFake: [...TIMERS] });
+    const anias = await connectLive(url, { cookie: ania.cookie, keepPings: true });
+
+    await vi.advanceTimersByTimeAsync(PING_MS);
+    await answerPing(anias);
+
+    await vi.waitFor(() => {
+      expect(
+        logs.entries().filter((entry) => entry["event"] === "live_session_check_failed"),
+      ).toEqual([
+        expect.objectContaining({
+          level: 50,
+          err: {
+            type: "DrizzleQueryError",
+            stack: ANY_STACK,
+            cause: { type: "Error", code: "57P01", stack: ANY_STACK },
+          },
+        }),
+      ]);
+    });
+    const text = logs.lines.join("\n");
+    for (const message of ["connection terminated", "Failed query", "expires_at"]) {
+      expect(text).not.toContain(message);
+    }
+    await expect(anias.closed(200)).rejects.toThrow("still open");
+    anias.close();
+  });
+
+  it("logs a failed subscribe with event and err and no database message (T-098)", async () => {
+    const logs = captureLogs();
+    const pool = failingPool(db.pool, /"session"\."expires_at" >/);
+    app = buildTestApp(pool, { logger: { level: "info", stream: logs.stream } });
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+    const anias = await connectLive(await liveUrl(app), { cookie: ania.cookie });
+
+    anias.send({ type: "subscribe", listId: list.id });
+
+    await vi.waitFor(() => {
+      expect(logs.entries().filter((entry) => entry["event"] === "live_message_failed")).toEqual([
+        expect.objectContaining({
+          level: 50,
+          err: {
+            type: "DrizzleQueryError",
+            stack: ANY_STACK,
+            cause: { type: "Error", code: "57P01", stack: ANY_STACK },
+          },
+        }),
+      ]);
+    });
+    expect(logs.lines.join("\n")).not.toContain("connection terminated");
+    anias.close();
   });
 
   it("checks each session at most once per ping and keeps pinging others while the database is slow (AC2)", async () => {
