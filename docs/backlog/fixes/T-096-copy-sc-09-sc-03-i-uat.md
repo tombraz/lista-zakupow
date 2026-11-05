@@ -4,7 +4,7 @@ title: "Copy SC-09 i SC-03 dla brakujących tekstów; UAT E-02 aktualny"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-03, F-16]
@@ -67,3 +67,24 @@ Nie dopisałem ich, bo są opisane w specyfikacji ekranu, a AC1 dotyczy tekstów
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-05)
+
+Verdict: pass
+
+Zakres: commit `991973c`. Reprodukcja: `pnpm typecheck` zielony, `pnpm lint` 0 ostrzeżeń, `prettier --check` zmienionych plików zielony, `pnpm test` 1224 testów, 0 błędów (JUnit). Testy SC-03 i SC-09: 6 plików, 48 testów zielonych.
+
+Kryteria:
+
+- AC1 — pass. `SC-09-konto.md` Copy: `name.invalid.hiddenChars` = „Usuń niewidoczne lub specjalne znaki.” z dopiskiem „zatwierdzone 2026-11-01, T-060”, identyczne z `HIDDEN_CHARACTERS_TEXT` (`apps/web/src/errorText.ts:20`, użyte w `session/personName.ts:7`) i z wpisem SC-02 (`invalid.hiddenChars`). `SC-03-reset-hasla.md` Copy: `step2.password.tooLong` = „Hasło może mieć najwyżej 128 znaków”, zgodne z `SC-03-reset-hasla/messages.ts:24`. Dodatkowo `logout.error` i wiersz States „Error — wylogowanie” zgodne z `SC-09-konto/messages.ts:30`. Zatwierdzenie tekstów przez właściciela podaje Evidence (sesja 2026-11-05); QA nie może go potwierdzić niezależnie.
+- AC2 — pass. `UAT.md:3` odsyła do `docs/reviews/E-02-2026-11-04-1.md` (runda 2, `Verdict: fail` — sprawdzone). Statusy w „Znane ograniczenia” sprawdzone w plikach zadań: T-070–T-072, T-074, T-076–T-083, T-085–T-087, T-089, T-094, T-095 `done`; T-084, T-090–T-093, T-097–T-099 `todo`. PR #14 `MERGED`, PR #15 otwarty (`gh pr list`). Lista zadań naprawczych rundy 2 zgadza się z sekcją zadań przeglądu.
+- AC3 — pass. Jedyna zmiana w `apps/` to komentarz w `SC-09-konto/messages.ts:28`; teksty bez zmian, testy zielone.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Zakres | QA plan mówi „`git diff --stat` tylko w `docs/`”, a commit zmienia komentarz w `apps/web/src/screens/SC-09-konto/messages.ts:28`. Zmiana uzasadniona (stary komentarz byłby nieprawdziwy), bez wpływu na zachowanie. | `git show 991973c --stat` | Akceptowalne; odnotowane dla śledzalności. |
+| 2 | note | Copy | Teksty opisane tylko w Layout/States, bez wiersza Copy: SC-03 („E-mail”, „Nowe hasło”, „Co najmniej 8 znaków.”, „Hasło musi mieć co najmniej 8 znaków”, „Zbyt wiele próśb o reset…”), SC-09 („Wstecz”, „Anuluj”, „Wpisz imię”, „Imię może mieć najwyżej 30 znaków”, „Nie udało się zapisać…”), wspólny `network` z `errorText.ts` bez wpisu na żadnym ekranie. Wymienione w Evidence, poza AC1. | Evidence T-096; `SC-03-reset-hasla/messages.ts`; `SC-09-konto/messages.ts` | Decyzja właściciela, czy Copy ma być pełnym rejestrem tekstów. |
+| 3 | note | Śledzalność | AC tego zadania są nieodhaczone (ta sama klasa co P7 przeglądu 2026-11-04). | sekcja „Acceptance criteria” | Odhaczanie AC przy przejściu do `done` albo reguła w `backlog-check`. |
+| 4 | note | Zapobieganie | Sekcja „Prevention” pusta; Root cause wskazuje brak testu porównującego teksty z kodu z tabelami Copy. | sekcja „Prevention” | Rozważyć test/skrypt porównujący `messages.ts` z tabelami Copy. |
+
+Root cause (wymóg dla `kind: fix`): wyjaśnia, dlaczego nic nie wychwyciło luk (brak porównania kod–Copy, brak przypomnienia o `UAT.md`). Test odtwarzający nie dotyczy — zadanie dokumentacyjne.
