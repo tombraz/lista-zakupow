@@ -74,6 +74,13 @@ Inne wystąpienia: brak (jedyne akcje AppBar zależne od roli są w `ListScreen.
 
 Propozycje z przeglądu (P1): kontrola przekazań „to E-xx” w `backlog-check` (T-099) i E2E przez UI zamiast `goto`.
 
+Co by zapobiegło: (1) testy interfejsu zależnego od roli pisane według specyfikacji dla każdej roli — dwa testy utrwalały brak akcji uczestnika; (2) `format:check` przed commitem — runda 1 QA padła na Prettierze, którego nie uruchomiono lokalnie.
+
+Przyjęte przez użytkownika (2026-11-05):
+- „Pułapki” w `docs/architecture/layers/web.md`: interfejs zależny od roli testowany dla każdej roli, test braku akcji cytuje linię specyfikacji, E2E do ekranu docelowego przez UI, nie `goto`.
+- `pnpm format:check` w kroku weryfikacji `/fix` (Step 6) i `/implement-task` — jak w CI.
+- Do zrobienia przez użytkownika: zadanie na stabilny pełny przebieg Vitest (13 przekroczeń czasu przy domyślnej liczbie workerów, QA runda 2) przez `/plan-backlog`. Przyczynę procesową (przekazanie E-01 → E-02 bez odbiorcy) pokrywa T-099.
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->

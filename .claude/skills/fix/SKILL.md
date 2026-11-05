@@ -65,7 +65,7 @@ Search for the same pattern elsewhere in the code. Other occurrences are listed 
 ## Step 6 — Fix (green)
 
 1. Make the minimal change that makes the reproducing test pass. No refactoring, no unrelated clean-up.
-2. Run the full test suite, type check, lint and build. In a brownfield project, compare with `docs/architecture/baseline.md` (no new failures, no new lint or type violations).
+2. Run the full test suite, type check, lint, format check (e.g. `pnpm format:check`, as CI runs it) and build. In a brownfield project, compare with `docs/architecture/baseline.md` (no new failures, no new lint or type violations).
 3. Check the "Regression" list in the task: the journeys and done tasks that use the changed code.
 4. Commit: `T-NNN: fix <short title>` (reproducing test and fix together, or test first if the user prefers separate commits).
 5. Set `status: in-qa`, run the checker, commit the task file.
