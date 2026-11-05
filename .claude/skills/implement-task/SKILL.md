@@ -92,7 +92,7 @@ Never silently expand or shrink scope.
 ## Step 8 — Verify
 
 0. One refactor pass over the task's whole diff against the review questions in `.claude/skills/tech-architecture/references/code-quality.md` (or under `~/.claude/skills/`) (single responsibility, duplicated knowledge, dependency direction, over-engineering) and `CODING_STANDARDS.md`. Tests stay green.
-1. Run the full test suite, type check, lint and build, including the code-quality checks from `CODING_STANDARDS.md` (duplication, complexity, dependency rules). In a brownfield project, compare with `docs/architecture/baseline.md`: no test may fail that is not in its "Pre-existing test failures" list, and lint or type-check violation counts may not rise above its "Static checks" numbers. If the baseline cannot be compared (marked "could not verify"), stop and ask the user (autonomous mode: `NEEDS_USER`).
+1. Run the full test suite, type check, lint, format check (e.g. `pnpm format:check`, as CI runs it) and build, including the code-quality checks from `CODING_STANDARDS.md` (duplication, complexity, dependency rules). In a brownfield project, compare with `docs/architecture/baseline.md`: no test may fail that is not in its "Pre-existing test failures" list, and lint or type-check violation counts may not rise above its "Static checks" numbers. If the baseline cannot be compared (marked "could not verify"), stop and ask the user (autonomous mode: `NEEDS_USER`).
 2. Walk through every acceptance criterion. For each, give evidence: the test that proves it, or the result of the manual check (screenshot for UI when possible).
 3. If anything fails, go back to Step 6. Do not claim "done" without fresh evidence from this run.
 

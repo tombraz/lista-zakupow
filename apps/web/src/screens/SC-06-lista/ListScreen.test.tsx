@@ -109,13 +109,16 @@ describe("SC-06 Lista", () => {
     });
 
     it("does not offer a participant rename or delete (SEC2)", async () => {
+      const user = userEvent.setup();
       const list = aList({ name: "Działka", role: "participant", owner: TOMEK });
       listIs(list);
 
       renderApp(`/listy/${list.id}`);
 
       expect(await screen.findByRole("heading", { level: 1, name: "Działka" })).toBeVisible();
-      expect(screen.queryByRole("button", { name: "Więcej opcji" })).toBeNull();
+      // Uczestnik ma menu tylko z „Opuść listę” (T-094, ListScreen.leave.test.tsx).
+      await user.click(screen.getByRole("button", { name: "Więcej opcji" }));
+      expect(screen.getByRole("button", { name: "Opuść listę" })).toBeVisible();
       expect(screen.queryByRole("button", { name: "Zmień nazwę listy" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Usuń listę" })).toBeNull();
     });
