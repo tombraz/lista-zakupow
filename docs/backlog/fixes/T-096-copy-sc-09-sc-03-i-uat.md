@@ -73,6 +73,8 @@ Co by temu zapobiegło: automatyczne sprawdzenie, że każdy tekst ekranu ma wie
 3. To samo zadanie dopisuje 11 tekstów wymienionych w Evidence (test czerwony przed dopisaniem). Nie trzeba ich ponownie zatwierdzać, bo są już w zatwierdzonej specyfikacji ekranów. Dopisek: „z Layout/States, T-xxx”.
 4. Zakres: ekrany web. Aplikacja mobilna (E-04) dołączy do tej samej kontroli, gdy powstanie.
 
+Zaplanowane jako T-100 (`docs/backlog/fixes/T-100-test-zgodnosci-tekstow-z-copy.md`, 2026-11-05), zakres rozszerzony na wszystkie ekrany web.
+
 `UAT.md` nadal odświeżamy ręcznie. `/qa-task E-02` aktualizuje go przed UAT.
 
 ## Incident note
