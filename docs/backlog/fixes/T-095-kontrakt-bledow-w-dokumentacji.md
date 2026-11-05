@@ -4,7 +4,7 @@ title: "architecture.md i api.md zgodne z kodem; test zgodności ErrorCode"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-03, F-04]
@@ -54,11 +54,22 @@ related_tasks: [T-053, T-054, T-062, T-076, T-081, T-086, T-088]
 
 ## Root cause
 
+Kontrakt błędów w `architecture.md` i `api.md` był utrzymywany ręcznie (reguła w `layers/backend.md`), a `ErrorCode` był samym typem TypeScript, więc nic w czasie wykonania nie mogło porównać kodów z dokumentami. T-054 dodał `invalid_token` tylko do `api.md`, T-086 przypisał `validation_failed` do 413/414/415 bez zmiany dokumentów, T-088 dodał alarm mailowy bez poprawienia opisu dostawcy maili. Istniejące testy sprawdzają odpowiedzi API, nie dokumenty.
+
+Inne wystąpienia tego samego wzorca: `api.md` nie miał w żadnej tabeli `not_found`, `rate_limited`, `unauthenticated`, `invalid_origin` ani `internal` (tylko same statusy) — poprawione w tym tasku tabelą „Błędy wspólne”.
+
+Zmiany: `DOMAIN_ERROR_CODES` / `ERROR_CODES` (`as const`) w `packages/shared/src/api/errors.ts`, z których wynikają typy `DomainErrorCode` / `ErrorCode` (zgodne wstecz); test `packages/shared/test/error-codes-docs.test.ts`; `architecture.md` (kontekst i diagram, tabela błędów, historia zmian); `api.md` („Błędy wspólne”, prośba o reset `{ email }` z adnotacją o `redirectTo`, 401 przy `DELETE /api/v1/me`); `layers/backend.md` (reguła odsyła do testu, historia zmian).
+
 ## Evidence
+
+- Czerwony: `pnpm vitest run --project shared test/error-codes-docs.test.ts` — 6 z 32 porażek na asercji: `architecture.md: tabela błędów ma wiersz dla invalid_token` → `AssertionError: brak invalid_token w kolumnie code tabeli błędów: expected false to be true`; w `api.md`: `not_found`, `rate_limited`, `unauthenticated`, `invalid_origin`, `internal`.
+- Zielony po poprawkach dokumentów: 32/32.
+- Przypadki brzegowe z QA planu: test liczy tylko komórki tabel (w `architecture.md` tylko kolumnę `code` tabeli z „Konwencje API i błędów”, nagłówek sprawdzany), więc `limit_reached` z przykładu formatu w prozie nie wystarcza; `code: "not_found"` z tabeli WS nie jest samodzielnym kodem w backtickach.
+- `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, test, test:mobile): exit 0, 153 pliki / 1223 testy.
 
 ## Prevention
 
-Test z AC4 zastępuje ręczną regułę z `backend.md:108`.
+Test z AC4 (`packages/shared/test/error-codes-docs.test.ts`) zastępuje ręczną regułę z `backend.md` dla kodów błędów; reguła w „Pułapkach” odsyła do testu. Pozostała część reguły (zdarzenia, tabele, moduły, ADR) dalej ręczna.
 
 ## Incident note
 
