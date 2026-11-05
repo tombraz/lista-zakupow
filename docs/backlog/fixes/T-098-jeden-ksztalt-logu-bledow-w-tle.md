@@ -56,7 +56,7 @@ related_tasks: [T-053, T-056, T-087, T-088, T-089]
 
 ## Root cause
 
-Każde miejsce błędu w tle pisało własne `log.error(...)`: `errorSummary` było dostępne, ale nic nie wymuszało jego użycia ani nazwy `event`. Mail resetu powstał przed konwencją `event` (pole `source`), alarm do właściciela użył `deliveryFailure` (z polem `error`) zamiast `errorSummary`, a dwa `.catch(() => …)` w WS w ogóle nie brały błędu. `afterCommit` i most Better Auth miały dwie ręczne kopie tego samego `try/catch`.
+Każde miejsce błędu w tle pisało własne `log.error(...)`: `errorSummary` było dostępne, ale nic nie wymuszało jego użycia ani nazwy `event`. Mail resetu powstał przed konwencją `event` (pole `source`), alarm do właściciela użył `deliveryFailure` (z polem `error`) zamiast `errorSummary`, a dwa `.catch(() => …)` w WS w ogóle nie brały błędu. `afterCommit` i most Better Auth miały dwie ręczne kopie tego samego `try/catch`. Istniejące testy tego nie złapały, bo przypinały ówczesne kształty (`source: "mailer"`, `error`): żadna reguła nie definiowała wspólnego kształtu wpisu, więc każdy test sprawdzał to, co zapisało jego miejsce.
 
 ## Evidence
 

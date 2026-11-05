@@ -21,7 +21,7 @@ flowchart LR
   host -.healthcheck.-> app
 ```
 
-- **Dostawca maili transakcyjnych** (wybór w `/ci-cd`): wysyła dwa rodzaje maili: mail z linkiem resetu hasła do domownika (F-03) i alarm z API do właściciela projektu („Obserwowalność”, T-088). Gdy nie działa, reset hasła i alarmy z API są niedostępne; reszta aplikacji działa. Odpowiedź na prośbę o reset jest i tak taka sama (bez zdradzania błędu wysyłki); błąd trafia do logów (`owner_alert_failed` dla alarmu).
+- **Dostawca maili transakcyjnych** (wybór w `/ci-cd`): wysyła dwa rodzaje maili: mail z linkiem resetu hasła do domownika (F-03) i alarm z API do właściciela projektu („Obserwowalność”, T-088). Gdy nie działa, reset hasła i alarmy z API są niedostępne; reszta aplikacji działa. Odpowiedź na prośbę o reset jest i tak taka sama (bez zdradzania błędu wysyłki); błąd trafia do logów (`password_reset_mail_failed` dla maila resetu, `owner_alert_failed` dla alarmu).
 - **Monitoring hostingu** (wybór w `/ci-cd`): odpytuje `/health` i wysyła mail do właściciela projektu przy awarii (N-03).
 
 Brak innych systemów zewnętrznych: bez analityki, śledzenia błędów, push i płatności (N-02, BRD §11).

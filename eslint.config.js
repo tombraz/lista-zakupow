@@ -115,6 +115,22 @@ const API_AFTER_COMMIT_SYNTAX = [
   `CallExpression[callee.property.name=/^(publish|notify|revoke)$/]${AFTER_COMMIT_ONLY}`,
 ].map((selector) => ({ selector, message: AFTER_COMMIT_MESSAGE }));
 
+// T-101 (T-098, TH-21): wpis błędu po zapisie i w tle tylko przez `logFailure` / `bestEffort`
+// (src/logging.ts) — jeden kształt `event` + `err: errorSummary`. Wyjątki: `src/logging.ts` i handler
+// błędów `src/http/api-error.ts` (bloki niżej).
+// Logger: obiekt o nazwie kończącej się na `log` / `logger` (`log`, `childLog`, `app.log`,
+// `request.log`, `this.log`); metoda `error` także jako `log["error"]`.
+const LOGGER =
+  ":matches([callee.object.name=/log(ger)?$/i], [callee.object.property.name=/log(ger)?$/i])";
+const ERROR_METHOD = ":matches([callee.property.name='error'], [callee.property.value='error'])";
+const API_FAILURE_LOG_SYNTAX = [
+  {
+    selector: `CallExpression${ERROR_METHOD}${LOGGER}`,
+    message:
+      "Błąd po zapisie i w tle przez logFailure(log, event, error) albo bestEffort(log, event, step) z src/logging.ts: jeden kształt event + err (T-098, TH-21, layers/backend.md „Pułapki”).",
+  },
+];
+
 // TH-26 (T-049): router dopasowuje trasę po zdekodowanej ścieżce, więc decyzje na surowym adresie
 // rozjeżdżają się z trasą. Wyjątek: handler 404 w `http/web-app.ts` (brak dopasowanej trasy).
 const API_RAW_URL_SYNTAX = [
@@ -352,6 +368,33 @@ export default tseslint.config(
         ...API_CLOCK_SYNTAX,
         ...API_LIMIT_LOG_SYNTAX,
         ...API_RAW_URL_SYNTAX,
+        ...API_FAILURE_LOG_SYNTAX,
+      ],
+    },
+  },
+  {
+    // rate-limit.ts sam loguje przekroczenie (bez API_LIMIT_LOG_SYNTAX), ale błąd też przez logFailure (T-101).
+    files: ["apps/api/src/http/rate-limit.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...API_CLOCK_SYNTAX,
+        ...API_RAW_URL_SYNTAX,
+        ...API_FAILURE_LOG_SYNTAX,
+      ],
+    },
+  },
+  {
+    // Handler błędów (T-101): wpis „unexpected error” z `errorSummary`, bez API_FAILURE_LOG_SYNTAX.
+    files: ["apps/api/src/http/api-error.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...SAFE_SYNTAX,
+        ...API_CLOCK_SYNTAX,
+        ...API_LIMIT_LOG_SYNTAX,
+        ...API_RAW_URL_SYNTAX,
       ],
     },
   },
@@ -366,6 +409,7 @@ export default tseslint.config(
         ...API_LIMIT_LOG_SYNTAX,
         ...API_RAW_URL_SYNTAX,
         ...API_AFTER_COMMIT_SYNTAX,
+        ...API_FAILURE_LOG_SYNTAX,
       ],
     },
   },
@@ -378,6 +422,7 @@ export default tseslint.config(
         ...SAFE_SYNTAX,
         ...API_CLOCK_SYNTAX,
         ...API_LIMIT_LOG_SYNTAX,
+        ...API_FAILURE_LOG_SYNTAX,
       ],
     },
   },
@@ -391,6 +436,7 @@ export default tseslint.config(
         ...API_CLOCK_SYNTAX,
         ...API_LIMIT_LOG_SYNTAX,
         ...API_RAW_URL_SYNTAX,
+        ...API_FAILURE_LOG_SYNTAX,
       ],
     },
   },

@@ -4,7 +4,7 @@ title: "API: reguła eslint — `log.error` tylko w `logging.ts` i handlerze bł
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-098]
 layers: [backend, infra]
 requirements: []
@@ -29,11 +29,11 @@ related_tasks: [T-098, T-035, T-089]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given plik w `apps/api/src/**` poza wyjątkami, który woła `log.error(…)`, `app.log.error(…)` albo `request.log.error(…)`, when `pnpm lint`, then błąd `no-restricted-syntax` z komunikatem o `logFailure` / `bestEffort`. — verified by: fikstura w `scripts/test/lint-security.test.mjs`, czerwona przed zmianą
-- [ ] AC2: Given `src/logging.ts`, `src/http/api-error.ts` i wywołania `logFailure` / `bestEffort` w innych plikach, then brak błędu lintu. Obecne repo przechodzi `pnpm lint` bez zmian w kodzie produkcyjnym. — verified by: fikstura (przypadek dozwolony) + `pnpm check`
-- [ ] AC3: Reguła działa we wszystkich blokach `files` dla `apps/api/src/**`, także w nadpisaniach, które powtarzają listę `no-restricted-syntax` (`modules/*/http/**`, `http/web-app.ts`). — verified by: fikstura z plikiem w `modules/x/http/` + przegląd QA
-- [ ] AC4: T-098 „Root cause” ma zdanie o tym, dlaczego testy nie złapały defektu: przypinały ówczesne kształty (`source: "mailer"`, `error`), bo żadna reguła nie definiowała wspólnego kształtu. `architecture.md:24` wymienia też `password_reset_mail_failed`. `backend.md` „Pułapki” (punkt T-098) wskazuje regułę lintu. — verified by: przegląd QA
-- [ ] AC5: No regression in: T-098, T-089 (`API_AFTER_COMMIT_SYNTAX`), T-035 (`API_LIMIT_LOG_SYNTAX`); pozostałe przypadki `lint-security.test.mjs` zielone.
+- [x] AC1: Given plik w `apps/api/src/**` poza wyjątkami, który woła `log.error(…)`, `app.log.error(…)` albo `request.log.error(…)`, when `pnpm lint`, then błąd `no-restricted-syntax` z komunikatem o `logFailure` / `bestEffort`. — verified by: fikstura w `scripts/test/lint-security.test.mjs`, czerwona przed zmianą
+- [x] AC2: Given `src/logging.ts`, `src/http/api-error.ts` i wywołania `logFailure` / `bestEffort` w innych plikach, then brak błędu lintu. Obecne repo przechodzi `pnpm lint` bez zmian w kodzie produkcyjnym. — verified by: fikstura (przypadek dozwolony) + `pnpm check`
+- [x] AC3: Reguła działa we wszystkich blokach `files` dla `apps/api/src/**`, także w nadpisaniach, które powtarzają listę `no-restricted-syntax` (`modules/*/http/**`, `http/web-app.ts`). — verified by: fikstura z plikiem w `modules/x/http/` + przegląd QA
+- [x] AC4: T-098 „Root cause” ma zdanie o tym, dlaczego testy nie złapały defektu: przypinały ówczesne kształty (`source: "mailer"`, `error`), bo żadna reguła nie definiowała wspólnego kształtu. `architecture.md:24` wymienia też `password_reset_mail_failed`. `backend.md` „Pułapki” (punkt T-098) wskazuje regułę lintu. — verified by: przegląd QA
+- [x] AC5: No regression in: T-098, T-089 (`API_AFTER_COMMIT_SYNTAX`), T-035 (`API_LIMIT_LOG_SYNTAX`); pozostałe przypadki `lint-security.test.mjs` zielone.
 
 ## TDD plan
 
@@ -55,7 +55,40 @@ related_tasks: [T-098, T-035, T-089]
 
 ## Root cause
 
+Kształt wpisu błędu po zapisie i w tle (T-098) był tylko konwencją w `backend.md`, „Pułapki”. Lint pilnował już kształtu zdarzeń limitu (T-035) i `afterCommit` (T-089), ale nie `log.error`, więc nowe miejsce mogło znów napisać własny kształt.
+
 ## Evidence
+
+Kod: `eslint.config.js` — `API_FAILURE_LOG_SYNTAX` (selektor `CallExpression` z metodą `error` — `.error` albo `["error"]` — na obiekcie, którego nazwa albo ostatnia właściwość kończy się na `log` / `logger`, bez rozróżniania wielkości liter). Dodana do każdego bloku `no-restricted-syntax` dla `apps/api/src/**`: blok główny API, `modules/*/http/**`, `http/web-app.ts`, `db/schema.ts` i nowy blok `http/rate-limit.ts` (był wyłączony z bloku głównego ze względu na `API_LIMIT_LOG_SYNTAX`, więc bez niego zostałby luką). Wyjątki: `src/logging.ts` (wyłączony już z bloku głównego) i nowy blok `src/http/api-error.ts`, który powtarza listę bez nowej reguły. Kod produkcyjny bez zmian.
+
+TDD (`node scripts/test/lint-security.test.mjs`; fikstury przez `lintText` pod nazwą istniejącego pliku):
+
+| # | Test | Red (przed zmianą) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `request.log.error w trasie modułu (modules/listy/http/routes.ts)` | `FAIL … brak błędu no-restricted-syntax z logFailure; są: [no-unused-vars …]` | ok |
+| 2 | `log.error w pliku API (modules/listy/infra/lists-repository.ts)` | `FAIL … brak błędu no-restricted-syntax z logFailure` (selektor łapał wtedy tylko `x.log.error`) | ok |
+| 2 | `app.log.error w pliku API` | zielony od razu po zmianie z testu 1 (ten sam selektor `object.property`) | ok |
+| 3 | dozwolone: `logFailure i bestEffort w pliku API` (z `log.warn`), `log.error w logging.ts`, `request.log.error w handlerze błędów (api-error.ts)` | spot-check: blok `api-error.ts` przestawiony na inny plik → `FAIL request.log.error w handlerze błędów` | ok |
+| dod. | `log["error"]`, `logger.error`, `this.log.error`, `request.log.error w web-app.ts`, `log.error w schema.ts` | gałęzie selektora / bloki dodane przed fiksturą, więc sprawdzone, że gryzą: bez gałęzi `value='error'` → `FAIL log["error"]…`; bez reguły w bloku `web-app.ts` → `FAIL request.log.error w web-app.ts`; bez reguły w bloku `schema.ts` → `FAIL log.error w schema.ts`; konfiguracja przywrócona | ok |
+| dod. | `log.error w rate-limit.ts` (luka znaleziona przy przeglądzie bloków, dopisana do planu) | `FAIL … brak błędu no-restricted-syntax z logFailure` | ok |
+
+Wynik: 53 × `ok`, 0 × `FAIL` (w tym wszystkie przypadki T-035, T-089, TH-15/16/20 i kontrola SAFE_SYNTAX w każdym bloku, także w nowych).
+
+Kryteria:
+
+- AC1: testy 1, 2 i `log["error"]` / `logger.error` / `this.log.error` (komunikat zawiera `logFailure`, `bestEffort`, `T-098`, `TH-21`, `layers/backend.md „Pułapki”`).
+- AC2: przypadki dozwolone z testu 3; `pnpm check` exit 0 (format, lint całego repo, typecheck, quality, design/backlog/workflow-check, 1242 testy vitest, 10 jest) bez zmian w kodzie produkcyjnym; `pnpm build` exit 0.
+- AC3: fikstury w `modules/listy/http/routes.ts`, `http/web-app.ts`, `db/schema.ts`, `http/rate-limit.ts` i pliku z bloku głównego; spot-checki wyżej.
+- AC4: `T-098` „Root cause” — zdanie o testach przypinających `source: "mailer"` i `error`; `architecture.md:24` — `password_reset_mail_failed` dla maila resetu; `backend.md` „Pułapki” (punkt T-098) — reguła `API_FAILURE_LOG_SYNTAX`, nazwy loggerów i wyjątki; wiersz w historii zmian `backend.md`.
+- AC5: pełny przebieg `lint-security.test.mjs` zielony; `pnpm check` zielony (testy T-098 w vitest).
+
+Decyzje do przeglądu QA (plan QA, przypadki brzegowe):
+
+- Nazwy loggera: wzorzec `/log(ger)?$/i` na nazwie obiektu albo jego ostatniej właściwości, nie zamknięta lista — łapie też `childLog`, `requestLog`, `reply.log`, `fastify.log`. Koszt: obiekt o nazwie typu `catalog` / `dialog` z metodą `error` też by padł; w `apps/api/src` takiego nie ma.
+- Nie łapie: ``log[`error`]`` (szablon), przypisania metody do zmiennej (`const e = log.error`), destrukturyzacji. Uznane za świadome obejście, nie przypadek do pilnowania.
+- `console.error`: żadna reguła go dziś nie obejmuje (w `eslint.config.js` brak `no-console`); w `apps/api/src` jest tylko `console.log` w `db/migrate-cli.ts` (CLI migracji, poza loggerem). Poza zakresem tego zadania; ewentualnie osobny fix.
+- `warn` poza zakresem (QA T-098, uwaga 5).
+- `node --test scripts/test/lint-security.test.mjs` (z planu) też działa, ale ukrywa wypis `ok/FAIL`; CI uruchamia `node scripts/test/lint-security.test.mjs` (`ci.yml:113`), a filtr ścieżek CI obejmuje już `eslint.config.js`.
 
 ## Prevention
 
