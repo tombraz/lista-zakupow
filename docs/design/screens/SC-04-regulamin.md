@@ -52,6 +52,7 @@ Treść dokumentów dostarcza właściciel projektu; nie jest częścią designu
 | toc.terms | Regulamin |
 | toc.privacy | Polityka prywatności |
 | back | Wróć |
+| toc.label | Spis treści (z Layout/States, T-100) |
 
 ## Accessibility
 

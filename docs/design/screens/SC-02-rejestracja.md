@@ -73,6 +73,29 @@ Jak SC-01 (jasne tło, kolumna `content-max`).
 | invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: imię; zatwierdzone 2026-11-01, T-060) |
 | error.emailTaken | Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło. |
 | info.invite | Po założeniu konta dołączysz do listy „{nazwa}”. |
+| consent.terms.accept | Akceptuję (część `consent.terms`; z Layout/States, T-100) |
+| consent.terms.termsLink | regulamin (link w `consent.terms`; z Layout/States, T-100) |
+| consent.terms.and | i (część `consent.terms`; z Layout/States, T-100) |
+| consent.terms.privacyLink | politykę prywatności (link w `consent.terms`; z Layout/States, T-100) |
+| haveAccount.text | Masz już konto? (część `haveAccount`; z Layout/States, T-100) |
+| haveAccount.link | Zaloguj się (link w `haveAccount` i `error.emailTaken`; z Layout/States, T-100) |
+| error.emailTaken.text | Konto z tym adresem już istnieje. (część `error.emailTaken`; z Layout/States, T-100) |
+| error.emailTaken.or | albo (część `error.emailTaken`; z Layout/States, T-100) |
+| error.emailTaken.reset | zresetuj hasło (link w `error.emailTaken`; z Layout/States, T-100) |
+| name.required | Wpisz imię (z Layout/States, T-100) |
+| name.tooLong | Imię może mieć najwyżej 30 znaków (z Layout/States, T-100) |
+| email.invalid | Wpisz poprawny adres e-mail (z Layout/States, T-100) |
+| password.tooShort | Hasło musi mieć co najmniej 8 znaków (z Layout/States, T-100) |
+| password.tooLong | Hasło może mieć najwyżej 128 znaków (z Copy SC-03 `step2.password.tooLong`, T-100) |
+| consent.terms.required | Zaakceptuj regulamin i politykę prywatności (z Layout/States, T-100) |
+| consent.age.required | Potwierdź, że masz ukończone 16 lat (z Layout/States, T-100) |
+| summary | Popraw {n} {pól} (z Layout/States, T-100) |
+| summary.one | pole (forma dla 1 w `summary`; zatwierdzone 2026-11-05, T-100) |
+| summary.few | pola (forma dla 2–4 w `summary`; zatwierdzone 2026-11-05, T-100) |
+| summary.many | pól (forma dla 5 i więcej w `summary`; z Layout/States, T-100) |
+| error.rateLimit | Zbyt wiele prób rejestracji. Spróbuj ponownie później. (z Layout/States, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z Layout/States, T-100) |
+| error.otherwise | Nie udało się założyć konta. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-100) |
 
 ## Accessibility
 

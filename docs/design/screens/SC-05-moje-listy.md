@@ -75,6 +75,14 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-05 Moje listy”
 | empty.cta | Utwórz pierwszą listę |
 | limit | Masz już 50 list — to limit. Usuń listę, której nie używasz, żeby utworzyć nową. |
 | removed | Lista „{nazwa}” została usunięta albo nie masz już do niej dostępu. |
+| account | Konto (z Layout/States, T-100) |
+| card.sharedBy.label | udostępniona przez {imię} (nazwa dostępna karty; z design-system ListCard, T-100) |
+| loadError | Nie udało się wczytać list. (z Layout/States, T-100) |
+| newList | Nowa lista: {nazwa} (ogłoszenie `polite`; z Accessibility, T-100) |
+| new.required | Wpisz nazwę listy (z Layout/States, T-100) |
+| new.tooLong | Nazwa listy może mieć najwyżej 100 znaków (z Layout/States, T-100) |
+| new.error | Nie udało się utworzyć listy. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z States SC-01, T-100) |
 
 ## Accessibility
 

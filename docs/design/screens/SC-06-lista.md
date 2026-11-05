@@ -104,6 +104,35 @@ Menu „Więcej opcji”: właściciel — „Zmień nazwę listy”, „Usuń l
 | invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: nazwa i notatka pozycji; zatwierdzone 2026-11-01, T-060) |
 | noAccess | Nie masz dostępu do tej listy. |
 | saveError | Nie udało się zapisać zmiany. Spróbuj ponownie. |
+| back | Wstecz (z Layout/States, T-100) |
+| participants | Uczestnicy (z Layout/States, T-100) |
+| more | Więcej opcji (z Layout/States, T-100) |
+| loadError | Nie udało się wczytać listy. (z Layout/States, T-100) |
+| backToLists | Wróć do moich list (z Layout/States, T-100) |
+| joined | Dołączyłeś(-aś) do listy „{nazwa}”. (z Copy SC-08 `joined`, T-100) |
+| toBuyHeading | Do kupienia (nagłówek wizualnie ukryty; z Accessibility, T-100) |
+| boughtHeading | Kupione (nagłówek listy; z Accessibility, T-100) |
+| add.form | Dodaj pozycję (nazwa formularza i przycisku; z Copy `add.submit`, T-100) |
+| add.added | Dodano {nazwa} (ogłoszenie; z Accessibility, T-100) |
+| add.name.required | Wpisz nazwę pozycji (zatwierdzone 2026-11-05, T-100) |
+| add.name.tooLong | Nazwa może mieć najwyżej 100 znaków (z Layout/States, T-100) |
+| add.note.tooLong | Notatka może mieć najwyżej 200 znaków (z Layout/States, T-100) |
+| checked | Odhaczono {nazwa} (ogłoszenie; z Accessibility, T-100) |
+| edit | Edytuj {nazwa} (nazwa dostępna nazwy pozycji; z design-system ItemRow, T-100) |
+| edit.name | Nazwa (pole w arkuszu; z Interactions, T-100) |
+| edit.deleted | Ta pozycja została usunięta przez inną osobę. (z Layout/States, T-100) |
+| edit.close | Zamknij (z Layout/States, T-100) |
+| cancel | Anuluj (z Interactions, T-100) |
+| clearBought.consequence | Tego nie można cofnąć. (także `delete.confirm` listy bez uczestników; zatwierdzone 2026-11-05, T-100) |
+| clearBought.confirm.cta | Usuń kupione (zatwierdzone 2026-11-05, T-100) |
+| delete.question | Usunąć listę „{nazwa}”? (część `delete.confirm`; z Interactions, T-100) |
+| delete.consequence | Zniknie też u {n} {uczestników}. (część `delete.confirm`; z Interactions, T-100) |
+| delete.consequence.one | uczestnika (forma dla 1 w `delete.consequence`; zatwierdzone 2026-11-05, T-100) |
+| delete.consequence.many | uczestników (forma w `delete.consequence`; z Interactions, T-100) |
+| rename.label | Nazwa listy (z Copy SC-05 `new.label`, T-100) |
+| rename.required | Wpisz nazwę listy (z States SC-05, T-100) |
+| rename.tooLong | Nazwa listy może mieć najwyżej 100 znaków (z States SC-05, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z States SC-01, T-100) |
 
 Uwaga: forma „dodał(a)” to kompromis — aplikacja nie zna rodzaju gramatycznego użytkownika (BRD go nie zbiera).
 
