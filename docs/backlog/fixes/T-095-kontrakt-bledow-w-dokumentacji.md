@@ -4,7 +4,7 @@ title: "architecture.md i api.md zgodne z kodem; test zgodności ErrorCode"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-03, F-04]
@@ -74,3 +74,23 @@ Test z AC4 (`packages/shared/test/error-codes-docs.test.ts`) zastępuje ręczną
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-05)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test | `architectureErrorTableCodes()` wywołuje `expect` w ciele `describe` (przy zbieraniu testów): brak sekcji lub zmieniony nagłówek tabeli daje błąd zbierania pliku zamiast nazwanego testu. Nadal czerwone, ale komunikat mniej czytelny. | `packages/shared/test/error-codes-docs.test.ts:37-46`, `:53-55` | sprawdzenie sekcji/nagłówka w osobnym `it` albo `beforeAll` |
+| 2 | note | test | Dla `api.md` wystarcza kod w backtickach w dowolnej komórce dowolnej tabeli (także w kolumnie „Kiedy”); zgodne z AC4 („wystąpienie w api.md”), słabsze niż dla `architecture.md`. | `apiTableCodes()` | ewentualnie zawęzić do kolumn „Błędy”/„Kod” |
+
+**Reprodukcja:** `pnpm check` exit 0 (cały zestaw, w tym format, lint, typecheck, testy web/api/shared/mobile). `pnpm vitest run --project shared test/error-codes-docs.test.ts`: 32/32.
+
+**Kryteria:**
+- AC1 pass: `architecture.md:108-110` ma `validation_failed` (400 oraz 413/414/415) i `invalid_token` (400); `api.md` „Błędy wspólne” opisuje 413/414/415. Zgodne z kodem: `apps/api/src/http/api-error.ts` (`isFastifyClientError` → `validation_failed` ze statusem Fastify, `frameworkErrors` dla 414), `auth-routes.ts:52-53` (`invalid_token` 400).
+- AC2 pass: `architecture.md:22` i diagram (`app -->|alarm z API| mail`, `mail -->|alarm z API| owner`) opisują oba maile.
+- AC3 pass: `DELETE /api/v1/me` z 401 (zgodne z `me-routes.ts:56`); body resetu `{ email }` z adnotacją o ignorowanym `redirectTo` (zgodne z `auth-routes.ts:125`, `forward(..., { email })`).
+- AC4 pass: spot-check (zmiany cofnięte, drzewo czyste): przeniesienie `invalid_token` z kolumny `code` do kolumny „Kiedy” w `architecture.md` → `FAIL ... wiersz dla invalid_token: brak invalid_token w kolumnie code tabeli błędów`; usunięcie backticków z `unauthenticated` w `api.md` → `FAIL ... api.md: tabela opisuje unauthenticated`. Test pada z nazwą kodu i nie przechodzi tylko dlatego, że kod jest w innej kolumnie. Kod z WS (`code: "not_found"` w `live.ts`) należy do `ErrorCode`, więc jest objęty.
+- AC5 pass: `backend.md:108` odsyła do testu; `pnpm check` zielony.
+
+**Fix task:** „Root cause” wyjaśnia, czemu testy nie złapały rozjazdu (sprawdzały odpowiedzi API, nie dokumenty). Red evidence z 6 porażkami w „Evidence”. Zmiana `ErrorCode` na `as const` zachowuje typy (typecheck zielony). Bez zakresu ponad zadanie. Bezpieczeństwo: brak zmian w kodzie wykonawczym API; `threats: []`.
