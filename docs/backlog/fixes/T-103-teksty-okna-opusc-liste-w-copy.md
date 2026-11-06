@@ -4,13 +4,13 @@ title: "Teksty okna „Opuść listę” w pliku komunikatów i w Copy SC-06/SC-
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
 threats: []
 screens: [SC-06, SC-07]
-related_tasks: [T-094, T-100, T-059]
+related_tasks: [T-094, T-100, T-059, T-106]
 ---
 
 # T-103 Teksty okna „Opuść listę” w pliku komunikatów i w Copy SC-06/SC-07; test Copy łapie teksty w .tsx
@@ -65,11 +65,32 @@ related_tasks: [T-094, T-100, T-059]
 
 ## Root cause
 
-<Uzupełnia /fix.>
+T-094 przeniósł teksty okna z `SC-07-uczestnicy/messages.ts` do wspólnego `lists/LeaveListDialog.tsx` (obiekt `leaveMessages`, `leaveErrorText`). Test Copy z T-100 świadomie pomijał literały `.tsx` (`copyRegister.ts`, `texts()`: `if (file.endsWith(".tsx")) return [];`), więc import `LeaveListDialog` z ekranu nie przynosił żadnego tekstu i test był zielony. Drugi otwór tej samej klasy: we wspólnym `.ts` liczą się tylko literały, które „wyglądają na tekst” (`looksLikeText`), więc jednowyrazowe „Anuluj” po przeniesieniu do `.ts` nadal nie byłoby sprawdzane (sprawdzone ręcznie: „Anuluj” → „Zamknij” zielone).
+
+Dlaczego testy nie złapały: zakres T-100 wykluczał `.tsx`, a fixture nie miały przypadku „tekst we wspólnym `.tsx`”; nic nie wymuszało, by wspólny `.tsx` nie trzymał tekstów.
+
+Inne wystąpienia: nowa kontrola znajduje 8 tekstów w `components/*.tsx` (AppBar, AuthPage, LoadError, OfflineBanner, PasswordField). Komponenty design systemu nie mają tabeli Copy (`design-system.md`), więc decyzją właściciela (2026-11-06) `components/` jest poza kontrolą w tym tasku → T-106. Teksty w `.tsx` katalogów ekranów zostają poza zakresem (T-100). W `lists/` i innych modułach wspólnych poza `components/` brak innych wystąpień (test zielony).
+
+Zmiany:
+- `lists/leaveMessages.ts` (nowy): `leaveMessages`, `leaveErrorText`; `LeaveListDialog.tsx` tylko importuje (AC1 — nazwa `leaveMessages.ts` zamiast przykładowego `leaveList.ts`, żeby plik liczył się jak `messages.ts`).
+- `test/copyRegister.ts`: `sharedTsxTexts()` — literał albo tekst JSX wyglądający na tekst interfejsu w `.tsx` modułu wspólnego (poza `screens/`, `components/`, testami) → błąd ze wskazaniem pliku i tekstu (AC3); `MESSAGES_FILE` — `<nazwa>Messages.ts` liczy każdy literał jak `messages.ts` (AC4 dla „Anuluj”).
+- Copy SC-07: `leave.confirm.question`, `leave.confirm.consequence` (części zatwierdzonego `leave.confirm`), `leave.confirm.cta` „Opuść” (zatwierdzone 2026-11-06, T-103). Copy SC-06: te trzy oraz `leave.error` (z Copy SC-07). „Anuluj” był już w Copy obu ekranów (`cancel`). Komórka `leave.confirm` SC-07 zostaje jako tekst źródłowy, jak `remove.confirm`.
+- Zakres opisany w nagłówku `copyRegister.test.ts` i w `web.md` („Pułapki”, Copy jako rejestr).
 
 ## Evidence
 
-<Uzupełnia /fix.>
+Właściciel 2026-11-06: etykieta przycisku „Opuść” zatwierdzona bez zmiany; teksty `components/` — osobny task (T-106).
+
+Red:
+- `findCopyGaps (fixtures) > interface text in a shared .tsx file (outside screens/) is an error naming the file` — `AssertionError: expected [Function withTexts] to throw an error`.
+- Repo (`every text of screens SC-01–SC-09 has a row in its Copy table`) po dodaniu kontroli: błąd „Teksty interfejsu w plikach .tsx modułów wspólnych …: lists/LeaveListDialog.tsx · „Opuścić listę „{…}”?” / „Żeby wrócić, potrzebujesz nowego zaproszenia.” / „Opuść” / „Nie udało się opuścić listy. Spróbuj ponownie.””; po przeniesieniu do `.ts` — 7 braków Copy (SC-06: 4, SC-07: 3).
+- `a shared *Messages.ts module counts every literal, like messages.ts (one-word „Anuluj”)` — oczekiwane `Anuluj`, `Zamknij`, otrzymane `[]`.
+
+Green: `pnpm vitest run --project web copyRegister` — 15 passed.
+
+AC4 ręcznie (zmiana w `lists/leaveMessages.ts`, test, przywrócenie): „Anuluj”→„Zamknij”, „Opuść”→„Wyjdź”, „nowego zaproszenia.”→„nowego linku.”, „Opuścić listę „”→„Opuścić „”, `otherwise` + „jeszcze” — każda zmiana: `Tests 1 failed | 14 passed (15)`.
+
+Pełne sprawdzenie: `pnpm check` exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check; `Test Files 154 passed`, `Tests 1245 passed`; test:mobile), `pnpm build` exit 0. Testy wyjścia SC-06/SC-07 (`ListScreen.leave.test.tsx`, `ParticipantsScreen.leave.test.tsx`) bez zmian i zielone.
 
 ## Prevention
 
