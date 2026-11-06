@@ -140,10 +140,12 @@ class ModuleGraph {
 
   /**
    * Pliki `.tsx` modułów wspólnych (poza `screens/`, także `components/`, bez testów) tylko
-   * renderują teksty importowane z plików `.ts`: literał, który wygląda na tekst interfejsu, i każdy
-   * tekst JSX z literą są tam błędem (T-103, T-106). Inaczej test nie widzi tekstu, bo literały
-   * `.tsx` są poza rejestrem. Tekst JSX prawie zawsze jest widoczny, więc nie musi wyglądać na
-   * polski tekst (`<span>Zamknij</span>`); literał bywa klasą albo typem, więc musi.
+   * renderują teksty importowane z plików `.ts`: literał, który wygląda na tekst interfejsu, oraz
+   * każdy tekst JSX i literał atrybutu tekstowego (`TEXT_ATTRIBUTES`) z literą są tam błędem (T-103,
+   * T-106, T-107). Inaczej test nie widzi tekstu, bo literały `.tsx` są poza rejestrem. Tekst JSX i
+   * atrybut tekstowy trafiają do użytkownika albo czytnika ekranu, więc nie muszą wyglądać na polski
+   * tekst (`<span>Zamknij</span>`, `aria-label="Zamknij"`); inny literał bywa klasą albo typem
+   * (`className`, `role`), więc musi.
    */
   sharedTsxTexts(): { file: string; text: string }[] {
     const found: { file: string; text: string }[] = [];
@@ -155,6 +157,8 @@ class ModuleGraph {
       const jsxTexts: string[] = [];
       const visit = (node: ts.Node): void => {
         if (ts.isJsxText(node)) jsxTexts.push(node.text.trim().replace(/\s+/g, " "));
+        const attribute = textAttributeValue(node);
+        if (attribute !== null) jsxTexts.push(attribute);
         ts.forEachChild(node, visit);
       };
       visit(module.source);
@@ -298,6 +302,20 @@ function declarationsOf(source: ts.SourceFile): Map<string, ts.Node[]> {
     }
   }
   return declarations;
+}
+
+/** Atrybuty JSX, które trafiają do użytkownika albo do czytnika ekranu (T-107). */
+const TEXT_ATTRIBUTES = new Set(["aria-label", "aria-description", "title", "alt", "placeholder"]);
+
+/** Literał w atrybucie tekstowym (`aria-label="…"`, `alt={"…"}`) → jego treść; inaczej `null`. */
+function textAttributeValue(node: ts.Node): string | null {
+  if (!ts.isJsxAttribute(node) || !TEXT_ATTRIBUTES.has(node.name.getText())) return null;
+  const value = node.initializer;
+  const literal = value && ts.isJsxExpression(value) ? value.expression : value;
+  if (!literal || !(ts.isStringLiteral(literal) || ts.isNoSubstitutionTemplateLiteral(literal))) {
+    return null;
+  }
+  return literal.text;
 }
 
 /** Tekst interfejsu po polsku: polska litera albo słowo z wielkiej litery i kolejne słowo. */

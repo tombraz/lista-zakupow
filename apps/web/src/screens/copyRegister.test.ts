@@ -14,8 +14,10 @@
  * - Pliki `.tsx` tylko prowadzą importy. W `.tsx` modułu wspólnego (wszystko poza `screens/`, także
  *   komponenty design systemu w `components/`) literał, który wygląda na tekst interfejsu, i każdy
  *   tekst JSX z literą (także jednowyrazowy `<span>Zamknij</span>`) to błąd ze wskazaniem pliku:
- *   tekst należy do pliku `.ts` modułu (T-103, T-106). Teksty w `.tsx` katalogów ekranów są jeszcze
- *   poza testem.
+ *   tekst należy do pliku `.ts` modułu (T-103, T-106). Tak samo literał z literą w atrybucie
+ *   `aria-label`, `aria-description`, `title`, `alt` i `placeholder` (`aria-label="Zamknij"`,
+ *   `alt={"Logo"}`; T-107); inne atrybuty (`className`, `type`, `role`, `id`, `data-*`) tekstem nie
+ *   są. Teksty w `.tsx` katalogów ekranów są jeszcze poza testem.
  * - Tekst z pliku w `components/` pasuje do wiersza Copy ekranu albo do tabeli „## Copy”
  *   komponentów w `docs/design/design-system.md` (T-106); tekst spoza `components/` tylko do Copy
  *   ekranu.
@@ -375,6 +377,36 @@ describe("findCopyGaps (fixtures)", () => {
         "invitations/Notice.tsx · „Dołączasz do listy”",
         "lists/LeaveListDialog.tsx · „Opuść”",
         "lists/LeaveListDialog.tsx · „Żeby wrócić, potrzebujesz zaproszenia.”",
+      ].join("\n"),
+    );
+  });
+
+  it("a text in a user-facing JSX attribute of a shared .tsx file is an error, also one word (T-107)", () => {
+    const check = () =>
+      findCopyGaps({
+        sources: {
+          "components/Modal/Modal.tsx": `
+            export const Modal = () => (
+              <div role="dialog" id="Main" className="Header" data-testid="Close" aria-labelledby="Title">
+                <button type="button" aria-label="Zamknij" title="Menu" />
+                <img alt={"Logo"} src="logo.svg" />
+                <input placeholder="Szukaj" aria-description="Opis" />
+                <span aria-label="" title="…" />
+              </div>
+            );`,
+          "screens/SC-05-moje-listy/messages.ts": `export const messages = {};`,
+        },
+        specs: { "SC-05-moje-listy.md": spec() },
+      });
+
+    expect(check).toThrow(
+      [
+        "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        "components/Modal/Modal.tsx · „Zamknij”",
+        "components/Modal/Modal.tsx · „Menu”",
+        "components/Modal/Modal.tsx · „Logo”",
+        "components/Modal/Modal.tsx · „Szukaj”",
+        "components/Modal/Modal.tsx · „Opis”",
       ].join("\n"),
     );
   });
