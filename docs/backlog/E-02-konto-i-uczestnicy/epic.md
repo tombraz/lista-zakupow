@@ -27,7 +27,7 @@ Domownik odzyskuje dostęp do konta resetem hasła, zmienia imię i usuwa konto;
 ## Stories
 
 - S-02-01 Reset hasła mailem (F-03, SC-01, SC-02, SC-03)
-- S-02-02 Uczestnicy: podgląd, usunięcie, opuszczenie listy (F-13, SC-07)
+- S-02-02 Uczestnicy: podgląd, usunięcie, opuszczenie listy (F-13, SC-05, SC-06, SC-07)
 - S-02-03 Konto: zmiana imienia i usunięcie konta (F-04, F-16, SC-09)
 - S-02-04 Brak połączenia (F-15, SC-05, SC-06, SC-07, SC-09)
 - S-02-05 Sprzątanie danych i miary sukcesu (N-02, BRD §10)

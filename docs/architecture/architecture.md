@@ -101,24 +101,25 @@ Dostęp do listy daje wyłącznie: `lista.owner_id = ja` albo wiersz członkostw
 - Identyfikatory: UUID (v7). Klient może podać `id` nowej pozycji: powtórzone żądanie z tym samym `id` zwraca istniejącą pozycję (200) zamiast ostrzeżenia o duplikacie (bezpieczne ponawianie przy słabym zasięgu, F-15).
 - Walidacja: schematy zod z `packages/shared`, po stronie serwera zawsze; klient waliduje tymi samymi schematami dla szybkiej informacji. Odrzucamy, nie poprawiamy (wyjątek: obcięcie białych znaków na brzegach nazw).
 - Kolekcje bez stronicowania: ograniczone limitami biznesowymi (50 list, 500 pozycji, 20 uczestników).
-- Format błędu: `{ "error": { "code": "duplicate_item", "fields"?: { "name": "too_long" }, "limit"?: "items" } }`. Klient mapuje `code` na polskie komunikaty z ekranów; serwer nie wysyła tekstów dla użytkownika.
+- Format błędu: `{ "error": { "code": "duplicate_item", "fields"?: { "name": "too_long" }, "limit"?: "items", "listId"?: "<uuid>", "requestId"?: "<id>" } }` (typ `ApiErrorBody`, `packages/shared/src/api/errors.ts`). Klient mapuje `code` na polskie komunikaty z ekranów; serwer nie wysyła tekstów dla użytkownika. Pola opcjonalne występują tylko przy swoich kodach: `fields` przy `validation_failed` z błędami pól, `limit` przy `limit_reached`, `listId` przy `own_list` i `already_member` (lista, do której domownik już ma dostęp; SC-08 „Otwórz listę”), `requestId` przy `internal`.
+- To jedyny opis kodów błędów: `api.md` wymienia przy trasach tylko kody i odsyła tutaj. Zgodność z kodem sprawdzają testy: każdy `ERROR_CODES` ma wiersz, każdy kod z kolumny `code` jest w `ERROR_CODES` (`packages/shared/test/error-codes-docs.test.ts`), a status kodu domeny jest tym z `DOMAIN_STATUS` (`apps/api/test/error-status-docs.test.ts`, T-105).
 
 | HTTP | `code` | Kiedy |
 | --- | --- | --- |
 | 400 | `validation_failed` | długości, puste pola, brak zgód (`fields` wskazuje pola); też zły JSON, pusta treść, zły zapis ścieżki (bez `fields`) |
 | 413, 414, 415 | `validation_failed` | treść ponad `HTTP_LIMITS.bodyBytes` (413, także zdarzenie `limit_reached` w logu `security`), parametr ścieżki dłuższy niż `maxParamLength` (414), nieobsługiwany `content-type` (415); bez `fields`, status z Fastify (T-086) |
 | 400 | `invalid_token` | link resetu hasła użyty, wygasły lub nieważny (F-03, T-054) |
-| 401 | `unauthenticated` | brak lub nieważna sesja |
+| 401 | `unauthenticated` | trasa `/api/v1/*` bez ważnej sesji (poza publicznymi) |
 | 401 | `invalid_credentials` | zły e-mail lub hasło przy logowaniu (ten sam dla obu, F-02) |
-| 403 | `invalid_origin` | żądanie zmieniające stan z obcego `Origin` (TH-14) |
+| 403 | `invalid_origin` | `POST` / `PATCH` / `DELETE` z obcego `Origin` lub bez niego (TH-14) |
 | 403 | `owner_only`, `owner_cannot_leave` | uczestnik próbuje akcji właściciela; właściciel opuszcza listę |
-| 404 | `not_found` | lista lub pozycja nie istnieje albo brak dostępu |
+| 404 | `not_found` | lista, pozycja, uczestnik lub link zaproszenia nie istnieje, identyfikator nie jest UUID albo brak dostępu (bez zdradzania istnienia, MC-01) |
 | 409 | `duplicate_item` | F-09 |
 | 409 | `limit_reached` (`limit`: `lists` \| `items` \| `participants`) | F-05, F-07, F-12 |
 | 409 | `email_taken` | F-01 |
 | 410 | `invitation_invalid` | link wykorzystany, wygasły lub unieważniony (F-11) |
-| 409 | `already_member`, `own_list` | F-12 |
-| 429 | `rate_limited` | MC-04, MC-05 |
+| 409 | `already_member`, `own_list` (`listId`) | F-12: przyjmujący jest już uczestnikiem albo właścicielem listy |
+| 429 | `rate_limited` | limit z `RATE_LIMITS` (MC-04, MC-05); trasy z limitem mają „429” w kolumnie „Błędy” `api.md` |
 | 500 | `internal` (`requestId`) | błąd serwera; szczegóły tylko w logach z identyfikatorem żądania |
 
 - Konflikty (F-14): ostatni zapis wygrywa (zwykły `UPDATE`); edycja usuniętej pozycji zwraca 404, klient pokazuje „pozycja usunięta przez inną osobę”.

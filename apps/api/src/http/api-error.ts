@@ -18,8 +18,8 @@ export class ApiError extends Error {
   }
 }
 
-// architecture.md, „Konwencje API i błędów”.
-const DOMAIN_STATUS: Record<DomainErrorCode, number> = {
+// architecture.md, „Konwencje API i błędów”; zgodność statusów z tabelą: `test/error-status-docs.test.ts`.
+export const DOMAIN_STATUS: Record<DomainErrorCode, number> = {
   not_found: 404,
   owner_only: 403,
   owner_cannot_leave: 403,

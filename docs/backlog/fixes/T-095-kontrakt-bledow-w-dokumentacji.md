@@ -30,11 +30,11 @@ related_tasks: [T-053, T-054, T-062, T-076, T-081, T-086, T-088]
 
 ## Acceptance criteria
 
-- [ ] AC1: Tabela błędów w `architecture.md` zawiera `invalid_token` oraz `validation_failed` z 413/414/415; `api.md` opisuje te statusy (tam, gdzie mogą wystąpić). — verified by: AC4 + przegląd QA
-- [ ] AC2: `architecture.md:22` i diagram kontekstu opisują oba rodzaje maili (reset hasła, alarm do właściciela). — verified by: przegląd QA
-- [ ] AC3: `api.md`: `DELETE /api/v1/me` z 401 (konto usunięte w międzyczasie); body prośby o reset bez `redirectTo` albo z adnotacją „ignorowany (T-053 SEC5)”. — verified by: przegląd QA
-- [ ] AC4: Given kod w `ErrorCode` (`packages/shared/src/api/errors.ts`) bez wiersza w tabeli błędów `architecture.md` albo bez wystąpienia w `api.md`, when `pnpm test`, then test pada z nazwą kodu. Czerwony przed AC1 (`invalid_token`). — verified by: test jednostkowy czytający oba dokumenty
-- [ ] AC5: `backend.md:108`: reguła odsyła do testu z AC4. No regression in: `pnpm check`.
+- [x] AC1: Tabela błędów w `architecture.md` zawiera `invalid_token` oraz `validation_failed` z 413/414/415; `api.md` opisuje te statusy (tam, gdzie mogą wystąpić). — verified by: AC4 + przegląd QA
+- [x] AC2: `architecture.md:22` i diagram kontekstu opisują oba rodzaje maili (reset hasła, alarm do właściciela). — verified by: przegląd QA
+- [x] AC3: `api.md`: `DELETE /api/v1/me` z 401 (konto usunięte w międzyczasie); body prośby o reset bez `redirectTo` albo z adnotacją „ignorowany (T-053 SEC5)”. — verified by: przegląd QA
+- [x] AC4: Given kod w `ErrorCode` (`packages/shared/src/api/errors.ts`) bez wiersza w tabeli błędów `architecture.md` albo bez wystąpienia w `api.md`, when `pnpm test`, then test pada z nazwą kodu. Czerwony przed AC1 (`invalid_token`). — verified by: test jednostkowy czytający oba dokumenty
+- [x] AC5: `backend.md:108`: reguła odsyła do testu z AC4. No regression in: `pnpm check`.
 
 ## TDD plan
 

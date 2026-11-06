@@ -24,10 +24,15 @@ function tableCells(markdown: string): string[][] {
     );
 }
 
-/** Kody zapisane jako samodzielny `kod` w komórce. */
+/**
+ * Kody zapisane jako samodzielny `kod` w komórce. Nawias to pola kodu (`limit`: `lists`,
+ * `requestId`), nie kolejne kody (T-105).
+ */
 function codesIn(cells: string[]): Set<string> {
   return new Set(
-    cells.flatMap((cell) => [...cell.matchAll(/`([a-z_]+)`/g)].map((m) => m[1] ?? "")),
+    cells.flatMap((cell) =>
+      [...cell.replace(/\([^)]*\)/g, "").matchAll(/`([a-z_]+)`/g)].map((m) => m[1] ?? ""),
+    ),
   );
 }
 
@@ -62,6 +67,12 @@ describe("kody błędów API w dokumentacji (T-095)", () => {
   it.each(ERROR_CODES)("architecture.md: tabela błędów ma wiersz dla `%s`", (code) => {
     const { codes } = architectureErrorTable();
     expect(codes.has(code), `brak \`${code}\` w kolumnie \`code\` tabeli błędów`).toBe(true);
+  });
+
+  it("architecture.md: każdy kod w kolumnie `code` tabeli błędów jest w `ERROR_CODES` (T-105)", () => {
+    const known = new Set<string>(ERROR_CODES);
+    const unknown = [...architectureErrorTable().codes].filter((code) => !known.has(code));
+    expect(unknown, "kody w tabeli błędów spoza `ERROR_CODES`").toEqual([]);
   });
 
   it.each(ERROR_CODES)("api.md: tabela opisuje `%s`", (code) => {

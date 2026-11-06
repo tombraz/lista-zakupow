@@ -31,11 +31,11 @@ related_tasks: [T-005, T-057, T-059]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given uczestnik na SC-06, then AppBar ma ikonę „Uczestnicy” prowadzącą do SC-07 tej listy; given właściciel, then bez zmian. — verified by: test komponentu (MSW)
-- [ ] AC2: Given uczestnik na SC-06, when otwiera „Więcej opcji”, then widzi tylko „Opuść listę” (bez „Zmień nazwę listy” i „Usuń listę”). — verified by: test komponentu
-- [ ] AC3: Given uczestnik, when „Opuść listę” → ConfirmDialog „Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia.” → „Opuść”, then zachowanie jak na SC-07 (T-059 AC3): przejście na SC-05 przez `replace`, bez tej listy; „Anuluj” zwraca fokus na „Więcej opcji”; błąd serwera — komunikat `leave.error` w oknie, okno zostaje; offline — pozycja nieaktywna. Logika wyjścia jest jedna dla SC-06 i SC-07 (`useLeaveList`). — verified by: test komponentu (MSW)
-- [ ] AC4: Given E2E podróży uczestnika, when wchodzi z SC-06 na SC-07 kliknięciem ikony „Uczestnicy” i opuszcza listę z menu SC-06, then oba przejścia działają bez `goto` na ekran docelowy; axe bez naruszeń na otwartym menu. — verified by: E2E Playwright + axe
-- [ ] AC5: No regression in: T-057 (podgląd uczestników), T-059 (wyjście z SC-07, druga karta), menu właściciela na SC-06 (T-005).
+- [x] AC1: Given uczestnik na SC-06, then AppBar ma ikonę „Uczestnicy” prowadzącą do SC-07 tej listy; given właściciel, then bez zmian. — verified by: test komponentu (MSW)
+- [x] AC2: Given uczestnik na SC-06, when otwiera „Więcej opcji”, then widzi tylko „Opuść listę” (bez „Zmień nazwę listy” i „Usuń listę”). — verified by: test komponentu
+- [x] AC3: Given uczestnik, when „Opuść listę” → ConfirmDialog „Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia.” → „Opuść”, then zachowanie jak na SC-07 (T-059 AC3): przejście na SC-05 przez `replace`, bez tej listy; „Anuluj” zwraca fokus na „Więcej opcji”; błąd serwera — komunikat `leave.error` w oknie, okno zostaje; offline — pozycja nieaktywna. Logika wyjścia jest jedna dla SC-06 i SC-07 (`useLeaveList`). — verified by: test komponentu (MSW)
+- [x] AC4: Given E2E podróży uczestnika, when wchodzi z SC-06 na SC-07 kliknięciem ikony „Uczestnicy” i opuszcza listę z menu SC-06, then oba przejścia działają bez `goto` na ekran docelowy; axe bez naruszeń na otwartym menu. — verified by: E2E Playwright + axe
+- [x] AC5: No regression in: T-057 (podgląd uczestników), T-059 (wyjście z SC-07, druga karta), menu właściciela na SC-06 (T-005).
 
 ## TDD plan
 

@@ -17,8 +17,8 @@ export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];
 
 /**
  * Kody błędów API (architecture.md, „Konwencje API i błędów”); klient mapuje je na teksty.
- * Każdy kod ma wiersz w tabeli błędów `architecture.md` i wystąpienie w `api.md`
- * (`test/error-codes-docs.test.ts`, T-095).
+ * Każdy kod ma wiersz w tabeli błędów `architecture.md` (i odwrotnie) oraz wystąpienie w `api.md`
+ * (`test/error-codes-docs.test.ts`, T-095, T-105).
  */
 export const ERROR_CODES = [
   ...DOMAIN_ERROR_CODES,

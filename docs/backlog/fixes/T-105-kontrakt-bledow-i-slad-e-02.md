@@ -4,7 +4,7 @@ title: "Dokumentacja po przeglądzie 3 E-02: jedna tabela błędów, listId w fo
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: [T-103, T-104]
 layers: [backend]
 requirements: [F-13]
@@ -32,13 +32,13 @@ related_tasks: [T-095, T-098, T-094, T-096]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given błędy wspólne, then opisuje je jedna tabela: druga odsyła do niej albo zawiera tylko kody specyficzne dla trasy. Żaden opis kodu nie jest powtórzony w dwóch miejscach. — verified by: przegląd QA
-- [ ] AC2: Given test zgodności dokumentacji, then sprawdza też (a) status HTTP z tabeli wobec `DOMAIN_STATUS` w `apps/api/src/http/api-error.ts` i (b) że każdy kod w kolumnie `code` tabeli jest w `ERROR_CODES`. Fixture albo ręczna zmiana statusu daje czerwony test (zapis w Evidence). — verified by: `pnpm vitest run --project shared error-codes-docs` (i test w `api`, jeśli porównanie z `DOMAIN_STATUS` wymaga importu z API)
-- [ ] AC3: Given format błędu w `architecture.md` i trasa przyjęcia zaproszenia w `api.md`, then `error.listId` jest opisane (kiedy występuje i co znaczy). — verified by: przegląd QA
-- [ ] AC4: Given `backend.md`, then `:105` i `:108` odsyłają do `bestEffort` / `afterCommit` zamiast „łapać i logować”, bez sprzeczności z `:106`. — verified by: przegląd QA
-- [ ] AC5: Given T-094 i T-095, then ich AC są odhaczone zgodnie z werdyktami QA. Given `epic.md` i `SC-06-lista.md`, then S-02-02 wymienia SC-06, a SC-06 ma F-13 w `requirements`. — verified by: `pnpm backlog-check`
-- [ ] AC6: Given `UAT.md`, then podaje aktualne statusy zadań naprawczych z przeglądów 2 i 3 (T-094–T-105) i odsyła do `docs/reviews/E-02-2026-11-06-1.md`. Ten krok robić jako ostatni, po T-103 i T-104. — verified by: przegląd QA
-- [ ] AC7: No regression in: `pnpm vitest run --project shared`, `pnpm backlog-check`, `pnpm format:check`.
+- [x] AC1: Given błędy wspólne, then opisuje je jedna tabela: druga odsyła do niej albo zawiera tylko kody specyficzne dla trasy. Żaden opis kodu nie jest powtórzony w dwóch miejscach. — verified by: przegląd QA
+- [x] AC2: Given test zgodności dokumentacji, then sprawdza też (a) status HTTP z tabeli wobec `DOMAIN_STATUS` w `apps/api/src/http/api-error.ts` i (b) że każdy kod w kolumnie `code` tabeli jest w `ERROR_CODES`. Fixture albo ręczna zmiana statusu daje czerwony test (zapis w Evidence). — verified by: `pnpm vitest run --project shared error-codes-docs` (i test w `api`, jeśli porównanie z `DOMAIN_STATUS` wymaga importu z API)
+- [x] AC3: Given format błędu w `architecture.md` i trasa przyjęcia zaproszenia w `api.md`, then `error.listId` jest opisane (kiedy występuje i co znaczy). — verified by: przegląd QA
+- [x] AC4: Given `backend.md`, then `:105` i `:108` odsyłają do `bestEffort` / `afterCommit` zamiast „łapać i logować”, bez sprzeczności z `:106`. — verified by: przegląd QA
+- [x] AC5: Given T-094 i T-095, then ich AC są odhaczone zgodnie z werdyktami QA. Given `epic.md` i `SC-06-lista.md`, then S-02-02 wymienia SC-06, a SC-06 ma F-13 w `requirements`. — verified by: `pnpm backlog-check`
+- [x] AC6: Given `UAT.md`, then podaje aktualne statusy zadań naprawczych z przeglądów 2 i 3 (T-094–T-105) i odsyła do `docs/reviews/E-02-2026-11-06-1.md`. Ten krok robić jako ostatni, po T-103 i T-104. — verified by: przegląd QA
+- [x] AC7: No regression in: `pnpm vitest run --project shared`, `pnpm backlog-check`, `pnpm format:check`.
 
 ## TDD plan
 
@@ -59,11 +59,21 @@ related_tasks: [T-095, T-098, T-094, T-096]
 
 ## Root cause
 
-<Uzupełnia /fix.>
+T-095 dodał w `api.md` tabelę „Błędy wspólne” z pełnymi opisami kodów, choć `architecture.md` już miała tabelę błędów, więc kontrakt żył w dwóch miejscach i opisy (404) rozjechały się przy pierwszej zmianie. Test zgodności z T-095 sprawdzał tylko kierunek kod → dokument i samą obecność kodu, więc ani rozjazd opisów, ani status HTTP, ani kod w dokumencie spoza `ERROR_CODES` nie dawały czerwonego testu; pole `listId` (dodane do `ApiErrorBody` z SC-08) nie ma testu wcale, bo test nie czyta formatu błędu. `backend.md` dostał w T-098/T-101 regułę `bestEffort`/`logFailure`, ale starsze akapity T-087 i T-076 nie zostały przepisane. Ślad backlogu (UAT, AC, metadane) to ręczne kroki bez kontroli (klasa P6 z przeglądu 2).
+
+Inne wystąpienia: innych powielonych tabel kodów w `docs/` nie ma (`grep "Błędy wspólne"`). Statusów kodów spoza domeny (`validation_failed`, `unauthenticated`, …) nadal nic nie sprawdza automatycznie — są rozsiane po `api-error.ts`, `auth-routes.ts` i Fastify, bez jednej mapy.
 
 ## Evidence
 
-<Uzupełnia /fix.>
+- **AC2 (b), czerwony przez mutację:** wiersz `| 418 | \`teapot\` | mutacja |` w tabeli `architecture.md` → `FAIL |shared| test/error-codes-docs.test.ts > … każdy kod w kolumnie \`code\` tabeli błędów jest w \`ERROR_CODES\` (T-105)`: `AssertionError: kody w tabeli błędów spoza \`ERROR_CODES\`: expected [ 'teapot' ] to deeply equal []`. Nawias przy kodzie (`(\`limit\`: \`lists\` …)`, `(\`requestId\`)`, `(\`listId\`)`) to pola, nie kody — pomijany.
+- **AC2 (a), czerwony przez mutację:** `| 410 | \`invitation_invalid\`` → `| 409 |` → `FAIL |api| test/error-status-docs.test.ts > … \`invitation_invalid\`: tabela błędów podaje status z \`DOMAIN_STATUS\``: `expected [ 409 ] to deeply equal [ 410 ]`. Test w `api`, bo `DOMAIN_STATUS` (teraz eksportowane) żyje w `apps/api/src/http/api-error.ts`. Kod z kilkoma statusami (`validation_failed` 400/413/414/415) nie jest kodem domeny; parser i tak zbiera wszystkie statusy z komórki HTTP.
+- Po przywróceniu dokumentów i zmianach: `pnpm vitest run --project shared error-codes-docs` 34/34, `pnpm vitest run --project api error-status-docs` 9/9.
+- `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, test, test:mobile): exit 0, 155 plików, 1257 testów.
+- AC1: `api.md` „Błędy wspólne” ma tylko kod i zakres (bez statusu i znaczenia) i odsyła do `architecture.md`; opisy z `api.md` (404 z uczestnikiem i linkiem, `invalid_origin` bez `Origin`, 401 poza publicznymi) przeniesione do tabeli `architecture.md`.
+- AC3: format błędu w `architecture.md` z `listId` i `requestId` oraz zdaniem, przy jakich kodach występuje każde pole; `api.md` „Przyjmij” i akapit pod tabelą zaproszeń opisują `listId`.
+- AC4: `backend.md` akapity T-087 i T-076 odsyłają do `bestEffort` / `afterCommit` (`logFailure`); akapit o dokumentach przekrojowych opisuje nowy test i `architecture.md` jako jedyne miejsce opisu kodu.
+- AC5: AC T-094 i T-095 odhaczone (oba: ostatni werdykt QA `pass`, AC1–AC5 pass); `epic.md` S-02-02 `(F-13, SC-05, SC-06, SC-07)` jak `story.md`; `SC-06-lista.md` `requirements` z F-13. `pnpm backlog-check`: OK.
+- AC6: `UAT.md` odsyła do przeglądu 3, podaje T-094–T-104 `done`, T-105 przez plik zadania, T-106 `todo`.
 
 ## Prevention
 

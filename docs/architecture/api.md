@@ -9,17 +9,16 @@ Zarys dla głównych ścieżek; taski doprecyzowują kształty. Kontrakt (typy �
 
 ## Błędy wspólne
 
-Mogą wystąpić na każdej trasie (lub każdej z opisanej grupy), więc kolumny „Błędy” w tabelach tras ich nie powtarzają; pełna tabela kodów: `architecture.md`.
+Te kody mogą wystąpić na każdej trasie z opisanego zakresu, więc kolumny „Błędy” w tabelach tras ich nie powtarzają. Status i znaczenie każdego kodu (także tych z kolumn „Błędy”) opisuje tylko tabela w `architecture.md`, „Konwencje API i błędów”.
 
-| HTTP | Kod | Kiedy |
-| --- | --- | --- |
-| 400 | `validation_failed` | treść nie spełnia schematu (`fields`), zły JSON, pusta treść, zły zapis ścieżki |
-| 413, 414, 415 | `validation_failed` | treść ponad `HTTP_LIMITS.bodyBytes` (413), parametr ścieżki ponad `maxParamLength` (414), nieobsługiwany `content-type` (415); bez `fields` (T-086) |
-| 401 | `unauthenticated` | trasa `/api/v1/*` bez ważnej sesji (poza publicznymi) |
-| 403 | `invalid_origin` | `POST` / `PATCH` / `DELETE` z obcego `Origin` lub bez niego (TH-14) |
-| 404 | `not_found` | lista, pozycja, uczestnik lub link nie istnieje, identyfikator nie jest UUID albo brak dostępu (bez zdradzania istnienia) |
-| 429 | `rate_limited` | limit z `RATE_LIMITS`; trasy z limitem mają „429” w kolumnie „Błędy” |
-| 500 | `internal` (`requestId`) | błąd serwera; szczegóły tylko w logu |
+| Kod | Zakres |
+| --- | --- |
+| `validation_failed` | każda trasa (treść, parametry ścieżki, `content-type`) |
+| `unauthenticated` | każda trasa `/api/v1/*` poza publicznymi |
+| `invalid_origin` | każde `POST` / `PATCH` / `DELETE` |
+| `not_found` | każda trasa z identyfikatorem w ścieżce |
+| `rate_limited` | trasy z „429” w kolumnie „Błędy” |
+| `internal` | każda trasa |
 
 ## Konta (Better Auth, `/api/auth/*`)
 
@@ -82,9 +81,9 @@ Stan po T-006: dodawanie, edycja nazwy i notatki oraz usuwanie działają (odhac
 | Utwórz link (F-11) | `POST /api/v1/lists/:listId/invitations` | — | 201 `{ id, url, expiresAt }` | 403, 404, 409 `limit_reached` (`participants`), 429 |
 | Unieważnij (F-11) | `DELETE /api/v1/lists/:listId/invitations/:invitationId` | — | 204 | 403, 404 |
 | Podgląd (SC-08), publiczna | `GET /api/v1/invitations/:token` | — | `{ listName, ownerName }` | 410 `invitation_invalid`, 429 |
-| Przyjmij (F-12) | `POST /api/v1/invitations/:token/accept` | — | 200 `{ listId }` | 401, 409 `own_list` / `already_member` / `limit_reached` (`participants`), 410, 429 |
+| Przyjmij (F-12) | `POST /api/v1/invitations/:token/accept` | — | 200 `{ listId }` | 401, 409 `own_list` / `already_member` (z `listId` tej listy), 409 `limit_reached` (`participants`), 410, 429 |
 
-`url` = `https://<web>/zaproszenie/<token>`. Rejestracja z `invitationToken` (F-01, F-12) przyjmuje zaproszenie w tej samej operacji po założeniu konta; błąd zaproszenia nie blokuje rejestracji (konto powstaje, klient pokazuje komunikat z SC-08).
+`url` = `https://<web>/zaproszenie/<token>`. Przy `own_list` i `already_member` błąd niesie `listId` listy, do której domownik już ma dostęp, żeby SC-08 mógł ją otworzyć („Otwórz listę”). Rejestracja z `invitationToken` (F-01, F-12) przyjmuje zaproszenie w tej samej operacji po założeniu konta; błąd zaproszenia nie blokuje rejestracji (konto powstaje, klient pokazuje komunikat z SC-08).
 
 ## Zmiany na żywo (`na-zywo`)
 

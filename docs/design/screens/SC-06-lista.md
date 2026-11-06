@@ -1,7 +1,7 @@
 ---
 id: SC-06
 title: Lista
-requirements: [F-05, F-07, F-08, F-09, F-10, F-14, F-15]
+requirements: [F-05, F-07, F-08, F-09, F-10, F-13, F-14, F-15]
 journeys: [J-02, J-03, J-05]
 platforms: [web]
 design:
