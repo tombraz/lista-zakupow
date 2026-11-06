@@ -4,7 +4,7 @@ title: "backlog-check: przekazanie z małymi literami (`to e-02`) liczone jak `t
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-099]
 layers: [infra]
 requirements: []
@@ -82,3 +82,18 @@ Test z małymi literami w `scripts/test/backlog-check.test.mjs` (AC1–AC3).
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | test quality | Brak błędów. Testy gryzą: po cofnięciu `toUpperCase()` padają wszystkie 3 nowe testy (14/17 pass), 14 testów T-099 dalej przechodzi; po przywróceniu 17/17. | spot-check QA, `git status` czysty po przywróceniu | — |
+| 2 | note | exploratory | Przypadki brzegowe z planu QA działają: `→e-02` → `E-02`; `to E-02 i to e-02` → jedno ostrzeżenie; `to e-09` → `E-09`; `To e-02 przejmie T-002` → brak; `` `to e-02` `` w backtickach → brak; `-> e-02` → `E-02`; `to e-02x` → brak; `we e-02, T-002` → brak. | fikstury tymczasowe, CLI `--root` | — |
+
+Reprodukcja: `node --test scripts/test/backlog-check.test.mjs` → 17/17 pass; `pnpm check` → exit 0 (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, workflow-check, vitest, mobile jest); `node scripts/backlog-check.mjs` → `OK: no errors`, brak ostrzeżeń o przekazaniu; `--summary --epic E-02` → `"ok":true`.
+
+Kryteria: AC1 pass, AC2 pass (oba przypadki), AC3 pass (komunikat z `E-02`, jedno ostrzeżenie przy mieszanej wielkości liter), AC4 pass.
+
+Code review: zmiana minimalna (jedna linia + komentarz sekcji), bez zmian zakresu; znormalizowany target trafia do wszystkich porównań (`reported`, własny epik, `todo`, `received`) i do komunikatu. Root cause wyjaśnia, czemu testy T-099 nie złapały błędu (tylko wielkie litery w fiksturach). Red evidence opisana i potwierdzona spot-checkiem QA.
