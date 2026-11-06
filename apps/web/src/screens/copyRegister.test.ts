@@ -8,8 +8,13 @@
  *   inne moduły (np. `errorText()` → wspólny `network`). Liczy się importowany symbol, nie cały
  *   moduł: ekran, który importuje `errorText`, nie musi mieć `HIDDEN_CHARACTERS_TEXT`.
  * - Moduł wspólny `.ts` ma teksty, gdy któryś jego literał wygląda na tekst interfejsu (polska litera
- *   albo słowo z wielkiej litery i kolejne słowo); wtedy liczy się każdy literał użytej deklaracji.
- *   Pliki `.tsx` tylko prowadzą importy: teksty w JSX są poza zakresem T-100.
+ *   albo słowo z wielkiej litery i kolejne słowo); liczą się literały użytej deklaracji, które tak
+ *   wyglądają. Plik komunikatów modułu wspólnego `<nazwa>Messages.ts` (np. `lists/leaveMessages.ts`)
+ *   liczy się jak `messages.ts`: każdy literał, także jednowyrazowy („Anuluj”; T-103).
+ * - Pliki `.tsx` tylko prowadzą importy. W `.tsx` modułu wspólnego (poza `screens/` i `components/`)
+ *   literał albo tekst JSX, który wygląda na tekst interfejsu, to błąd ze wskazaniem pliku: tekst
+ *   należy do pliku `.ts` modułu (T-103). Teksty w `.tsx` katalogów ekranów i komponentów design
+ *   systemu (`components/`) są jeszcze poza testem.
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
  * - Parametr szablonu `${…}` pasuje do dowolnego `{nazwa}` w Copy (`${String(count)} do kupienia`
@@ -332,6 +337,77 @@ describe("findCopyGaps (fixtures)", () => {
       "screens/SC-01-logowanie/messages.ts: nie rozpoznano importu „../../brak”",
     );
     expect(noSpec).toThrow("SC-10: brak specyfikacji ekranu");
+  });
+
+  it("interface text in a shared .tsx file (outside screens/ and components/) is an error naming the file", () => {
+    const input = (dialog: string) => ({
+      sources: {
+        "lists/LeaveListDialog.tsx": dialog,
+        "invitations/Notice.tsx": `export const Notice = () => <p role="status">Dołączasz   do listy</p>;`,
+        "components/Banner.tsx": `export const Banner = () => <p role="status">Jesteś offline</p>;`,
+        "components/Button.tsx": `export const Button = () => <button className="btn primary" type="button" />;`,
+        "screens/SC-07-uczestnicy/messages.ts": `export const messages = { title: "Uczestnicy" };`,
+        "screens/SC-07-uczestnicy/Leave.tsx": `
+          import { LeaveListDialog } from "../../lists/LeaveListDialog";
+          export const Leave = () => <LeaveListDialog label="Opuść" />;`,
+      },
+      specs: { "SC-07-uczestnicy.md": spec(["title", "Uczestnicy"]) },
+    });
+    const withTexts = () =>
+      findCopyGaps(
+        input(`
+          export const leaveMessages = { confirm: "Opuść", consequence: \`Żeby wrócić, potrzebujesz zaproszenia.\` };
+          export const LeaveListDialog = () => <p>{leaveMessages.confirm}</p>;`),
+      );
+
+    expect(withTexts).toThrow(
+      [
+        "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        "invitations/Notice.tsx · „Dołączasz do listy”",
+        "lists/LeaveListDialog.tsx · „Opuść”",
+        "lists/LeaveListDialog.tsx · „Żeby wrócić, potrzebujesz zaproszenia.”",
+      ].join("\n"),
+    );
+  });
+
+  it("a shared *Messages.ts module counts every literal, like messages.ts (one-word „Anuluj”)", () => {
+    const gaps = findCopyGaps({
+      sources: {
+        "lists/leaveMessages.ts": `export const leaveMessages = { confirm: "Opuść", cancel: "Anuluj", close: "Zamknij" };`,
+        "lists/listName.ts": `export const pick = (focus: (f: string) => void) => { focus("Name"); return "Wpisz nazwę"; };`,
+        "screens/SC-07-uczestnicy/messages.ts": `
+          import { leaveMessages } from "../../lists/leaveMessages";
+          import { pick } from "../../lists/listName";
+          export const messages = { leave: leaveMessages, pick };`,
+      },
+      specs: {
+        "SC-07-uczestnicy.md": spec(["leave.confirm.cta", "Opuść"], ["name", "Wpisz nazwę"]),
+      },
+    });
+
+    expect(gaps.map((gap) => `${gap.file} · ${gap.text}`)).toEqual([
+      "lists/leaveMessages.ts · Anuluj",
+      "lists/leaveMessages.ts · Zamknij",
+    ]);
+  });
+
+  it("a shared .tsx file that only renders imported texts is not an error", () => {
+    const gaps = findCopyGaps({
+      sources: {
+        "lists/leaveList.ts": `export const leaveMessages = { confirm: "Opuść" };`,
+        "lists/LeaveListDialog.tsx": `
+          import { leaveMessages } from "./leaveList";
+          export const LeaveListDialog = () => <button className="btn primary">{leaveMessages.confirm}</button>;`,
+        "lists/LeaveListDialog.test.tsx": `it("x", () => screen.getByText("Opuść listę"));`,
+        "screens/SC-07-uczestnicy/messages.ts": `export const messages = {};`,
+        "screens/SC-07-uczestnicy/Leave.tsx": `
+          import { LeaveListDialog } from "../../lists/LeaveListDialog";
+          export const Leave = () => <LeaveListDialog />;`,
+      },
+      specs: { "SC-07-uczestnicy.md": spec() },
+    });
+
+    expect(gaps).toEqual([{ screen: "SC-07", file: "lists/leaveList.ts", text: "Opuść" }]);
   });
 
   it("CRLF line endings in the spec give the same result as LF", () => {

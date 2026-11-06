@@ -33,11 +33,23 @@ interface Module {
 
 const SCREEN_DIR = /^screens\/(SC-\d{2})-[^/]+\//;
 
+/** Plik komunikatów: `messages.ts` ekranu albo `<nazwa>Messages.ts` modułu wspólnego (T-103). */
+const MESSAGES_FILE = /(^|\/)messages\.ts$|[a-z]Messages\.ts$/;
+
 /** Parametr tekstu: `${…}` w kodzie i `{nazwa}` w Copy. */
 const PARAMETER = "{…}";
 
 export function findCopyGaps({ sources, specs, packages = {} }: CopyRegisterInput): CopyGap[] {
   const modules = new ModuleGraph(sources, packages);
+  const misplaced = modules.sharedTsxTexts();
+  if (misplaced.length > 0) {
+    throw new Error(
+      [
+        "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        ...misplaced.map(({ file, text }) => `${file} · „${text}”`),
+      ].join("\n"),
+    );
+  }
   const gaps: CopyGap[] = [];
   for (const [screen, files] of screens(sources)) {
     const copy = copyTexts(specOf(screen, specs));
@@ -114,6 +126,30 @@ class ModuleGraph {
     return [...found.values()];
   }
 
+  /**
+   * Pliki `.tsx` modułów wspólnych (poza `screens/` i `components/`, bez testów) tylko renderują
+   * teksty importowane z plików `.ts`: literał albo tekst JSX, który wygląda na tekst interfejsu,
+   * jest tam błędem (T-103). Inaczej test nie widzi tekstu, bo literały `.tsx` są poza rejestrem.
+   * `components/` (design system, Copy w `design-system.md`) jeszcze poza kontrolą — osobny task.
+   */
+  sharedTsxTexts(): { file: string; text: string }[] {
+    const found: { file: string; text: string }[] = [];
+    for (const file of Object.keys(this.sources).sort()) {
+      const shared = !file.startsWith("screens/") && !file.startsWith("components/");
+      if (!file.endsWith(".tsx") || !shared || file.endsWith(".test.tsx")) continue;
+      const module = this.module(file);
+      const jsxTexts: string[] = [];
+      const visit = (node: ts.Node): void => {
+        if (ts.isJsxText(node)) jsxTexts.push(node.text.trim().replace(/\s+/g, " "));
+        ts.forEachChild(node, visit);
+      };
+      visit(module.source);
+      const texts = [...this.literals(module, [module.source]), ...jsxTexts].filter(looksLikeText);
+      for (const text of new Set(texts)) found.push({ file, text });
+    }
+    return found;
+  }
+
   private module(file: string): Module {
     const cached = this.parsed.get(file);
     if (cached) return cached;
@@ -157,14 +193,14 @@ class ModuleGraph {
   }
 
   /**
-   * `messages.ts`: każdy literał. Inny plik `.ts` miesza teksty z logiką (klucze pól, adresy),
+   * `messages.ts` i `<nazwa>Messages.ts`: każdy literał. Inny plik `.ts` miesza teksty z logiką (klucze pól, adresy),
    * więc liczą się literały, które wyglądają na tekst interfejsu. JSX i literały w plikach `.tsx`
    * są poza zakresem (T-100): `.tsx` tylko prowadzi importy.
    */
   private texts(file: string, nodes: ts.Node[]): string[] {
     if (file.endsWith(".tsx")) return [];
     const literals = this.literals(this.module(file), nodes);
-    return file.endsWith("/messages.ts") ? literals : literals.filter(looksLikeText);
+    return MESSAGES_FILE.test(file) ? literals : literals.filter(looksLikeText);
   }
 
   private literals(module: Module, nodes: ts.Node[]): string[] {

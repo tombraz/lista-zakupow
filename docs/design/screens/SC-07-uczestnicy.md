@@ -80,6 +80,9 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | leave | Opuść listę |
 | leave.confirm | Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia. |
 | leave.error | Nie udało się opuścić listy. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
+| leave.confirm.question | Opuścić listę „{nazwa}”? (część `leave.confirm`; T-103) |
+| leave.confirm.consequence | Żeby wrócić, potrzebujesz nowego zaproszenia. (część `leave.confirm`; T-103) |
+| leave.confirm.cta | Opuść (przycisk akcji w oknie; zatwierdzone 2026-11-06, T-103) |
 | empty | Nikt jeszcze nie dołączył. Utwórz link i wyślij go domownikowi. |
 | limit | Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę. |
 | back | Wstecz (z Layout/States, T-100) |

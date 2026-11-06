@@ -100,6 +100,10 @@ Menu „Więcej opcji”: właściciel — „Zmień nazwę listy”, „Usuń l
 | menu.rename | Zmień nazwę listy |
 | menu.delete | Usuń listę |
 | menu.leave | Opuść listę |
+| leave.confirm.question | Opuścić listę „{nazwa}”? (okno jak na SC-07; z Copy SC-07 `leave.confirm`, T-103) |
+| leave.confirm.consequence | Żeby wrócić, potrzebujesz nowego zaproszenia. (z Copy SC-07 `leave.confirm`, T-103) |
+| leave.confirm.cta | Opuść (przycisk akcji w oknie; zatwierdzone 2026-11-06, T-103) |
+| leave.error | Nie udało się opuścić listy. Spróbuj ponownie. (w oknie; z Copy SC-07 `leave.error`, T-103) |
 | delete.confirm | Usunąć listę „{nazwa}”? Zniknie też u {n} uczestników. |
 | invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: nazwa i notatka pozycji; zatwierdzone 2026-11-01, T-060) |
 | noAccess | Nie masz dostępu do tej listy. |

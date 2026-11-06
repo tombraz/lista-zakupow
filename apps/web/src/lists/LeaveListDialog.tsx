@@ -1,22 +1,9 @@
 import type { ListDetails } from "@lista/shared";
 import type { RefObject } from "react";
-import { asRequestError, type RequestErrorCode } from "../api/client";
+import { asRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog/ConfirmDialog";
-import { errorText } from "../errorText";
+import { leaveErrorText, leaveMessages } from "./leaveMessages";
 import { useLeaveList } from "./useLeaveList";
-
-/** Copy SC-07 `leave.*`; SC-06 `menu.leave` prowadzi do tego samego okna („→ jak na SC-07”). */
-export const leaveMessages = {
-  question: (listName: string) => `Opuścić listę „${listName}”?`,
-  consequence: "Żeby wrócić, potrzebujesz nowego zaproszenia.",
-  confirm: "Opuść",
-  cancel: "Anuluj",
-};
-
-// Copy SC-07 `leave.error` (T-080).
-export function leaveErrorText(code: RequestErrorCode): string {
-  return errorText(code, { otherwise: "Nie udało się opuścić listy. Spróbuj ponownie." });
-}
 
 interface LeaveListDialogProps {
   list: ListDetails;
