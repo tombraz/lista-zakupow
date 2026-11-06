@@ -4,7 +4,7 @@ title: "SC-06: „Usuń listę” w menu nieaktywne bez połączenia, jak inne w
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-15, F-05]
@@ -75,3 +75,27 @@ Pełne sprawdzenie: `pnpm check` exit 0 (format, lint, typecheck, quality, desig
 Reguła w `web.md` (AC2), propozycja z przeglądu zaakceptowana przez właściciela 2026-11-06.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+Zakres: commit `a3e5104` (`ListScreen.tsx` +2, `ListScreen.test.tsx` +28, `web.md` +2).
+
+**Reprodukcja:** `pnpm vitest run --project web src/screens/SC-06-lista`: 9 plików, 109 testów zielonych. `pnpm check` exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check; `Test Files 154 passed`, `Tests 1247 passed`, test:mobile).
+
+**Kryteria:**
+
+- AC1 — pass. Test `it.each` dla „Usuń listę” (`alertdialog`) i „Zmień nazwę listy” (`dialog`): `aria-disabled="true"`, opis dostępny „Brak połączenia” (`aria-describedby` paska), klik nie otwiera okna. Spot-check: usunięcie `writes: true` z „Zmień nazwę listy” → test tej pozycji pada (`1 failed | 19 passed`); przywrócone `git checkout`, `git status` czysty.
+- AC2 — pass. Decyzja („Zmień nazwę listy” też `writes`) uzasadniona w „Root cause”, reguła zapisana w `docs/architecture/layers/web.md` → „Konwencje”, wpis w historii zmian; test jak w AC1 jest.
+- AC3 — pass. Testy T-005 (menu właściciela, usunięcie online), T-094 (menu uczestnika) i T-063 (pasek, `connection.test.tsx`, `offlineWrites.test.tsx`) zielone w pełnym przebiegu.
+
+**Eksploracja (tymczasowy test, usunięty):** menu otwarte online → „Usuń listę” aktywne; utrata połączenia przy otwartym menu → pozycja `aria-disabled`, Enter z klawiatury nic nie otwiera; powrót połączenia (ponowna subskrypcja + `subscribed`) → pozycja aktywna, klik otwiera `alertdialog`. „Zmień nazwę listy” online otwiera `dialog`.
+
+**Root cause / TDD:** sekcja wyjaśnia, dlaczego testy nie złapały błędu (brak testu offline menu właściciela). Evidence opisuje czerwony przebieg na `aria-disabled`; spot-check potwierdza, że test gryzie.
+
+**Bezpieczeństwo / dostępność:** zmiana tylko po stronie UI, bez nowych danych ani wywołań; autoryzacja zapisu bez zmian po stronie serwera. Pozycja pozostaje fokusowalna (`aria-disabled`, nie `disabled`) z opisem przyczyny — zgodnie z wzorcem T-063/T-094.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | test | Test AC1 sprawdza stan offline ustawiony przed otwarciem menu; przejście offline/online przy otwartym menu nie ma stałego testu (ręcznie sprawdzone — działa). | tymczasowy test QA, wszystkie kroki zielone | opcjonalnie dodać przypadek „utrata połączenia przy otwartym menu” do `MoreMenu` |
