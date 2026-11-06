@@ -172,12 +172,14 @@ function OwnerMenu({ list }: { list: ListDetails }) {
         actions={[
           {
             label: messages.menu.rename,
+            writes: true,
             onSelect: () => {
               setOpen("rename");
             },
           },
           {
             label: messages.menu.delete,
+            writes: true,
             onSelect: () => {
               setOpen("delete");
             },

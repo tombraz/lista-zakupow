@@ -74,6 +74,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 - Komponent renderuje; pobieranie danych i reguły w hookach (`useList`, `useAddItem`), subskrypcja na żywo w jednym hooku `useLiveList`.
 - Brak optymistycznych aktualizacji: pozycja pojawia się po odpowiedzi API; w czasie zapisu stan „zapisywanie” (F-15).
 - Teksty z tabeli „Copy” specyfikacji ekranu, w plikach komunikatów obok ekranu; kody błędów API mapowane na teksty w jednym miejscu.
+- Bez połączenia akcja zapisu jest nieaktywna już na wyzwalaczu, nie dopiero w oknie: przycisk, który otwiera okno, arkusz albo formularz prowadzący do zapisu, ma `writes` (`Button`). Pozycja menu ma `writes: true` (`MoreMenu`). Dotyczy to także okien z przyciskiem `writes` w środku. Wzorce: SC-05 „+ Nowa lista”, SC-06 „Zmień nazwę listy” / „Usuń listę” / „Opuść listę”, SC-07, SC-09 „Usuń konto”. Test offline: `browserGoes("offline")`, wyzwalacz `aria-disabled` z opisem paska, po kliknięciu nic się nie otwiera (T-063, T-104).
 - `lang="pl"`, daty przez `Intl.DateTimeFormat("pl-PL")`.
 - Zachowania dostępności z sekcji „Accessibility” specyfikacji ekranu i `design-system.md` (fokus, `role="alert"` / `status`, pułapka fokusu w arkuszu i oknach).
 
@@ -114,6 +115,7 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 
 | Data | Zmiana |
 | --- | --- |
+| 2026-11-06 | T-104: „Konwencje” — wyzwalacz akcji zapisu (przycisk, pozycja menu) ma `writes`; SC-06 „Zmień nazwę listy” i „Usuń listę” bez połączenia nieaktywne. |
 | 2026-11-05 | T-100: „Pułapki” — Copy jako pełny rejestr tekstów ekranu, test zgodności `screens/copyRegister.test.ts`; mobile (E-04) dołączy. |
 | 2026-11-04 | T-081 (prevention): „Pułapki” — zmiana mechanizmu lub zdarzenia aktualizuje w tym samym tasku „Gdzie jest kod”, `api.md` i `architecture.md`. |
 | 2026-11-04 | T-081: „Gdzie jest kod”: mechanizm komunikatu SC-01 po końcu sesji (`SESSION_END_KEY`, `EntryState`). |
