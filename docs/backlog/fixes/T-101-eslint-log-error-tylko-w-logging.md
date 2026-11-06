@@ -4,7 +4,7 @@ title: "API: reguła eslint — `log.error` tylko w `logging.ts` i handlerze bł
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: [T-098]
 layers: [backend, infra]
 requirements: []
@@ -97,3 +97,26 @@ To zadanie jest prewencją dla klasy T-098 (przegląd E-02, C7 / C4).
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+Reprodukcja: `pnpm install --frozen-lockfile && pnpm check && pnpm build` exit 0 (lint, typecheck, quality, design/backlog/workflow-check, vitest 154 plików / 1242 testy, jest 10); `node scripts/test/lint-security.test.mjs` — wszystkie przypadki `ok`, w tym T-035, T-089, TH-15/16/20 i SAFE_SYNTAX w każdym bloku (AC5). Wyszukanie `.error(` w `apps/api/src`: tylko `logging.ts:213` i `http/api-error.ts:81,104` (AC2).
+
+Kryteria: AC1 pass, AC2 pass, AC3 pass, AC4 pass (przegląd `T-098` „Root cause”, `architecture.md:24`, `backend.md` „Pułapki” i historia zmian), AC5 pass.
+
+Spot-checki (przywrócone `git checkout -- eslint.config.js`, `git status` czysty):
+- selektor `API_FAILURE_LOG_SYNTAX` zneutralizowany → 9 × `FAIL` (wszystkie przypadki odrzucane T-101), przypadki dozwolone dalej `ok`;
+- reguła zdjęta tylko z bloku `modules/*/http/**` → `FAIL request.log.error w trasie modułu` (AC3 gryzie per blok).
+
+Eksploracja (`lintText` na plikach API): łapie `log?.error`, `request.log?.error`, `request.server.log.error`, `LOG.error`, pliki `cleanup/index.ts` i `owner-alerts.ts`; przepuszcza `log.warn`, `log.info`.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | lint / zakres reguły | `.error` na loggerze potomnym nie jest łapany: obiekt wywołania to `CallExpression`, więc nie ma `name` ani `property.name`. Wzorzec jest realny w tym repo (`securityLog` w `logging.ts:118` zwraca `log.child(…)`). Decyzja nie jest opisana w „Decyzje do przeglądu QA”, a plan QA o to prosił. | `log.child({}).error("x")`, `request.log.child({ a: 1 }).error("x")` w `lists-repository.ts` / `modules/listy/http/routes.ts` → brak `no-restricted-syntax` | Dopisać do selektora gałąź `callee.object.type='CallExpression'` z `callee.object.callee.property.name='child'` (albo `securityLog`) albo opisać świadome pominięcie w `backend.md` „Pułapki”. |
+| 2 | note | lint / zakres reguły | `log.fatal(…)` (level 60) i `(log as T).error(…)` też omijają wspólny kształt. `fatal` nie występuje w `apps/api/src`. | eksploracja `lintText` → brak błędu | Można rozszerzyć `ERROR_METHOD` o `fatal` przy okazji punktu 1. |
+| 3 | note | lint | `console.error` nie obejmuje żadna reguła (brak `no-console`), co autor zgłosił. W `apps/api/src` występuje tylko `console.log` w CLI migracji. | eksploracja: `console.error(error)` → brak błędu | Osobny fix, jeśli właściciel chce: `no-console` w `apps/api/src/**` z wyjątkiem `db/migrate-cli.ts`. |
+| 4 | note | lint / konfiguracja | Po dodaniu bloku `rate-limit.ts` ogólny blok `apps/api/src/**` (SAFE+CLOCK+RAW_URL, eslint.config.js:354) działa już tylko dla `logging.ts`, ale komentarz tego nie mówi. | `eslint.config.js:353-359` | Opcjonalnie: zawęzić blok do `logging.ts` albo uzupełnić komentarz. |
+
+Fix: „Root cause” mówi, dlaczego nic tego nie łapało (tylko konwencja w dokumencie, brak przypadku w `lint-security.test.mjs`). Brak czerwonego testu przed zmianą został pokazany w Evidence (testy 1, 2 i `rate-limit.ts`), a spot-check potwierdza, że przypadki padają bez reguły.
