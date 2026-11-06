@@ -4,7 +4,7 @@ title: "backlog-check: praca przekazana „to E-xx” musi mieć task albo wpis 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -107,3 +107,25 @@ To zadanie jest prewencją dla klasy P1.
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+Odtworzenie: `pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm lint`, `pnpm typecheck` OK; `pnpm test` 154 pliki / 1242 testy pass; `node --test scripts/test/backlog-check.test.mjs` 14/14 pass (Node 24.14.1). Regresja: `node scripts/backlog-check.mjs` → `OK: no errors`, kod 0; `--summary --epic E-02` → poprawny JSON; `--json` kod 0; `--write-index --board` przy tym commicie.
+
+Kryteria:
+- **AC1 — pass.** Test 1 sprawdza plik:linię, epik docelowy i `OK: no errors`; fikstury eksploracyjne: `→E-02` bez spacji i nieistniejący `E-09` też zgłaszane.
+- **AC2 — pass.** Pokrycie per linia (task / story / fix task z gałęzią `epic/E-02-…`); `related_tasks` i treść taska E-02 nie pokrywają (test 2).
+- **AC3 — pass.** Na kopii backlogu po usunięciu „; przejął T-094.” z T-005:175 → `WARN … T-005-moje-listy.md:175: hands work over to E-02 ("to E-02")…`; na repo brak ostrzeżeń. Odbiorcy dopisani w T-004/T-005/T-010 są właściwi (T-094 „Opuść listę”, T-061/T-062 SC-09, T-053 reset, T-055 Brevo). Na kopii z E-03/E-04 w `in-progress` dokładnie 8 ostrzeżeń wymienionych w Evidence.
+- **AC4 — pass.** `WARN`, kod 0; opis w `pipeline.md` i nagłówku skryptu; brak regresji trybów.
+
+Jakość testów: spot-check — wyłączenie `warnings.push` w sekcji Handoffs → 6/14 testów czerwonych; zastąpienie `ownerEpic(id) === target` przez `true` → 2 czerwone; przywrócone `git checkout`, `git status` czysty. Testy na seamie CLI `--root`, oczekiwania to literały. Czerwone komunikaty w Evidence dla każdego testu (strażnicy oznaczeni).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Reguła | Flaga `i` w `HANDOFF` łapie małe `e-xx`, ale target małymi literami nie pasuje do ID epików: ostrzeżenie nawet przy odbiorcy w linii, a status `todo` epiku jest pomijany. | Fikstura `- Opuść listę to e-02.` → `WARN … hands work over to e-02`; ten raport bez backticków sam to zgłosił. | Normalizować `target.toUpperCase()` albo usunąć `i` dla części `E-\d+`. |
+| 2 | note | Utrzymanie | Kopia w `.claude/skills/plan-backlog/scripts/backlog-check.mjs` nie ma sekcji Handoffs; skill kopiuje skrypt tylko gdy go brak, więc ryzyko nadpisania małe, a test w CI je wykryje. | `diff` skryptu repo z kopią skilla: różnica tylko w sekcji T-099. | Przy następnej aktualizacji product-skills przenieść regułę upstream lub zachować sekcję. |
+| 3 | note | Reguła | Fałszywe alarmy na czasowe „do E-02” i angielskie „to E-02” — świadoma decyzja autora (Do uwagi QA, pkt 2); obejście: odbiorca w linii albo `kod`. | Fikstura „- Moved to E-02 later.” → ostrzeżenie. | Bez zmian. |
+
+Root cause wyjaśnia, dlaczego wcześniej nic tego nie łapało (skrypt nie czytał notatek). Design, dostępność, zagrożenia: nie dotyczy (`layers: [infra]`, `threats: []`).
