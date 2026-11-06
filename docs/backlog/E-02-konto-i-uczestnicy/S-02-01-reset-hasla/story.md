@@ -31,7 +31,7 @@ screens: [SC-03, SC-01, SC-02]
 ## Notes
 
 - SC-03 pod trasą `/reset-hasla` (linkują tam już SC-01 i komunikat o zajętym e-mailu na SC-02). Każdy link do SC-03 przenosi wpisany e-mail i kontekst zaproszenia jak `EntryLink` (WCAG 3.3.7; T-028).
-- To jedyny mail wysyłany przez aplikację (F-03). Nadawca na staging bez własnej domeny: ryzyko spamu i odmowy Brevo (`deployment.md`, „Ryzyka”).
+- To jedyny mail wysyłany do domowników (F-03, BRD 1.4). Nadawca na staging bez własnej domeny: ryzyko spamu i odmowy Brevo (`deployment.md`, „Ryzyka”).
 - TH-28 (przegląd bezpieczeństwa E-01, #6 rundy 1): reset unieważnia sesje i zamyka ich połączenia na żywo.
 
 ## Story acceptance (QA, 2026-11-01)

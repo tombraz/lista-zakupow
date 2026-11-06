@@ -32,7 +32,7 @@ Domownik odzyskuje dostęp do konta resetem hasła, zmienia imię i usuwa konto;
 - S-02-04 Brak połączenia (F-15, SC-05, SC-06, SC-07, SC-09)
 - S-02-05 Sprzątanie danych i miary sukcesu (N-02, BRD §10)
 
-Poprawki spoza epiku planowane razem z nim (`fixes/`, z UAT E-01): T-052 niestabilne CI na `main`, T-066 pusty `h1` SC-06, T-067 „Wszystko kupione” na pustej liście SC-05, T-068 alert CodeQL w pliku testowym.
+Poprawki z UAT E-01 (T-052 niestabilne CI na `main`, T-066 pusty `h1` SC-06, T-067 „Wszystko kupione” na pustej liście SC-05, T-068 alert CodeQL w pliku testowym) nie należą do tego epiku: od żadnej nie zależy punkt „Done when”, zostają samodzielnymi poprawkami w `fixes/` (decyzja właściciela 2026-11-06, przegląd E-02 runda 3, P7). T-052 warto zrobić wkrótce po scaleniu epiku, bo czerwone CI na `main` zasłania prawdziwe awarie.
 
 ## Technology
 

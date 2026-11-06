@@ -31,7 +31,7 @@ Ustalony z właścicielem 2026-10-26 (`/tech-architecture`, krok 1). Każdy wyb�
 | Logi | pino (JSON, bez danych osobowych) | wbudowany w Fastify | — | N-02, N-03 |
 | Śledzenie błędów, analityka | brak zewnętrznych narzędzi; miary sukcesu liczone zapytaniami SQL z danych aplikacji | BRD N-02: bez zewnętrznej analityki i śledzenia, zero dodatkowych podmiotów | Sentry | N-02 |
 | Hosting, CI/CD | preferencja: najtaniej (darmowo lub kilka euro miesięcznie), dane w UE, CI na GitHub Actions; dostawcy i pipeline w `/ci-cd` | pilotaż niekomercyjny | — | N-03 |
-| Wysyłka maila (reset hasła) | dostawca transakcyjnego maila wybierany w `/ci-cd`; lokalnie Mailpit | jedyny mail w aplikacji (F-03) | — | F-03 |
+| Wysyłka maila (reset hasła) | dostawca transakcyjnego maila wybierany w `/ci-cd`; lokalnie Mailpit | jedyny mail do domowników (F-03); ten sam dostawca wysyła alarmy z API do właściciela projektu (T-088) | — | F-03 |
 | Pozostałe wymagania z BRD | offline: brak (F-15); push: brak; pliki: brak; płatności: brak; wyszukiwanie: brak | poza zakresem MVP (BRD §11) | — | — |
 
 ## Propozycje do potwierdzenia przy zatwierdzeniu
