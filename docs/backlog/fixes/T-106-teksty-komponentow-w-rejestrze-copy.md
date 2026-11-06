@@ -33,10 +33,11 @@ related_tasks: [T-100, T-103]
 
 - [ ] AC1: Given komponenty z listy, then ich teksty są w plikach `.ts` (`<nazwa>Messages.ts` albo `messages.ts` komponentu), a `.tsx` je importują. — verified by: test zgodności Copy (kontrola `.tsx` obejmuje `components/`)
 - [ ] AC2: Given `design-system.md`, then ma tabelę Copy komponentów (albo ekrany mają wiersze), a test zgodności ją czyta; braki rozstrzyga właściciel (`web.md`: nie wymyślać tekstów). — verified by: `copyRegister.test.ts`
-- [ ] AC3: No regression in: testy komponentów `components/`, E2E bez zmian.
+- [ ] AC3: Given plik `.tsx` modułu wspólnego (także `components/` po AC1) z tekstem JSX, który ma literę, ale nie wygląda na polski tekst (np. `<span>Zamknij</span>`), when uruchamia się test zgodności Copy, then test jest czerwony ze wskazaniem pliku. Test ma fixture tego przypadku, a zakres w nagłówku testu i w `web.md` jest z nim zgodny. Źródło: uwaga minor QA T-103, runda 1 (zaakceptowana przez właściciela 2026-11-06). — verified by: test jednostkowy `copyRegister` z fixture
+- [ ] AC4: No regression in: testy komponentów `components/`, E2E bez zmian.
 
 ## Prevention
 
-Domknięcie zakresu kontroli z T-103 (`components/`).
+Domknięcie zakresu kontroli z T-103 (`components/`) oraz uwagi QA T-103: w `.tsx` modułu wspólnego każdy tekst JSX z literą to błąd, nie tylko ten, który `looksLikeText` uznaje za tekst (AC3).
 
 <!-- QA rounds are appended below by /qa-task -->

@@ -96,6 +96,8 @@ Pełne sprawdzenie: `pnpm check` exit 0 (format, lint, typecheck, quality, desig
 
 Propozycja z przeglądu: AC3 (test Copy zgłasza teksty w `.tsx`). Zaakceptowana przez właściciela 2026-11-06 razem z tym zadaniem.
 
+Po QA (runda 1, uwaga minor): jednowyrazowy tekst JSX bez polskiej litery w `.tsx` modułu wspólnego (`<span>Zamknij</span>`) przechodzi kontrolę. Właściciel 2026-11-06: dopisane do T-106 jako AC3 (każdy tekst JSX z literą w `.tsx` modułu wspólnego to błąd).
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-11-06)
