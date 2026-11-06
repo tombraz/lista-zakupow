@@ -91,7 +91,7 @@ What an independent tester checks beyond the automated tests:
 
 - Właściciel zakłada konta i nadaje sekrety (Fly, Neon, GitHub Environment `staging`); task przygotowuje listę kroków i komendy, nie uruchamia komend z reguły ask w `.claude/settings.json`.
 - Jeden obraz na commit `main`, web z względnymi adresami (`/api/v1`); ten sam obraz pójdzie na produkcję w E-03.
-- Brevo (mail resetu) dochodzi w E-02 razem z resetem hasła; tu bez maili.
+- Brevo (mail resetu) dochodzi w E-02 razem z resetem hasła (przejął T-055); tu bez maili.
 - Wycofanie, gałąź-kopia Neon, tag i Release — E-03.
 - Logika dostawców w `scripts/`, YAML tylko je wywołuje.
 

@@ -287,6 +287,7 @@ jobs:
           bash scripts/test/smoke.test.sh
           bash scripts/test/zap.test.sh
           bash scripts/test/staging-setup.test.sh
+          node --test scripts/test/backlog-check.test.mjs
 
   # Obraz z deploy.yml (T-010) budowany i sprawdzany na PR, bez publikacji: migracje z obrazu, api i web
   # pod jednym portem przechodzą smoke test, Trivy blokuje high/critical z poprawką (TH-22).

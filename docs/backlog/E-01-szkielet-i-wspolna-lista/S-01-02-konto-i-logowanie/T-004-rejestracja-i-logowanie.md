@@ -30,7 +30,7 @@ Domownik zakłada konto (imię, e-mail, hasło, zgody, 16+), loguje się i wylog
 
 - BRD: F-01 — „imię 1–30, hasło ≥ 8, akceptacja regulaminu i polityki prywatności, potwierdzenie 16+; e-mail użyty — czytelny komunikat”; F-02 — „komunikat nie zdradza, czy konto istnieje; próby ograniczane (MC-04)”; MC-05 — masowe zakładanie kont ograniczane.
 - Architektura: „Uwierzytelnianie i autoryzacja”, ADR 0002 (Better Auth, sesje w Postgresie, 30 dni), `api.md` „Konta”, `data-model.md` (`user` z `terms_accepted_at`, `terms_version`, `age_confirmed_at`).
-- Design: SC-01, SC-02, SC-04, SC-09 (tylko e-mail, imię jako tekst, „Wyloguj się”, link do SC-04 — zmiana imienia i usunięcie konta w E-02); komponenty TextField, PasswordField, ConsentCheckbox, Button, InlineAlert, AppBar.
+- Design: SC-01, SC-02, SC-04, SC-09 (tylko e-mail, imię jako tekst, „Wyloguj się”, link do SC-04 — zmiana imienia i usunięcie konta w E-02, przejęły T-061 i T-062); komponenty TextField, PasswordField, ConsentCheckbox, Button, InlineAlert, AppBar.
 - Depends on: T-001 — harness integracyjny, migracje, logger z redakcją i logiem `security`, web serwowany pod jednym originem.
 
 ## Acceptance criteria
@@ -175,7 +175,7 @@ Decyzje właściciela (2026-10-27, Step 4): zależności `better-auth` 1.7.13, `
 - Adres klienta dla limitów per IP: most nadpisuje `X-Forwarded-For` adresem z Fastify (`request.ip`), więc klient nie obejdzie limitu własnym nagłówkiem. Za proxy: `TRUSTED_PROXIES` (adresy/CIDR; Fastify 5.12 nie ufa samej liczbie hopów). **Wartość dla Fly trzeba ustawić przy wdrożeniu**, inaczej wszyscy dzielą limit adresu proxy (`deployment.md`).
 - Nowe zmienne: `BETTER_AUTH_SECRET` (wymagany), `APP_ORIGIN`, `TRUSTED_PROXIES` (`.env.example`, `deployment.md`). `db:migrate` czyta tylko `DATABASE_URL` (job CI „migrations” nie ma sekretu) — sprawdzone uruchomieniem bez sekretu: błąd połączenia, nie konfiguracji.
 - Przekierowanie po zalogowaniu/rejestracji robi strażnik `PublicOnly` (jedno miejsce; formularz tylko ustawia sesję); powrót tylko na ścieżki aplikacji (odrzuca `//host`).
-- SC-01 bez linku „Nie pamiętasz hasła?” (SC-03 to E-02). SC-02 ma link „zresetuj hasło” → `/reset-hasla`, bo wymaga go AC2; do E-02 ta ścieżka prowadzi anonima na SC-01.
+- SC-01 bez linku „Nie pamiętasz hasła?” (SC-03 to E-02, przejął T-053). SC-02 ma link „zresetuj hasło” → `/reset-hasla`, bo wymaga go AC2; do E-02 ta ścieżka prowadzi anonima na SC-01.
 - Ekran startowy szkieletu (T-001, stan API) usunięty — `/` prowadzi na „Moje listy” / SC-01. Test E2E T-001 (`start.spec.ts`) zmieniony: SPA pod `/` i dowolną ścieżką pokazuje SC-01 (`lang="pl"`, axe).
 - Zmiany istniejących testów: `database.test.ts` przypinał „dokładnie 1 migracja” → „co najmniej 1” (zastosowane = w dzienniku zostaje); testy T-001 budują aplikację przez `buildTestApp` (wymagana opcja `auth`), asercje bez zmian.
 - `eslint.config.js`: progi rozmiaru funkcji i plików nie obejmują już `*.test.{ts,tsx}` — zgodnie z `CODING_STANDARDS.md` („kod źródłowy (bez testów)”); wcześniej konfiguracja obejmowała testy w `src/`.

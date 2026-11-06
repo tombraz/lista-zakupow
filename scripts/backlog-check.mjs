@@ -15,6 +15,8 @@
 //   node scripts/backlog-check.mjs --threats <file> # threat model (default docs/architecture/threat-model.md)
 //
 // Exit code 1 when errors are found (missing dependency, cycle, bad status...).
+// Warnings (exit code 0) include work handed over to another epic without a receiver
+// ("to E-02", "w E-02", "→ E-02"...; rules in the "Handoffs" section below).
 // No dependencies: runs on plain Node 18+.
 
 import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from "node:fs";
@@ -204,6 +206,38 @@ if (existsSync(THREAT_MODEL)) {
     if (!coveredBy) warnings.push(`${THREAT_MODEL}: ${th} needs exactly one "Covered by" value: task, ci or accepted`);
     else if (coveredBy === "task" && !listed.has(th)) warnings.push(`threat ${th} is covered "by task" but no task lists it in threats:`);
   }
+}
+
+// Handoffs: a task line that hands work over to another epic needs a receiver, otherwise the
+// work is lost between epics (T-099). Handoff phrase: "to E-xx", "w E-xx", "we E-xx", "do E-xx",
+// "→ E-xx" or "-> E-xx" (fenced code blocks and `inline code` are ignored). Received when the
+// same line names a task of E-xx (a fix task belongs to the epic whose branch epic/E-xx-... its
+// text names) or a story of E-xx, or when E-xx's "## Out of scope" section names the source task.
+// Skipped: the task's own epic, and epics still in status todo (not planned yet).
+// Warning only, so it never blocks /build-epic.
+const HANDOFF = /(?<![\p{L}\p{N}_])(?:to|we?|do)\s+(E-\d+)(?![\w-])|(?:->|→)\s*(E-\d+)(?![\w-])/giu;
+const RECEIVER = /(?<![\w-])(?:T-\d{3,}|S-\d+-\d+)(?!\d)/g;
+const taskText = new Map([...tasks.values()].map((t) => [t.id, readFileSync(t.path, "utf8")]));
+const epicOf = (t) => t.epic || (taskText.get(t.id).match(/epic\/(E-\d+)(?!\w)/) || [])[1];
+const ownerEpic = (id) => (tasks.has(id) ? epicOf(tasks.get(id)) : stories.get(id)?.epic);
+const outOfScope = (ep) =>
+  (readFileSync(ep.path, "utf8").match(/^## Out of scope[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [])[1] ?? "";
+const received = (target, line, sourceId) =>
+  [...line.matchAll(RECEIVER)].some(([id]) => id !== sourceId && ownerEpic(id) === target) ||
+  (epics.has(target) && new RegExp(`(?<![\\w-])${sourceId}(?!\\d)`).test(outOfScope(epics.get(target))));
+for (const t of tasks.values()) {
+  let fenced = false;
+  taskText.get(t.id).split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) return;
+    const reported = new Set();
+    for (const m of line.replace(/`[^`]*`/g, "").matchAll(HANDOFF)) {
+      const target = m[1] ?? m[2];
+      if (reported.has(target) || target === epicOf(t) || epics.get(target)?.status === "todo" || received(target, line, t.id)) continue;
+      reported.add(target);
+      warnings.push(`${t.file}:${i + 1}: hands work over to ${target} ("${m[0].trim()}") but names no ${target} task or story as receiver, and ${target} "Out of scope" does not list ${t.id}`);
+    }
+  });
 }
 
 // Cycles (DFS with colours)

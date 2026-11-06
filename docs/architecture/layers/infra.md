@@ -34,6 +34,8 @@ Istnieje (T-010): `Dockerfile` i `.dockerignore` (obraz `ghcr.io/tombraz/lista-z
 
 Istnieje (T-013): `scripts/workflow-check.mjs` (znacznik `TYMCZASOWE` w `.github/workflows/` zatrzymuje `pnpm check` i job `always` w CI) z testem `scripts/test/workflow-check.test.sh`; `deploy.yml` wdraża staging tylko z `main` i przez `workflow_dispatch`.
 
+Istnieje (T-099): `scripts/test/backlog-check.test.mjs` (`node:test`, backlog-fikstury w katalogu tymczasowym, CLI z `--root`) — przekazania pracy do innego epiku bez odbiorcy; job `infra` w CI.
+
 Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`.
 
 ## Komendy
@@ -46,6 +48,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | raport pokrycia | `pnpm test:coverage` (wynik w `coverage/`) | korzeń repo |
 | actionlint (rung 1) | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` (Git Bash na Windows: poprzedź `MSYS_NO_PATHCONV=1`) | korzeń repo |
 | testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh`; `bash scripts/test/mobile.test.sh` | korzeń repo |
+| test `backlog-check` (przekazania do epiku, T-099) | `node --test scripts/test/backlog-check.test.mjs` | korzeń repo |
 | skan zależności | `pnpm audit --audit-level high` | korzeń repo |
 | testy skryptów wdrożenia (rung 2) | `bash scripts/test/deploy.test.sh`; `deploy-workflow`, `workflow-check`, `image`, `smoke`, `zap`, `staging-setup` analogicznie | korzeń repo |
 | test przebiegu komentarzy z `pnpm lint` (obejścia padają; job `static`, bo potrzebuje zależności) | `bash scripts/test/lint-directives.test.sh` | korzeń repo |
