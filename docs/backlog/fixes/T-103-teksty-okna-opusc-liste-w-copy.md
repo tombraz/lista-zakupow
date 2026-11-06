@@ -4,7 +4,7 @@ title: "Teksty okna „Opuść listę” w pliku komunikatów i w Copy SC-06/SC-
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-13]
@@ -97,3 +97,25 @@ Pełne sprawdzenie: `pnpm check` exit 0 (format, lint, typecheck, quality, desig
 Propozycja z przeglądu: AC3 (test Copy zgłasza teksty w `.tsx`). Zaakceptowana przez właściciela 2026-11-06 razem z tym zadaniem.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+Przegląd: commit `fd3c172` (jedyny commit implementacji). Uruchomione: `pnpm check` exit 0 (Test Files 154 passed, Tests 1245 passed; test:mobile 10 passed; lint, typecheck, quality, design-check, backlog-check, workflow-check zielone). `threats: []` — brak prób exploitu do wykonania; zmiana nie dotyka autoryzacji ani danych.
+
+Kryteria:
+- AC1 pass — `lists/leaveMessages.ts` trzyma `leaveMessages` i `leaveErrorText`; `LeaveListDialog.tsx` tylko importuje (jedyny konsument, grep).
+- AC2 pass — Copy SC-06: `leave.confirm.question/consequence/cta`, `leave.error`, `cancel`; Copy SC-07: `leave.confirm.question/consequence/cta`, `leave.error`, `cancel`. Test zgodności zielony.
+- AC3 pass — fixture `interface text in a shared .tsx file …` sprawdza błąd z nazwą pliku (literał, template, tekst JSX; `components/` i `screens/` pominięte). Spot-check: `<span aria-label="Zamknij okno" />` dopisany do `LeaveListDialog.tsx` → czerwony „lists/LeaveListDialog.tsx · „Zamknij okno””. Zakres w nagłówku testu i `web.md` zgodny.
+- AC4 pass — spot-check w `lists/leaveMessages.ts` (przywrócone): „Opuść”→„Wyjdź” (SC-06 i SC-07 czerwone), „Anuluj”→„Zamknij” (SC-07 czerwone; SC-06 ma „Zamknij” w Copy `edit.close`, więc dla SC-06 to poprawnie zgodne), „Spróbuj ponownie.”→„Spróbuj jeszcze raz.” (SC-06 i SC-07 czerwone). Każdy: `Tests 1 failed | 14 passed (15)`.
+- AC5 pass — pełny zestaw zielony, w tym `ListScreen.leave.test.tsx`, `ParticipantsScreen.*.test.tsx`; zachowanie okna bez zmian (te same teksty, ten sam komponent).
+
+Root cause wyjaśnia, dlaczego test T-100 nie złapał błędu (`.tsx` pomijane); red evidence dla testów 1 i 2 jest w Evidence.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test Copy | Jednowyrazowy tekst bez polskiej litery w `.tsx` modułu wspólnego (np. `<span>Zamknij</span>`, „Zapisz”) nie jest zgłaszany: `sharedTsxTexts()` filtruje przez `looksLikeText`. To ta sama klasa luki, którą task zamknął dla `*Messages.ts` („Anuluj”). AC3 mówi „tekst, który test uznałby za tekst interfejsu”, więc kryterium spełnione. | Spot-check: `const y = <span>Zamknij</span>` w `LeaveListDialog.tsx` → `Tests 15 passed`. | Rozważyć: każdy niepusty `JsxText` z literą w `.tsx` modułu wspólnego to błąd (tekst JSX prawie zawsze jest widoczny). |
+| 2 | note | test Copy | `MESSAGES_FILE` (`[a-z]Messages\.ts$`) to konwencja nazwy, której nic nie wymusza: tekst w module wspólnym o innej nazwie znów podlega `looksLikeText`. | `copyRegister.ts:37`. | Ewentualnie reguła w `web.md`/lint: teksty modułu wspólnego tylko w `*Messages.ts`. |
+
+Po spot-checkach `git status` czysty (pliki przywrócone z kopii).
