@@ -210,9 +210,10 @@ if (existsSync(THREAT_MODEL)) {
 
 // Handoffs: a task line that hands work over to another epic needs a receiver, otherwise the
 // work is lost between epics (T-099). Handoff phrase: "to E-xx", "w E-xx", "we E-xx", "do E-xx",
-// "→ E-xx" or "-> E-xx" (fenced code blocks and `inline code` are ignored). Received when the
-// same line names a task of E-xx (a fix task belongs to the epic whose branch epic/E-xx-... its
-// text names) or a story of E-xx, or when E-xx's "## Out of scope" section names the source task.
+// "→ E-xx" or "-> E-xx", in any letter case ("to e-02" counts as E-02, T-102; fenced code blocks
+// and `inline code` are ignored). Received when the same line names a task of E-xx (a fix task
+// belongs to the epic whose branch epic/E-xx-... its text names) or a story of E-xx, or when
+// E-xx's "## Out of scope" section names the source task.
 // Skipped: the task's own epic, and epics still in status todo (not planned yet).
 // Warning only, so it never blocks /build-epic.
 const HANDOFF = /(?<![\p{L}\p{N}_])(?:to|we?|do)\s+(E-\d+)(?![\w-])|(?:->|→)\s*(E-\d+)(?![\w-])/giu;
@@ -232,7 +233,7 @@ for (const t of tasks.values()) {
     if (fenced) return;
     const reported = new Set();
     for (const m of line.replace(/`[^`]*`/g, "").matchAll(HANDOFF)) {
-      const target = m[1] ?? m[2];
+      const target = (m[1] ?? m[2]).toUpperCase();
       if (reported.has(target) || target === epicOf(t) || epics.get(target)?.status === "todo" || received(target, line, t.id)) continue;
       reported.add(target);
       warnings.push(`${t.file}:${i + 1}: hands work over to ${target} ("${m[0].trim()}") but names no ${target} task or story as receiver, and ${target} "Out of scope" does not list ${t.id}`);

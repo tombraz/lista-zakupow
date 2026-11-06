@@ -146,3 +146,30 @@ test("dwie frazy do tego samego epiku w jednej linii → jedno ostrzeżenie", ()
   const out = run(handing("- SC-03 to E-02; do E-02 link prowadzi na SC-01."));
   assert.equal(handoffWarnings(out).length, 1, out);
 });
+
+// T-102: ID epiku w przekazaniu małymi literami („to e-02”) liczy się jak „to E-02”.
+test("„to e-02” z odbiorcą T-002 w linii → brak ostrzeżenia (T-102 AC1)", () => {
+  const out = run(handing("- Opuść listę to e-02; przejął T-002."));
+  assert.deepEqual(handoffWarnings(out), []);
+});
+
+test("„w e-01” we własnym epiku i „to e-02” przy E-02 w statusie todo → brak ostrzeżenia (T-102 AC2)", () => {
+  const own = base(task("T-002", "E-02", "S-02-01", "Coś innego."));
+  own[SOURCE] = task("T-001", "E-01", "S-01-01", "- Zrobione w e-01, bez zmian.");
+  assert.deepEqual(handoffWarnings(run(own)), []);
+  const todo = handing("- Opuść listę to e-02.");
+  todo["backlog/E-02-b/epic.md"] = epic("E-02", "todo");
+  assert.deepEqual(handoffWarnings(run(todo)), []);
+});
+
+test("niepokryte „to e-02” → jedno ostrzeżenie z E-02, także z „to E-02” i „do e-02” w linii (T-102 AC3)", () => {
+  for (const line of [
+    "- Opuść listę to e-02.",
+    "- SC-03 to E-02; do e-02 link prowadzi na SC-01.",
+  ]) {
+    const warns = handoffWarnings(run(handing(line)));
+    assert.equal(warns.length, 1, line);
+    assert.match(warns[0], /hands work over to E-02 .*names no E-02 task/, warns[0]);
+    assert.doesNotMatch(warns[0], /e-02 task|to e-02 \(|, and e-02/, warns[0]);
+  }
+});

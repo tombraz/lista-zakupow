@@ -4,7 +4,7 @@ title: "backlog-check: przekazanie z małymi literami (`to e-02`) liczone jak `t
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: [T-099]
 layers: [infra]
 requirements: []
@@ -24,10 +24,10 @@ related_tasks: [T-099]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given linia `- Opuść listę to e-02; przejął T-002.` w tasku E-01 i T-002 w epiku E-02 (`in-progress`), when `node scripts/backlog-check.mjs`, then brak ostrzeżenia o przekazaniu. — verified by: test w `scripts/test/backlog-check.test.mjs`, czerwony przed zmianą
-- [ ] AC2: Given `w e-01` w tasku E-01 (własny epik) albo `to e-02` przy E-02 w statusie `todo`, then brak ostrzeżenia. — verified by: jak AC1
-- [ ] AC3: Given niepokryte `to e-02`, then jedno ostrzeżenie z `E-02` wielkimi literami (także gdy w tej samej linii jest `to E-02` i `do e-02`). — verified by: jak AC1
-- [ ] AC4: No regression in: 14 testów T-099 w `scripts/test/backlog-check.test.mjs`; `node scripts/backlog-check.mjs` na repo bez ostrzeżeń; `--write-index`, `--summary`, `--board`.
+- [x] AC1: Given linia `- Opuść listę to e-02; przejął T-002.` w tasku E-01 i T-002 w epiku E-02 (`in-progress`), when `node scripts/backlog-check.mjs`, then brak ostrzeżenia o przekazaniu. — verified by: test w `scripts/test/backlog-check.test.mjs`, czerwony przed zmianą
+- [x] AC2: Given `w e-01` w tasku E-01 (własny epik) albo `to e-02` przy E-02 w statusie `todo`, then brak ostrzeżenia. — verified by: jak AC1
+- [x] AC3: Given niepokryte `to e-02`, then jedno ostrzeżenie z `E-02` wielkimi literami (także gdy w tej samej linii jest `to E-02` i `do e-02`). — verified by: jak AC1
+- [x] AC4: No regression in: 14 testów T-099 w `scripts/test/backlog-check.test.mjs`; `node scripts/backlog-check.mjs` na repo bez ostrzeżeń; `--write-index`, `--summary`, `--board`.
 
 ## TDD plan
 
@@ -37,7 +37,7 @@ related_tasks: [T-099]
 | --- | --- | --- | --- | --- |
 | 1 | `to e-02` z odbiorcą T-002 w linii → brak ostrzeżenia | unit | node:test | AC1 |
 | 2 | `w e-01` we własnym epiku i `to e-02` przy E-02 `todo` → brak ostrzeżenia | unit | node:test | AC2 |
-| 3 | niepokryte `to e-02` → ostrzeżenie z `E-02`; `to E-02` i `do e-02` w jednej linii → jedno ostrzeżenie | unit | node:test | AC3 |
+| 3 | `niepokryte `to e-02` → ostrzeżenie z `E-02`; `to E-02` i `do e-02` w jednej linii → jedno ostrzeżenie` | unit | node:test | AC3 |
 
 **Run:** `node --test scripts/test/backlog-check.test.mjs` (w CI: job `infra`)
 
@@ -52,6 +52,28 @@ related_tasks: [T-099]
 T-099 dodał flagę `i` do wzorca, żeby łapać „To E-02” i „W E-02” na początku zdania, ale nie znormalizował przechwyconego ID epiku. Testy T-099 używały tylko wielkich liter w ID, więc niedopasowanie nie wyszło.
 
 ## Evidence
+
+Zmiana: `scripts/backlog-check.mjs`, sekcja „Handoffs” — przechwycone ID epiku normalizowane `toUpperCase()` przed porównaniami (`reported`, własny epik, status `todo`, `received`) i w komunikacie; komentarz sekcji mówi, że wielkość liter nie ma znaczenia.
+
+**TDD** (`node --test scripts/test/backlog-check.test.mjs`, seam: CLI z `--root`, jak T-099):
+
+| # | Test | Red (przed zmianą) | Teraz |
+| --- | --- | --- | --- |
+| 1 | `„to e-02” z odbiorcą T-002 w linii → brak ostrzeżenia (T-102 AC1)` | `deepStrictEqual`: oczekiwano `[]`, jest `WARN … hands work over to e-02 ("to e-02") but names no e-02 task …` | pass |
+| 2 | `„w e-01” we własnym epiku i „to e-02” przy E-02 w statusie todo → brak ostrzeżenia (T-102 AC2)` | oczekiwano `[]`, jest `WARN … hands work over to e-01 ("w e-01") …` | pass |
+| 3 | `niepokryte „to e-02” → jedno ostrzeżenie z E-02, także z „to E-02” i „do e-02” w linii (T-102 AC3)` | `doesNotMatch`/`match`: komunikat `hands work over to e-02 … names no e-02 task` zamiast `E-02` | pass |
+
+Uwaga dla QA: test 1 był czerwony przed jakąkolwiek zmianą produkcyjną. Jedna linia poprawki (green testu 1) naprawiła też zachowania z testów 2 i 3, więc ich czerwień pokazałem, cofając na chwilę poprawkę (`target = m[1] ?? m[2]`) — wszystkie trzy testy padały na asercjach pokazanych wyżej — i przywracając ją. Wszystkie 17 testów przechodzi.
+
+**Kryteria akceptacji:**
+
+- AC1: test 1.
+- AC2: test 2 (oba przypadki: własny epik i epik w `todo`).
+- AC3: test 3 (pojedyncze `to e-02` oraz linia z `to E-02; do e-02` → jedno ostrzeżenie z `E-02`).
+- AC4: 14 testów T-099 przechodzi (17/17 łącznie); `node scripts/backlog-check.mjs` → `OK: no errors`, brak ostrzeżeń o przekazaniu; `--summary --epic E-02` → `"ok":true`; `--write-index --board` przechodzi przy przekazaniu do QA. `pnpm check` (format, lint, typy, jscpd, dependency-cruiser, design-check, backlog-check, workflow-check, 1242 testy vitest, mobile) — exit 0.
+- Przypadki brzegowe z planu QA, sprawdzone ręcznie na fiksturze tymczasowej: `→e-02` bez spacji → `hands work over to E-02 ("→e-02")`; `to E-02 i to e-02` → jedno ostrzeżenie; `to e-09` (nieistniejący epik) → komunikat z `E-09`. Fragment w cudzysłowie (`"to e-02"`) pokazuje tekst w oryginalnej formie.
+
+Przewodniki warstw: bez zmian.
 
 ## Prevention
 
