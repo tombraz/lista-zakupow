@@ -4,7 +4,7 @@ title: "Teksty komponentów design systemu (`components/*.tsx`) w plikach komuni
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: [T-103]
 layers: [web]
 requirements: []
@@ -75,3 +75,34 @@ Pełne sprawdzenie: `pnpm check` exit 0 (format, lint, typecheck, quality, desig
 Domknięcie zakresu kontroli z T-103 (`components/`) oraz uwagi QA T-103: w `.tsx` modułu wspólnego każdy tekst JSX z literą to błąd, nie tylko ten, który `looksLikeText` uznaje za tekst (AC3).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+Zakres: commity `36b45a3`, `d923513` (`d7fe6ba` — status). Kontrola niezależna w nowym kontekście.
+
+**Reprodukcja:** `pnpm install --frozen-lockfile`, `pnpm check` — exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check; `Test Files 155 passed`, `Tests 1259 passed`; test:mobile). `pnpm vitest run --project web copyRegister` — 17 passed.
+
+**Kryteria:**
+- AC1 — pass. `AppBar`, `AuthPage`, `LoadError`, `OfflineBanner`, `PasswordField` importują teksty z `productMessages.ts` / `<nazwa>Messages.ts`; wartości w diffie identyczne co do znaku z dawnymi literałami. Repo-test obejmuje `components/` i jest zielony.
+- AC2 — pass. `design-system.md` ma sekcję „## Copy” (7 wierszy); test czyta ją tylko dla plików z `components/`; brak sekcji = błąd (fixture). Wiersze mają źródło w zatwierdzonych dokumentach (SC-01 Layout/Copy `legal`, SC-05–SC-07 States, OfflineBanner „Budowa”/T-080) albo zapis zatwierdzenia właściciela 2026-11-06.
+- AC3 — pass. Fixture `components/Close.tsx` z `<span>Zamknij</span>`; nagłówek testu i `web.md` („Pułapki”) opisują ten zakres.
+- AC4 — pass dla testów komponentów i ekranów (pełny `pnpm check`). E2E nie uruchamiane przez QA: zmiana nie zmienia renderowanych wartości (diff), więc ryzyko regresji E2E pomijalne.
+
+**Mutacje QA (zmiana → test → przywrócenie z kopii, `git status` czysty):**
+1. Tekst JSX znów przez `looksLikeText` → `1 failed` (fixture AC3).
+2. Ponowne wykluczenie `components/` w `sharedTsxTexts` → `1 failed`.
+3. Copy komponentów dopasowywane też dla plików ekranów → `1 failed` („a screen text never matches the component Copy”).
+4. `<span>Pokaz</span>` w `PasswordField.tsx` → repo-test czerwony: `components/PasswordField/PasswordField.tsx · „Pokaz”`.
+5. `LoadError.retry` w `design-system.md` → „Spróbuj jeszcze raz” → repo-test czerwony dla SC-05, SC-06, SC-07.
+
+**Fix task:** „Root cause” wyjaśnia, czemu testy nie złapały (zakres T-103 wykluczał `components/`, brak fixture jednowyrazowego JSX); czerwone dowody są w Evidence; mutacje 1–2 potwierdzają, że test reprodukujący pada bez poprawki.
+
+**Bezpieczeństwo:** brak `threats:`; zmiana dotyczy tylko tekstów i testu, bez danych użytkownika.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Code (duplicated knowledge) | „Wspólna lista zakupów” zapisane dwa razy w `components/productMessages.ts` (`PRODUCT_NAME` i szablon `documentTitle`). Powód: test nie rozwija stałej z importu względnego w szablonie (`${PRODUCT_NAME}` dałby `{…} · {…}`). | `apps/web/src/components/productMessages.ts`, linie 2 i 6 | Jedno źródło nazwy produktu; ewentualnie test rozwijający stałe lokalne/względne w szablonach. |
+| 2 | minor | Test coverage | Literał w atrybucie JSX w `.tsx` modułu wspólnego (`aria-label="Zamknij"`) nadal przechodzi przez `looksLikeText`, więc jednowyrazowy tekst bez polskiej litery nie jest zgłaszany. Obecnie w `components/` brak takich atrybutów (grep). | `apps/web/test/copyRegister.ts`, `sharedTsxTexts` | Atrybuty dostępności (`aria-label`, `title`, `alt`, `placeholder`) traktowane jak tekst JSX (każda litera). |
+| 3 | note | Design docs | `design-system.md` „## Copy” mówi, że ekran nie powtarza wierszy komponentów, a Copy SC-01 dalej ma `legal` (teraz nieużywany przez kod SC-01; tekst idzie z `AuthPage.legal`). Test nie wykrywa osieroconych wierszy. | `docs/design/screens/SC-01-logowanie.md:75` | Usunąć wiersz albo oznaczyć jako pochodzący z komponentu. |
