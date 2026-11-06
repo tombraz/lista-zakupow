@@ -4,7 +4,7 @@ title: "SC-06: „Usuń listę” w menu nieaktywne bez połączenia, jak inne w
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-15, F-05]
@@ -52,11 +52,23 @@ related_tasks: [T-063, T-094, T-005]
 
 ## Root cause
 
-<Uzupełnia /fix.>
+Menu właściciela SC-06 powstało w T-005, przed trybem offline. T-063 dodał `writes` do `Button`, a T-094 dodał `writes` do `MoreMenu`, ale tylko dla nowej pozycji uczestnika „Opuść listę”. Pozycji właściciela („Zmień nazwę listy”, „Usuń listę”) nikt nie przejrzał, bo reguła „wyzwalacz akcji zapisu ma `writes`” nie była nigdzie zapisana. Okna blokowały zapis tylko przyciskiem w środku (`ConfirmDialog`, `RenameSheet`: `Button writes`).
+
+Dlaczego testy nie złapały: testy offline T-063 sprawdzały przyciski zapisu (w tym te w oknach), a T-094 tylko menu uczestnika. Nie było testu offline menu właściciela.
+
+Inne wystąpienia: `MoreMenu` jest używane tylko na SC-06. Pozostałe wyzwalacze okien i formularzy zapisu mają już `writes` (SC-05 „+ Nowa lista”, SC-07 `LeaveList`, `Members`, `ParticipantsScreen`, SC-09 `DeleteAccount`). Edycja pozycji (`ItemRow`) jest nieaktywna bez połączenia od T-063.
+
+Decyzja AC2: „Zmień nazwę listy” też dostaje `writes`. Otwiera arkusz, którego jedynym celem jest zapis (`PATCH`), tak samo jak SC-05 „+ Nowa lista” otwiera formularz i ma `writes`. Reguła w `web.md` → „Konwencje”.
+
+Zmiany: `ListScreen.tsx` (`OwnerMenu`: `writes: true` dla obu pozycji), `ListScreen.test.tsx` (test offline dla obu pozycji), `docs/architecture/layers/web.md` („Konwencje”, historia zmian).
 
 ## Evidence
 
-<Uzupełnia /fix.>
+Red: `SC-06 Lista > menu „Więcej opcji” > makes the owner's „Usuń listę” inactive without a connection and opens nothing (T-063)` oraz ten sam test dla „Zmień nazwę listy”: oba padają na `expect(item).toHaveAttribute("aria-disabled", "true")` (atrybutu brak). W tym samym DOM `Dodaj pozycję` ma `aria-disabled="true"`, więc stan offline działa. `Tests 2 failed | 18 skipped`.
+
+Green: `pnpm vitest run --project web src/screens/SC-06-lista`: `Test Files 9 passed`, `Tests 109 passed`.
+
+Pełne sprawdzenie: `pnpm check` exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, `Test Files 154 passed`, `Tests 1247 passed`, test:mobile). `pnpm build` exit 0.
 
 ## Prevention
 
