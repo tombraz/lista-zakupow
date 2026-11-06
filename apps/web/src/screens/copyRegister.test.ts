@@ -11,10 +11,14 @@
  *   albo słowo z wielkiej litery i kolejne słowo); liczą się literały użytej deklaracji, które tak
  *   wyglądają. Plik komunikatów modułu wspólnego `<nazwa>Messages.ts` (np. `lists/leaveMessages.ts`)
  *   liczy się jak `messages.ts`: każdy literał, także jednowyrazowy („Anuluj”; T-103).
- * - Pliki `.tsx` tylko prowadzą importy. W `.tsx` modułu wspólnego (poza `screens/` i `components/`)
- *   literał albo tekst JSX, który wygląda na tekst interfejsu, to błąd ze wskazaniem pliku: tekst
- *   należy do pliku `.ts` modułu (T-103). Teksty w `.tsx` katalogów ekranów i komponentów design
- *   systemu (`components/`) są jeszcze poza testem.
+ * - Pliki `.tsx` tylko prowadzą importy. W `.tsx` modułu wspólnego (wszystko poza `screens/`, także
+ *   komponenty design systemu w `components/`) literał, który wygląda na tekst interfejsu, i każdy
+ *   tekst JSX z literą (także jednowyrazowy `<span>Zamknij</span>`) to błąd ze wskazaniem pliku:
+ *   tekst należy do pliku `.ts` modułu (T-103, T-106). Teksty w `.tsx` katalogów ekranów są jeszcze
+ *   poza testem.
+ * - Tekst z pliku w `components/` pasuje do wiersza Copy ekranu albo do tabeli „## Copy”
+ *   komponentów w `docs/design/design-system.md` (T-106); tekst spoza `components/` tylko do Copy
+ *   ekranu.
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
  * - Parametr szablonu `${…}` pasuje do dowolnego `{nazwa}` w Copy (`${String(count)} do kupienia`
@@ -34,6 +38,7 @@ import { findCopyGaps, formatCopyGaps } from "../../test/copyRegister";
 
 const SRC = join(import.meta.dirname, "..");
 const SCREENS_DOCS = join(import.meta.dirname, "../../../../docs/design/screens");
+const DESIGN_SYSTEM = join(import.meta.dirname, "../../../../docs/design/design-system.md");
 
 function filesIn(dir: string): string[] {
   return readdirSync(dir, { recursive: true, encoding: "utf8" }).map((file) => join(dir, file));
@@ -65,6 +70,7 @@ describe("Copy register of web screens (repo)", () => {
       sources,
       specs: repoSpecs(),
       packages: { "@lista/shared": shared },
+      designSystem: readFileSync(DESIGN_SYSTEM, "utf8"),
     });
 
     expect([...screens]).toEqual(
@@ -339,13 +345,14 @@ describe("findCopyGaps (fixtures)", () => {
     expect(noSpec).toThrow("SC-10: brak specyfikacji ekranu");
   });
 
-  it("interface text in a shared .tsx file (outside screens/ and components/) is an error naming the file", () => {
+  it("interface text in a shared .tsx file (outside screens/, also components/) is an error naming the file", () => {
     const input = (dialog: string) => ({
       sources: {
         "lists/LeaveListDialog.tsx": dialog,
         "invitations/Notice.tsx": `export const Notice = () => <p role="status">Dołączasz   do listy</p>;`,
         "components/Banner.tsx": `export const Banner = () => <p role="status">Jesteś offline</p>;`,
         "components/Button.tsx": `export const Button = () => <button className="btn primary" type="button" />;`,
+        "components/Close.tsx": `export const Close = () => <button type="button"><span aria-hidden="true">×</span> <span>Zamknij</span></button>;`,
         "screens/SC-07-uczestnicy/messages.ts": `export const messages = { title: "Uczestnicy" };`,
         "screens/SC-07-uczestnicy/Leave.tsx": `
           import { LeaveListDialog } from "../../lists/LeaveListDialog";
@@ -363,11 +370,98 @@ describe("findCopyGaps (fixtures)", () => {
     expect(withTexts).toThrow(
       [
         "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        "components/Banner.tsx · „Jesteś offline”",
+        "components/Close.tsx · „Zamknij”",
         "invitations/Notice.tsx · „Dołączasz do listy”",
         "lists/LeaveListDialog.tsx · „Opuść”",
         "lists/LeaveListDialog.tsx · „Żeby wrócić, potrzebujesz zaproszenia.”",
       ].join("\n"),
     );
+  });
+
+  it("texts of a design system component match the component Copy in design-system.md or the screen Copy", () => {
+    const sources = {
+      "components/OfflineBanner/offlineBannerMessages.ts": `export const offlineBannerMessages = { offline: "Brak połączenia.", restored: "Połączenie przywrócone." };`,
+      "components/OfflineBanner/OfflineBanner.tsx": `
+        import { offlineBannerMessages } from "./offlineBannerMessages";
+        export const OfflineBanner = () => <p>{offlineBannerMessages.offline}</p>;`,
+      "components/PasswordField/passwordFieldMessages.ts": `export const passwordFieldMessages = { show: "Pokaż", hide: "Ukryj" };`,
+      "components/PasswordField/PasswordField.tsx": `
+        import { passwordFieldMessages } from "./passwordFieldMessages";
+        export const PasswordField = () => <button>{passwordFieldMessages.show}</button>;`,
+      "screens/SC-01-logowanie/messages.ts": `export const messages = { error: "Brak połączenia z kontem." };`,
+      "screens/SC-01-logowanie/SignIn.tsx": `
+        import { OfflineBanner } from "../../components/OfflineBanner/OfflineBanner";
+        import { PasswordField } from "../../components/PasswordField/PasswordField";
+        export const SignIn = () => <><OfflineBanner /><PasswordField /></>;`,
+      "screens/SC-05-moje-listy/messages.ts": `export const messages = { title: "Moje listy" };`,
+    };
+    const designSystem = `# Design system
+
+## Komponenty
+
+### OfflineBanner
+
+## Copy
+
+| Key | Text |
+| --- | --- |
+| OfflineBanner.offline | Brak połączenia. (zatwierdzone 2026-11-06, T-106) |
+| PasswordField.show / PasswordField.hide | Pokaż / Ukryj |
+
+## Zasady dostępności
+
+| a | Spoza Copy |
+`;
+    const gaps = findCopyGaps({
+      sources,
+      specs: {
+        "SC-01-logowanie.md": spec(["error", "Brak połączenia z kontem."]),
+        "SC-05-moje-listy.md": spec(["title", "Moje listy"], ["x", "Brak połączenia."]),
+      },
+      designSystem,
+    });
+    const screenRowOnly = findCopyGaps({
+      sources: {
+        ...sources,
+        "screens/SC-01-logowanie/messages.ts": `export const messages = { a: "Brak połączenia." };`,
+      },
+      specs: {
+        "SC-01-logowanie.md": spec(
+          ["a", "Brak połączenia."],
+          ["restored", "Połączenie przywrócone."],
+        ),
+        "SC-05-moje-listy.md": spec(["title", "Moje listy"]),
+      },
+      designSystem: designSystem.replace(
+        "| PasswordField.show / PasswordField.hide | Pokaż / Ukryj |\n",
+        "",
+      ),
+    });
+
+    expect(gaps).toEqual([
+      {
+        screen: "SC-01",
+        file: "components/OfflineBanner/offlineBannerMessages.ts",
+        text: "Połączenie przywrócone.",
+      },
+    ]);
+    expect(screenRowOnly.map((gap) => gap.text)).toEqual(["Pokaż", "Ukryj"]);
+    expect(() => findCopyGaps({ sources, specs: {}, designSystem: "# Design system\n" })).toThrow(
+      "design-system.md: brak sekcji „## Copy”",
+    );
+  });
+
+  it("a screen text never matches the component Copy, only its own Copy table", () => {
+    const gaps = findCopyGaps({
+      sources: {
+        "screens/SC-01-logowanie/messages.ts": `export const messages = { show: "Pokaż" };`,
+      },
+      specs: { "SC-01-logowanie.md": spec() },
+      designSystem: "## Copy\n\n| Key | Text |\n| --- | --- |\n| PasswordField.show | Pokaż |\n",
+    });
+
+    expect(gaps.map((gap) => gap.text)).toEqual(["Pokaż"]);
   });
 
   it("a shared *Messages.ts module counts every literal, like messages.ts (one-word „Anuluj”)", () => {

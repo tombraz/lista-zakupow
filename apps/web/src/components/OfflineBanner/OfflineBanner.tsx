@@ -1,13 +1,9 @@
 import { useState } from "react";
+import { offlineBannerMessages as texts } from "./offlineBannerMessages";
 import styles from "./OfflineBanner.module.css";
 
 /** Id paska: nieaktywne przyciski zapisu wskazują go jako wyjaśnienie (`aria-describedby`). */
 export const OFFLINE_BANNER_ID = "offline-banner";
-
-const texts = {
-  offline: "Brak połączenia. Zmiany nie są zapisywane.",
-  restored: "Połączenie przywrócone.",
-};
 
 /**
  * OfflineBanner (design-system.md): pod paskiem nagłówka, przesuwa treść. Region `role="status"`

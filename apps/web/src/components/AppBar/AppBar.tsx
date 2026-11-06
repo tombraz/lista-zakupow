@@ -2,6 +2,7 @@ import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode, type Ref 
 import { Link, useLocation } from "react-router";
 import { useConnection } from "../../live/useConnection";
 import { OfflineBanner } from "../OfflineBanner/OfflineBanner";
+import { documentTitle } from "../productMessages";
 import styles from "./AppBar.module.css";
 
 interface AppBarProps {
@@ -18,7 +19,7 @@ export function AppBar({ title, back, actions }: AppBarProps) {
   return (
     <>
       <header className={styles.bar}>
-        <title>{`${title} · Wspólna lista zakupów`}</title>
+        <title>{documentTitle(title)}</title>
         {back && (
           <Link className={styles.control} to={back.to}>
             <span aria-hidden="true">←</span> {back.label}

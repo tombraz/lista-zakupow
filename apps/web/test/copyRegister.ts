@@ -13,6 +13,8 @@ export interface CopyRegisterInput {
   specs: Record<string, string>;
   /** Wartości stałych z pakietów (`@lista/shared` → moduł). */
   packages?: Record<string, Record<string, unknown>>;
+  /** `docs/design/design-system.md`: tabela „## Copy” komponentów design systemu (T-106). */
+  designSystem?: string;
 }
 
 type Packages = Record<string, Record<string, unknown>>;
@@ -36,10 +38,19 @@ const SCREEN_DIR = /^screens\/(SC-\d{2})-[^/]+\//;
 /** Plik komunikatów: `messages.ts` ekranu albo `<nazwa>Messages.ts` modułu wspólnego (T-103). */
 const MESSAGES_FILE = /(^|\/)messages\.ts$|[a-z]Messages\.ts$/;
 
+const COPY_HEADING = /^## Copy\s*$/m;
+
 /** Parametr tekstu: `${…}` w kodzie i `{nazwa}` w Copy. */
 const PARAMETER = "{…}";
 
-export function findCopyGaps({ sources, specs, packages = {} }: CopyRegisterInput): CopyGap[] {
+export function findCopyGaps({
+  sources,
+  specs,
+  packages = {},
+  designSystem = "## Copy\n",
+}: CopyRegisterInput): CopyGap[] {
+  if (!COPY_HEADING.test(designSystem)) throw new Error("design-system.md: brak sekcji „## Copy”");
+  const componentCopy = copyTexts(designSystem);
   const modules = new ModuleGraph(sources, packages);
   const misplaced = modules.sharedTsxTexts();
   if (misplaced.length > 0) {
@@ -54,7 +65,8 @@ export function findCopyGaps({ sources, specs, packages = {} }: CopyRegisterInpu
   for (const [screen, files] of screens(sources)) {
     const copy = copyTexts(specOf(screen, specs));
     for (const { file, text } of modules.screenTexts(files)) {
-      if (!copy.has(text)) gaps.push({ screen, file, text });
+      const component = file.startsWith("components/") && componentCopy.has(text);
+      if (!copy.has(text) && !component) gaps.push({ screen, file, text });
     }
   }
   return gaps;
@@ -83,7 +95,7 @@ function specOf(screen: string, specs: Record<string, string>): string {
   if (name === undefined)
     throw new Error(`${screen}: brak specyfikacji ekranu w docs/design/screens`);
   const markdown = specs[name] ?? "";
-  if (!/^## Copy\s*$/m.test(markdown)) throw new Error(`${name}: brak sekcji „## Copy”`);
+  if (!COPY_HEADING.test(markdown)) throw new Error(`${name}: brak sekcji „## Copy”`);
   return markdown;
 }
 
@@ -127,16 +139,18 @@ class ModuleGraph {
   }
 
   /**
-   * Pliki `.tsx` modułów wspólnych (poza `screens/` i `components/`, bez testów) tylko renderują
-   * teksty importowane z plików `.ts`: literał albo tekst JSX, który wygląda na tekst interfejsu,
-   * jest tam błędem (T-103). Inaczej test nie widzi tekstu, bo literały `.tsx` są poza rejestrem.
-   * `components/` (design system, Copy w `design-system.md`) jeszcze poza kontrolą — osobny task.
+   * Pliki `.tsx` modułów wspólnych (poza `screens/`, także `components/`, bez testów) tylko
+   * renderują teksty importowane z plików `.ts`: literał, który wygląda na tekst interfejsu, i każdy
+   * tekst JSX z literą są tam błędem (T-103, T-106). Inaczej test nie widzi tekstu, bo literały
+   * `.tsx` są poza rejestrem. Tekst JSX prawie zawsze jest widoczny, więc nie musi wyglądać na
+   * polski tekst (`<span>Zamknij</span>`); literał bywa klasą albo typem, więc musi.
    */
   sharedTsxTexts(): { file: string; text: string }[] {
     const found: { file: string; text: string }[] = [];
     for (const file of Object.keys(this.sources).sort()) {
-      const shared = !file.startsWith("screens/") && !file.startsWith("components/");
-      if (!file.endsWith(".tsx") || !shared || file.endsWith(".test.tsx")) continue;
+      if (!file.endsWith(".tsx") || file.startsWith("screens/") || file.endsWith(".test.tsx")) {
+        continue;
+      }
       const module = this.module(file);
       const jsxTexts: string[] = [];
       const visit = (node: ts.Node): void => {
@@ -144,7 +158,10 @@ class ModuleGraph {
         ts.forEachChild(node, visit);
       };
       visit(module.source);
-      const texts = [...this.literals(module, [module.source]), ...jsxTexts].filter(looksLikeText);
+      const texts = [
+        ...this.literals(module, [module.source]).filter(looksLikeText),
+        ...jsxTexts.filter((text) => /\p{L}/u.test(text)),
+      ];
       for (const text of new Set(texts)) found.push({ file, text });
     }
     return found;
