@@ -4,7 +4,7 @@ title: "Dokumentacja po przeglądzie 3 E-02: jedna tabela błędów, listId w fo
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-103, T-104]
 layers: [backend]
 requirements: [F-13]
@@ -80,3 +80,30 @@ Inne wystąpienia: innych powielonych tabel kodów w `docs/` nie ma (`grep "Bł�
 AC2 (test zgodności w obu kierunkach i ze statusem), propozycja z przeglądu zaakceptowana przez właściciela 2026-11-06.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-06)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Test | `codesIn` i parser w `error-status-docs.test.ts` pomijają treść w nawiasach, więc kod spoza `ERROR_CODES` zapisany w nawiasie w kolumnie `code` (np. `` `x` (`teapot`) ``) nie da czerwonego testu. Dziś nawiasy zawierają tylko pola (`limit`, `listId`, `requestId`). | `packages/shared/test/error-codes-docs.test.ts:33`, `apps/api/test/error-status-docs.test.ts:21` | ewentualnie pomijać tylko znane nazwy pól z `ApiErrorBody` zamiast całego nawiasu |
+| 2 | note | Test | Statusy kodów spoza domeny (`validation_failed`, `unauthenticated`, `invalid_credentials`, `invalid_token`, `email_taken`, `rate_limited`, `internal`, `invalid_origin`) nadal nie są sprawdzane automatycznie (przyznane w „Root cause”). | `apps/api/test/error-status-docs.test.ts:29` iteruje tylko `DOMAIN_ERROR_CODES` | poza zakresem AC2 (a); możliwa przyszła mapa statusów |
+
+Reproduce: `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, test, test:mobile) exit 0: 155 plików, 1257 testów vitest, 10 jest. `git status` czysty po uruchomieniu.
+
+Spot-check (mutacje `architecture.md`, cofnięte `git checkout`, `git status` czysty):
+- wiersz `| 418 | \`teapot\` | x |` → `FAIL |shared| … każdy kod w kolumnie \`code\` tabeli błędów jest w \`ERROR_CODES\` (T-105)`: `expected [ 'teapot' ] to deeply equal []`.
+- `| 410 | \`invitation_invalid\`` → `| 409 |` → `FAIL |api| … \`invitation_invalid\`: tabela błędów podaje status z \`DOMAIN_STATUS\``: `expected [ 409 ] to deeply equal [ 410 ]`.
+Oba testy odpowiadają planowi TDD (#1, #2) i ujawniają klasę błędu z „Root cause”.
+
+Kryteria:
+- AC1 — pass. `api.md` „Błędy wspólne” ma tylko kod i zakres, bez statusu i znaczenia, z odesłaniem do `architecture.md`; opisy 401/403/404 przeniesione do tabeli `architecture.md`. Poza tymi dwoma plikami w `docs/` (bez przeglądów i backlogu) brak innej tabeli opisów kodów (`grep`).
+- AC2 — pass (mutacje wyżej). Kod z kilkoma statusami (`validation_failed`) nie jest kodem domeny; parser zbiera wszystkie statusy z komórki, a dla kodów domeny wymaga dokładnie jednego (`toEqual([status])`), więc zdublowany wiersz z innym statusem też daje czerwony test.
+- AC3 — pass. Format błędu w `architecture.md` wymienia `listId` i `requestId` z kodami, przy których występują; `api.md` „Przyjmij” i akapit pod tabelą zaproszeń opisują `listId`. Zgodne z `ApiErrorBody` (`packages/shared/src/api/errors.ts:45`) i `apps/api/src/http/api-error.ts:36-38`.
+- AC4 — pass. Akapity T-087 i T-076 w `backend.md` odsyłają do `bestEffort` / `afterCommit` (`logFailure`), bez „łapać i logować”; brak sprzeczności z regułą o `try/catch`.
+- AC5 — pass. AC T-094 i T-095 odhaczone, ostatnie werdykty QA `pass` (T-094:118, T-095:80). `epic.md` S-02-02 `(F-13, SC-05, SC-06, SC-07)` jak `screens` w `story.md`; `SC-06-lista.md` ma F-13. `pnpm backlog-check` OK.
+- AC6 — pass. `UAT.md` odsyła do `docs/reviews/E-02-2026-11-06-1.md` (runda 3, `Verdict: fail` — sprawdzone). Statusy sprawdzone w plikach: T-094–T-104 `done`, T-106 `todo`, T-084, T-090–T-093, T-052, T-066–T-068 `todo`, T-047 `blocked`. Zadania rundy 3 (T-103, T-104, T-105) i decyzje P5/P7 zgodne z sekcją zadań przeglądu.
+- AC7 — pass (`pnpm check`).
+
+Fix task: „Root cause” wyjaśnia, czemu istniejący test nie złapał rozjazdu (tylko kierunek kod → dokument i obecność, bez statusu); test reprodukujący pada bez poprawki (mutacje wyżej). Kod produkcyjny: jedyna zmiana to `export` przy `DOMAIN_STATUS` (potrzebny testowi) i komentarze. Bez zakresu ponad zadanie. Story/epik: n/a (`kind: fix`).
