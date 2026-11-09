@@ -4,7 +4,7 @@ title: "`MenuAction.writes` wymagane, żeby każda pozycja menu jawnie decydowa�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa           # todo | in-progress | in-qa | done | blocked
+status: done            # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-15]
@@ -27,9 +27,9 @@ related_tasks: [T-063, T-094, T-104]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given `MenuAction` bez pola `writes`, when uruchamia się `pnpm typecheck`, then typecheck kończy się błędem. — verified by: `pnpm typecheck` (pole wymagane w typie; QA sprawdza próbną akcję bez pola)
-- [ ] AC2: Given istniejące akcje menu SC-06, then każda ma jawne `writes` i zachowanie bez połączenia się nie zmienia. — verified by: istniejące testy `ListScreen.test.tsx` i `ListScreen.leave.test.tsx` (offline)
-- [ ] AC3: No regression in: T-094, T-104, T-063.
+- [x] AC1: Given `MenuAction` bez pola `writes`, when uruchamia się `pnpm typecheck`, then typecheck kończy się błędem. — verified by: `pnpm typecheck` (pole wymagane w typie; QA sprawdza próbną akcję bez pola)
+- [x] AC2: Given istniejące akcje menu SC-06, then każda ma jawne `writes` i zachowanie bez połączenia się nie zmienia. — verified by: istniejące testy `ListScreen.test.tsx` i `ListScreen.leave.test.tsx` (offline)
+- [x] AC3: No regression in: T-094, T-104, T-063.
 
 ## TDD plan
 
@@ -64,3 +64,24 @@ Flaga opcjonalna z bezpieczną dla użytkownika, ale niebezpieczną dla reguły 
 Typ wymusza regułę `web.md:77` (zaakceptowane przez właściciela 2026-11-09).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-09)
+
+Verdict: pass
+
+Zakres: commit `64f678b` (`MoreMenu.tsx`: `writes?: boolean` → `writes: boolean`, `action.writes === true && !online` → `action.writes && !online`).
+
+Odtworzenie: `pnpm typecheck` OK, `pnpm lint` OK, `pnpm format:check` OK, `pnpm test` 1269 testów / 0 błędów (junit), `pnpm vitest run --project web SC-06` 109/109.
+
+| AC | Wynik | Dowód |
+| --- | --- | --- |
+| AC1 | pass | Próbny `probe-qa.ts` z `MenuAction` bez `writes`: `pnpm --filter @lista/web typecheck` kod 1, `TS2741: Property 'writes' is missing ... required in type 'MenuAction'`; ta sama próbka z `writes: false` kompiluje się. Próbka usunięta. |
+| AC2 | pass | Trzy akcje w `ListScreen.tsx` (`:175`, `:182`, `:209`) mają `writes: true`; jedyne użycie `MenuAction`. Spot-check: `const offline = false` w `MoreMenu.tsx` → SC-06 3 testy czerwone (2 pliki); po `git checkout` 109/109. |
+| AC3 | pass | Pełny zestaw zielony, w tym testy offline T-063/T-094/T-104 SC-06. |
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Root cause | „Root cause” nie mówi wprost, dlaczego testy nie złapały błędu; tu odpowiedź jest oczywista (luka w typie, nie w zachowaniu; test komponentu nie wykrywa braku pola w nowej pozycji), a red/green pokazano kompilatorem. | sekcja Root cause | Jedno zdanie o tym w przyszłych fixach typu. |
+| 2 | note | Test | Brak testu komponentu dla jawnego `writes: false` (pozycja aktywna offline); dziś żadna pozycja go nie używa. | `grep writes apps/web/src` | Dodać, gdy pojawi się pierwsza taka pozycja. |
+
+Bezpieczeństwo: zmiana tylko typu i warunku w UI; brak `threats:`, brak danych użytkownika. `git status` czysty po spot-checkach.
