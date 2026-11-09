@@ -4,7 +4,7 @@ title: "Wiersz Copy SC-01 `legal` po przeniesieniu tekstu do Copy komponentów; 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: [T-106]
 layers: [web]
 requirements: []
@@ -82,3 +82,17 @@ Rejestr Copy w obu kierunkach: tekst w kodzie ma wiersz (T-100), a wiersz ma tek
 W tym tasku: reguła „ekran nie powtarza wierszy komponentów” jest teraz kontrolą testu, nie tylko prozą. Kierunek „wiersz bez kodu” pozostaje jako proponowany task (lista w „Other occurrences”).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-09)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | AC1 | Copy SC-01 bez wierszy `legal` i `password.show / hide`, zgodnie z decyzją właściciela 2026-11-09; teksty są w Copy komponentów (`AuthPage.legal`, `PasswordField.show / PasswordField.hide`), zdanie w `design-system.md` „## Copy” opisuje kontrolę T-108. Proza Layout SC-01 („Pokaż”, stopka „Regulamin…”) zostaje i jest spójna. Pass. | `git show a87a148 -- docs/design` | — |
+| 2 | note | AC2 | Test zgłasza dubel komponentu (wiersz Copy ekranu z tekstem, który ekran bierze tylko z `components/`); pełna kontrola „wiersz bez kodu” poza zakresem decyzją właściciela z powodem i listą 9 wierszy w „Other occurrences”. Fixture sprawdza też wyjątek: SC-06 `dup.show` z własnego `messages.ts`. Pass. | `pnpm vitest run --project web copyRegister`: 19 passed | — |
+| 3 | note | AC3 | Brak regresji: `pnpm check` exit 0 (`Test Files 155 passed`, `Tests 1261 passed`, lint, typecheck, format, quality, design-check, backlog-check, mobile). Fixture T-100/T-106/T-107 zielone. Pass. | log `pnpm check` | — |
+| 4 | note | Test quality | Mutacje (przywrócone, `git status` czysty): (a) wyłączenie zgłaszania dubla → fixture T-108 czerwony (1 failed); (b) usunięcie `!ownTexts.has(text)` → 2 failed (fixture T-106 i T-108); (c) przywrócenie wiersza `legal` w Copy SC-01 → test na repo czerwony z „SC-01 · components/AuthPage/authPageMessages.ts · „Regulamin i polityka prywatności””. Red z Evidence potwierdzony. Root cause wyjaśnia, czemu testy nie złapały dubla. | uruchomienia lokalne | — |
+| 5 | minor | Follow-up | Kontrola „wiersz Copy bez kodu web” (9 wierszy w SC-02, SC-03, SC-06–SC-09) wymaga nowego taska przez `/plan-backlog`, jak proponuje task; nie utworzono go w QA. | „Other occurrences” | Task z decyzją per wiersz (mail/API/mobile vs błąd kodu). |
+
+Kod aplikacji bez zmian (tylko test, `test/copyRegister.ts` i dokumenty); bez UI, bez zagrożeń (`threats: []`), więc kroki 6–7 ograniczone do przeglądu logiki testu. Fix task: story/epic n/a.
