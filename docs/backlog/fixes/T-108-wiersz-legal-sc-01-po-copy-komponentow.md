@@ -4,7 +4,7 @@ title: "Wiersz Copy SC-01 `legal` po przeniesieniu tekstu do Copy komponentów; 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: [T-106]
 layers: [web]
 requirements: []
