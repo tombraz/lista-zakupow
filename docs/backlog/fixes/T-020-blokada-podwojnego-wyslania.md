@@ -27,10 +27,10 @@ related_tasks: [T-004, T-005, T-007, T-008]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-07, when dwa kliknięcia synchronicznie, then jedno `POST` linku. — verified by: test komponentu z `fireEvent` ×2
-- [ ] AC2: Given tworzenie listy, rejestracja, „Usuń kupione”, przyjęcie zaproszenia, when podwójne wysłanie, then jedno żądanie. — verified by: testy komponentów
-- [ ] AC3: Given `layers/web.md` „Pułapki”, then opisuje wspólny mechanizm blokady. — verified by: przegląd dokumentu
-- [ ] AC4: No regression in: dodawanie pozycji (idempotentne `id`, T-006) bez zmian; T-015 (aria-disabled).
+- [x] AC1: Given SC-07, when dwa kliknięcia synchronicznie, then jedno `POST` linku. — verified by: test komponentu z `fireEvent` ×2
+- [x] AC2: Given tworzenie listy, rejestracja, „Usuń kupione”, przyjęcie zaproszenia, when podwójne wysłanie, then jedno żądanie. — verified by: testy komponentów
+- [x] AC3: Given `layers/web.md` „Pułapki”, then opisuje wspólny mechanizm blokady. — verified by: przegląd dokumentu
+- [x] AC4: No regression in: dodawanie pozycji (idempotentne `id`, T-006) bez zmian; T-015 (aria-disabled).
 
 ## TDD plan
 

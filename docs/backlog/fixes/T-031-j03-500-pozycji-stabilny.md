@@ -31,9 +31,9 @@ related_tasks: [T-006, T-023]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given lista z 499 pozycjami dodanymi przez API, when test wpisuje 500. pozycję, then robi to dopiero, gdy ekran pokazuje 499 pozycji, i test przechodzi w 5 kolejnych uruchomieniach. — verified by: E2E J-03 T-023 (`--repeat-each 5`)
-- [ ] AC2: `pnpm format:check` zielony. — verified by: CI / `pnpm check`
-- [ ] AC3: No regression in: J-03, T-023.
+- [x] AC1: Given lista z 499 pozycjami dodanymi przez API, when test wpisuje 500. pozycję, then robi to dopiero, gdy ekran pokazuje 499 pozycji, i test przechodzi w 5 kolejnych uruchomieniach. — verified by: E2E J-03 T-023 (`--repeat-each 5`)
+- [x] AC2: `pnpm format:check` zielony. — verified by: CI / `pnpm check`
+- [x] AC3: No regression in: J-03, T-023.
 
 ## TDD plan
 

@@ -39,11 +39,11 @@ related_tasks: [T-094, T-100, T-059, T-106]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given teksty okna „Opuść listę”, then są w pliku `.ts` modułu `lists/` (np. `lists/leaveList.ts`, wzorem `lists/listName.ts`), a `LeaveListDialog.tsx` tylko je importuje. — verified by: przegląd QA
-- [ ] AC2: Given Copy SC-07 i SC-06, then każdy tekst okna ma tam wiersz zatwierdzony przez właściciela, z datą i ID taska: pytanie, konsekwencja, etykieta „Opuść”, „Anuluj” (albo wiersz w Copy ConfirmDialog w `design-system.md`) i `leave.error`. Tekstów brakujących w specyfikacji nie wymyślać, tylko zapytać właściciela (`web.md:103`). — verified by: test zgodności Copy (`copyRegister.test.ts`)
-- [ ] AC3: Given plik `.tsx` poza `screens/`, który eksportuje obiekt tekstów (albo tekst, który test uznałby za tekst interfejsu), when uruchamia się test zgodności Copy, then test jest czerwony z komunikatem wskazującym plik. Test ma fixture tego przypadku, a zakres opisany w `web.md:102` i w nagłówku testu jest z nim zgodny. — verified by: test jednostkowy `copyRegister` z fixture
-- [ ] AC4: Given zmiana dowolnego tekstu okna „Opuść listę” w kodzie, when uruchamia się test zgodności, then test jest czerwony. — verified by: test zgodności Copy (sprawdzone w Evidence ręczną zmianą)
-- [ ] AC5: No regression in: T-094 (SC-06: menu uczestnika i wyjście), T-059 (wyjście z SC-07), T-100 (test zgodności Copy), `ListScreen.leave.test.tsx`, `ParticipantsScreen.*.test.tsx`.
+- [x] AC1: Given teksty okna „Opuść listę”, then są w pliku `.ts` modułu `lists/` (np. `lists/leaveList.ts`, wzorem `lists/listName.ts`), a `LeaveListDialog.tsx` tylko je importuje. — verified by: przegląd QA
+- [x] AC2: Given Copy SC-07 i SC-06, then każdy tekst okna ma tam wiersz zatwierdzony przez właściciela, z datą i ID taska: pytanie, konsekwencja, etykieta „Opuść”, „Anuluj” (albo wiersz w Copy ConfirmDialog w `design-system.md`) i `leave.error`. Tekstów brakujących w specyfikacji nie wymyślać, tylko zapytać właściciela (`web.md:103`). — verified by: test zgodności Copy (`copyRegister.test.ts`)
+- [x] AC3: Given plik `.tsx` poza `screens/`, który eksportuje obiekt tekstów (albo tekst, który test uznałby za tekst interfejsu), when uruchamia się test zgodności Copy, then test jest czerwony z komunikatem wskazującym plik. Test ma fixture tego przypadku, a zakres opisany w `web.md:102` i w nagłówku testu jest z nim zgodny. — verified by: test jednostkowy `copyRegister` z fixture
+- [x] AC4: Given zmiana dowolnego tekstu okna „Opuść listę” w kodzie, when uruchamia się test zgodności, then test jest czerwony. — verified by: test zgodności Copy (sprawdzone w Evidence ręczną zmianą)
+- [x] AC5: No regression in: T-094 (SC-06: menu uczestnika i wyjście), T-059 (wyjście z SC-07), T-100 (test zgodności Copy), `ListScreen.leave.test.tsx`, `ParticipantsScreen.*.test.tsx`.
 
 ## TDD plan
 

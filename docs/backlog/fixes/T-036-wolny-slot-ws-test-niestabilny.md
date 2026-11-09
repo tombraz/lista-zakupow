@@ -27,8 +27,8 @@ related_tasks: [T-033, T-035]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given 5 otwartych połączeń sesji, when klient zamknie jedno i od razu połączy się ponownie, then nowe połączenie zostaje otwarte — deterministycznie (pętla wielu powtórzeń bez błędu). — verified by: `live.limits.test.ts`
-- [ ] AC2: No regression in: T-033, `live.limits.test.ts`, `limits.security.test.ts` (`connectionsPerSession`).
+- [x] AC1: Given 5 otwartych połączeń sesji, when klient zamknie jedno i od razu połączy się ponownie, then nowe połączenie zostaje otwarte — deterministycznie (pętla wielu powtórzeń bez błędu). — verified by: `live.limits.test.ts`
+- [x] AC2: No regression in: T-033, `live.limits.test.ts`, `limits.security.test.ts` (`connectionsPerSession`).
 
 ## TDD plan
 

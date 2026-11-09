@@ -35,11 +35,11 @@ related_tasks: [T-005, T-008, T-015, T-023]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-07 z fokusem na „Utwórz link”, when API odpowie 409 `limit_reached` albo `members.changed` doprowadzi listę do 20 osób, then fokus jest na ostrzeżeniu o limicie, nie na `body`. — verified by: test komponentu SC-07 (atrapa `test/disabledFocus.ts`)
-- [ ] AC2: Given SC-07 z pełną listą i otwartym linkiem, when właściciel unieważni link, then fokus nie spada na `body` (trafia na ostrzeżenie o limicie). — verified by: test komponentu SC-07
-- [ ] AC3: Given SC-05 z formularzem nowej listy i fokusem w polu nazwy, when API odpowie 409 `limit_reached`, then fokus jest na ostrzeżeniu o limicie. To samo dla fokusu na „+ Nowa lista”, gdy `lists.changed` podniesie liczbę własnych list do 50. — verified by: test komponentu SC-05
-- [ ] AC4: Given SC-05 po odmowie 409, when liczba własnych list spadnie poniżej liczby z chwili odmowy, then „+ Nowa lista” jest aktywny, a ostrzeżenie znika. — verified by: test komponentu SC-05
-- [ ] AC5: No regression in: J-02 (utworzenie listy), J-04 (link, przyjęcie), T-023 (limit pozycji), T-015.
+- [x] AC1: Given SC-07 z fokusem na „Utwórz link”, when API odpowie 409 `limit_reached` albo `members.changed` doprowadzi listę do 20 osób, then fokus jest na ostrzeżeniu o limicie, nie na `body`. — verified by: test komponentu SC-07 (atrapa `test/disabledFocus.ts`)
+- [x] AC2: Given SC-07 z pełną listą i otwartym linkiem, when właściciel unieważni link, then fokus nie spada na `body` (trafia na ostrzeżenie o limicie). — verified by: test komponentu SC-07
+- [x] AC3: Given SC-05 z formularzem nowej listy i fokusem w polu nazwy, when API odpowie 409 `limit_reached`, then fokus jest na ostrzeżeniu o limicie. To samo dla fokusu na „+ Nowa lista”, gdy `lists.changed` podniesie liczbę własnych list do 50. — verified by: test komponentu SC-05
+- [x] AC4: Given SC-05 po odmowie 409, when liczba własnych list spadnie poniżej liczby z chwili odmowy, then „+ Nowa lista” jest aktywny, a ostrzeżenie znika. — verified by: test komponentu SC-05
+- [x] AC5: No regression in: J-02 (utworzenie listy), J-04 (link, przyjęcie), T-023 (limit pozycji), T-015.
 
 ## TDD plan
 

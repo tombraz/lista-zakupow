@@ -27,9 +27,9 @@ related_tasks: [T-006, T-007, T-009]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given zdarzenie WS z nowszym `updatedAt` przed odpowiedzią HTTP własnej zmiany, when przyjdzie odpowiedź, then SC-06 pokazuje nowszą wersję. — verified by: test komponentu SC-06 (podstawiony klient WS)
-- [ ] AC2: Given `testClock` w API, when edycja pozycji, then `updatedAt` = czas z zegara (jak przy odhaczeniu). — verified by: test integracyjny API
-- [ ] AC3: No regression in: J-05 (zmiany na żywo), własna zmiana bez podświetlenia, edycja i odhaczenie tej samej pozycji przez dwie osoby.
+- [x] AC1: Given zdarzenie WS z nowszym `updatedAt` przed odpowiedzią HTTP własnej zmiany, when przyjdzie odpowiedź, then SC-06 pokazuje nowszą wersję. — verified by: test komponentu SC-06 (podstawiony klient WS)
+- [x] AC2: Given `testClock` w API, when edycja pozycji, then `updatedAt` = czas z zegara (jak przy odhaczeniu). — verified by: test integracyjny API
+- [x] AC3: No regression in: J-05 (zmiany na żywo), własna zmiana bez podświetlenia, edycja i odhaczenie tej samej pozycji przez dwie osoby.
 
 ## TDD plan
 

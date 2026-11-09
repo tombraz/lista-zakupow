@@ -30,8 +30,8 @@ related_tasks: [T-007, T-030]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given dwie sąsiednie pozycje odhaczane szybko po sobie, when obie odpowiedzi przyjdą, then fokus jest na nieodhaczonej pozycji (Jajka) albo, gdy takiej nie ma, na „Kupione (N)”. — verified by: test komponentu SC-06
-- [ ] AC2: No regression in: fokus po pojedynczym odhaczeniu (następna / poprzednia / „Kupione”), zdarzenie na żywo przed odpowiedzią API (F-14), T-007, T-030.
+- [x] AC1: Given dwie sąsiednie pozycje odhaczane szybko po sobie, when obie odpowiedzi przyjdą, then fokus jest na nieodhaczonej pozycji (Jajka) albo, gdy takiej nie ma, na „Kupione (N)”. — verified by: test komponentu SC-06
+- [x] AC2: No regression in: fokus po pojedynczym odhaczeniu (następna / poprzednia / „Kupione”), zdarzenie na żywo przed odpowiedzią API (F-14), T-007, T-030.
 
 ## TDD plan
 

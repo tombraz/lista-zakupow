@@ -3,7 +3,7 @@
 // z --root, tak jak robi to CI.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -172,4 +172,98 @@ test("niepokryte „to e-02” → jedno ostrzeżenie z E-02, także z „to E-0
     assert.match(warns[0], /hands work over to E-02 .*names no E-02 task/, warns[0]);
     assert.doesNotMatch(warns[0], /e-02 task|to e-02 \(|, and e-02/, warns[0]);
   }
+});
+
+// T-110: zadanie `done` musi mieć odhaczone AC, a status przy ID w `UAT.md` epiku musi być taki
+// jak w pliku zadania. Oba przypadki to błąd (kod wyjścia 1).
+function check(files) {
+  const dir = mkdtempSync(join(tmpdir(), "backlog-check-"));
+  try {
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, path)), { recursive: true });
+      writeFileSync(join(dir, path), text);
+    }
+    const r = spawnSync(process.execPath, [SCRIPT, "--root", "backlog"], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    return { code: r.status, out: (r.stdout + r.stderr).replaceAll("\\", "/") };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+const errorLines = (out) => out.split("\n").filter((l) => l.startsWith("ERROR "));
+const fixWith = (id, status, ac) =>
+  `---\nid: ${id}\ntitle: Fix ${id}\nkind: fix\nstatus: ${status}\ndepends_on: []\nlayers: [web]\n---\n\n# ${id}\n\n## Report\n\n- [ ] w raporcie to nie AC\n\n${ac}## Notes\n\n- [ ] notatka to nie AC\n`;
+const AC = (...marks) =>
+  `## Acceptance criteria\n\n${marks.map((m, i) => `${m} AC${i + 1}: coś.`).join("\n")}\n\n`;
+const epicFiles = (uat, fixes) => ({
+  "backlog/E-01-a/epic.md": epic("E-01", "in-uat"),
+  "backlog/E-01-a/S-01-01-a/story.md": story("S-01-01", "E-01"),
+  "backlog/E-01-a/S-01-01-a/T-001-a.md": task("T-001", "E-01", "S-01-01", "Nic."),
+  ...(uat === null ? {} : { "backlog/E-01-a/UAT.md": uat }),
+  ...fixes,
+});
+
+test("done z nieodhaczonym AC → błąd z plikiem i liczbą nieodhaczonych AC (T-110 AC1)", () => {
+  const ac =
+    "## Acceptance criteria\n\n- [x] AC1: a\n- [ ] AC2: b\n\n### Podsekcja\n\n  - [ ] AC3: wcięte\n\n";
+  const { code, out } = check(
+    epicFiles(null, { "backlog/fixes/T-002-b.md": fixWith("T-002", "done", ac) }),
+  );
+  assert.equal(code, 1, out);
+  const errs = errorLines(out);
+  assert.equal(errs.length, 1, out);
+  assert.match(
+    errs[0],
+    /backlog\/fixes\/T-002-b\.md: status done but 2 of 3 acceptance criteria are unchecked/,
+    errs[0],
+  );
+});
+
+test("done z odhaczonymi AC (także [X]), todo z nieodhaczonymi i brak sekcji AC → OK (T-110 AC1)", () => {
+  const { code, out } = check(
+    epicFiles(null, {
+      "backlog/fixes/T-002-b.md": fixWith("T-002", "done", AC("- [x]", "- [X]", "* [x]")),
+      "backlog/fixes/T-003-c.md": fixWith("T-003", "todo", AC("- [ ]", "- [ ]")),
+      "backlog/fixes/T-004-d.md": fixWith("T-004", "in-qa", AC("- [ ]")),
+      "backlog/fixes/T-005-e.md": fixWith("T-005", "done", ""),
+    }),
+  );
+  assert.equal(code, 0, out);
+  assert.deepEqual(errorLines(out), []);
+});
+
+const UAT_HEAD = "# UAT E-01\n\nPrzygotował: QA.\n\n## Znane ograniczenia\n\n";
+const fixes3 = {
+  "backlog/fixes/T-002-b.md": fixWith("T-002", "done", ""),
+  "backlog/fixes/T-003-c.md": fixWith("T-003", "todo", ""),
+  "backlog/fixes/T-004-d.md": fixWith("T-004", "done", ""),
+};
+
+test("UAT.md podaje status inny niż plik zadania → błąd z linią, ID i oboma statusami (T-110 AC2)", () => {
+  const uat = `${UAT_HEAD}- Zadania: T-002 (opis, z QA T-003) \`todo\`; T-003 (x) \`todo\`.\n`;
+  const { code, out } = check(epicFiles(uat, fixes3));
+  assert.equal(code, 1, out);
+  const errs = errorLines(out);
+  assert.equal(errs.length, 1, out);
+  assert.match(
+    errs[0],
+    /backlog\/E-01-a\/UAT\.md:7: T-002 is "todo" here but "done" in backlog\/fixes\/T-002-b\.md/,
+    errs[0],
+  );
+});
+
+test("UAT.md: status dla kilku ID i zakresu, zapis „(todo)” bez backticków → każde ID sprawdzone (T-110 AC2)", () => {
+  const uat = `${UAT_HEAD}- T-002 i T-003–T-004 \`done\`.\n- Otwarte: T-004 (todo).\n`;
+  const errs = errorLines(check(epicFiles(uat, fixes3)).out);
+  assert.equal(errs.length, 2, errs.join("\n"));
+  assert.match(errs[0], /UAT\.md:7: T-003 is "done" here but "todo"/);
+  assert.match(errs[1], /UAT\.md:8: T-004 is "todo" here but "done"/);
+});
+
+test("UAT.md: ID bez statusu, status po „;” innego zdania i ID w `kodzie` → OK (T-110 AC2)", () => {
+  const uat = `${UAT_HEAD}- T-003 bez statusu; T-002 \`done\`. Plik \`T-003-c.md\` \`done\`.\n- Po T-003 (todo) i T-002.\n`;
+  const { code, out } = check(epicFiles(uat, fixes3));
+  assert.equal(code, 0, out);
 });

@@ -29,10 +29,10 @@ related_tasks: [T-062]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given pierwsza próba zakończona 500, when druga próba dostaje 401, then klient kończy sesję jak przy zwykłym 401, bez komunikatu „Konto zostało usunięte.”. — verified by: test ekranu (MSW)
-- [ ] AC2: Given pierwsza próba zakończona błędem sieci (odpowiedź utracona), when ponowienie dostaje 401, then pojawia się „Konto zostało usunięte.” (zachowanie z T-062). — verified by: test (MSW)
-- [ ] AC3: Given zamknięcie i ponowne otwarcie okna potwierdzenia, then stan prób zaczyna się od nowa. — verified by: test
-- [ ] AC4: No regression in: E2E usunięcia konta (T-062).
+- [x] AC1: Given pierwsza próba zakończona 500, when druga próba dostaje 401, then klient kończy sesję jak przy zwykłym 401, bez komunikatu „Konto zostało usunięte.”. — verified by: test ekranu (MSW)
+- [x] AC2: Given pierwsza próba zakończona błędem sieci (odpowiedź utracona), when ponowienie dostaje 401, then pojawia się „Konto zostało usunięte.” (zachowanie z T-062). — verified by: test (MSW)
+- [x] AC3: Given zamknięcie i ponowne otwarcie okna potwierdzenia, then stan prób zaczyna się od nowa. — verified by: test
+- [x] AC4: No regression in: E2E usunięcia konta (T-062).
 
 ## TDD plan
 

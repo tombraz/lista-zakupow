@@ -38,9 +38,9 @@ Each criterion must fail before the work and pass after it.
 - [x] AC1: Given `MAILER=brevo` i klucz API, when `Mailer` wysyła mail, then wysyła `POST https://api.brevo.com/v3/smtp/email` z nagłówkiem `api-key`, nadawcą z konfiguracji, odbiorcą, tematem i treścią tekstową; odpowiedź 2xx = sukces. — verified by: test adaptera z serwerem HTTP podstawionym na granicy (sprawdza żądanie)
 - [x] AC2: Given Brevo odpowiada 4xx/5xx albo nie odpowiada w 10 s, when wysyłka, then błąd jest zalogowany (status, bez e-maila i treści), a odpowiedź `request-password-reset` dalej 200 jak zawsze (SEC1 T-053). — verified by: test adaptera + test integracyjny
 - [x] AC3: Given konfiguracja produkcyjna bez `BREVO_API_KEY` lub nadawcy, when API startuje, then start kończy się czytelnym błędem konfiguracji (nie cichą wysyłką donikąd). — verified by: `config.test.ts`
-- [ ] AC4: Given staging po wdrożeniu, when właściciel prosi o reset, then mail dochodzi; wynik (skrzynka odbiorcza czy spam, czas dostarczenia, czy Brevo akceptuje nadawcę bez własnej domeny) zapisany w `deployment.md` (zamyka punkt „Wysyłka Brevo bez własnej domeny”). — verified by: ręcznie właściciel + wpis w `deployment.md`
+- [x] AC4: Given staging po wdrożeniu, when właściciel prosi o reset, then mail dochodzi; wynik (skrzynka odbiorcza czy spam, czas dostarczenia, czy Brevo akceptuje nadawcę bez własnej domeny) zapisany w `deployment.md` (zamyka punkt „Wysyłka Brevo bez własnej domeny”). — verified by: ręcznie właściciel + wpis w `deployment.md`
 - [x] SEC1 (TH-21): Given wysyłka (udana i nieudana), when API loguje, then logi nie zawierają klucza API, e-maila odbiorcy ani linku z tokenem. — verified by: test logów adaptera
-- [ ] SEC2 (TH-22): Given repozytorium i obraz, when skan sekretów w CI, then klucz Brevo nie występuje w repo ani w obrazie (tylko sekret Fly `BREVO_API_KEY`). — verified by: zielony skan sekretów w CI + przegląd `fly secrets list` w Evidence (bez wartości)
+- [x] SEC2 (TH-22): Given repozytorium i obraz, when skan sekretów w CI, then klucz Brevo nie występuje w repo ani w obrazie (tylko sekret Fly `BREVO_API_KEY`). — verified by: zielony skan sekretów w CI + przegląd `fly secrets list` w Evidence (bez wartości)
 
 ## TDD plan
 

@@ -26,9 +26,9 @@ related_tasks: [T-001]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given `docs/design/tokens.json`, when build tokenów, then każde `--typography-size-*` w `tokens.css` jest w `rem`, a `tokens.ts` ma liczby jak dotąd. — verified by: `packages/tokens/test/build.test.ts`
-- [ ] AC2: Given przeglądarka z domyślnym rozmiarem tekstu 20px, when otwarcie SC-06, then tekst skaluje się proporcjonalnie. — verified by: E2E (Playwright, zmieniony font-size dokumentu)
-- [ ] AC3: No regression in: wygląd SC-01…SC-09 przy 100% i 200% rozmiaru tekstu.
+- [x] AC1: Given `docs/design/tokens.json`, when build tokenów, then każde `--typography-size-*` w `tokens.css` jest w `rem`, a `tokens.ts` ma liczby jak dotąd. — verified by: `packages/tokens/test/build.test.ts`
+- [x] AC2: Given przeglądarka z domyślnym rozmiarem tekstu 20px, when otwarcie SC-06, then tekst skaluje się proporcjonalnie. — verified by: E2E (Playwright, zmieniony font-size dokumentu)
+- [x] AC3: No regression in: wygląd SC-01…SC-09 przy 100% i 200% rozmiaru tekstu.
 
 ## TDD plan
 

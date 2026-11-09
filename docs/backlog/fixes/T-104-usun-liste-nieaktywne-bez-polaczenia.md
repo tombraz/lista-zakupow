@@ -30,9 +30,9 @@ related_tasks: [T-063, T-094, T-005]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given właściciel na SC-06 bez połączenia, when otwiera „Więcej opcji”, then „Usuń listę” jest nieaktywne (`aria-disabled`, `aria-describedby` paska „Brak połączenia”) i nie otwiera okna. — verified by: test komponentu (MSW, offline)
-- [ ] AC2: Given decyzja, czy „Zmień nazwę listy” też ma `writes` (zapis), then decyzja i reguła są zapisane w `docs/architecture/layers/web.md`: „wyzwalacz akcji zapisu w menu ma `writes`”. Jeśli „Zmień nazwę listy” dostaje `writes`, to z testem jak w AC1. — verified by: przegląd QA
-- [ ] AC3: No regression in: T-005 (menu właściciela, usunięcie listy online), T-094 (menu uczestnika), T-063 (pasek „Brak połączenia”).
+- [x] AC1: Given właściciel na SC-06 bez połączenia, when otwiera „Więcej opcji”, then „Usuń listę” jest nieaktywne (`aria-disabled`, `aria-describedby` paska „Brak połączenia”) i nie otwiera okna. — verified by: test komponentu (MSW, offline)
+- [x] AC2: Given decyzja, czy „Zmień nazwę listy” też ma `writes` (zapis), then decyzja i reguła są zapisane w `docs/architecture/layers/web.md`: „wyzwalacz akcji zapisu w menu ma `writes`”. Jeśli „Zmień nazwę listy” dostaje `writes`, to z testem jak w AC1. — verified by: przegląd QA
+- [x] AC3: No regression in: T-005 (menu właściciela, usunięcie listy online), T-094 (menu uczestnika), T-063 (pasek „Brak połączenia”).
 
 ## TDD plan
 

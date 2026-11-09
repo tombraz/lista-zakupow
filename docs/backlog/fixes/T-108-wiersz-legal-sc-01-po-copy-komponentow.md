@@ -26,9 +26,9 @@ related_tasks: [T-100, T-106]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given Copy SC-01, then wiersz `legal` jest usunięty albo oznaczony jako tekst komponentu, zgodnie z decyzją właściciela; reguła z sekcji „## Copy” w `design-system.md` jest z tym spójna. — verified by: przegląd QA
-- [ ] AC2: Given wiersz Copy ekranu, którego tekstu nie używa żaden kod web tego ekranu, when uruchamia się test zgodności, then test to zgłasza — albo, jeśli właściciel uzna to za zbyt szerokie (Copy zawiera też teksty spoza kodu web: tematy maili, stany z Layout/States, mobile E-04), decyzja i powód są zapisane w tasku, a kontrola zostaje poza zakresem. Jeśli kontrola wymaga więcej niż jednej sesji, przenieść ją do `/plan-backlog`. — verified by: test jednostkowy `copyRegister` z fixture albo zapis decyzji
-- [ ] AC3: No regression in: test zgodności Copy na repo (zielony), T-100, T-106.
+- [x] AC1: Given Copy SC-01, then wiersz `legal` jest usunięty albo oznaczony jako tekst komponentu, zgodnie z decyzją właściciela; reguła z sekcji „## Copy” w `design-system.md` jest z tym spójna. — verified by: przegląd QA
+- [x] AC2: Given wiersz Copy ekranu, którego tekstu nie używa żaden kod web tego ekranu, when uruchamia się test zgodności, then test to zgłasza — albo, jeśli właściciel uzna to za zbyt szerokie (Copy zawiera też teksty spoza kodu web: tematy maili, stany z Layout/States, mobile E-04), decyzja i powód są zapisane w tasku, a kontrola zostaje poza zakresem. Jeśli kontrola wymaga więcej niż jednej sesji, przenieść ją do `/plan-backlog`. — verified by: test jednostkowy `copyRegister` z fixture albo zapis decyzji
+- [x] AC3: No regression in: test zgodności Copy na repo (zielony), T-100, T-106.
 
 ## Decisions
 

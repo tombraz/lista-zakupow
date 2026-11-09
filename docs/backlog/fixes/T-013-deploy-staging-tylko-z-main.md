@@ -26,9 +26,9 @@ related_tasks: [T-010]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given push na gałąź `deploy-test/**`, when GitHub ocenia wyzwalacze, then workflow `Deploy` się nie uruchamia; push do `main` nadal go uruchamia. — verified by: `scripts/test/deploy-workflow.test.sh` (sprawdza `on.push.branches == [main]`) + actionlint
-- [ ] AC2: Given workflow w `.github/workflows/` z komentarzem `TYMCZASOWE`, when `pnpm check` / CI, then sprawdzenie go odrzuca. — verified by: test skryptu (red na kopii z komentarzem)
-- [ ] AC3: No regression in: deploy z `main` po merge PR epiku (T-010 AC2), `workflow_dispatch`.
+- [x] AC1: Given push na gałąź `deploy-test/**`, when GitHub ocenia wyzwalacze, then workflow `Deploy` się nie uruchamia; push do `main` nadal go uruchamia. — verified by: `scripts/test/deploy-workflow.test.sh` (sprawdza `on.push.branches == [main]`) + actionlint
+- [x] AC2: Given workflow w `.github/workflows/` z komentarzem `TYMCZASOWE`, when `pnpm check` / CI, then sprawdzenie go odrzuca. — verified by: test skryptu (red na kopii z komentarzem)
+- [x] AC3: No regression in: deploy z `main` po merge PR epiku (T-010 AC2), `workflow_dispatch`.
 
 ## TDD plan
 

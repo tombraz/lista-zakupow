@@ -27,12 +27,12 @@ related_tasks: [T-060]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given nazwa z 🏴 i sekwencją tagów, która nie jest poprawną flagą regionu (np. tagi tekstu ASCII, brak U+E007F, więcej niż 6 tagów), when walidacja imienia, nazwy listy, nazwy pozycji lub notatki, then `invalid`. — verified by: test unit
-- [ ] AC2: Given flaga Anglii, Szkocji albo Walii (🏴 + tagi `gbeng` / `gbsct` / `gbwls` + U+E007F, dokładny ciąg), when walidacja, then przechodzi; given każda inna sekwencja tagów (inne litery, np. `gbzzz`, brak U+E007F, tagi bez 🏴, dodatkowy tag po fladze), then `invalid`. Decyzja właściciela 2026-11-02 (`docs/product/decisions.md`). — verified by: test unit
-- [ ] AC3: Given U+FE0E zaraz po emoji (❤︎) albo U+FE0F w keycapie (1️⃣), then przechodzi (zatwierdzone 2026-11-02); given dwa selektory wariantu z rzędu albo selektor bez emoji przed nim, then `invalid`. — verified by: test unit
-- [ ] AC4: Given dowolny znak `\p{Cf}` spoza zatwierdzonej listy wstawiony w dowolne miejsce (także zaraz po emoji), then `invalid`. — verified by: test własności (fast-check albo pętla po zakresie)
-- [ ] SEC1 (TH-29): Given `POST /api/v1/lists`, `POST …/items` albo `PATCH /api/v1/me` z ukrytymi tagami, then 400 `validation_failed`. — verified by: test integracyjny
-- [ ] AC5: No regression in: emoji z T-060 (👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈, ❤️, 1️⃣).
+- [x] AC1: Given nazwa z 🏴 i sekwencją tagów, która nie jest poprawną flagą regionu (np. tagi tekstu ASCII, brak U+E007F, więcej niż 6 tagów), when walidacja imienia, nazwy listy, nazwy pozycji lub notatki, then `invalid`. — verified by: test unit
+- [x] AC2: Given flaga Anglii, Szkocji albo Walii (🏴 + tagi `gbeng` / `gbsct` / `gbwls` + U+E007F, dokładny ciąg), when walidacja, then przechodzi; given każda inna sekwencja tagów (inne litery, np. `gbzzz`, brak U+E007F, tagi bez 🏴, dodatkowy tag po fladze), then `invalid`. Decyzja właściciela 2026-11-02 (`docs/product/decisions.md`). — verified by: test unit
+- [x] AC3: Given U+FE0E zaraz po emoji (❤︎) albo U+FE0F w keycapie (1️⃣), then przechodzi (zatwierdzone 2026-11-02); given dwa selektory wariantu z rzędu albo selektor bez emoji przed nim, then `invalid`. — verified by: test unit
+- [x] AC4: Given dowolny znak `\p{Cf}` spoza zatwierdzonej listy wstawiony w dowolne miejsce (także zaraz po emoji), then `invalid`. — verified by: test własności (fast-check albo pętla po zakresie)
+- [x] SEC1 (TH-29): Given `POST /api/v1/lists`, `POST …/items` albo `PATCH /api/v1/me` z ukrytymi tagami, then 400 `validation_failed`. — verified by: test integracyjny
+- [x] AC5: No regression in: emoji z T-060 (👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈, ❤️, 1️⃣).
 
 ## TDD plan
 

@@ -33,10 +33,10 @@ related_tasks: [T-027, T-034, T-035, T-038]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given podmiot (IP, konto, lista) ponad limitem z `RATE_LIMITS`, when wykona N kolejnych żądań w oknie limitu, then każde dostaje 429 `rate_limited`, a log `security` ma ograniczoną liczbę wpisów (niezależną od N) w oknie czasu, każdy w kształcie `logLimitEvent` (`limit`, `route`, identyfikatory), bez adresu IP. — verified by: testy limitów HTTP (`health-rate-limit.test.ts`, `sign-in-rate-limit.test.ts`, `invitations.rate-limit.test.ts` lub nowy wspólny)
-- [ ] AC2: Dwa różne podmioty (dwa IP, dwa konta; dla WS z T-038 dwie sesje tej samej osoby) ponad limitem → osobne zdarzenia (deduplikacja nie ukrywa drugiego atakującego).
-- [ ] AC3 (prevention z T-038): tabela `limits.security.test.ts` przekracza każdy limit nadużyć kilka razy i sprawdza nadal dokładnie jedno zdarzenie — nowy limit bez deduplikacji → test czerwony. Wpis w „Pułapkach” `docs/architecture/layers/backend.md`: zdarzenie limitu raz na podmiot i limit w oknie, nie raz na żądanie / połączenie. — verified by: `limits.security.test.ts`
-- [ ] AC4: No regression in: T-027, T-034, T-035, T-038, `limits.security.test.ts` (nadal dokładnie jedno zdarzenie na pierwsze przekroczenie).
+- [x] AC1: Given podmiot (IP, konto, lista) ponad limitem z `RATE_LIMITS`, when wykona N kolejnych żądań w oknie limitu, then każde dostaje 429 `rate_limited`, a log `security` ma ograniczoną liczbę wpisów (niezależną od N) w oknie czasu, każdy w kształcie `logLimitEvent` (`limit`, `route`, identyfikatory), bez adresu IP. — verified by: testy limitów HTTP (`health-rate-limit.test.ts`, `sign-in-rate-limit.test.ts`, `invitations.rate-limit.test.ts` lub nowy wspólny)
+- [x] AC2: Dwa różne podmioty (dwa IP, dwa konta; dla WS z T-038 dwie sesje tej samej osoby) ponad limitem → osobne zdarzenia (deduplikacja nie ukrywa drugiego atakującego).
+- [x] AC3 (prevention z T-038): tabela `limits.security.test.ts` przekracza każdy limit nadużyć kilka razy i sprawdza nadal dokładnie jedno zdarzenie — nowy limit bez deduplikacji → test czerwony. Wpis w „Pułapkach” `docs/architecture/layers/backend.md`: zdarzenie limitu raz na podmiot i limit w oknie, nie raz na żądanie / połączenie. — verified by: `limits.security.test.ts`
+- [x] AC4: No regression in: T-027, T-034, T-035, T-038, `limits.security.test.ts` (nadal dokładnie jedno zdarzenie na pierwsze przekroczenie).
 
 ## TDD plan
 

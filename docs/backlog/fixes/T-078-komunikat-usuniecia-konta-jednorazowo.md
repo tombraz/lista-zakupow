@@ -28,8 +28,8 @@ related_tasks: [T-062, T-018]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given komunikat po usunięciu konta już pokazany, when wejście na chroniony adres, then SC-01 bez tego komunikatu, z zachowanym `from`. — verified by: test ekranu/trasy
-- [ ] AC2: No regression in: T-062 (komunikat po usunięciu), T-018 (wygasła sesja na SC-01), komunikat po resecie hasła.
+- [x] AC1: Given komunikat po usunięciu konta już pokazany, when wejście na chroniony adres, then SC-01 bez tego komunikatu, z zachowanym `from`. — verified by: test ekranu/trasy
+- [x] AC2: No regression in: T-062 (komunikat po usunięciu), T-018 (wygasła sesja na SC-01), komunikat po resecie hasła.
 
 ## TDD plan
 

@@ -31,9 +31,9 @@ related_tasks: [T-027, T-028, T-029, T-034, T-035, T-040]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given zmieniona wartość dowolnej stałej w `RATE_LIMITS`, `BUSINESS_LIMITS` lub `HTTP_LIMITS`, when uruchomię testy, then test w `packages/shared/test` pada z nazwą stałej. Wartości oczekiwane pochodzą z BRD i threat-model. — verified by: test jednostkowy
-- [ ] AC2: Given komentarz `eslint-disable` dla `no-restricted-syntax` w `apps/api/src` lub `apps/web/src`, when uruchomię `pnpm lint`, then lint pada. Istniejące uzasadnione wyjątki są opisane w `eslint.config.js` (zawężony `files`/`ignores` z komentarzem), nie komentarzem w kodzie. Reguła `EntryLink` ma własną tablicę. — verified by: `pnpm lint` na próbnym komentarzu
-- [ ] AC3: No regression in: `pnpm lint`, `pnpm test`, `pnpm quality`.
+- [x] AC1: Given zmieniona wartość dowolnej stałej w `RATE_LIMITS`, `BUSINESS_LIMITS` lub `HTTP_LIMITS`, when uruchomię testy, then test w `packages/shared/test` pada z nazwą stałej. Wartości oczekiwane pochodzą z BRD i threat-model. — verified by: test jednostkowy
+- [x] AC2: Given komentarz `eslint-disable` dla `no-restricted-syntax` w `apps/api/src` lub `apps/web/src`, when uruchomię `pnpm lint`, then lint pada. Istniejące uzasadnione wyjątki są opisane w `eslint.config.js` (zawężony `files`/`ignores` z komentarzem), nie komentarzem w kodzie. Reguła `EntryLink` ma własną tablicę. — verified by: `pnpm lint` na próbnym komentarzu
+- [x] AC3: No regression in: `pnpm lint`, `pnpm test`, `pnpm quality`.
 
 ## TDD plan
 

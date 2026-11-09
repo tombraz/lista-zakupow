@@ -35,10 +35,10 @@ related_tasks: [T-023, T-025, T-020, T-030]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-07 z dwoma linkami i wstrzymanymi odpowiedziami, when właściciel unieważni oba, then oba przyciski są w stanie zapisu (`aria-disabled="true"`), dopóki ich odpowiedź nie wróci. — verified by: test komponentu SC-07
-- [ ] AC2: `useGuardedMutation` udostępnia reaktywne `isLocked(key)`; SC-06 (odhaczanie) i SC-07 (unieważnienie) używają go zamiast własnego stanu. — verified by: istniejące testy SC-06 `ListScreen.check.test.tsx` i nowy test AC1
-- [ ] AC3: AddBar w SC-06 używa `useLimitFocus` z `components/useFocus.ts`; prywatna kopia usunięta, `web.md:89` wskazuje jedno miejsce. — verified by: istniejące testy fokusu limitu 500 pozycji (T-023)
-- [ ] AC4: No regression in: J-03, J-04, T-023, T-030, T-039.
+- [x] AC1: Given SC-07 z dwoma linkami i wstrzymanymi odpowiedziami, when właściciel unieważni oba, then oba przyciski są w stanie zapisu (`aria-disabled="true"`), dopóki ich odpowiedź nie wróci. — verified by: test komponentu SC-07
+- [x] AC2: `useGuardedMutation` udostępnia reaktywne `isLocked(key)`; SC-06 (odhaczanie) i SC-07 (unieważnienie) używają go zamiast własnego stanu. — verified by: istniejące testy SC-06 `ListScreen.check.test.tsx` i nowy test AC1
+- [x] AC3: AddBar w SC-06 używa `useLimitFocus` z `components/useFocus.ts`; prywatna kopia usunięta, `web.md:89` wskazuje jedno miejsce. — verified by: istniejące testy fokusu limitu 500 pozycji (T-023)
+- [x] AC4: No regression in: J-03, J-04, T-023, T-030, T-039.
 
 ## TDD plan
 

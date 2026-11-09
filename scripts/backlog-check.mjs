@@ -241,6 +241,51 @@ for (const t of tasks.values()) {
   });
 }
 
+// Acceptance criteria (T-110): a done task has every checkbox under "## Acceptance criteria"
+// (subsections and indented items included) ticked; QA ticks each criterion it verified.
+const AC_BOX = /^\s*[-*]\s+\[([ xX])\]/;
+for (const t of tasks.values()) {
+  if (t.status !== "done") continue;
+  const section = (taskText.get(t.id).match(/^## Acceptance criteria[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [])[1] ?? "";
+  const boxes = section.split(/\r?\n/).map((l) => l.match(AC_BOX)?.[1]).filter(Boolean);
+  const open = boxes.filter((b) => b === " ").length;
+  if (open) errors.push(`${t.file}: status done but ${open} of ${boxes.length} acceptance criteria are unchecked ("- [ ]"); QA ticks each verified criterion ("- [x]")`);
+}
+
+// UAT.md (T-110): a status written next to task IDs in an epic's UAT.md ("T-103 i T-104 `done`",
+// "T-090–T-093 `todo`", "T-052 (todo)") must match the task files. A status applies to the IDs
+// before it in the same clause (clauses end at ";" or "."); text in (parentheses) and other
+// `inline code` is skipped; an ID with no status after it is not checked.
+const UAT_STATUS = new RegExp(`\`(${STATUSES.join("|")})\`|\\((${STATUSES.join("|")})\\)`, "g");
+const UAT_TOKEN = /\u0001([a-z-]+)\u0001|(?<![\w-])T-(\d{3,})(?:\s*[–—-]\s*T-(\d{3,}))?(?!\d)/g;
+for (const ep of epics.values()) {
+  const uatPath = join(ep.dir, "UAT.md");
+  if (!existsSync(uatPath)) continue;
+  const uatRel = relative(process.cwd(), uatPath);
+  let fenced = false;
+  readFileSync(uatPath, "utf8").split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) return;
+    let s = line.replace(UAT_STATUS, (_, a, b) => `\u0001${a ?? b}\u0001`).replace(/`[^`]*`/g, " ");
+    while (/\([^()]*\)/.test(s)) s = s.replace(/\([^()]*\)/g, " ");
+    for (const clause of s.split(/;|\.(?=\s|$)/)) {
+      let pending = [];
+      for (const m of clause.matchAll(UAT_TOKEN)) {
+        if (m[1]) {
+          for (const id of pending) {
+            const t = tasks.get(id);
+            if (t && t.status !== m[1]) errors.push(`${uatRel}:${i + 1}: ${id} is "${m[1]}" here but "${t.status}" in ${t.file}`);
+          }
+          pending = [];
+          continue;
+        }
+        const from = Number(m[2]), to = m[3] ? Number(m[3]) : from;
+        for (let n = from; n <= to && n - from <= 1000; n++) pending.push(`T-${String(n).padStart(m[2].length, "0")}`);
+      }
+    }
+  });
+}
+
 // Cycles (DFS with colours)
 const colour = new Map();
 const cycles = [];

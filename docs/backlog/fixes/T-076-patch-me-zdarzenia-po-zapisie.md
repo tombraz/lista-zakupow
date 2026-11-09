@@ -28,9 +28,9 @@ related_tasks: [T-061]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given rozesłanie zdarzeń kończy się błędem po zapisie, when `PATCH /api/v1/me`, then 200 z nowym imieniem, a log zawiera błąd z `errorSummary` (bez imienia i e-maila). — verified by: test integracyjny
-- [ ] AC2: `api.md` w wierszu „Zmiana imienia” wymienia błędy 400 i 401. — verified by: przegląd dokumentu
-- [ ] AC3: No regression in: T-061 (zdarzenia na żywo po zmianie imienia).
+- [x] AC1: Given rozesłanie zdarzeń kończy się błędem po zapisie, when `PATCH /api/v1/me`, then 200 z nowym imieniem, a log zawiera błąd z `errorSummary` (bez imienia i e-maila). — verified by: test integracyjny
+- [x] AC2: `api.md` w wierszu „Zmiana imienia” wymienia błędy 400 i 401. — verified by: przegląd dokumentu
+- [x] AC3: No regression in: T-061 (zdarzenia na żywo po zmianie imienia).
 
 ## TDD plan
 
