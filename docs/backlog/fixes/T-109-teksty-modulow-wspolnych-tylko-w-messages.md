@@ -4,7 +4,7 @@ title: "Test Copy: teksty modułów wspólnych tylko w `<nazwa>Messages.ts`; ka�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: []
@@ -68,11 +68,41 @@ related_tasks: [T-100, T-103, T-106, T-107, T-108]
 
 ## Root cause
 
-T-103 i T-106 zaostrzały kontrolę tylko dla tych przypadków, które dało się pokazać na znalezionym tekście („Opuść”, „Żeby wrócić…”). Dla pozostałych literałów została heurystyka `looksLikeText` z T-100, więc fikstury przechodziły z heurystyką, a nie dzięki regule. Inne miejsca o tym samym wzorcu: każdy `.ts` modułu wspólnego z tekstami obok logiki.
+T-103 i T-106 zaostrzały kontrolę tylko dla tych przypadków, które dało się pokazać na znalezionym tekście („Opuść”, „Żeby wrócić…”). Dla pozostałych literałów została heurystyka `looksLikeText` z T-100, więc fikstury przechodziły z heurystyką, a nie dzięki regule. Inne miejsca o tym samym wzorcu: każdy `.ts` modułu wspólnego z tekstami obok logiki — pomiar nową regułą na repo: `errorText.ts`, `lists/listName.ts`, `session/personName.ts` (naprawione tutaj); innych nie ma.
+
+Dlaczego testy nie złapały: fikstury T-100–T-107 sprawdzały tylko teksty, które heurystyka `looksLikeText` i tak łapie (polska litera albo dwa słowa), a fikstura „only literals that look like interface text count” wręcz utrwalała tekst w `lists/listName.ts` jako poprawny układ.
 
 ## Evidence
 
-<Reproducing test: red failure message, then passing. Full suite and static checks result.>
+Red (przed zmianą `copyRegister.ts`):
+- `findCopyGaps (fixtures) > a displayed literal in a shared .tsx file is an error: object value, JSX expression, component prop (T-109)` — `AssertionError: expected [Function check] to throw an error` (AC1).
+- `… > a shared .ts module other than <name>Messages.ts with a displayed one-word text is an error (T-109)` — `AssertionError: expected [Function check] to throw an error` (AC2, `lists/leaveList.ts`: „Opuść”, „Anuluj”, „Zamknij”).
+- Fikstury T-106 i T-107 (`.tsx` wspólny, atrybuty): czerwone na nowym nagłówku błędu (komunikat wskazuje `<nazwa>Messages.ts`, nie `lists/listName.ts`).
+
+Po zmianie reguły test repo był czerwony z dokładnie tymi tekstami, które wymienia raport: `errorText.ts` (2), `lists/listName.ts` (2), `session/personName.ts` (2). Pośrednie kroki pomiaru odsiały fałszywe trafienia kodu: camelCase (`listId`, `deleteList`, `sessionEnd`) — „słowo z wielkiej litery” liczy się od początku słowa; argument wywołania w JSX (`toLocaleUpperCase("pl-PL")` w `Avatar.tsx`) — liczy się jak literał poza JSX.
+
+Zmiany:
+- `apps/web/test/copyRegister.ts`: `misplacedSharedTexts()` zamiast `sharedTsxTexts()` — każdy plik `.ts`/`.tsx` modułu wspólnego (poza `screens/`, bez testów i `.d.ts`) poza `<nazwa>Messages.ts`. W JSX każdy literał z literą poza atrybutami kodu (`CODE_ATTRIBUTES`, `data-*`, `on…`, `aria-*` poza `TEXT_ARIA`) i argumentami wywołań; poza JSX każdy literał, który nie jest kodem (`isCode`). `TEXT_ATTRIBUTES`/`textAttributeValue` usunięte (domyślnie atrybut jest tekstem). Stała tego samego modułu z literałem rozwijana w szablonie (`localConstant`). JSDoc `texts()` i `MESSAGES_FILE` aktualne (S4).
+- Teksty przeniesione bez zmiany wartości: `errorTextMessages.ts` (`COMMON_ERROR_TEXTS`, `HIDDEN_CHARACTERS_TEXT`), `lists/listNameMessages.ts` (`listNameErrorText`), `session/personName.ts` → `session/personNameMessages.ts` (`git mv`). Importy: `errorText.ts`, `lists/listName.ts`, `ListNameField.tsx`, SC-02 `messages.ts`, SC-06 `messages.ts`, SC-09 `NameForm.tsx`.
+- `components/productMessages.ts`: `documentTitle` z `PRODUCT_NAME` (K2/S3); SC-04 `TermsScreen.tsx` i SC-08 `InvitationScreen.tsx` tworzą tytuł karty przez `documentTitle`; Copy `product.documentTitle` w `design-system.md` wymienia AppBar, AuthPage, SC-04, SC-08.
+- Dokumenty: nagłówek `copyRegister.test.ts`, `web.md` „Pułapki” (jedna reguła), „Gdzie jest kod” (pliki `*Messages.ts`, K4), historia zmian.
+
+Diff wartości tekstów (`git diff apps/web/src`, linie z literałami): każdy przeniesiony literał jest co do znaku taki sam; tytuł SC-04/SC-08 daje ten sam ciąg `{tytuł} · Wspólna lista zakupów`.
+
+Mutacje (zmiana, test, przywrócenie), każda złapana:
+- bez `localConstant` → fikstura `PRODUCT_NAME` czerwona;
+- JSX nie ściśle (tylko `isCode`) → fikstura AC1 czerwona (`„lub”`, `„ok”`; pierwsza wersja fikstury miała tylko słowa z wielkiej litery i mutacja przeżyła — dodane teksty małą literą);
+- `label` jako atrybut kodu → fikstura AC1 czerwona;
+- argumenty wywołań w JSX liczone ściśle → test repo (`pl-PL`) i fikstura `listNameErrorText("x")` czerwone.
+
+`pnpm vitest run --project web copyRegister` — 23 passed. `pnpm build` exit 0. `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, test, test:mobile): trzeci przebieg exit 0 (`Test Files 155 passed`, `Tests 1265 passed`). Dwa wcześniejsze przebiegi miały po jednym innym błędzie, oba zielone pojedynczo i niezwiązane z tekstem: `SC-08 … sign up with a taken e-mail → „Zaloguj się” … (T-028)` — `Test timed out in 5000ms` pod obciążeniem (pojedynczo 1,1–2,0 s; zmiana w `InvitationScreen.tsx` to tylko `documentTitle`); `|api| routes-nul.test.ts > never logs a raw database exception for NUL input (SEC1)` — warstwa API, poza tym taskiem (pojedynczo 24 passed). Do zgłoszenia jako niestabilne testy.
+
+Granica reguły (zapisana w nagłówku testu): poza JSX jednowyrazowy tekst małą literą bez polskiej litery albo wielkimi literami (`"lub"`, `"OK"`) wygląda jak kod i nie jest zgłaszany. W JSX jest zgłaszany zawsze.
+
+## Regression
+
+- T-100, T-103, T-106, T-107, T-108: fikstury `copyRegister` zielone (T-106/T-107 z nowym nagłówkiem błędu; fikstury z tekstami w `errorText.ts`, `listName.ts`, `personName.ts`, `leaveList.ts` przeniesione na pliki `*Messages.ts`, bo stary układ jest teraz błędem).
+- SC-01–SC-09: teksty bez zmian; testy ekranów zielone w `pnpm check`. Tytuł karty SC-04 i SC-08: ten sam ciąg.
 
 ## Prevention
 
