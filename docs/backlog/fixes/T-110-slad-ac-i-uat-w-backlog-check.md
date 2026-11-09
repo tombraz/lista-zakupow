@@ -77,7 +77,7 @@ Przyczyna w przepływie: `/qa-task` przy `Pass` ustawiał tylko `status: done`; 
 
 ## Prevention
 
-Kontrola w `backlog-check` zaakceptowana przez właściciela 2026-11-09 (przegląd E-02 runda 4).
+Kontrola w `backlog-check` zaakceptowana przez właściciela 2026-11-09 (przegląd E-02 runda 4). Właściciel 2026-11-09 przyjął też propozycję z QA runda 1: krok „Pass” w `.claude/skills/qa-task/SKILL.md` każe odhaczać zweryfikowane AC, poprawiać status w `UAT.md`, a AC zweryfikowane poza rundą QA odhaczać z linią o źródle. Zmiana w pakiecie skilli (product-skills v4.9) do zgłoszenia u źródła; `scripts/backlog-check.mjs` nie jest nadpisywany przy aktualizacji (`plan-backlog` kopiuje go tylko, gdy go brak). Kontrola `story.md` niepotrzebna: 11 story `done`, żadna z nieodhaczonym polem.
 
 <!-- QA rounds are appended below by /qa-task -->
 
