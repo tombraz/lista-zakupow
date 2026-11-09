@@ -67,7 +67,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | owner | właściciel |
 | you | Ty |
 | remove | Usuń (nazwa dostępna: „Usuń {imię} z listy”) |
-| remove.confirm | Usunąć {imię} z listy? Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną. |
+| remove.confirm | Usunąć {imię} z listy? Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną. (złożony z części; T-111) |
 | remove.error | Nie udało się usunąć. Spróbuj ponownie. (w ConfirmDialog; zatwierdzone 2026-11-01, T-058) |
 | invites | Zaproszenia |
 | invite.create | Utwórz link zaproszenia |
@@ -78,7 +78,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | invite.revoke | Unieważnij |
 | invite.revoked | Link unieważniony |
 | leave | Opuść listę |
-| leave.confirm | Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia. |
+| leave.confirm | Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia. (złożony z części; T-111) |
 | leave.error | Nie udało się opuścić listy. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
 | leave.confirm.question | Opuścić listę „{nazwa}”? (część `leave.confirm`; T-103) |
 | leave.confirm.consequence | Żeby wrócić, potrzebujesz nowego zaproszenia. (część `leave.confirm`; T-103) |

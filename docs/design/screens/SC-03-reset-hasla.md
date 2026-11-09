@@ -81,8 +81,8 @@ Jak SC-01. Dwa widoki pod jednym ekranem:
 | step2.password.hint | Co najmniej 8 znaków. (z Layout/States, T-100) |
 | step2.password.tooShort | Hasło musi mieć co najmniej 8 znaków (z Layout/States, T-100) |
 | error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z Layout/States, T-100) |
-| mail.subject | Reset hasła — Wspólna lista zakupów |
-| mail.body | Ktoś poprosił o reset hasła do Twojego konta. Kliknij link, żeby ustawić nowe hasło (ważny 1 godzinę): {link}. Jeśli to nie Ty, zignoruj tę wiadomość. |
+| mail.subject | Reset hasła — Wspólna lista zakupów (mail z API; T-053) |
+| mail.body | Ktoś poprosił o reset hasła do Twojego konta. Kliknij link, żeby ustawić nowe hasło (ważny 1 godzinę): {link}. Jeśli to nie Ty, zignoruj tę wiadomość. (mail z API; T-053) |
 
 ## Accessibility
 

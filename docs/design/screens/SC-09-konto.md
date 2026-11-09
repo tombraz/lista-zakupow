@@ -76,7 +76,7 @@ Domownik widzi swój e-mail, zmienia imię widoczne dla innych, wylogowuje się 
 | delete.confirm.title | Usunąć konto na zawsze? |
 | delete.confirm.body | {n} Twoich list zniknie, także u ich uczestników. Tego nie da się cofnąć. |
 | delete.confirm.cta | Usuń konto |
-| deleted | Konto zostało usunięte. |
+| deleted | Konto zostało usunięte. (pokazuje SC-01; T-111) |
 | back | Wstecz (z Layout/States, T-100) |
 | name.required | Wpisz imię (z Layout/States, T-100) |
 | name.tooLong | Imię może mieć najwyżej 30 znaków (z Layout/States, T-100) |

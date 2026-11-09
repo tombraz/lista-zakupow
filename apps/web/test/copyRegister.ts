@@ -43,6 +43,15 @@ const MESSAGES_FILE = /(^|\/)messages\.ts$|[a-z]Messages\.ts$/;
 
 const COPY_HEADING = /^## Copy\s*$/m;
 
+/**
+ * Dopisek źródła wiersza Copy, którego tekstu nie pokazuje kod web ekranu (T-111), jako osobny
+ * segment dopisku (na początku albo po `; ` / `, `): `mail z API` (tekst maila tworzony przez API),
+ * `mobile` (tekst aplikacji mobilnej), `złożony z części` (kod składa tekst z wierszy-części) albo
+ * `pokazuje SC-xx` (tekst pokazuje inny ekran). „e-mail” w innym dopisku nie jest źródłem.
+ */
+const COPY_SOURCE =
+  /(?:^\(|[;,] )(?:mail z API|mobile|złożony z części|pokazuje SC-\d{2})(?=[;,)])/;
+
 /** Parametr tekstu: `${…}` w kodzie i `{nazwa}` w Copy. */
 const PARAMETER = "{…}";
 
@@ -94,6 +103,39 @@ export function formatCopyGaps(gaps: CopyGap[]): string {
   return [
     "Teksty bez wiersza w tabeli Copy specyfikacji ekranu (docs/design/screens):",
     ...gaps.map(({ screen, file, text }) => `${screen} · ${file} · „${text}”`),
+  ].join("\n");
+}
+
+export interface UnusedCopyRow {
+  screen: string;
+  key: string;
+  text: string;
+}
+
+/**
+ * Wiersze Copy ekranu, których tekstu nie pokazuje kod web ekranu (z modułami wspólnymi i
+ * komponentami, które ekran importuje) i które nie mają dopisku źródła (`COPY_SOURCE`, T-111).
+ */
+export function findUnusedCopyRows({
+  sources,
+  specs,
+  packages = {},
+}: CopyRegisterInput): UnusedCopyRow[] {
+  const modules = new ModuleGraph(sources, packages);
+  const unused: UnusedCopyRow[] = [];
+  for (const [screen, files] of screens(sources)) {
+    const used = new Set(modules.screenTexts(files).map(({ text }) => text));
+    for (const { key, text, note } of copyRows(specOf(screen, specs))) {
+      if (!used.has(text) && !COPY_SOURCE.test(note)) unused.push({ screen, key, text });
+    }
+  }
+  return unused;
+}
+
+export function formatUnusedCopyRows(rows: UnusedCopyRow[]): string {
+  return [
+    "Wiersze Copy ekranu bez tekstu w kodzie web ekranu i bez dopisku źródła (usuń martwy wiersz albo dopisz źródło: „(mail z API; T-053)”, „(mobile; T-…)”, „(złożony z części; T-111)”, „(pokazuje SC-01; T-111)”):",
+    ...rows.map(({ screen, key, text }) => `${screen} · ${key} · „${text}”`),
   ].join("\n");
 }
 
@@ -504,20 +546,37 @@ function isConstructorArgument(node: ts.Node): boolean {
 /** Dopisek na końcu komórki: nawias po spacji z `:`, `;` albo ID zadania (`T-100`). */
 const NOTE = / \((?=[^()]*(?:[:;]|T-\d{3}))[^()]*\)$/;
 
+interface CopyRow {
+  key: string;
+  text: string;
+  /** Dopisek na końcu komórki (`NOTE`) albo pusty. */
+  note: string;
+}
+
 function copyTexts(markdown: string): Set<string> {
-  const texts = new Set<string>();
+  return new Set(copyRows(markdown).map(({ text }) => text));
+}
+
+/** Wiersze tabeli „## Copy” bez nagłówka: jeden na tekst (klucz `a / b` daje dwa). */
+function copyRows(markdown: string): CopyRow[] {
+  const rows: CopyRow[] = [];
   const lines = markdown.split(/\r?\n/);
   const start = lines.findIndex((line) => /^## Copy\s*$/.test(line));
   for (const line of lines.slice(start + 1)) {
     if (line.startsWith("## ")) break;
     const [key, cell] = tableCells(line);
-    if (key === undefined || cell === undefined) continue;
+    if (key === undefined || cell === undefined || key === "Key" || /^-+$/.test(key)) continue;
+    const note = NOTE.exec(cell)?.[0].trim() ?? "";
     // `a / b` w kluczu: komórka ma tyle samo tekstów rozdzielonych „ / ”.
     const text = cell.replace(NOTE, "");
-    const split = key.includes(" / ") ? text.split(" / ") : [text];
-    for (const part of split) texts.add(part.replace(/\{[^{}]+\}/g, PARAMETER));
+    const keys = key.split(" / ");
+    const parts = keys.length > 1 ? text.split(" / ") : [text];
+    parts.forEach((part, index) => {
+      const partKey = keys[index] ?? key;
+      rows.push({ key: partKey, text: part.replace(/\{[^{}]+\}/g, PARAMETER), note });
+    });
   }
-  return texts;
+  return rows;
 }
 
 /** Komórki wiersza tabeli Markdown (`\|` to znak w treści, nie granica komórki). */

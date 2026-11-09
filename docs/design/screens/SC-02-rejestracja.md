@@ -66,12 +66,12 @@ Jak SC-01 (jasne tło, kolumna `content-max`).
 | email.label | E-mail |
 | password.label | Hasło |
 | password.hint | Co najmniej 8 znaków. |
-| consent.terms | Akceptuję regulamin i politykę prywatności. |
+| consent.terms | Akceptuję regulamin i politykę prywatności. (złożony z części; T-111) |
 | consent.age | Mam ukończone 16 lat. |
 | submit | Załóż konto |
-| haveAccount | Masz już konto? Zaloguj się |
+| haveAccount | Masz już konto? Zaloguj się (złożony z części; T-111) |
 | invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: imię; zatwierdzone 2026-11-01, T-060) |
-| error.emailTaken | Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło. |
+| error.emailTaken | Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło. (złożony z części; T-111) |
 | info.invite | Po założeniu konta dołączysz do listy „{nazwa}”. |
 | consent.terms.accept | Akceptuję (część `consent.terms`; z Layout/States, T-100) |
 | consent.terms.termsLink | regulamin (link w `consent.terms`; z Layout/States, T-100) |

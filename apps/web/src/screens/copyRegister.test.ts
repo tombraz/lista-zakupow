@@ -24,8 +24,11 @@
  *   komponentów w `docs/design/design-system.md` (T-106); tekst spoza `components/` tylko do Copy
  *   ekranu. Wiersz Copy ekranu, który powtarza Copy komponentów tekstem, jaki ekran bierze tylko
  *   z `components/` (nie też z własnego pliku), to błąd: ekran nie powtarza wierszy komponentów
- *   (T-108). Wierszy Copy, których nie używa żaden kod, test nie szuka (decyzja właściciela
- *   2026-11-09, T-108).
+ *   (T-108).
+ * - Wiersz Copy ekranu, którego tekstu nie pokazuje kod web ekranu (z importowanymi modułami
+ *   wspólnymi i komponentami), to błąd ze wskazaniem ekranu i klucza (`findUnusedCopyRows`, T-111),
+ *   chyba że dopisek podaje źródło jako osobny segment: `mail z API`, `mobile`, `złożony z części`
+ *   (kod składa tekst z wierszy-części) albo `pokazuje SC-xx`. Martwy wiersz się usuwa.
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
  * - Parametr szablonu `${…}` pasuje do dowolnego `{nazwa}` w Copy (`${String(count)} do kupienia`
@@ -42,7 +45,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import * as shared from "@lista/shared";
 import { describe, expect, it } from "vitest";
-import { findCopyGaps, formatCopyGaps } from "../../test/copyRegister";
+import {
+  findCopyGaps,
+  findUnusedCopyRows,
+  formatCopyGaps,
+  formatUnusedCopyRows,
+} from "../../test/copyRegister";
 
 const SRC = join(import.meta.dirname, "..");
 const SCREENS_DOCS = join(import.meta.dirname, "../../../../docs/design/screens");
@@ -95,6 +103,17 @@ describe("Copy register of web screens (repo)", () => {
       ]),
     );
     expect(formatCopyGaps(gaps)).toBe(formatCopyGaps([]));
+  });
+
+  it("every Copy row of screens SC-01–SC-09 has its text in the screen code or a source note (T-111)", () => {
+    const rows = findUnusedCopyRows({
+      sources: repoSources(),
+      specs: repoSpecs(),
+      packages: { "@lista/shared": shared },
+      designSystem: readFileSync(DESIGN_SYSTEM, "utf8"),
+    });
+
+    expect(formatUnusedCopyRows(rows)).toBe(formatUnusedCopyRows([]));
   });
 });
 
@@ -733,5 +752,80 @@ describe("findCopyGaps (fixtures)", () => {
     });
 
     expect(gaps.map((gap) => gap.text)).toEqual(["Hasło zmienione."]);
+  });
+});
+
+describe("findUnusedCopyRows (fixtures, T-111)", () => {
+  const sources = {
+    "components/Dialog/dialogMessages.ts": `export const dialogMessages = { close: "Zamknij" };`,
+    "screens/SC-07-uczestnicy/messages.ts": `
+      export const messages = {
+        title: "Uczestnicy",
+        question: (name: string) => \`Opuścić listę „\${name}”?\`,
+      };`,
+    "screens/SC-07-uczestnicy/Members.tsx": `
+      import { dialogMessages } from "../../components/Dialog/dialogMessages";
+      import { messages } from "./messages";
+      export const Members = () => <h1>{messages.title}{dialogMessages.close}</h1>;`,
+  };
+
+  it("a Copy row whose text the screen code does not show and without a source note is reported with screen and key", () => {
+    const rows = findUnusedCopyRows({
+      sources,
+      specs: {
+        "SC-07-uczestnicy.md": spec(
+          ["title", "Uczestnicy"],
+          ["close", "Zamknij"],
+          ["leave.confirm.question", "Opuścić listę „{nazwa}”? (część `leave.confirm`; T-103)"],
+          ["leave.confirm", "Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz zaproszenia."],
+          ["empty", "Nikt jeszcze nie dołączył. (z Layout/States, T-100)"],
+        ),
+      },
+    });
+
+    expect(rows).toEqual([
+      {
+        screen: "SC-07",
+        key: "leave.confirm",
+        text: "Opuścić listę „{…}”? Żeby wrócić, potrzebujesz zaproszenia.",
+      },
+      { screen: "SC-07", key: "empty", text: "Nikt jeszcze nie dołączył." },
+    ]);
+    expect(formatUnusedCopyRows(rows)).toContain("SC-07 · leave.confirm · „Opuścić listę");
+  });
+
+  it("a Copy row with a source note (mail, API, mobile, parts, other screen) is not reported", () => {
+    const rows = findUnusedCopyRows({
+      sources,
+      specs: {
+        "SC-07-uczestnicy.md": spec(
+          ["title", "Uczestnicy"],
+          ["leave.confirm", "Opuścić listę „{nazwa}”? Żeby wrócić… (złożony z części; T-111)"],
+          ["mail.subject", "Reset hasła (mail z API; T-053)"],
+          ["push", "Nowa pozycja (mobile; T-200)"],
+          ["joined", "Dołączyłeś(-aś) do listy „{nazwa}”. (pokazuje SC-06; T-111)"],
+          ["a / b", "Pierwszy / Drugi (pokazuje SC-01; T-111)"],
+        ),
+      },
+    });
+
+    expect(rows).toEqual([]);
+  });
+
+  it("a note without a source marker does not excuse a row; `a / b` rows are checked per text", () => {
+    const rows = findUnusedCopyRows({
+      sources,
+      specs: {
+        "SC-07-uczestnicy.md": spec(
+          ["title / back", "Uczestnicy / Wstecz (z Layout/States, T-100)"],
+          ["mailbox", "Skrzynka mailowa (pole e-mail; mobile później, T-100)"],
+        ),
+      },
+    });
+
+    expect(rows).toEqual([
+      { screen: "SC-07", key: "back", text: "Wstecz" },
+      { screen: "SC-07", key: "mailbox", text: "Skrzynka mailowa" },
+    ]);
   });
 });
