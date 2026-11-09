@@ -4,7 +4,7 @@ title: "`backlog-check`: zadanie `done` z nieodhaczonym AC i statusy w `UAT.md` 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -62,7 +62,18 @@ related_tasks: [T-099, T-102, T-105]
 
 ## Evidence
 
-<Reproducing test: red failure message, then passing. Full suite and static checks result.>
+Reproducing tests (`scripts/test/backlog-check.test.mjs`, `node --test`), red przed zmianą:
+
+- „done z nieodhaczonym AC → błąd z plikiem i liczbą nieodhaczonych AC (T-110 AC1)”: `0 !== 1` (wyjście „OK: no errors”).
+- „UAT.md podaje status inny niż plik zadania → błąd z linią, ID i oboma statusami (T-110 AC2)”: `0 !== 1`.
+- „UAT.md: status dla kilku ID i zakresu, zapis „(todo)” bez backticków → każde ID sprawdzone (T-110 AC2)”: `0 !== 2`.
+- Dwa testy przypadków poprawnych (odhaczone AC i `[X]`, `todo`/`in-qa` z nieodhaczonymi, brak sekcji AC; ID bez statusu, `;`, ID w `kodzie`) zielone przed i po zmianie.
+
+Po zmianie: 23/23 (`node --test scripts/test/*.test.mjs`). Pierwszy przebieg na repo: błąd `UAT.md:33` (T-106 `todo` przy `done`) i 38 zadań `done` z nieodhaczonymi AC (nie 4 z raportu: także T-013–T-044, T-055, T-072–T-089, T-109). Każde z 38 ma ostatnią rundę QA `Verdict: pass`, a w rundach QA nie ma uwagi o niezweryfikowanym AC, więc AC odhaczono w sekcji „Acceptance criteria” (poza nią bez zmian). `UAT.md`: runda 4 jako ostatni przegląd, statusy T-103–T-112 (T-110 jak T-105 w rundzie 3: odesłanie do pliku zadania, bo status zmienia QA).
+
+Statyczne: `pnpm backlog-check` OK, `--write-index` OK, `pnpm workflow-check` OK, `pnpm format:check`, `pnpm lint`, `pnpm typecheck` zielone, `pnpm test` 1265 testów, 0 błędów. Kod aplikacji bez zmian (build nie dotyczy).
+
+Przyczyna w przepływie: `/qa-task` przy `Pass` ustawiał tylko `status: done`; krok „Pass” w `.claude/skills/qa-task/SKILL.md` każe teraz odhaczyć zweryfikowane AC i poprawić status w `UAT.md`.
 
 ## Prevention
 
