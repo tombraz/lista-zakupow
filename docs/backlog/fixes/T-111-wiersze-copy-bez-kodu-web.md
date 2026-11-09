@@ -4,7 +4,7 @@ title: "Wiersze Copy bez kodu web: rozstrzygnięcie dla każdego z 9 wierszy i k
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa              # todo | in-progress | in-qa | done | blocked
+status: done               # todo | in-progress | in-qa | done | blocked
 depends_on: [T-109]
 layers: [web]
 requirements: []
@@ -31,10 +31,10 @@ related_tasks: [T-100, T-108]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given 9 wierszy z T-108, then każdy ma zapisaną decyzję właściciela. Wiersz usunięty (martwy), dopisek w komórce wskazujący źródło (np. `(mail; T-055)`, `(część consent.terms)`, `(pokazuje SC-06)`) albo błąd kodu z osobnym zadaniem. — verified by: przegląd QA, tabela decyzji w „Root cause”
-- [ ] AC2: Given wiersz Copy ekranu, którego tekstu nie ma w tekstach ekranu ani w tekstach z dopiskiem źródła, when uruchamia się test Copy, then test jest czerwony i wskazuje ekran i klucz. — verified by: fikstura w `apps/web/src/screens/copyRegister.test.ts`
-- [ ] AC3: Given repo po zmianie, then test Copy repo jest zielony. — verified by: `pnpm vitest run --project web copyRegister`
-- [ ] AC4: No regression in: T-100, T-108 (dublet Copy komponentów), T-109.
+- [x] AC1: Given 9 wierszy z T-108, then każdy ma zapisaną decyzję właściciela. Wiersz usunięty (martwy), dopisek w komórce wskazujący źródło (np. `(mail; T-055)`, `(część consent.terms)`, `(pokazuje SC-06)`) albo błąd kodu z osobnym zadaniem. — verified by: przegląd QA, tabela decyzji w „Root cause”
+- [x] AC2: Given wiersz Copy ekranu, którego tekstu nie ma w tekstach ekranu ani w tekstach z dopiskiem źródła, when uruchamia się test Copy, then test jest czerwony i wskazuje ekran i klucz. — verified by: fikstura w `apps/web/src/screens/copyRegister.test.ts`
+- [x] AC3: Given repo po zmianie, then test Copy repo jest zielony. — verified by: `pnpm vitest run --project web copyRegister`
+- [x] AC4: No regression in: T-100, T-108 (dublet Copy komponentów), T-109.
 
 ## TDD plan
 
@@ -111,3 +111,20 @@ Pełne sprawdzenie: `pnpm check` exit 0 (`Test Files 155 passed`, `Tests 1269 pa
 Co zapobiegłoby: kontrola w obu kierunkach od T-100. Teraz jest (AC2): nowy wiersz Copy bez kodu albo dopisku źródła zatrzymuje `pnpm check`. Wpis w „Pułapkach” `web.md` opisuje słownik dopisków.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-09)
+
+Verdict: pass
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | AC1 | Tabela decyzji w „Root cause” ma 10 wierszy (T-108 liczył `mail.subject`/`mail.body` jako jeden); każdy ma dopisek źródła w Copy SC-02, SC-03, SC-06–SC-09, żaden wiersz nie usunięty, bez osobnych zadań. Sprawdzone w kodzie: wiersze-części istnieją w Copy i kodzie (np. SC-06 `delete.question`/`delete.consequence`, SC-07 `remove.confirm.question`/`.consequence`, SC-02 `haveAccount.text`/`.link`), SC-06 `joined` w `SC-06-lista/messages.ts:21`, SC-01 `info.accountDeleted` w `SC-01-logowanie/messages.ts:16`, mail w `apps/api/src/modules/konta/domain/reset-mail.ts:15-17` zgodny z Copy SC-03. Pass. | `git show 7ee1eb4 -- docs/design`; grep | — |
+| 2 | note | AC2 | Mutacja dokumentów: usunięcie dopisku SC-08 `joined` i dodanie martwego wiersza `ghost` w SC-05 → test na repo czerwony: `SC-05 · ghost · „Martwy tekst”`, `SC-08 · joined · „Dołączyłeś(-aś) do listy „{…}”.”` (1 failed / 26 passed). Fikstury: wiersz bez kodu i bez dopisku zgłoszony z ekranem i kluczem; dopiski źródła zwalniają; dopisek bez znacznika („mobile później”, „z Layout/States”) nie zwalnia; `a / b` sprawdzane per tekst. Pass. | lokalne uruchomienie, przywrócone (`git checkout`) | — |
+| 3 | note | AC3 | `pnpm vitest run --project web copyRegister`: 27 passed. Pass. | lokalne uruchomienie | — |
+| 4 | note | AC4 | Brak regresji: `pnpm check` exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check; `Test Files 155 passed`, `Tests 1269 passed`; mobile 10 passed), `pnpm build` exit 0. Fikstury T-100/T-106–T-109 zielone. Pass. | lokalne uruchomienie | — |
+| 5 | note | Test quality | Mutacja kodu: usunięcie `!used.has(text)` w `findUnusedCopyRows` → 4 failed (test na repo i trzy fikstury); red z Evidence (zaślepka `[]`) i mutacja autora (`!COPY_SOURCE.test(note)`) spójne. Oczekiwane wartości to literały. `git status` czysty po spot-checkach. | lokalne uruchomienie | — |
+| 6 | minor | Test strength | Dopisek źródła nie jest weryfikowany: „(pokazuje SC-06; T-111)” nie sprawdza, że kod SC-06 pokazuje ten tekst, a „(złożony z części; T-111)” nie sprawdza istnienia wierszy-części. Dopisek wpisany przy martwym wierszu zwolni go po cichu. | `apps/web/test/copyRegister.ts`, `COPY_SOURCE` | Opcjonalnie: dla `pokazuje SC-xx` sprawdzić tekst w kodzie ekranu SC-xx. |
+| 7 | minor | Traceability | Sekcja „Decisions” podaje decyzje właściciela z 2026-11-09, ale zadanie nie miało `## Open question` z `Answer:`, a decyzje pojawiły się dopiero w commicie implementacji; QA nie może potwierdzić ich źródła. | `git show f62173a:docs/backlog/fixes/T-111-…` (brak „Decisions”) | Decyzja właściciela zapisana z odnośnikiem (Open question z Answer albo sesja). |
+| 8 | note | Scope | Kierunek „wiersz bez kodu” nie obejmuje Copy komponentów w `design-system.md` (poza AC, opisane w „Other occurrences”). Spec SC-xx bez katalogu ekranu byłby pominięty po cichu (dziś wszystkie SC-01–SC-09 mają katalog). | `screens(sources)` | — |
+
+Kod aplikacji bez zmian (tylko `test/copyRegister.ts`, test i dokumenty); bez UI i zagrożeń (`threats: []`), więc kroki 6–7 ograniczone do przeglądu logiki testu i przypadków brzegowych z QA plan (wiersz-źródło części, `{nazwa}`, mail T-053, SC-08 `joined`). Root cause wyjaśnia, czemu testy nie złapały problemu. Fix task: story/epic n/a.
