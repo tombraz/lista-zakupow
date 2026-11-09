@@ -3,5 +3,5 @@ export const PRODUCT_NAME = "Wspólna lista zakupów";
 
 /** Tytuł karty przeglądarki (Copy w `design-system.md`: `product.documentTitle`). */
 export function documentTitle(title: string): string {
-  return `${title} · Wspólna lista zakupów`;
+  return `${title} · ${PRODUCT_NAME}`;
 }

@@ -7,17 +7,19 @@
  *   deklaracji, które pliki katalogu ekranu importują z modułów wspólnych, także pośrednio przez
  *   inne moduły (np. `errorText()` → wspólny `network`). Liczy się importowany symbol, nie cały
  *   moduł: ekran, który importuje `errorText`, nie musi mieć `HIDDEN_CHARACTERS_TEXT`.
- * - Moduł wspólny `.ts` ma teksty, gdy któryś jego literał wygląda na tekst interfejsu (polska litera
- *   albo słowo z wielkiej litery i kolejne słowo); liczą się literały użytej deklaracji, które tak
- *   wyglądają. Plik komunikatów modułu wspólnego `<nazwa>Messages.ts` (np. `lists/leaveMessages.ts`)
- *   liczy się jak `messages.ts`: każdy literał, także jednowyrazowy („Anuluj”; T-103).
- * - Pliki `.tsx` tylko prowadzą importy. W `.tsx` modułu wspólnego (wszystko poza `screens/`, także
- *   komponenty design systemu w `components/`) literał, który wygląda na tekst interfejsu, i każdy
- *   tekst JSX z literą (także jednowyrazowy `<span>Zamknij</span>`) to błąd ze wskazaniem pliku:
- *   tekst należy do pliku `.ts` modułu (T-103, T-106). Tak samo literał z literą w atrybucie
- *   `aria-label`, `aria-description`, `title`, `alt` i `placeholder` (`aria-label="Zamknij"`,
- *   `alt={"Logo"}`; T-107); inne atrybuty (`className`, `type`, `role`, `id`, `data-*`) tekstem nie
- *   są. Teksty w `.tsx` katalogów ekranów są jeszcze poza testem.
+ * - Teksty modułu wspólnego (wszystko poza `screens/`, także komponenty design systemu w
+ *   `components/`) są tylko w `<nazwa>Messages.ts` (np. `lists/leaveMessages.ts`), który liczy się
+ *   jak `messages.ts`: każdy literał, także jednowyrazowy („Anuluj”; T-103, T-109). Wyświetlany
+ *   literał w innym pliku `.ts` albo `.tsx` modułu wspólnego to błąd ze wskazaniem pliku,
+ *   niezależnie od liczby słów i polskich znaków (T-109):
+ *   - w JSX każdy literał z literą: tekst (`<span>Zamknij</span>`), wyrażenie (`{"Zamknij"}`),
+ *     atrybut i props komponentu (`label="Zamknij"`, `aria-label="Zamknij"`; T-106, T-107), poza
+ *     atrybutami kodu (`className`, `type`, `role`, `id`, `data-*`, `aria-*by`, `aria-controls`,
+ *     `href`, `to`, `variant`, `tone`, `autoComplete`, `on…` itd.) i argumentami wywołań;
+ *   - poza JSX każdy literał, który nie jest kodem: kod to jeden ciąg bez polskiej litery i bez
+ *     słowa z wielkiej litery (`"name"`, `"listId"`, `"POST"`, `"/api/v1/lists"`, `"pl-PL"`);
+ *     `{ cancel: "Anuluj" }` to tekst.
+ *   Pliki `.tsx` tylko prowadzą importy. Teksty w `.tsx` katalogów ekranów są jeszcze poza testem.
  * - Tekst z pliku w `components/` pasuje do wiersza Copy ekranu albo do tabeli „## Copy”
  *   komponentów w `docs/design/design-system.md` (T-106); tekst spoza `components/` tylko do Copy
  *   ekranu. Wiersz Copy ekranu, który powtarza Copy komponentów tekstem, jaki ekran bierze tylko
@@ -27,8 +29,9 @@
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
  * - Parametr szablonu `${…}` pasuje do dowolnego `{nazwa}` w Copy (`${String(count)} do kupienia`
- *   ↔ `{n} do kupienia`). Stała z pakietu (`NAME_MAX_LENGTH`, `BUSINESS_LIMITS.itemsPerList`) jest
- *   rozwijana do wartości, więc Copy ma liczbę (`najwyżej 30 znaków`), nie `{n}`.
+ *   ↔ `{n} do kupienia`). Stała z pakietu (`NAME_MAX_LENGTH`, `BUSINESS_LIMITS.itemsPerList`) i stała
+ *   tego samego modułu z literałem (`PRODUCT_NAME`, T-109) są rozwijane do wartości, więc Copy ma
+ *   wartość (`najwyżej 30 znaków`, `{tytuł} · Wspólna lista zakupów`), nie `{n}`.
  * - Komórka Copy pasuje tylko w całości, co do znaku. Dopisek na końcu (` (…)` z `:`, `;` albo ID
  *   zadania, np. „(zatwierdzone 2026-11-05, T-100)”) się nie liczy; klucz `a / b` dzieli komórkę
  *   na teksty rozdzielone „ / ”; `\|` to znak `|` w treści.
@@ -94,6 +97,9 @@ describe("Copy register of web screens (repo)", () => {
     expect(formatCopyGaps(gaps)).toBe(formatCopyGaps([]));
   });
 });
+
+const SHARED_TEXTS_HEADER =
+  "Teksty interfejsu w modułach wspólnych poza plikiem <nazwa>Messages.ts (przenieś tekst do <nazwa>Messages.ts modułu, np. lists/leaveMessages.ts):";
 
 function spec(...rows: [string, string][]): string {
   const body = rows.map(([key, text]) => `| ${key} | ${text} |`).join("\n");
@@ -228,12 +234,14 @@ describe("findCopyGaps (fixtures)", () => {
   it("texts of a shared module are required on each screen that imports them, and only there", () => {
     const gaps = findCopyGaps({
       sources: {
-        "errorText.ts": `
-          const COMMON = { network: "Brak połączenia. Sprawdź internet i spróbuj ponownie." };
-          export function errorText(code: string, otherwise: string): string {
-            return COMMON[code] ?? otherwise;
-          }
+        "errorTextMessages.ts": `
+          export const COMMON_ERROR_TEXTS = { network: "Brak połączenia. Sprawdź internet i spróbuj ponownie." };
           export const HIDDEN_CHARACTERS_TEXT = "Usuń niewidoczne lub specjalne znaki.";`,
+        "errorText.ts": `
+          import { COMMON_ERROR_TEXTS } from "./errorTextMessages";
+          export function errorText(code: string, otherwise: string): string {
+            return COMMON_ERROR_TEXTS[code] ?? otherwise;
+          }`,
         "api/client.ts": `
           export function apiRequest(path: string) {
             return fetch(path, { method: "POST", credentials: "same-origin" });
@@ -246,7 +254,7 @@ describe("findCopyGaps (fixtures)", () => {
           export const signIn = () => apiRequest("/api/auth/sign-in/email");`,
         "screens/SC-05-moje-listy/messages.ts": `export const messages = { title: "Moje listy" };`,
         "screens/SC-05-moje-listy/NewListForm.tsx": `
-          import { HIDDEN_CHARACTERS_TEXT } from "../../errorText";
+          import { HIDDEN_CHARACTERS_TEXT } from "../../errorTextMessages";
           export const Form = () => <p>{HIDDEN_CHARACTERS_TEXT}</p>;`,
         "screens/SC-08-zaproszenie/messages.ts": `
           import type { errorText } from "../../errorText";
@@ -262,31 +270,35 @@ describe("findCopyGaps (fixtures)", () => {
     expect(gaps).toEqual([
       {
         screen: "SC-01",
-        file: "errorText.ts",
+        file: "errorTextMessages.ts",
         text: "Brak połączenia. Sprawdź internet i spróbuj ponownie.",
       },
-      { screen: "SC-05", file: "errorText.ts", text: "Usuń niewidoczne lub specjalne znaki." },
+      {
+        screen: "SC-05",
+        file: "errorTextMessages.ts",
+        text: "Usuń niewidoczne lub specjalne znaki.",
+      },
     ]);
   });
 
   it("texts of a shared module imported indirectly (module → module → screen) are required", () => {
     const gaps = findCopyGaps({
       sources: {
-        "errorText.ts": `export const HIDDEN_CHARACTERS_TEXT = "Usuń niewidoczne lub specjalne znaki.";`,
-        "session/personName.ts": `
+        "errorTextMessages.ts": `export const HIDDEN_CHARACTERS_TEXT = "Usuń niewidoczne lub specjalne znaki.";`,
+        "session/personNameMessages.ts": `
           import { NAME_MAX_LENGTH } from "@lista/shared";
-          import { HIDDEN_CHARACTERS_TEXT } from "../errorText";
+          import { HIDDEN_CHARACTERS_TEXT } from "../errorTextMessages";
           export const NAME_ERROR_TEXTS = {
             required: "Wpisz imię",
             invalid: HIDDEN_CHARACTERS_TEXT,
             too_long: \`Imię może mieć najwyżej \${String(NAME_MAX_LENGTH)} znaków\`,
           };`,
-        "lists/listName.ts": `
+        "lists/listNameMessages.ts": `
           export function listNameErrorText(code: string): string {
             return code === "too_long" ? "Nazwa listy jest za długa" : "Wpisz nazwę listy";
           }`,
         "lists/ListNameField.tsx": `
-          import { listNameErrorText } from "./listName";
+          import { listNameErrorText } from "./listNameMessages";
           export const ListNameField = () => <p>{listNameErrorText("x")}</p>;`,
         "screens/SC-05-moje-listy/messages.ts": `export const messages = {};`,
         "screens/SC-05-moje-listy/NewListForm.tsx": `
@@ -294,7 +306,7 @@ describe("findCopyGaps (fixtures)", () => {
           export const NewListForm = () => <ListNameField />;`,
         "screens/SC-09-konto/messages.ts": `export const messages = {};`,
         "screens/SC-09-konto/NameForm.tsx": `
-          import { NAME_ERROR_TEXTS } from "../../session/personName";
+          import { NAME_ERROR_TEXTS } from "../../session/personNameMessages";
           export const NameForm = () => <p>{NAME_ERROR_TEXTS.required}</p>;`,
       },
       specs: {
@@ -305,19 +317,34 @@ describe("findCopyGaps (fixtures)", () => {
     });
 
     expect(gaps).toEqual([
-      { screen: "SC-05", file: "lists/listName.ts", text: "Nazwa listy jest za długa" },
-      { screen: "SC-09", file: "session/personName.ts", text: "Imię może mieć najwyżej 30 znaków" },
-      { screen: "SC-09", file: "errorText.ts", text: "Usuń niewidoczne lub specjalne znaki." },
+      { screen: "SC-05", file: "lists/listNameMessages.ts", text: "Nazwa listy jest za długa" },
+      {
+        screen: "SC-09",
+        file: "session/personNameMessages.ts",
+        text: "Imię może mieć najwyżej 30 znaków",
+      },
+      {
+        screen: "SC-09",
+        file: "errorTextMessages.ts",
+        text: "Usuń niewidoczne lub specjalne znaki.",
+      },
     ]);
   });
 
-  it("in a shared module only literals that look like interface text count (not field keys)", () => {
+  it("code literals of a shared module (field keys, paths, methods, query keys) are not texts (T-109)", () => {
     const gaps = findCopyGaps({
       sources: {
+        "lists/listNameMessages.ts": `export const LIST_NAME_REQUIRED = "Wpisz nazwę listy";`,
         "lists/listName.ts": `
+          import { LIST_NAME_REQUIRED } from "./listNameMessages";
           export function useListNameForm(focusField: (field: string) => void) {
             focusField("name");
-            return "Wpisz nazwę listy";
+            const key = ["lists", "detail"];
+            const save = () => apiRequest("/api/v1/lists", { method: "POST", credentials: "same-origin" });
+            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+            const initial = (name: string) => name.toLocaleUpperCase("pl-PL");
+            const kind = reduced ? "text" : "password";
+            return LIST_NAME_REQUIRED;
           }`,
         "screens/SC-05-moje-listy/messages.ts": `export const messages = {};`,
         "screens/SC-05-moje-listy/useNewList.ts": `
@@ -374,7 +401,7 @@ describe("findCopyGaps (fixtures)", () => {
 
     expect(withTexts).toThrow(
       [
-        "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        SHARED_TEXTS_HEADER,
         "components/Banner.tsx · „Jesteś offline”",
         "components/Close.tsx · „Zamknij”",
         "invitations/Notice.tsx · „Dołączasz do listy”",
@@ -404,7 +431,7 @@ describe("findCopyGaps (fixtures)", () => {
 
     expect(check).toThrow(
       [
-        "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        SHARED_TEXTS_HEADER,
         "components/Modal/Modal.tsx · „Zamknij”",
         "components/Modal/Modal.tsx · „Menu”",
         "components/Modal/Modal.tsx · „Logo”",
@@ -547,14 +574,12 @@ describe("findCopyGaps (fixtures)", () => {
     const gaps = findCopyGaps({
       sources: {
         "lists/leaveMessages.ts": `export const leaveMessages = { confirm: "Opuść", cancel: "Anuluj", close: "Zamknij" };`,
-        "lists/listName.ts": `export const pick = (focus: (f: string) => void) => { focus("Name"); return "Wpisz nazwę"; };`,
         "screens/SC-07-uczestnicy/messages.ts": `
           import { leaveMessages } from "../../lists/leaveMessages";
-          import { pick } from "../../lists/listName";
-          export const messages = { leave: leaveMessages, pick };`,
+          export const messages = { leave: leaveMessages };`,
       },
       specs: {
-        "SC-07-uczestnicy.md": spec(["leave.confirm.cta", "Opuść"], ["name", "Wpisz nazwę"]),
+        "SC-07-uczestnicy.md": spec(["leave.confirm.cta", "Opuść"]),
       },
     });
 
@@ -567,9 +592,9 @@ describe("findCopyGaps (fixtures)", () => {
   it("a shared .tsx file that only renders imported texts is not an error", () => {
     const gaps = findCopyGaps({
       sources: {
-        "lists/leaveList.ts": `export const leaveMessages = { confirm: "Opuść" };`,
+        "lists/leaveMessages.ts": `export const leaveMessages = { confirm: "Opuść" };`,
         "lists/LeaveListDialog.tsx": `
-          import { leaveMessages } from "./leaveList";
+          import { leaveMessages } from "./leaveMessages";
           export const LeaveListDialog = () => <button className="btn primary">{leaveMessages.confirm}</button>;`,
         "lists/LeaveListDialog.test.tsx": `it("x", () => screen.getByText("Opuść listę"));`,
         "screens/SC-07-uczestnicy/messages.ts": `export const messages = {};`,
@@ -580,7 +605,112 @@ describe("findCopyGaps (fixtures)", () => {
       specs: { "SC-07-uczestnicy.md": spec() },
     });
 
-    expect(gaps).toEqual([{ screen: "SC-07", file: "lists/leaveList.ts", text: "Opuść" }]);
+    expect(gaps).toEqual([{ screen: "SC-07", file: "lists/leaveMessages.ts", text: "Opuść" }]);
+  });
+
+  it("a displayed literal in a shared .tsx file is an error: object value, JSX expression, component prop (T-109)", () => {
+    const check = () =>
+      findCopyGaps({
+        sources: {
+          "lists/LeaveListDialog.tsx": `
+            const t = { cancel: "Anuluj" };
+            export const LeaveListDialog = ({ kind }: { kind: string }) => (
+              <div role="dialog" className="row" id="leave" data-state="open" aria-labelledby="leave-title">
+                <button type="button" className={"btn primary"} aria-describedby="hint" aria-controls="menu">{t.cancel}</button>
+                <span>{"Zamknij"}</span>
+                <MoreMenu label="Menu" tone="error" variant="danger" />
+                <p>{"lub"}</p>
+                <Tag text="ok" />
+                <a href="/regulamin" target="_blank" rel="noopener">{kind === "owner" && <b />}</a>
+                <Link to="/listy" />
+                <input autoComplete="email" name="email" inputMode="email" aria-hidden="true" />
+              </div>
+            );`,
+          "screens/SC-07-uczestnicy/messages.ts": `export const messages = {};`,
+        },
+        specs: { "SC-07-uczestnicy.md": spec() },
+      });
+
+    expect(check).toThrow(
+      [
+        SHARED_TEXTS_HEADER,
+        "lists/LeaveListDialog.tsx · „Anuluj”",
+        "lists/LeaveListDialog.tsx · „Zamknij”",
+        "lists/LeaveListDialog.tsx · „Menu”",
+        "lists/LeaveListDialog.tsx · „lub”",
+        "lists/LeaveListDialog.tsx · „ok”",
+      ].join("\n"),
+    );
+  });
+
+  it("a shared .tsx file with only code attributes and code literals is not an error (T-109)", () => {
+    const gaps = findCopyGaps({
+      sources: {
+        "components/Field.tsx": `
+          const SELECTOR = "button:not(:disabled), a[href]";
+          export const Field = ({ id, open }: { id: string; open: boolean }) => (
+            <div role="group" className="field" id={\`\${id}-label\`} data-testid="field" aria-labelledby={\`\${id}-label\`} aria-describedby={open ? \`\${id}-hint\` : undefined}>
+              <input type={open ? "text" : "password"} autoComplete="current-password" htmlFor="x" aria-invalid="true" aria-live="polite" />
+              <Button variant="secondary" tone="error" />
+              <Link to="/listy" state={{ from: "/listy" }} />
+            </div>
+          );`,
+        "screens/SC-07-uczestnicy/messages.ts": `export const messages = {};`,
+      },
+      specs: { "SC-07-uczestnicy.md": spec() },
+    });
+
+    expect(gaps).toEqual([]);
+  });
+
+  it("a shared .ts module other than <name>Messages.ts with a displayed one-word text is an error (T-109)", () => {
+    const check = () =>
+      findCopyGaps({
+        sources: {
+          "lists/leaveList.ts": `export const m = { confirm: "Opuść", cancel: "Anuluj", close: "Zamknij" };`,
+          "screens/SC-07-uczestnicy/messages.ts": `
+            import { m } from "../../lists/leaveList";
+            export const messages = { leave: m };`,
+        },
+        specs: { "SC-07-uczestnicy.md": spec() },
+      });
+
+    expect(check).toThrow(
+      [
+        SHARED_TEXTS_HEADER,
+        "lists/leaveList.ts · „Opuść”",
+        "lists/leaveList.ts · „Anuluj”",
+        "lists/leaveList.ts · „Zamknij”",
+      ].join("\n"),
+    );
+  });
+
+  it("a constant of the same module in a template is expanded to its value (PRODUCT_NAME, T-109)", () => {
+    const gaps = findCopyGaps({
+      sources: {
+        "components/productMessages.ts": `
+          export const PRODUCT_NAME = "Wspólna lista zakupów";
+          export function documentTitle(title: string): string {
+            return \`\${title} · \${PRODUCT_NAME}\`;
+          }`,
+        "screens/SC-04-regulamin/messages.ts": `export const messages = { title: "Regulamin" };`,
+        "screens/SC-04-regulamin/Terms.tsx": `
+          import { documentTitle } from "../../components/productMessages";
+          import { messages } from "./messages";
+          export const Terms = () => <title>{documentTitle(messages.title)}</title>;`,
+      },
+      specs: { "SC-04-regulamin.md": spec(["title", "Regulamin"]) },
+      designSystem:
+        "## Copy\n\n| Key | Text |\n| --- | --- |\n| product.name | Wspólna lista zakupów |\n",
+    });
+
+    expect(gaps).toEqual([
+      {
+        screen: "SC-04",
+        file: "components/productMessages.ts",
+        text: "{…} · Wspólna lista zakupów",
+      },
+    ]);
   });
 
   it("CRLF line endings in the spec give the same result as LF", () => {

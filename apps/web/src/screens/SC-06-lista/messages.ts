@@ -6,7 +6,8 @@ import {
   type Person,
 } from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
-import { errorText, HIDDEN_CHARACTERS_TEXT } from "../../errorText";
+import { errorText } from "../../errorText";
+import { HIDDEN_CHARACTERS_TEXT } from "../../errorTextMessages";
 
 /** Teksty z tabeli „Copy” SC-06 (docs/design/screens/SC-06-lista.md). */
 export const messages = {

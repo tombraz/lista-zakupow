@@ -35,7 +35,10 @@ interface Module {
 
 const SCREEN_DIR = /^screens\/(SC-\d{2})-[^/]+\//;
 
-/** Plik komunikatów: `messages.ts` ekranu albo `<nazwa>Messages.ts` modułu wspólnego (T-103). */
+/**
+ * Plik komunikatów: `messages.ts` ekranu albo `<nazwa>Messages.ts` modułu wspólnego (T-103). Moduł
+ * wspólny ma teksty interfejsu tylko w `<nazwa>Messages.ts` (T-109).
+ */
 const MESSAGES_FILE = /(^|\/)messages\.ts$|[a-z]Messages\.ts$/;
 
 const COPY_HEADING = /^## Copy\s*$/m;
@@ -52,11 +55,11 @@ export function findCopyGaps({
   if (!COPY_HEADING.test(designSystem)) throw new Error("design-system.md: brak sekcji „## Copy”");
   const componentCopy = copyTexts(designSystem);
   const modules = new ModuleGraph(sources, packages);
-  const misplaced = modules.sharedTsxTexts();
+  const misplaced = modules.misplacedSharedTexts();
   if (misplaced.length > 0) {
     throw new Error(
       [
-        "Teksty interfejsu w plikach .tsx modułów wspólnych (miejsce: plik .ts modułu, np. lists/listName.ts):",
+        "Teksty interfejsu w modułach wspólnych poza plikiem <nazwa>Messages.ts (przenieś tekst do <nazwa>Messages.ts modułu, np. lists/leaveMessages.ts):",
         ...misplaced.map(({ file, text }) => `${file} · „${text}”`),
       ].join("\n"),
     );
@@ -154,33 +157,49 @@ class ModuleGraph {
   }
 
   /**
-   * Pliki `.tsx` modułów wspólnych (poza `screens/`, także `components/`, bez testów) tylko
-   * renderują teksty importowane z plików `.ts`: literał, który wygląda na tekst interfejsu, oraz
-   * każdy tekst JSX i literał atrybutu tekstowego (`TEXT_ATTRIBUTES`) z literą są tam błędem (T-103,
-   * T-106, T-107). Inaczej test nie widzi tekstu, bo literały `.tsx` są poza rejestrem. Tekst JSX i
-   * atrybut tekstowy trafiają do użytkownika albo czytnika ekranu, więc nie muszą wyglądać na polski
-   * tekst (`<span>Zamknij</span>`, `aria-label="Zamknij"`); inny literał bywa klasą albo typem
-   * (`className`, `role`), więc musi.
+   * Moduł wspólny (wszystko poza `screens/`, także `components/`, bez testów) ma teksty interfejsu
+   * tylko w `<nazwa>Messages.ts`; wyświetlany literał w innym jego pliku `.ts` albo `.tsx` to błąd
+   * (T-109). Inaczej siła kontroli zależałaby od położenia tekstu: inny plik miesza teksty z logiką,
+   * więc test brałby z niego tylko literały, które wyglądają na tekst, a jednowyrazowe „Anuluj”
+   * przechodziłoby po cichu.
+   * - W JSX (tekst, wyrażenie `{…}` w treści, atrybut i props komponentu) wyświetlany jest każdy
+   *   literał z literą (`<span>{"Zamknij"}</span>`, `label="Zamknij"`), poza atrybutami kodu
+   *   (`isCodeAttribute`: `className`, `type`, `role`, `id`, `data-*`, `aria-*by`, `to` itd.).
+   * - Poza JSX literał jest tekstem, jeśli nie jest kodem (`isCode`), np. `{ cancel: "Anuluj" }`.
+   * - Nie są tekstem literały w miejscach z `isNotText` (klucze, typy, porównania, `new …(…)`).
    */
-  sharedTsxTexts(): { file: string; text: string }[] {
+  misplacedSharedTexts(): { file: string; text: string }[] {
     const found: { file: string; text: string }[] = [];
     for (const file of Object.keys(this.sources).sort()) {
-      if (!file.endsWith(".tsx") || file.startsWith("screens/") || file.endsWith(".test.tsx")) {
-        continue;
-      }
+      if (!isSharedCodeFile(file)) continue;
       const module = this.module(file);
-      const jsxTexts: string[] = [];
-      const visit = (node: ts.Node): void => {
-        if (ts.isJsxText(node)) jsxTexts.push(node.text.trim().replace(/\s+/g, " "));
-        const attribute = textAttributeValue(node);
-        if (attribute !== null) jsxTexts.push(attribute);
-        ts.forEachChild(node, visit);
+      const constant = this.constant(module);
+      const texts: string[] = [];
+      const visit = (node: ts.Node, inJsx: boolean): void => {
+        if (ts.isJsxAttribute(node)) {
+          if (!isCodeAttribute(node.name.getText())) {
+            ts.forEachChild(node, (child) => {
+              visit(child, true);
+            });
+          }
+          return;
+        }
+        if (ts.isJsxText(node)) {
+          const text = node.text.trim().replace(/\s+/g, " ");
+          if (/\p{L}/u.test(text)) texts.push(text);
+        }
+        const text = literalText(node, constant);
+        if (text !== null && !isNotText(node, text) && (inJsx || !isCode(text))) texts.push(text);
+        // Wyświetla się wyrażenie w treści JSX; argument wywołania w nim to dane wejściowe, nie tekst
+        // (`toLocaleUpperCase("pl-PL")`), więc liczy się jak literał poza JSX.
+        const jsxChildren = ts.isJsxElement(node) || ts.isJsxFragment(node);
+        const call = ts.isCallExpression(node) || ts.isNewExpression(node);
+        ts.forEachChild(node, (child) => {
+          const argument = call && node.arguments?.includes(child as ts.Expression) === true;
+          visit(child, !argument && (inJsx || (jsxChildren && ts.isJsxExpression(child))));
+        });
       };
-      visit(module.source);
-      const texts = [
-        ...this.literals(module, [module.source]).filter(looksLikeText),
-        ...jsxTexts.filter((text) => /\p{L}/u.test(text)),
-      ];
+      visit(module.source, false);
       for (const text of new Set(texts)) found.push({ file, text });
     }
     return found;
@@ -229,9 +248,10 @@ class ModuleGraph {
   }
 
   /**
-   * `messages.ts` i `<nazwa>Messages.ts`: każdy literał. Inny plik `.ts` miesza teksty z logiką (klucze pól, adresy),
-   * więc liczą się literały, które wyglądają na tekst interfejsu. JSX i literały w plikach `.tsx`
-   * są poza zakresem (T-100): `.tsx` tylko prowadzi importy.
+   * Teksty deklaracji: z `messages.ts` i `<nazwa>Messages.ts` każdy literał. Inny plik `.ts` modułu
+   * wspólnego nie ma tekstów (`misplacedSharedTexts`, T-109). Inny plik `.ts` katalogu ekranu miesza
+   * teksty z logiką (klucze pól, adresy), więc liczą się literały, które wyglądają na tekst
+   * interfejsu. Pliki `.tsx` tylko prowadzą importy (T-100).
    */
   private texts(file: string, nodes: ts.Node[]): string[] {
     if (file.endsWith(".tsx")) return [];
@@ -241,8 +261,7 @@ class ModuleGraph {
 
   private literals(module: Module, nodes: ts.Node[]): string[] {
     const texts: string[] = [];
-    const constant = (expression: ts.Expression) =>
-      constantOf(expression, module.imports, this.packages);
+    const constant = this.constant(module);
     const visit = (node: ts.Node): void => {
       const text = literalText(node, constant);
       if (text !== null && !isNotText(node, text)) texts.push(text);
@@ -250,6 +269,12 @@ class ModuleGraph {
     };
     nodes.forEach(visit);
     return texts;
+  }
+
+  /** Wartość stałej w szablonie: z pakietu albo literał stałej tego samego modułu (`PRODUCT_NAME`). */
+  private constant(module: Module): (expression: ts.Expression) => string | null {
+    return (expression) =>
+      constantOf(expression, module.imports, this.packages) ?? localConstant(module, expression);
   }
 
   /** Importy wartości (bez `import type`): nazwa lokalna → wiązanie. */
@@ -319,18 +344,75 @@ function declarationsOf(source: ts.SourceFile): Map<string, ts.Node[]> {
   return declarations;
 }
 
-/** Atrybuty JSX, które trafiają do użytkownika albo do czytnika ekranu (T-107). */
-const TEXT_ATTRIBUTES = new Set(["aria-label", "aria-description", "title", "alt", "placeholder"]);
+/** Plik kodu modułu wspólnego spoza `<nazwa>Messages.ts`: poza `screens/`, bez testów (T-109). */
+function isSharedCodeFile(file: string): boolean {
+  return (
+    /\.tsx?$/.test(file) &&
+    !file.startsWith("screens/") &&
+    !/\.test\.tsx?$|\.d\.ts$/.test(file) &&
+    !MESSAGES_FILE.test(file)
+  );
+}
 
-/** Literał w atrybucie tekstowym (`aria-label="…"`, `alt={"…"}`) → jego treść; inaczej `null`. */
-function textAttributeValue(node: ts.Node): string | null {
-  if (!ts.isJsxAttribute(node) || !TEXT_ATTRIBUTES.has(node.name.getText())) return null;
-  const value = node.initializer;
-  const literal = value && ts.isJsxExpression(value) ? value.expression : value;
-  if (!literal || !(ts.isStringLiteral(literal) || ts.isNoSubstitutionTemplateLiteral(literal))) {
-    return null;
-  }
-  return literal.text;
+/**
+ * Atrybuty JSX, które nie trafiają do użytkownika ani do czytnika ekranu: klasy, typy, role,
+ * identyfikatory, adresy, warianty komponentów, `data-*`, zdarzenia `on…` i `aria-*` poza
+ * tekstowymi (`TEXT_ARIA`). Każdy inny atrybut, także props własnego komponentu (`label`), jest
+ * tekstem (T-107, T-109).
+ */
+const CODE_ATTRIBUTES = new Set([
+  "className",
+  "type",
+  "role",
+  "id",
+  "key",
+  "href",
+  "to",
+  "state",
+  "replace",
+  "target",
+  "rel",
+  "src",
+  "variant",
+  "tone",
+  "size",
+  "autoComplete",
+  "inputMode",
+  "enterKeyHint",
+  "name",
+  "htmlFor",
+  "method",
+  "style",
+  "tabIndex",
+  "lang",
+  "dir",
+]);
+
+/** `aria-*`, które są tekstem dla czytnika ekranu (T-107). */
+const TEXT_ARIA = new Set([
+  "aria-label",
+  "aria-description",
+  "aria-roledescription",
+  "aria-valuetext",
+  "aria-placeholder",
+]);
+
+function isCodeAttribute(name: string): boolean {
+  if (name.startsWith("aria-")) return !TEXT_ARIA.has(name);
+  return CODE_ATTRIBUTES.has(name) || name.startsWith("data-") || /^on[A-Z]/.test(name);
+}
+
+/**
+ * Kod, nie tekst (poza JSX modułu wspólnego, T-109): bez polskiej litery, bez dwóch słów
+ * rozdzielonych spacją i bez słowa, które zaczyna się wielką literą (`name`, `listId`, `POST`, `same-origin`,
+ * `/api/v1/lists`, `pl-PL`, `(prefers-reduced-motion: reduce)`). „Anuluj” i „do kupienia” to tekst.
+ */
+function isCode(text: string): boolean {
+  return (
+    !/[ąćęłńóśźż]/i.test(text) &&
+    !/\p{L}\s+\p{L}/u.test(text) &&
+    !/(^|\P{L})\p{Lu}\p{Ll}/u.test(text)
+  );
 }
 
 /** Tekst interfejsu po polsku: polska litera albo słowo z wielkiej litery i kolejne słowo. */
@@ -373,6 +455,17 @@ function constantOf(
     packages[imported.from],
   );
   return typeof value === "string" || typeof value === "number" ? String(value) : null;
+}
+
+/** Stała tego samego modułu z literałem (`const PRODUCT_NAME = "…"`) → jej wartość. */
+function localConstant(module: Module, expression: ts.Expression): string | null {
+  if (!ts.isIdentifier(expression)) return null;
+  const [declaration, ...rest] = module.declarations.get(expression.text) ?? [];
+  if (!declaration || rest.length > 0 || !ts.isVariableDeclaration(declaration)) return null;
+  const constant = (declaration.parent.flags & ts.NodeFlags.Const) !== 0;
+  const value = declaration.initializer;
+  if (!constant || !value) return null;
+  return ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value) ? value.text : null;
 }
 
 const COMPARISONS = new Set([

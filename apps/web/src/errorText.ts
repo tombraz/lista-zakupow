@@ -1,20 +1,10 @@
 import type { RequestErrorCode } from "./api/client";
+import { COMMON_ERROR_TEXTS } from "./errorTextMessages";
 
 /** Teksty ekranu dla jego kodów błędów i tekst dla każdego innego kodu. */
 export type ErrorTexts = Partial<Record<RequestErrorCode, string>> & { otherwise: string };
 
-// Kody, które znaczą to samo na każdym ekranie (CODING_STANDARDS.md: mapowanie w jednym miejscu).
-const COMMON: Partial<Record<RequestErrorCode, string>> = {
-  network: "Brak połączenia. Sprawdź internet i spróbuj ponownie.",
-};
-
 /** Kod błędu żądania → komunikat: najpierw tekst ekranu, potem wspólny, na końcu domyślny. */
 export function errorText(code: RequestErrorCode, texts: ErrorTexts): string {
-  return texts[code] ?? COMMON[code] ?? texts.otherwise;
+  return texts[code] ?? COMMON_ERROR_TEXTS[code] ?? texts.otherwise;
 }
-
-/**
- * Błąd `invalid` pola tekstu widocznego dla innych (imię, nazwa listy i pozycji, notatka): znaki
- * ukryte, sterujące albo zmieniające kierunek tekstu (TH-29; copy zatwierdzone 2026-11-01).
- */
-export const HIDDEN_CHARACTERS_TEXT = "Usuń niewidoczne lub specjalne znaki.";

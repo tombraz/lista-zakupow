@@ -196,7 +196,7 @@ Teksty komponentów design systemu (`apps/web/src/components/`). Ekran, który p
 | Key | Text |
 | --- | --- |
 | product.name | Wspólna lista zakupów (AuthPage nad `h1`; z Layout SC-01, T-106) |
-| product.documentTitle | {tytuł} · Wspólna lista zakupów (tytuł karty przeglądarki: AppBar, AuthPage; zatwierdzone 2026-11-06, T-106) |
+| product.documentTitle | {tytuł} · Wspólna lista zakupów (tytuł karty przeglądarki: AppBar, AuthPage, SC-04, SC-08 przez `documentTitle`; zatwierdzone 2026-11-06, T-106; T-109) |
 | AuthPage.legal | Regulamin i polityka prywatności (stopka SC-01–SC-03; z Copy SC-01 `legal`, T-106) |
 | LoadError.retry | Spróbuj ponownie (z Layout/States SC-05–SC-07, T-106) |
 | OfflineBanner.offline | Brak połączenia. Zmiany nie są zapisywane. (z OfflineBanner „Budowa”, T-106) |

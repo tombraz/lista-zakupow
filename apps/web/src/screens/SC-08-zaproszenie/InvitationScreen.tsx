@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { ApiRequestError } from "../../api/client";
 import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
+import { documentTitle } from "../../components/productMessages";
 import { shouldJoin, type EntryState } from "../../invitations/invitationContext";
 import { useSession } from "../../session/useSession";
 import { failureText, messages } from "./messages";
@@ -20,7 +21,7 @@ export function InvitationScreen() {
 
   return (
     <main className={styles.page}>
-      <title>{`${title} · Wspólna lista zakupów`}</title>
+      <title>{documentTitle(title)}</title>
       <Heading key={view.kind} text={title} />
       {view.kind === "checking" && <p aria-busy="true">{messages.checking}</p>}
       {view.kind === "invalid" && <Invalid />}
