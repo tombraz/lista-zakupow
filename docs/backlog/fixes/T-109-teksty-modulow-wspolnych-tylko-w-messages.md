@@ -4,7 +4,7 @@ title: "Test Copy: teksty modułów wspólnych tylko w `<nazwa>Messages.ts`; ka�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                  # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: []
@@ -109,3 +109,28 @@ Granica reguły (zapisana w nagłówku testu): poza JSX jednowyrazowy tekst mał
 Reguła zapisana w teście i w `web.md` („teksty modułu wspólnego tylko w `<nazwa>Messages.ts`”) zamyka klasę: miejsce tekstu nie decyduje już o sile kontroli. Propozycję zaakceptował właściciel 2026-11-09 (przegląd E-02 runda 4).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-09)
+
+Verdict: pass
+
+Reproduce: `pnpm vitest run --project web copyRegister` — 23 passed. `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, test, test:mobile) — exit 0, `Test Files 155 passed`, `Tests 1265 passed`. `git status` clean after the run.
+
+Acceptance criteria:
+- AC1 pass — fixture `a displayed literal in a shared .tsx file…` asserts the exact error list (`Anuluj` in an object, `{"Zamknij"}`, `label="Menu"`, `lub`, `ok`); the companion fixture with `className`, `type`, `role`, `id`, `data-*`, `aria-*by`, `aria-controls`, `href`, `to`, `variant`, `tone`, `autoComplete`, `state` gives no gap. QA probe: ternary in `aria-label` and in JSX content, template in `title` and in content, default prop value `label = "Zamknij"` — all reported.
+- AC2 pass — fixture `lists/leaveList.ts` reports `Opuść`, `Anuluj`, `Zamknij`; header points to `<nazwa>Messages.ts` (example `lists/leaveMessages.ts`, which exists). QA probe: array literal, template with parameter, `toast("Zapisano")` in a `.ts` — reported; `switch`/`===` codes, `new Intl.NumberFormat("pl-PL")`, `.test.ts`, `.d.ts` — not reported.
+- AC3 pass — `errorTextMessages.ts`, `lists/listNameMessages.ts`, `session/personNameMessages.ts` (rename) hold the texts; diff of moved literals is character-identical. `documentTitle` uses `PRODUCT_NAME`; SC-04 `TermsScreen.tsx` and SC-08 `InvitationScreen.tsx` call `documentTitle`; `design-system.md:199` lists AppBar, AuthPage, SC-04, SC-08. Repo test green. Only remaining literal of the product name outside `productMessages.ts` is the legal text in SC-04 `documents.tsx` (screen, out of scope).
+- AC4 pass — `web.md:103`, the test header, `MESSAGES_FILE` and `texts()` JSDoc describe one rule; "Gdzie jest kod" lines 22, 32, 36 name the `*Messages.ts` files.
+- AC5 pass — all `copyRegister` fixtures of T-100–T-108 green; lint, typecheck and the full suite green.
+
+Spot-checks (each reverted, `git status` clean):
+- `misplacedSharedTexts` skips `.ts` files → AC2 fixture red.
+- JSX literals checked with `isCode` like non-JSX → AC1 fixture red.
+
+Red evidence in the Evidence section for tests 1, 2, 4; test 3 is a guard (no-error) fixture, test 5 red-then-green on the repo is described.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | test rule | Outside JSX a one-word lowercase text without a Polish letter, or an all-caps one, is treated as code and not reported: `{ cancel: "anuluj" }`, `{ ok: "OK" }` in `lists/a.ts`; in JSX a lowercase call argument `{f("zamknij")}` is also not reported. Documented as the rule's boundary in the test header and `web.md:103`. | QA probe with `findCopyGaps` (scratch test, removed) | Accept as documented, or require shared `.ts` modules to contain no text-like literal of any case (owner decision). |
+| 2 | note | regression | Browser tab title for SC-04 / SC-08 not checked in a browser; `documentTitle(title)` returns the same `{tytuł} · Wspólna lista zakupów` string as the old template, so the title is unchanged by construction. | code read of `productMessages.ts`, `TermsScreen.tsx`, `InvitationScreen.tsx` | — |
+| 3 | note | tests | The author reported two flaky tests under load during `pnpm check` (SC-08 T-028 timeout, API `routes-nul.test.ts` SEC1); the QA run of `pnpm check` was green. | Evidence section; QA `pnpm check` exit 0 | Track as flaky-test follow-up. |
