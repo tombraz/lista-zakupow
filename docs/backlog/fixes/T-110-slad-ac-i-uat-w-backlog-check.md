@@ -4,7 +4,7 @@ title: "`backlog-check`: zadanie `done` z nieodhaczonym AC i statusy w `UAT.md` 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -33,10 +33,10 @@ related_tasks: [T-099, T-102, T-105]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given plik zadania ze `status: done` i co najmniej jednym `- [ ]` w sekcji „Acceptance criteria”, when uruchamia się `backlog-check`, then kończy się błędem, który wskazuje plik i liczbę nieodhaczonych AC. — verified by: test w `scripts/test/backlog-check.test.mjs` (fikstura)
-- [ ] AC2: Given `UAT.md` epiku, który przy ID zadania podaje status (`T-NNN … \`todo\``) różny od `status:` w pliku tego zadania, when uruchamia się `backlog-check`, then kończy się błędem, który wskazuje linię `UAT.md`, ID i oba statusy. — verified by: test w `scripts/test/backlog-check.test.mjs`
-- [ ] AC3: Given repo po zmianie, then AC w T-103, T-104, T-106 i T-108 są odhaczone (po sprawdzeniu, że ich QA `pass` je potwierdza). `UAT.md` E-02 podaje statusy T-103–T-112 i wskazuje `docs/reviews/E-02-2026-11-09-1.md` jako ostatni przegląd. `pnpm backlog-check` jest zielony. — verified by: `pnpm backlog-check`
-- [ ] AC4: No regression in: T-099, T-102 (kontrola przekazań do epiku), `pnpm workflow-check`.
+- [x] AC1: Given plik zadania ze `status: done` i co najmniej jednym `- [ ]` w sekcji „Acceptance criteria”, when uruchamia się `backlog-check`, then kończy się błędem, który wskazuje plik i liczbę nieodhaczonych AC. — verified by: test w `scripts/test/backlog-check.test.mjs` (fikstura)
+- [x] AC2: Given `UAT.md` epiku, który przy ID zadania podaje status (`T-NNN … \`todo\``) różny od `status:` w pliku tego zadania, when uruchamia się `backlog-check`, then kończy się błędem, który wskazuje linię `UAT.md`, ID i oba statusy. — verified by: test w `scripts/test/backlog-check.test.mjs`
+- [x] AC3: Given repo po zmianie, then AC w T-103, T-104, T-106 i T-108 są odhaczone (po sprawdzeniu, że ich QA `pass` je potwierdza). `UAT.md` E-02 podaje statusy T-103–T-112 i wskazuje `docs/reviews/E-02-2026-11-09-1.md` jako ostatni przegląd. `pnpm backlog-check` jest zielony. — verified by: `pnpm backlog-check`
+- [x] AC4: No regression in: T-099, T-102 (kontrola przekazań do epiku), `pnpm workflow-check`.
 
 ## TDD plan
 
@@ -80,3 +80,26 @@ Przyczyna w przepływie: `/qa-task` przy `Pass` ustawiał tylko `status: done`; 
 Kontrola w `backlog-check` zaakceptowana przez właściciela 2026-11-09 (przegląd E-02 runda 4).
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-09)
+
+Verdict: pass
+
+Zakres: commit `39daa7d` (implementacja), `064f6bc` (in-qa). Kod aplikacji bez zmian; zmienione `scripts/backlog-check.mjs`, jego testy, `.claude/skills/qa-task/SKILL.md` i pliki backlogu.
+
+**Reprodukcja (Windows, lokalnie):** `node --test scripts/test/*.test.mjs` 23/23; `pnpm backlog-check` OK (exit 0); `--write-index` bez zmian w drzewie; `pnpm workflow-check` OK; `pnpm format:check`, `pnpm lint`, `pnpm typecheck` zielone. `pnpm test`: 1237/1238 — 1 błąd `apps/web/src/live/connection.test.tsx > back online > SC-06: subscribes again…` przy pełnym przebiegu; ten plik osobno 3× zielony (4/4). Zadanie nie dotyka `apps/web`, klasa niestabilności znana (T-083, T-084) — zob. #2.
+
+**Kryteria:**
+
+- AC1 — pass. Test „done z nieodhaczonym AC…” sprawdza kod 1, jedną linię `ERROR` z plikiem i „2 of 3” (AC w podsekcji `###` i z wcięciem liczone; `- [ ]` w „Report” i „Notes” nie). Na repo: `- [x] AC2` → `- [ ]` w T-103 daje `ERROR …T-103…: status done but 1 of 5 acceptance criteria are unchecked`, exit 1. Przypadki OK (`[X]`, `* [x]`, `todo`/`in-qa` z nieodhaczonymi, brak sekcji) — test zielony.
+- AC2 — pass. Testy sprawdzają linię, ID i oba statusy, zakres `T-003–T-004`, zapis `(todo)`, ID bez statusu, `;` i ID w `kodzie`. Na repo: T-109 `done`→`todo` w `UAT.md` → `UAT.md:34: T-109 is "todo" here but "done" in …T-109…`; dopisana linia `T-110 (in-qa) T-111 \`done\`` → błąd tylko dla T-111; ID w bloku ``` pominięte.
+- AC3 — pass. AC w T-103, T-104, T-106, T-108 odhaczone; diff 38 plików zadań zmienia wyłącznie `- [ ]`→`- [x]` (126 linii, ten sam tekst). `UAT.md:3` wskazuje `docs/reviews/E-02-2026-11-09-1.md` (runda 4); statusy T-103–T-112 zgodne z plikami (T-110 odesłany do pliku zadania). `pnpm backlog-check` zielony.
+- AC4 — pass. Testy T-099/T-102 w `backlog-check.test.mjs` zielone, `pnpm workflow-check` OK.
+
+**Jakość testów:** spot-check — wyłączone oba `errors.push` (AC i UAT) w `backlog-check.mjs` → 3 testy czerwone (19/22); przywrócone, `git status` czysty. Red evidence w sekcji Evidence dla 3 testów reprodukujących. Wartości oczekiwane to literały. Root cause wyjaśnia, czemu żaden test tego nie łapał (brak kontroli).
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | backlog / Evidence | Evidence twierdzi, że w rundach QA 38 zadań „nie ma uwagi o niezweryfikowanym AC”. Nieprawda dla T-055 (QA round 1: „AC4 — not verifiable”, implementer: „AC4 i SEC2 zostają nieodhaczone celowo”) i T-021 (AC3 „CI Linux nieweryfikowalne”). Odhaczenie jest merytorycznie uzasadnione (AC4 T-055 zweryfikowane w T-069, `deployment.md:68`; sekrety w UAT.md „spełnione”), ale w T-055 brak wpisu, na czym opiera się odhaczenie. | `T-055-…md:119,156`; `T-021-…md:107` | Przy odhaczaniu AC zweryfikowanego poza rundą QA dopisać w zadaniu jedną linię ze źródłem (np. „AC4, SEC2 — zweryfikowane w T-069”). |
+| 2 | note | testy | `connection.test.tsx` „back online … SC-06” niestabilny przy pełnym `pnpm test` (1 błąd / 1238), osobno zielony 3×. Niezwiązane z T-110. | przebieg `pnpm test` 2026-11-09 | Dołączyć do T-084 albo osobnej poprawki niestabilnego testu. |
+| 3 | note | backlog-check | Kontrola AC obejmuje tylko zadania; story `done` z nieodhaczonymi AC nie jest sprawdzana (poza zakresem AC1). | `backlog-check.mjs:244-253` | Rozważyć rozszerzenie na `story.md`. |
