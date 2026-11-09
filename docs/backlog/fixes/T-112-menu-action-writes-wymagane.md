@@ -4,7 +4,7 @@ title: "`MenuAction.writes` wymagane, żeby każda pozycja menu jawnie decydowa�
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web]
 requirements: [F-15]
@@ -53,7 +53,11 @@ Flaga opcjonalna z bezpieczną dla użytkownika, ale niebezpieczną dla reguły 
 
 ## Evidence
 
-<Reproducing test: red failure message, then passing. Full suite and static checks result.>
+- **Red:** próbny plik `apps/web/src/components/MoreMenu/probe-T112.ts` z `const probe: MenuAction = { label: "x", onSelect: () => undefined }`; `pnpm --filter @lista/web typecheck` kończy się kodem 0 (akcja bez `writes` przechodzi).
+- **Green:** po zmianie `writes?: boolean` → `writes: boolean` ten sam plik daje `error TS2741: Property 'writes' is missing in type '{ label: string; onSelect: () => undefined; }' but required in type 'MenuAction'.` Próbka usunięta.
+- Lint wskazał zbędne `action.writes === true` (`no-unnecessary-boolean-literal-compare`) w `MoreMenu.tsx:67` → `action.writes && !online` (to samo zachowanie).
+- Pełny zestaw: `pnpm typecheck` OK, `pnpm lint` OK, `pnpm format:check` OK, `pnpm test` 155 plików / 1269 testów zielone, `pnpm vitest run --project web SC-06` 109 zielonych, `pnpm --filter @lista/web build` OK.
+- Inne wystąpienia: `MenuAction` używane tylko w `ListScreen.tsx` (3 akcje, wszystkie `writes: true`); brak innych opcjonalnych flag `writes` w menu.
 
 ## Prevention
 

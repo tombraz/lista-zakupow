@@ -14,8 +14,11 @@ import styles from "./MoreMenu.module.css";
 export interface MenuAction {
   label: string;
   onSelect: () => void;
-  /** Akcja prowadząca do zapisu: bez połączenia nieaktywna, jak `Button` z `writes` (T-063). */
-  writes?: boolean;
+  /**
+   * Akcja prowadząca do zapisu: bez połączenia nieaktywna, jak `Button` z `writes` (T-063).
+   * Wymagane, żeby każda pozycja jawnie decydowała o działaniu bez połączenia (T-112).
+   */
+  writes: boolean;
 }
 
 interface MoreMenuProps {
@@ -61,7 +64,7 @@ export function MoreMenu({ label, actions, buttonRef }: MoreMenuProps) {
       {open && (
         <ul id={menuId} className={styles.items}>
           {actions.map((action) => {
-            const offline = action.writes === true && !online;
+            const offline = action.writes && !online;
             return (
               <li key={action.label}>
                 <button
