@@ -53,6 +53,15 @@ related_tasks: [T-100, T-108]
 - **Edge cases:** wiersz-źródło części (`leave.confirm` i `leave.confirm.question`), tekst z parametrem `{nazwa}`, tekst z maila (T-055), tekst pokazywany na innym ekranie (SC-08 `joined`).
 - **Platforms:** web.
 
+## Open question
+
+Zadane właścicielowi w sesji `/fix T-111` 2026-11-09, po pomiarze na repo (10 wierszy), przed zmianą specyfikacji (commit `7ee1eb4`). Trzy pytania, każde z opcją „dopisek” (rekomendacja) albo alternatywą:
+1. 6 wierszy to pełne zdania składane przez kod z wierszy-części (SC-02 `consent.terms`, `haveAccount`, `error.emailTaken`; SC-06 `delete.confirm`; SC-07 `remove.confirm`, `leave.confirm`): dopisek „(złożony z części; T-111)” czy usunięcie?
+2. SC-03 `mail.subject` i `mail.body` to mail tworzony przez API (`reset-mail.ts`, T-053): dopisek „(mail z API; T-053)” czy przeniesienie do innego dokumentu i usunięcie z Copy SC-03?
+3. SC-08 `joined` pokazuje SC-06, SC-09 `deleted` pokazuje SC-01: dopisek „(pokazuje SC-xx; T-111)” czy usunięcie (tekst zostaje w Copy SC-06 / SC-01)?
+
+Answer (właściciel, 2026-11-09, w tej samej sesji): 1 — dopisek; 2 — dopisek; 3 — dopisek. Ślad uzupełniony po QA rundy 1 (uwaga #7), na prośbę właściciela.
+
 ## Decisions
 
 Właściciel 2026-11-09 (wszystkie trzy grupy: dopisek, żaden wiersz nie jest usuwany):
