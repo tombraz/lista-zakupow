@@ -62,12 +62,27 @@ export function findCopyGaps({
     );
   }
   const gaps: CopyGap[] = [];
+  const repeated: CopyGap[] = [];
   for (const [screen, files] of screens(sources)) {
     const copy = copyTexts(specOf(screen, specs));
-    for (const { file, text } of modules.screenTexts(files)) {
+    const texts = modules.screenTexts(files);
+    const ownTexts = new Set(
+      texts.filter(({ file }) => !file.startsWith("components/")).map(({ text }) => text),
+    );
+    for (const { file, text } of texts) {
       const component = file.startsWith("components/") && componentCopy.has(text);
       if (!copy.has(text) && !component) gaps.push({ screen, file, text });
+      // Ekran nie powtarza wierszy Copy komponentów (design-system.md, „## Copy”; T-108).
+      if (component && copy.has(text) && !ownTexts.has(text)) repeated.push({ screen, file, text });
     }
+  }
+  if (repeated.length > 0) {
+    throw new Error(
+      [
+        "Wiersze Copy ekranu powtarzają tabelę „## Copy” komponentów w design-system.md (ekran nie powtarza wierszy komponentów; usuń wiersz z Copy ekranu):",
+        ...repeated.map(({ screen, file, text }) => `${screen} · ${file} · „${text}”`),
+      ].join("\n"),
+    );
   }
   return gaps;
 }

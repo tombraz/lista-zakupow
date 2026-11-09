@@ -191,7 +191,7 @@ Rodzina: `typography.family.base` (systemowa bezszeryfowa). Rozmiary w px skaluj
 
 ## Copy
 
-Teksty komponentów design systemu (`apps/web/src/components/`). Ekran, który pokazuje komponent, nie powtarza tych wierszy w swojej tabeli Copy; test zgodności Copy (`copyRegister.test.ts`) czyta tę tabelę dla tekstów z `components/` (T-106).
+Teksty komponentów design systemu (`apps/web/src/components/`). Ekran, który pokazuje komponent, nie powtarza tych wierszy w swojej tabeli Copy; test zgodności Copy (`copyRegister.test.ts`) czyta tę tabelę dla tekstów z `components/` (T-106), a wiersz Copy ekranu z tekstem, który ekran bierze tylko z komponentu, zgłasza jako błąd (T-108).
 
 | Key | Text |
 | --- | --- |

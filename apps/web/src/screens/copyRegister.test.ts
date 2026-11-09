@@ -20,7 +20,10 @@
  *   są. Teksty w `.tsx` katalogów ekranów są jeszcze poza testem.
  * - Tekst z pliku w `components/` pasuje do wiersza Copy ekranu albo do tabeli „## Copy”
  *   komponentów w `docs/design/design-system.md` (T-106); tekst spoza `components/` tylko do Copy
- *   ekranu.
+ *   ekranu. Wiersz Copy ekranu, który powtarza Copy komponentów tekstem, jaki ekran bierze tylko
+ *   z `components/` (nie też z własnego pliku), to błąd: ekran nie powtarza wierszy komponentów
+ *   (T-108). Wierszy Copy, których nie używa żaden kod, test nie szuka (decyzja właściciela
+ *   2026-11-09, T-108).
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
  * - Parametr szablonu `${…}` pasuje do dowolnego `{nazwa}` w Copy (`${String(count)} do kupienia`
@@ -494,6 +497,50 @@ describe("findCopyGaps (fixtures)", () => {
     });
 
     expect(gaps.map((gap) => gap.text)).toEqual(["Pokaż"]);
+  });
+
+  it("a screen Copy row that repeats the component Copy for a text the screen takes only from components/ is an error (T-108)", () => {
+    const sources = {
+      "components/AuthPage/authPageMessages.ts": `export const authPageMessages = { legal: "Regulamin i polityka prywatności" };`,
+      "components/AuthPage/AuthPage.tsx": `
+        import { authPageMessages } from "./authPageMessages";
+        export const AuthPage = () => <a>{authPageMessages.legal}</a>;`,
+      "components/PasswordField/passwordFieldMessages.ts": `export const passwordFieldMessages = { show: "Pokaż" };`,
+      "components/PasswordField/PasswordField.tsx": `
+        import { passwordFieldMessages } from "./passwordFieldMessages";
+        export const PasswordField = () => <button>{passwordFieldMessages.show}</button>;`,
+      "screens/SC-01-logowanie/SignIn.tsx": `
+        import { AuthPage } from "../../components/AuthPage/AuthPage";
+        import { PasswordField } from "../../components/PasswordField/PasswordField";
+        export const SignIn = () => <AuthPage><PasswordField /></AuthPage>;`,
+      "screens/SC-06-lista/messages.ts": `export const messages = { show: "Pokaż" };`,
+      "screens/SC-06-lista/List.tsx": `
+        import { PasswordField } from "../../components/PasswordField/PasswordField";
+        import { messages } from "./messages";
+        export const List = () => <><PasswordField /><b>{messages.show}</b></>;`,
+    };
+    const designSystem =
+      "## Copy\n\n| Key | Text |\n| --- | --- |\n| AuthPage.legal | Regulamin i polityka prywatności (z Copy SC-01, T-106) |\n| PasswordField.show | Pokaż |\n";
+    const withRows = (...rows: [string, string][]) =>
+      findCopyGaps({
+        sources,
+        specs: {
+          "SC-01-logowanie.md": spec(...rows),
+          "SC-06-lista.md": spec(["dup.show", "Pokaż"]),
+        },
+        designSystem,
+      });
+
+    expect(withRows()).toEqual([]);
+    expect(() =>
+      withRows(["legal", "Regulamin i polityka prywatności"], ["password.show", "Pokaż"]),
+    ).toThrow(
+      [
+        "Wiersze Copy ekranu powtarzają tabelę „## Copy” komponentów w design-system.md (ekran nie powtarza wierszy komponentów; usuń wiersz z Copy ekranu):",
+        "SC-01 · components/AuthPage/authPageMessages.ts · „Regulamin i polityka prywatności”",
+        "SC-01 · components/PasswordField/passwordFieldMessages.ts · „Pokaż”",
+      ].join("\n"),
+    );
   });
 
   it("a shared *Messages.ts module counts every literal, like messages.ts (one-word „Anuluj”)", () => {
