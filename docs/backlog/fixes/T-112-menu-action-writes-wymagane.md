@@ -49,7 +49,7 @@ related_tasks: [T-063, T-094, T-104]
 
 ## Root cause
 
-Flaga opcjonalna z bezpieczną dla użytkownika, ale niebezpieczną dla reguły wartością domyślną. T-104 poprawił istniejące akcje, ale nie zmienił typu.
+Flaga opcjonalna z bezpieczną dla użytkownika, ale niebezpieczną dla reguły wartością domyślną. T-104 poprawił istniejące akcje, ale nie zmienił typu. Testy tego nie wyłapały, bo sprawdzają zachowanie istniejących akcji (wszystkie mają `writes: true`), a luka dotyczy przyszłej akcji, której żaden test nie może jeszcze zawierać; regułę może wymusić tylko typ.
 
 ## Evidence
 
