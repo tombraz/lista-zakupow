@@ -31,6 +31,8 @@ related_tasks: [T-001, T-005, T-006, T-010]
 - [x] AC2: Given testy API, when pełny przebieg, then brak „Connection terminated”, całość < 2 min, pliki < 5 s albo wyjątek zapisany w `testing-strategy.md`. — verified by: pomiar w Evidence
 - [x] AC3: No regression in: `pnpm check`, CI (Linux, równolegle) i Windows.
 
+Weryfikacja poza rundą QA (T-110): AC3 „CI (Linux, równolegle)” potwierdzone zielonym przebiegiem CI na `main` dla `c3dbc86` (2026-11-01), który zawiera `77e800e`.
+
 ## TDD plan
 
 **Seam:** konfiguracja Vitest, `renderApp` / `test/setup.ts`, `apps/api/test/database.ts` i `global-setup.ts`. Zadanie dotyczy samych testów, więc „test odtwarzający” to pomiar przebiegu pod obciążeniem (zgodnie z AC).

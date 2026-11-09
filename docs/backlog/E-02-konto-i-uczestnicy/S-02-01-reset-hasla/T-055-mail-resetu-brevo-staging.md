@@ -42,6 +42,8 @@ Each criterion must fail before the work and pass after it.
 - [x] SEC1 (TH-21): Given wysyłka (udana i nieudana), when API loguje, then logi nie zawierają klucza API, e-maila odbiorcy ani linku z tokenem. — verified by: test logów adaptera
 - [x] SEC2 (TH-22): Given repozytorium i obraz, when skan sekretów w CI, then klucz Brevo nie występuje w repo ani w obrazie (tylko sekret Fly `BREVO_API_KEY`). — verified by: zielony skan sekretów w CI + przegląd `fly secrets list` w Evidence (bez wartości)
 
+Weryfikacja poza rundą QA (T-110): AC4 i SEC2 potwierdzone w T-069 (AC2, AC3, SEC2) i w `deployment.md` („Wysyłka Brevo bez własnej domeny — zweryfikowana 2026-11-03 na staging (T-069)”), zgodnie z decyzją właściciela w „Open question”.
+
 ## TDD plan
 
 **Test seams** (public boundaries tested from outside; agreed during planning):
