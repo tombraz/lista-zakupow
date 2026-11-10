@@ -4,7 +4,7 @@ title: "Opis reguł testu Copy i bramek CI po T-110–T-113 w przewodnikach wars
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [web, infra]
 requirements: []
@@ -33,12 +33,12 @@ related_tasks: [T-104, T-109, T-110, T-112, T-113]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given `web.md:103`, then mówi, że dopisek `pokazuje SC-xx` przechodzi tylko wtedy, gdy kod ekranu SC-xx pokazuje tekst wiersza, a nieistniejący SC-xx to błąd (T-113). Pozostałe dopiski (`mail z API`, `mobile`, `złożony z części`) są opisane tak, jak działają na HEAD: zwalniają wiersz bez sprawdzenia (T-115 zaktualizuje opis, gdy zacznie je sprawdzać). — verified by: odczyt `web.md` wobec `copyRegister.ts`
-- [ ] AC2: Given `web.md:103` i nagłówek `apps/web/src/screens/copyRegister.test.ts`, then oba opisują granicę kontroli tak, jak działa kod. Poza JSX za kod uchodzi jeden ciąg bez polskiej litery i bez słowa z wielkiej litery (przykład „E-mail”), a `.ts` ekranu spoza `messages.ts` sprawdza `looksLikeText`. Zdanie „niezależnie od liczby słów i polskich znaków” jest zawężone do JSX. — verified by: odczyt wobec `isCode` i `texts()`
-- [ ] AC3: Given `web.md:77`, then mówi, że `writes` jest wymagane w `Button` i w `MenuAction`; `Button` bez `writes` to błąd `pnpm typecheck`, a każdy istniejący `Button` ma jawne `writes` (decyzja właściciela 2026-11-10). — verified by: `pnpm typecheck` (próbny `Button` bez `writes`) i odczyt `web.md:77`
-- [ ] AC4: Given historia zmian `web.md`, then ma wiersze T-112 i T-113 (oraz T-114). — verified by: odczyt
-- [ ] AC5: Given `infra.md`, `pipeline.md` i nagłówek `scripts/test/backlog-check.test.mjs`, then wymieniają kontrole T-110 (`done` z nieodhaczonym AC; status w `UAT.md` zgodny z plikiem zadania). — verified by: odczyt wobec `scripts/backlog-check.mjs`
-- [ ] AC6: No regression in: `pnpm check` (format, `backlog-check`, test Copy).
+- [x] AC1: Given `web.md:103`, then mówi, że dopisek `pokazuje SC-xx` przechodzi tylko wtedy, gdy kod ekranu SC-xx pokazuje tekst wiersza, a nieistniejący SC-xx to błąd (T-113). Pozostałe dopiski (`mail z API`, `mobile`, `złożony z części`) są opisane tak, jak działają na HEAD: zwalniają wiersz bez sprawdzenia (T-115 zaktualizuje opis, gdy zacznie je sprawdzać). — verified by: odczyt `web.md` wobec `copyRegister.ts`
+- [x] AC2: Given `web.md:103` i nagłówek `apps/web/src/screens/copyRegister.test.ts`, then oba opisują granicę kontroli tak, jak działa kod. Poza JSX za kod uchodzi jeden ciąg bez polskiej litery i bez słowa z wielkiej litery (przykład „E-mail”), a `.ts` ekranu spoza `messages.ts` sprawdza `looksLikeText`. Zdanie „niezależnie od liczby słów i polskich znaków” jest zawężone do JSX. — verified by: odczyt wobec `isCode` i `texts()`
+- [x] AC3: Given `web.md:77`, then mówi, że `writes` jest wymagane w `Button` i w `MenuAction`; `Button` bez `writes` to błąd `pnpm typecheck`, a każdy istniejący `Button` ma jawne `writes` (decyzja właściciela 2026-11-10). — verified by: `pnpm typecheck` (próbny `Button` bez `writes`) i odczyt `web.md:77`
+- [x] AC4: Given historia zmian `web.md`, then ma wiersze T-112 i T-113 (oraz T-114). — verified by: odczyt
+- [x] AC5: Given `infra.md`, `pipeline.md` i nagłówek `scripts/test/backlog-check.test.mjs`, then wymieniają kontrole T-110 (`done` z nieodhaczonym AC; status w `UAT.md` zgodny z plikiem zadania). — verified by: odczyt wobec `scripts/backlog-check.mjs`
+- [x] AC6: No regression in: `pnpm check` (format, `backlog-check`, test Copy).
 
 ## TDD plan
 
@@ -75,3 +75,26 @@ Inne wystąpienia: brak innych opcjonalnych flag `writes`. Przyciski wysyłając
 Propozycja z przeglądu 2026-11-10: QA zadania, które zmienia regułę testu albo bramki CI, sprawdza, że `web.md`, `infra.md` i `pipeline.md` opisują tę regułę po zmianie. Do decyzji właściciela.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-10)
+
+Verdict: pass
+
+Sprawdzone samodzielnie: `pnpm check` kod 0 (Test Files 155 passed, Tests 1273 passed; mobile 10 passed; format, lint, typecheck, quality, design-check, backlog-check, workflow-check zielone). Próbny `apps/web/src/components/Button/qaProbe.tsx` z `<Button>x</Button>` → `pnpm --filter @lista/web typecheck`: `error TS2741: Property 'writes' is missing in type '{ children: string; }' but required in type 'ButtonProps'`; po usunięciu próbki typecheck 0, `git status` czysty. `tsconfig` web obejmuje `src`, `test`, `e2e`, więc każdy istniejący `Button` (także w testach) ma jawne `writes`.
+
+| AC | Wynik | Dowód |
+| --- | --- | --- |
+| AC1 | pass | `web.md` „Pułapki”: `pokazuje SC-xx` sprawdzany wobec tekstów ekranu SC-xx, nieistniejący SC-xx to błąd; zgodne z `SHOWN_ON` i `findUnusedCopyRows` (`copyRegister.ts:59`, `:144-150`). `mail z API`, `mobile`, `złożony z części` zwalniają wiersz bez sprawdzenia — zgodne z `COPY_SOURCE.test(note)` → `continue` (`:144`). |
+| AC2 | pass | `web.md` i nagłówek `copyRegister.test.ts`: „niezależnie od liczby słów i polskich znaków” tylko w JSX; granica `isCode` i `looksLikeText` opisane. Przykłady sprawdzone na regexach z `copyRegister.ts:480-492`: „E-mail”, „albo”, „OK”, „{…} osoby” → `isCode=true`; „Anuluj”, „do kupienia” → tekst; „Anuluj” w `.ts` ekranu → `looksLikeText=false` (przechodzi bez wiersza), zgodnie z opisem `texts()` (`:327-330`). |
+| AC3 | pass | `Button.tsx`: `writes: boolean`, bez domyślnego; próbka bez `writes` daje TS2741 (wyżej); `web.md` „Konwencje” mówi o wymaganym `writes` w `Button` i `MenuAction`. Zmiany `writes={false}` tylko tam, gdzie było domyślne `false` — bez zmiany zachowania. |
+| AC4 | pass | Historia `web.md` ma wiersze T-114, T-113, T-112. |
+| AC5 | pass | `infra.md` („Gdzie jest kod”, „Komendy”, historia), `pipeline.md:55`, nagłówek `scripts/test/backlog-check.test.mjs`: AC zadań `done` i statusy w `UAT.md` jako błędy (T-110), przekazania jako ostrzeżenie (T-099) — zgodne z `scripts/backlog-check.mjs` (`errors.push` dla T-110, `warnings.push` dla przekazań). |
+| AC6 | pass | `pnpm check` kod 0. |
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs | Nowe sformułowanie reguły `isCode` „bez wielkiej litery, po której stoi mała” jest dosłownie sprzeczne z przykładem `"listId"` w tym samym zdaniu (w `listId` po „I” stoi „d”, a test uznaje to za kod). Kod sprawdza wielką literę na początku słowa, po której stoi mała: `/(^|\P{L})\p{Lu}\p{Ll}/u`. | nagłówek `apps/web/src/screens/copyRegister.test.ts` (lista przykładów z `"listId"`), `web.md` „Pułapki”; `copyRegister.ts:480-486` | „bez słowa, które zaczyna się wielką literą, po której stoi mała” (jak komentarz `isCode`). |
+| 2 | note | product / F-15 | `writes={false}` dostały też przyciski wysyłające żądania: „Dołącz” (SC-08), „Wyloguj” (SC-09), wysłanie logowania, rejestracji i resetu hasła. Zachowanie bez zmian, decyzja F-15 nadal otwarta (opisana w „Root cause”). | `InvitationScreen.tsx:101`, `AccountScreen.tsx:45` | Rozstrzygnięcie właściciela, czy mają być nieaktywne bez połączenia. |
+| 3 | note | TDD | Dowód red dla AC3 (próbka typecheck kod 0 przed zmianą) jest w Evidence; reszta to dokumentacja sprawdzana odczytem, zgodnie z planem. | Evidence | — |
+
+Spot-check: próbka bez `writes` łamie typecheck (test „gryzie”), usunięta; `git status` czysty przed zapisem raportu.
