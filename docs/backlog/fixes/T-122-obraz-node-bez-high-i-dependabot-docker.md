@@ -53,7 +53,7 @@ related_tasks: [T-010]
 
 T-010 przypiął tag i digest obrazu Node (dobre dla TH-22), ale nic go nie aktualizuje: `dependabot.yml` nie miał ekosystemu `docker`. Do tego obraz był podany przez `ARG NODE_IMAGE` w `FROM ${NODE_IMAGE}`, a Dependabot `docker` aktualizuje tylko dosłowne `FROM`, więc samo dopisanie ekosystemu nic by nie dało. Po opublikowaniu CVE-2026-109518 (apt i libapt-pkg7.0 3.0.3) przypięty obraz stał się podatny bez żadnej zmiany w repo. Testy tego nie złapały, bo nie miały czego łapać przed publikacją CVE. Bramka Trivy zadziałała zgodnie z planem, ale nie ma automatu, który podnosi pin.
 
-Poprawka: `node:24.22.2-trixie-slim@sha256:0820eaa8…` (apt i libapt-pkg7.0 3.0.4, Node v24.22.2, zgodne z `.nvmrc` 24 i `engines` `>=24.11 <25`) wpisany dosłownie w obu `FROM`. Dependabot `docker` dla `/` co tydzień, bez podbić semver-major (Node zostaje na 24). `pipeline.md` (etap 3, TH-22) i `SECURITY.md` wymieniają ekosystem docker.
+Poprawka: `apt-get upgrade` w etapie runtime (poprawki Debiana, których upstream jeszcze nie ma) oraz `node:24.22.2-trixie-slim@sha256:0820eaa8…` (apt i libapt-pkg7.0 3.0.4, Node v24.22.2, zgodne z `.nvmrc` 24 i `engines` `>=24.11 <25`) wpisany dosłownie w obu `FROM`. Dependabot `docker` dla `/` co tydzień, bez podbić semver-major (Node zostaje na 24). `pipeline.md` (etap 3, TH-22) i `SECURITY.md` wymieniają ekosystem docker.
 
 Inne wystąpienia: obraz Postgresa w `docker-compose.yml` jest poza obrazem produkcyjnym i poza Trivy, więc nie wchodzi w zakres tego zadania (ekosystem `docker-compose` można dodać osobnym zadaniem).
 
@@ -62,6 +62,7 @@ Inne wystąpienia: obraz Postgresa w `docker-compose.yml` jest poza obrazem prod
 - Red (CI, run 42078397111, job `image`): `Total: 2 (HIGH: 2, CRITICAL: 0)`, `apt │ CVE-2026-109518 │ HIGH │ fixed │ 3.0.3 │ 3.0.4` (druga HIGH to `libapt-pkg7.0` z tym samym CVE).
 - Lokalnie (2026-11-10): `node:24.21.0-trixie-slim@sha256:173f1258…`: `node v24.21.0`, `apt 3.0.3`, `libapt-pkg7.0 3.0.3`. `node:24.22.2-trixie-slim@sha256:0820eaa8…` (to samo, co obecny `node:24-trixie-slim`): `node v24.22.2`, `apt 3.0.4`, `libapt-pkg7.0 3.0.4`.
 - Lokalnie nie da się uruchomić `scripts/image.sh build` ani Trivy: kontenery nie ufają certyfikatowi pośredniczącemu w TLS na tej maszynie (`UNABLE_TO_VERIFY_LEAF_SIGNATURE` przy `npm install`, `x509: certificate signed by unknown authority` przy pobieraniu bazy Trivy). AC1 i `image-run.test.sh` (AC4) weryfikuje job `image` w CI.
+- CI po pierwszej poprawce (run 42826144581, 690bcf4): `image-run.test.sh` ok (migracje, bez roota, smoke). Trivy nadal `Total: 2 (HIGH: 2)`, ale już nie apt: `zlib1g 1:1.3.dfsg+really1.3.1-1+b1` (CVE-2026-76844, CVE-2026-85091, poprawka `+deb13u1`). Najnowszy upstream `node:24-trixie-slim` też ma `+b1`, więc zgodnie z AC1 etap runtime robi `apt-get upgrade`. Lokalnie w obrazie bazowym `apt-get update && apt-get upgrade` daje `zlib1g …+deb13u1`.
 - `bash scripts/test/image.test.sh`: ok. `dependabot.yml` parsuje się (`npm`, `github-actions`, `docker`).
 
 ## Prevention

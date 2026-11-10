@@ -15,6 +15,9 @@ RUN pnpm install --frozen-lockfile --filter @lista/api... --filter @lista/web...
 
 FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d
 ENV NODE_ENV=production
+# Poprawki bezpieczeństwa Debiana, których upstream obraz Node jeszcze nie ma (T-122; Trivy blokuje
+# high/critical z dostępną poprawką). Digest przypięty, a Dependabot docker podnosi go co tydzień.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 # npm i corepack nie są potrzebne w czasie działania, a ich zależności mają własne podatności (Trivy).
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
   /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
