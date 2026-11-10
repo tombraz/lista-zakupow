@@ -4,7 +4,7 @@ title: "backlog-check: nowy plik testu w warstwie wymaga wiersza zadania w przew
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -43,11 +43,11 @@ related_tasks: [T-110, T-112, T-113, T-115]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given zadanie `in-qa`/`done`, którego commity dodały `*.test.ts` w warstwie z `layers:`, a przewodnik warstwy nie ma wiersza historii zmian z ID zadania, when uruchamia się `backlog-check`, then zgłasza zadanie, plik i przewodnik. — verified by: test `backlog-check` z fikstury
-- [ ] AC2: Given ten sam przypadek z wierszem w historii zmian przewodnika, then brak zgłoszenia. — verified by: fikstura
-- [ ] AC3: Given repo, then `backlog-check` jest zielony (zadania sprzed reguły zgodnie z decyzją z „Do ustalenia”). — verified by: `pnpm check`
-- [ ] AC4: Given `docs/architecture/layers/infra.md`, then opisuje regułę, a historia zmian ma wiersz T-117. — verified by: odczyt
-- [ ] AC5: No regression in: T-099, T-102, T-110, T-116.
+- [x] AC1: Given zadanie `in-qa`/`done`, którego commity dodały `*.test.ts` w warstwie z `layers:`, a przewodnik warstwy nie ma wiersza historii zmian z ID zadania, when uruchamia się `backlog-check`, then zgłasza zadanie, plik i przewodnik. — verified by: test `backlog-check` z fikstury
+- [x] AC2: Given ten sam przypadek z wierszem w historii zmian przewodnika, then brak zgłoszenia. — verified by: fikstura
+- [x] AC3: Given repo, then `backlog-check` jest zielony (zadania sprzed reguły zgodnie z decyzją z „Do ustalenia”). — verified by: `pnpm check`
+- [x] AC4: Given `docs/architecture/layers/infra.md`, then opisuje regułę, a historia zmian ma wiersz T-117. — verified by: odczyt
+- [x] AC5: No regression in: T-099, T-102, T-110, T-116.
 
 ## TDD plan
 
@@ -81,3 +81,39 @@ Ten sam wzorzec gdzie indziej: brak — inne sprawdzenia `backlog-check` nie czy
 Ta reguła jest prewencją: przewodnik warstwy nadąża za nowymi testami i bramkami bez polegania na QA.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-10)
+
+Verdict: pass
+
+Zakres: commity `1a1ce5e`, `0f5e516`. Zadanie `kind: fix` — bez akceptacji story/epiku.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | docs (pipeline) | `docs/architecture/pipeline.md:55` (wiersz „zawsze”) wymienia błędy `backlog-check` z T-110 i ostrzeżenia z T-099, ale nie nową regułę T-117 ani wymogu `fetch-depth: 0` w jobie `always`; opis bramki CI jest niepełny. | `grep -n "backlog-check\|fetch-depth" docs/architecture/pipeline.md` — brak T-117 | Wiersz „zawsze” dopisuje: nowy plik testu z commitów zadania bez wiersza w „Historia zmian” przewodnika warstwy (błąd, T-117), checkout z `fetch-depth: 0`. |
+| 2 | note | tests | Test AC2 (z wierszem → brak zgłoszenia) z natury przechodzi przed zmianą; czerwony dowód jest tylko dla AC1. Dopuszczalne — AC1 i pozostałe przypadki gryzą (pkt Spot-check). | Evidence zadania | — |
+
+**Reprodukcja:**
+
+- `node --test scripts/test/backlog-check.test.mjs`: 31/31 pass.
+- `pnpm check`: exit 0 (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, Vitest, Jest mobile).
+- `node scripts/backlog-check.mjs` na repo: `OK: no errors` (AC3).
+
+**Kryteria:**
+
+- AC1 pass — test „commit zadania in-qa dodał test…” sprawdza kod 1 i treść błędu (zadanie, plik, przewodnik). Rzeczywisty przypadek: po usunięciu wiersza T-115 z `backend.md` skrypt zgłasza `commits of T-115 added test apps/api/test/reset-mail.copy.test.ts, but docs\architecture\layers\backend.md has no row with T-115…`, exit 1; także uruchomiony z `apps/` z `--root ../docs/backlog --layers ../docs/architecture/layers`. Przywrócone.
+- AC2 pass — test z wierszem T-005 w „Historia zmian”: kod 0, brak błędów; T-005 w „Pułapkach” nie wystarcza (osobny test).
+- AC3 pass — repo zielone; granica `2026-11-10T00:00:00+01:00` sprawdzona testem 23:30 / 00:30.
+- AC4 pass — `infra.md`: „Gdzie jest kod”, „Komendy”, „Pułapki” (`--since` z samą datą, `fetch-depth`), wiersz T-117 w historii; `paths:` i wiersze T-117 w backend/db/web/mobile (mobile dostał sekcję „Historia zmian”).
+- AC5 pass — testy T-099 i T-110 w tym samym pliku zielone; `pnpm check` zielony; T-116 jest `todo` (nic do regresji poza `backlog-check` na repo).
+
+**Spot-check (przywrócone, `git status` czysty):**
+
+- `errors.push(...)` reguły zamienione na `void(...)` → 5 testów T-117 czerwonych.
+- `--diff-filter=A` → `AR` → test „zmiana nazwy pliku testu nie jest nowym testem” czerwony.
+
+**Eksploracja:** kilka warstw zadania (wystarcza wiersz w jednym przewodniku; błąd wymienia oba), testy w `apps/web/src` i `*.spec.ts` w `apps/web/e2e`, status `todo`/`in-progress`, commit innego zadania, temat bez dwukropka, edycja istniejącego testu, zmiana nazwy, płytki klon (ostrzeżenie) — pokryte testami i zielone. CI: `fetch-depth: 0` tylko w jobie `always`, gdzie działa `backlog-check`; job `infra` uruchamia test na fiksturach-repozytoriach z lokalnym `user.email`.
+
+**Bezpieczeństwo:** `spawnSync("git", [...])` z tablicą argumentów (bez powłoki), wejście tylko z repo; brak sekretów i danych osobowych.
+
+**Uwagi kodowe:** brak. Reguła ograniczona do `paths:` z danych przewodników, bez nowej abstrakcji.
