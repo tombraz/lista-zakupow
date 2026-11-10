@@ -17,10 +17,11 @@
  *     (`className`, `type`, `role`, `id`, `data-*`, `aria-*by`, `aria-controls`, `href`, `to`,
  *     `variant`, `tone`, `autoComplete`, `on…` itd.) i argumentami wywołań;
  *   - poza JSX każdy literał, który nie jest kodem (`isCode`): kod to ciąg bez polskiej litery, bez
- *     dwóch słów rozdzielonych odstępem i bez wielkiej litery, po której stoi mała (`"name"`,
- *     `"listId"`, `"POST"`, `"/api/v1/lists"`, `"pl-PL"`); `{ cancel: "Anuluj" }` to tekst.
- *     Granica: za kod uchodzą też prawdziwe teksty z jednego słowa bez polskiej litery i bez
- *     wielkiej litery, po której stoi mała („E-mail”, „albo”, „OK”), i szablon, w którym słowo
+ *     dwóch słów rozdzielonych odstępem i bez słowa, które zaczyna się wielką literą, po której
+ *     stoi mała (`"name"`, `"listId"`, `"POST"`, `"/api/v1/lists"`, `"pl-PL"`);
+ *     `{ cancel: "Anuluj" }` to tekst. Granica: za kod uchodzą też prawdziwe teksty z jednego
+ *     słowa bez polskiej litery, które nie zaczyna się wielką literą z małą po niej („E-mail”,
+ *     „albo”, „OK”), i szablon, w którym słowo
  *     stoi tylko obok parametru (`` `${n} osoby` ``) — test ich nie zgłosi (przegląd E-02
  *     2026-11-10, S1).
  *   Pliki `.tsx` tylko prowadzą importy. Teksty w `.tsx` katalogów ekranów są jeszcze poza testem.

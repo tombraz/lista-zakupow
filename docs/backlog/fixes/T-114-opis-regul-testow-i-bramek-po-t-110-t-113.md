@@ -98,3 +98,5 @@ Sprawdzone samodzielnie: `pnpm check` kod 0 (Test Files 155 passed, Tests 1273 p
 | 3 | note | TDD | Dowód red dla AC3 (próbka typecheck kod 0 przed zmianą) jest w Evidence; reszta to dokumentacja sprawdzana odczytem, zgodnie z planem. | Evidence | — |
 
 Spot-check: próbka bez `writes` łamie typecheck (test „gryzie”), usunięta; `git status` czysty przed zapisem raportu.
+
+**Po QA round 1 (minor #1):** opis `isCode` w `web.md:103` i nagłówku `copyRegister.test.ts` poprawiony na „bez słowa, które zaczyna się wielką literą, po której stoi mała” (zgodnie z `(^|\P{L})\p{Lu}\p{Ll}`; `listId` to kod). Prettier i `backlog-check` OK.
