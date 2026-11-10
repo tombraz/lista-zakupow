@@ -74,6 +74,8 @@ Inne wystąpienia: brak innych opcjonalnych flag `writes`. Przyciski wysyłając
 
 Propozycja z przeglądu 2026-11-10: QA zadania, które zmienia regułę testu albo bramki CI, sprawdza, że `web.md`, `infra.md` i `pipeline.md` opisują tę regułę po zmianie. Do decyzji właściciela.
 
+Decyzja właściciela 2026-11-10 (/fix): przyjęte. `.claude/agents/task-qa.md`, sekcja „Project checks”: QA zadania, które zmienia regułę testu albo bramki CI (albo zaostrza typ / props komponentu), porównuje nowe zachowanie z opisem w przewodnikach warstw, `pipeline.md` i nagłówku testu; rozjazd albo brak wiersza historii to minor. Automatyczna kontrola zgodności dokumentów z kodem odrzucona jako nieproporcjonalna.
+
 <!-- QA rounds are appended below by /qa-task -->
 
 ## QA round 1 (2026-11-10)
