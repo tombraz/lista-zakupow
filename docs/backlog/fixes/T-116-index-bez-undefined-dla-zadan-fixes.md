@@ -4,7 +4,7 @@ title: "backlog-check --write-index: „—” zamiast „undefined” w kolumna
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -30,7 +30,7 @@ Poza zakresem (decyzja właściciela 2026-11-10, ustalenie P2): nieodhaczone poz
 ## Acceptance criteria
 
 - [ ] AC1: Given zadanie z `fixes/` bez `epic` i `story`, when uruchamia się `backlog-check --write-index`, then jego wiersz w `index.md` ma „—” w kolumnach Epic i Story. — verified by: test w `scripts/test/backlog-check.test.mjs`
-- [ ] AC2: Given repo po `--write-index`, then `index.md` nie zawiera „undefined”. — verified by: `grep`
+- [ ] AC2: Given repo po `--write-index`, then żadna komórka tabeli w `index.md` nie jest „undefined” (`grep -c "| undefined" docs/backlog/index.md` → 0; słowo zostaje tylko w tytule i nazwie pliku T-116). — verified by: `grep`, test T-116
 - [ ] AC3: Given opis kontroli T-110, then mówi, że „Definition of done” nie jest śledzone po `done` (decyzja 2026-11-10). — verified by: odczyt
 - [ ] AC4: No regression in: `node --test scripts/test/backlog-check.test.mjs`, `node scripts/backlog-check.mjs`.
 
@@ -52,11 +52,18 @@ Poza zakresem (decyzja właściciela 2026-11-10, ustalenie P2): nieodhaczone poz
 
 ## Root cause
 
-<Wypełnia /fix.>
+Generator `--write-index` (`scripts/backlog-check.mjs:792`, od `ebca907`, 2026-10-26) wstawiał surowe `${t.epic}` i `${t.story}`; zadania z `docs/backlog/fixes/` (dodane później, `kind: fix`) nie mają tych pól, więc szablon dawał tekst „undefined”. Kolumna „Depends on” miała już zapas `|| "—"`, Epic i Story nie. Testy nie złapały tego, bo `scripts/test/backlog-check.test.mjs` nie sprawdzał wyjścia `--write-index` (tylko komunikaty kontroli), a sam `index.md` jest generowany i nikt go nie czyta w przeglądzie.
+
+Ten sam wzorzec gdzie indziej: brak. Pozostałe użycia `t.epic`/`t.story` są w komunikatach błędów chronionych warunkiem (`if (t.epic && …)`) albo w `--board`, który dla `kind: fix` ma osobną gałąź.
 
 ## Evidence
 
-<Wypełnia /fix.>
+- Test odtwarzający: `--write-index: wiersz zadania z fixes/ ma „—” w kolumnach Epic i Story, bez „undefined” (T-116 AC1, AC2)` w `scripts/test/backlog-check.test.mjs`. Przed poprawką: `AssertionError: + '| [T-002](fixes/T-002-a.md) | Fix T-002 | undefined | undefined | done | — |'  - '| [T-002](fixes/T-002-a.md) | Fix T-002 | — | — | done | — |'`. Po poprawce: pass; wiersz zadania epiku (`E-01 | S-01-01`) bez zmian.
+- `node --test scripts/test/*.test.mjs` → 33 pass, 0 fail.
+- `node scripts/backlog-check.mjs --write-index`; `grep -c "| undefined" docs/backlog/index.md` → 0 (przed: 88). AC2 doprecyzowane: dosłowne „undefined” zostaje w tytule i nazwie pliku T-116, nie jako wartość pola.
+- AC3: zdanie o „Definition of done” w komentarzu kontroli AC (`scripts/backlog-check.mjs`, przy T-110) i w `docs/architecture/layers/infra.md` („Gdzie jest kod”), wiersz T-116 w „Historia zmian”.
+- `pnpm check` → exit 0 (156 plików, 1278 testów), `pnpm build` → OK. Jeden wcześniejszy przebieg miał 2 przekroczenia czasu w `apps/web` (`ListScreen.edit.test.tsx`, `ListScreen.test.tsx`, ~1,8 s) — bez związku ze zmianą w `scripts/`; oba pliki osobno 35/35, kolejny pełny przebieg zielony (znana niestabilność, T-047).
+- Przypadek brzegowy „epic bez story”: kod daje „—” dla każdego pustego pola osobno (`t.epic || "—"`, `t.story || "—"`).
 
 ## Prevention
 
