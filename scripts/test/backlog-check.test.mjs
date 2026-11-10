@@ -1,7 +1,7 @@
 // backlog-check: przekazanie pracy do innego epiku („to E-02”, „w E-02”, „→ E-02”) musi mieć
 // odbiorcę (ostrzeżenie, T-099); zadanie `done` ma odhaczone wszystkie AC, a status przy ID zadania
 // w `UAT.md` epiku zgadza się z plikiem zadania (błędy, T-110); nowy plik testu z commitów zadania
-// ma wiersz w „Historia zmian” przewodnika warstwy (błąd, T-117; fikstura z repozytorium git). Każdy test buduje backlog-fiksturę
+// ma wiersz w „Historia zmian” przewodnika warstwy (błąd, T-117; fikstura z repozytorium git). `--write-index` wpisuje „—” w pustych polach Epic i Story (T-116). Każdy test buduje backlog-fiksturę
 // w katalogu tymczasowym i uruchamia CLI z --root, tak jak robi to CI.
 import { test } from "node:test";
 import assert from "node:assert/strict";

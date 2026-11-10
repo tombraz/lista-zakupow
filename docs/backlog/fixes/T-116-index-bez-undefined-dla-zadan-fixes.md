@@ -67,7 +67,9 @@ Ten sam wzorzec gdzie indziej: brak. Pozostałe użycia `t.epic`/`t.story` są w
 
 ## Prevention
 
-<Wypełnia /fix.>
+Co by temu zapobiegło: test wyjścia `--write-index` — brakujący seam, teraz jest (test T-116 w `scripts/test/backlog-check.test.mjs`, uruchamiany w jobie `infra` w CI). Każdy kolejny regres w wierszach indeksu zadań z `fixes/` złamie ten test.
+
+Propozycja dodatkowa (czeka na decyzję właściciela): wpis w „Pułapki” `infra.md` — pola frontmatter, których nie mają zadania z `fixes/` (`epic`, `story`), w szablonach tekstu zawsze z zapasem (`|| "—"`).
 
 <!-- QA rounds are appended below by /qa-task -->
 
