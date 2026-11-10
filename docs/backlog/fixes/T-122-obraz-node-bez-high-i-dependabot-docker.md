@@ -70,7 +70,12 @@ Inne wystąpienia: obraz Postgresa w `docker-compose.yml` jest poza obrazem prod
 
 ## Prevention
 
-Dependabot `docker` (AC2) zapobiega powtórce.
+Co by zapobiegło: automat, który podnosi pin, i bramka, która nie pozwala go po cichu wyłączyć.
+
+- Dependabot `docker` (AC2) co tydzień podnosi tag i digest obrazu Node.
+- Check automatyczny (zaakceptowany przez właściciela 2026-11-10): `scripts/test/image.test.sh` (job `infra`) sprawdza, że każde `FROM` w `Dockerfile` jest dosłownym `obraz:tag@sha256:…` (bez `${ARG}`), major Node w tagu = `.nvmrc` i `dependabot.yml` ma `package-ecosystem: docker`; przypadki obejść (ARG, tag bez digestu, Node 26, brak `docker`) w tym samym teście. Na plikach sprzed T-122 zgłasza 4 błędy. `.nvmrc` dopisany do filtra `infra` w `ci.yml`, żeby sama zmiana wersji Node uruchamiała test.
+- Pułapka w `docs/architecture/layers/infra.md` i wiersz w „Historia zmian”.
+- Poza zakresem (propozycja osobnego zadania): pozostałe przypięte obrazy bez automatu (`docker-compose.yml`: Postgres, Mailpit; Trivy w `scripts/image.sh`; actionlint w `ci.yml`).
 
 ## Incident note
 

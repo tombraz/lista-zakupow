@@ -75,6 +75,7 @@ jobs:
               - 'scripts/**'
               - 'docker-compose.yml'
               - 'Dockerfile'
+              - '.nvmrc'
               - '.dockerignore'
               - '**/fly*.toml'
               - '.zap/**'

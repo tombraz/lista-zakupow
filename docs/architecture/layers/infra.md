@@ -95,6 +95,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 - Wymagane checki `ci-ok` i `codeql` muszą raportować na każdym PR: `security.yml` i job `ci-ok` nie mają filtra ścieżek (pominięty wymagany workflow blokowałby merge).
 - Bramka, której nic w repo nie narusza (np. przebieg komentarzy z `pnpm lint`), jest zielona także po osłabieniu: zmiana flagi, listy reguł albo `files` przechodzi po cichu (T-030 → T-044 → T-045). Każda taka bramka dostaje stały test na znanych obejściach, który bierze polecenie z miejsca, gdzie bramka działa (wzór: `scripts/test/lint-directives.test.sh`, T-046), a nie tylko jednorazowe pliki próbne.
 - `git log --since=2026-11-10` (sama data) znaczy „tego dnia o bieżącej godzinie”: commity sprzed godziny uruchomienia wypadają. Granica w skrypcie to pełny znacznik czasu (`2026-11-10T00:00:00+01:00`, T-117). Sprawdzenie oparte na historii git w CI potrzebuje `fetch-depth: 0` (domyślny płytki klon ma jeden commit).
+- Dependabot (`package-ecosystem: docker`) aktualizuje tylko dosłowne `FROM obraz:tag@sha256:…`. `FROM ${ARG}` pomija po cichu, więc pin nie dostaje poprawek, a nowe CVE w obrazie bazowym zatrzymują Trivy (T-122). Obraz wpisany dosłownie w każde `FROM`, major Node równy `.nvmrc`; pilnuje tego `scripts/test/image.test.sh`. Gdy upstream nie ma jeszcze poprawki Debiana, etap runtime robi `apt-get upgrade`.
 - Emulator Androida w CI wymaga KVM na runnerze Linux; build Gradle lokalnie w jobie, nie przez EAS (limit 15 buildów).
 
 ## Skille i źródła
@@ -114,3 +115,4 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | 2026-11-10 | T-114: „Gdzie jest kod” i „Komendy” — `backlog-check` sprawdza też AC zadań `done` i statusy w `UAT.md` (T-110). |
 | 2026-11-10 | T-117: `backlog-check` — nowy plik testu z commitów zadania w katalogu warstwy (`paths:` we frontmatter przewodników) wymaga wiersza zadania w „Historia zmian” przewodnika; `fetch-depth: 0` w jobie `always`; „Pułapki”: `git log --since` z samą datą. |
 | 2026-11-10 | T-116: „Gdzie jest kod” — `--write-index` wpisuje „—” zamiast `undefined` w kolumnach Epic i Story zadań z `fixes/`; pozycje „Definition of done” nie są śledzone po `done` (decyzja właściciela 2026-11-10). |
+| 2026-11-10 | T-122: „Pułapki” — Dependabot `docker` nie aktualizuje `FROM ${ARG}`; `scripts/test/image.test.sh` sprawdza pin obrazu Node (dosłowne `FROM` z tagiem i digestem, major = `.nvmrc`, ekosystem `docker` w `dependabot.yml`); `.nvmrc` w filtrze `infra`. |
