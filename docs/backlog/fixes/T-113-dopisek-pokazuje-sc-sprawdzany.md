@@ -4,7 +4,7 @@ title: "Dopisek Copy „pokazuje SC-xx” sprawdzany: tekst wiersza jest w tekst
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-111]
 layers: [web]
 requirements: []
@@ -54,11 +54,16 @@ Poza zakresem (decyzja właściciela 2026-11-09): sprawdzanie dopisków „zło�
 
 ## Root cause
 
-<Do uzupełnienia przy realizacji.>
+`COPY_SOURCE` (`apps/web/test/copyRegister.ts`, T-111) traktował `pokazuje SC-\d{2}` jak każdy inny dopisek źródła: sama obecność dopisku zwalniała wiersz, bez sprawdzenia tekstów SC-xx. W T-111 była to świadoma deklaracja (uwaga minor QA, rozstrzygnięta przez właściciela jako osobne zadanie). Testy tego nie wyłapały, bo fikstury T-111 sprawdzały tylko, że dopisek wiersz *zwalnia* (fikstura bez ekranów SC-06 i SC-01 w `sources`), a nie że *nie zwalnia*, gdy SC-xx tekstu nie pokazuje.
+
+Poprawka: `pokazuje SC-xx` wyjęte z `COPY_SOURCE` do `SHOWN_ON`; `findUnusedCopyRows` najpierw liczy teksty każdego ekranu (te same, co test Copy), potem wiersz z `SHOWN_ON` przechodzi tylko, gdy tekst jest w tekstach SC-xx. Zgłoszenie ma `shownOn` (i `missingScreen: true`, gdy ekranu nie ma), komunikat: „(pokazuje SC-xx: SC-xx nie pokazuje tego tekstu)” albo „(pokazuje SC-xx: brak ekranu SC-xx)”. Ten sam wzorzec gdzie indziej: dopiski `mail z API`, `mobile`, `złożony z części` nadal są deklaracjami — poza zakresem (decyzja właściciela 2026-11-09).
 
 ## Evidence
 
-<Reproducing test: red failure message, then passing. Full suite and static checks result.>
+- Red (przed poprawką), `pnpm vitest run --project web copyRegister`: 3 failed | 28 passed — `findUnusedCopyRows (fixtures, T-111) > note „pokazuje SC-xx” is checked against the texts of SC-xx (T-113) >` „a row whose text SC-xx does not show is reported with screen, key and SC-xx”, „a row pointing to a screen that does not exist is reported”, „a row pointing to its own screen is checked against its own texts”: `AssertionError: expected [] to deeply equal [ { screen: 'SC-07', …(3) } ]`. „a row whose text SC-xx shows is not reported” zielony już przed poprawką (AC2).
+- Green: 31 passed (w tym test repo, AC3: SC-08 `joined` → SC-06, SC-09 `deleted` → SC-01).
+- Krok z raportu po poprawce: SC-08 `joined` z „(pokazuje SC-05; T-111)” → czerwony: `SC-08 · joined · „Dołączyłeś(-aś) do listy „{…}”.” (pokazuje SC-05: SC-05 nie pokazuje tego tekstu)`; zmiana cofnięta.
+- `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check): OK; `pnpm test`: 155 plików, 1273 testy passed; `pnpm test:mobile`: 10 passed; `pnpm build`: OK.
 
 ## Prevention
 
