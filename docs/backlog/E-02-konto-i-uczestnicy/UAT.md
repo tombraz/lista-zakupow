@@ -1,6 +1,6 @@
 # UAT E-02 Konto i zarządzanie udostępnianiem (web)
 
-Przygotował: QA (po T-069), 2026-11-03. Wykonuje: właściciel. Miejsce: staging `https://lista-staging.fly.dev` (workflow bez środowisk podglądowych — `docs/architecture/tech-stack.md`, „Git workflow”). Kolejność przed UAT: `/review-change E-02` (ostatni przegląd `docs/reviews/E-02-2026-11-10-1.md`, runda 5, ma `Verdict: pass`; zadania naprawcze minorów T-114–T-116 na gałęzi epiku; stan na 2026-11-10), `/security-review E-02` (brak przeglądu w `docs/security/reviews/`), potem `/qa-task E-02`.
+Przygotował: QA (po T-069), 2026-11-03. Wykonuje: właściciel. Miejsce: staging `https://lista-staging.fly.dev` (workflow bez środowisk podglądowych — `docs/architecture/tech-stack.md`, „Git workflow”). Kolejność przed UAT: `/review-change E-02` (ostatni przegląd `docs/reviews/E-02-2026-11-10-1.md`, runda 5, ma `Verdict: pass`; zadania naprawcze minorów T-114–T-116 na gałęzi epiku; stan na 2026-11-10), `/security-review E-02` (`docs/security/reviews/E-02-2026-11-10-1.md`, `Verdict: pass`; zadania naprawcze medium T-118–T-122 `todo`), potem `/qa-task E-02`.
 
 ## Przed UAT (warunki z tego epiku)
 
