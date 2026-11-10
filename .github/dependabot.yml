@@ -16,3 +16,12 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # Przypięty tag i digest obrazu Node w Dockerfile (T-122): poprawki obrazu bazowego co tydzień.
+  # Bez podbić major: Node zostaje na linii z .nvmrc / engines (24).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]

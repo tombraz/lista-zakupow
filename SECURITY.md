@@ -15,7 +15,7 @@ Zakres: kod w tym repozytorium oraz środowiska `lista-staging.fly.dev` i `lista
 | `pnpm audit --audit-level high` blokuje `ci-ok`                                            | `.github/workflows/ci.yml`       | TH-22               |
 | CodeQL (JavaScript/TypeScript) na PR, push do `main` i co tydzień, wymagany check `codeql` | `.github/workflows/security.yml` | TH-15, TH-20        |
 | ESLint: zakaz `dangerouslySetInnerHTML`, `sql.raw`, `eval`, `localStorage`                 | `eslint.config.js`               | TH-15, TH-16, TH-20 |
-| Dependabot (npm, GitHub Actions; co tydzień, grupowane)                                    | `.github/dependabot.yml`         | TH-22               |
+| Dependabot (npm, GitHub Actions, obraz Node w `Dockerfile`; co tydzień)                    | `.github/dependabot.yml`         | TH-22               |
 | Akcje przypięte do SHA, `permissions: contents: read` domyślnie                            | `.github/workflows/`             | TH-22               |
 | Secret scanning z push protection                                                          | ustawienia repozytorium          | TH-22, TH-23        |
 
