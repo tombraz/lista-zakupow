@@ -245,6 +245,7 @@ for (const t of tasks.values()) {
 
 // Acceptance criteria (T-110): a done task has every checkbox under "## Acceptance criteria"
 // (subsections and indented items included) ticked; QA ticks each criterion it verified.
+// "## Definition of done" checkboxes are not tracked after done (owner decision 2026-11-10, T-116).
 const AC_BOX = /^\s*[-*]\s+\[([ xX])\]/;
 for (const t of tasks.values()) {
   if (t.status !== "done") continue;
@@ -789,7 +790,7 @@ if (flag("--next")) {
 
 if (flag("--write-index")) {
   const rows = all
-    .map((t) => `| [${t.id}](${relative(ROOT, t.file).replace(/\\/g, "/")}) | ${t.title} | ${t.epic} | ${t.story} | ${t.status} | ${t.depends_on.join(", ") || "—"} |`)
+    .map((t) => `| [${t.id}](${relative(ROOT, t.file).replace(/\\/g, "/")}) | ${t.title} | ${t.epic || "—"} | ${t.story || "—"} | ${t.status} | ${t.depends_on.join(", ") || "—"} |`)
     .join("\n");
   const md = `# Backlog index
 

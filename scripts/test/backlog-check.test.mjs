@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -440,4 +440,35 @@ test("płytki klon (CI bez fetch-depth: 0) → ostrzeżenie, bez błędu (T-117)
   });
   assert.equal(code, 0, out);
   assert.match(out, /WARN\s+shallow git clone/, out);
+});
+
+// --write-index (T-116): zadanie z fixes/ nie ma epic ani story; puste pole w tabeli to „—”, jak w „Depends on”.
+function writeIndex(files) {
+  const dir = mkdtempSync(join(tmpdir(), "backlog-check-"));
+  try {
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, path)), { recursive: true });
+      writeFileSync(join(dir, path), text);
+    }
+    execFileSync(process.execPath, [SCRIPT, "--root", "backlog", "--write-index"], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    return readFileSync(join(dir, "backlog", "index.md"), "utf8");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("--write-index: wiersz zadania z fixes/ ma „—” w kolumnach Epic i Story, bez „undefined” (T-116 AC1, AC2)", () => {
+  const index = writeIndex({
+    ...epicFiles(null, { "backlog/fixes/T-002-a.md": fix("T-002", "Nic.") }),
+  });
+  const row = (id) => index.split("\n").find((l) => l.startsWith(`| [${id}]`));
+  assert.equal(row("T-002"), "| [T-002](fixes/T-002-a.md) | Fix T-002 | — | — | done | — |");
+  assert.equal(
+    row("T-001"),
+    "| [T-001](E-01-a/S-01-01-a/T-001-a.md) | Task T-001 | E-01 | S-01-01 | done | — |",
+  );
+  assert.doesNotMatch(index, /undefined/);
 });
