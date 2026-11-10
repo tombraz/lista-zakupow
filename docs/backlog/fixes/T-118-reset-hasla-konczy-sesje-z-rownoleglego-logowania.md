@@ -4,7 +4,7 @@ title: "Reset hasła kończy także sesję z równoległego logowania starym has
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: high         # incident | high | normal | low
-status: in-qa              # todo | in-progress | in-qa | done | blocked
+status: done              # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend]
 requirements: [F-03]
@@ -79,3 +79,25 @@ Propozycja z przeglądu: linia w `backend.md` „Zasady bezpieczeństwa” o tra
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-10)
+
+Verdict: pass
+
+Reproduction: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check` OK. `pnpm test` — 157 plików, 1280/1281 zielone; jedyny błąd `routes-nul.test.ts › never logs a raw database exception for NUL input (SEC1)` (regex `/byte sequence|22021/` na całym logu, brak wpisów ≥ 50), plik pojedynczo 3× 24/24 zielony — znana niestabilność zgłoszona już w T-109 (#3). Pierwszy przebieg (zimny Docker) dał timeouty 30 s w wielu plikach, kolejne przebiegi zielone — środowisko. `pnpm vitest run --project api password-reset.race` — 3/3. J-01 E2E (`playwright test e2e/j01`) — 18/18.
+
+Acceptance criteria:
+- AC1 pass — testy 1 i 2 (`password-reset.race.test.ts`); dodatkowo własny test: wyścig z e-mailem wielkimi literami → 401, bez `set-cookie`.
+- AC2 pass — test 3: po 500 stare hasło działa, sesja żyje, token działa dalej.
+- AC3 pass — komentarze `infra/auth.ts`, T-054 SEC1, `backend.md` („Gdzie jest kod”, „Pułapki”, historia zmian).
+- AC4 pass — pełny zestaw API (poza znaną niestabilnością wyżej) i J-01.
+
+Spot-checks (cofnięte, `git status` czysty): bez `revokeLateSessions` pada test 2; porównanie hasha wyłączone → pada test 1; bez `transaction: true` pada test 3. Red evidence w sekcji Evidence obecne dla wszystkich 3 testów. Root cause wyjaśnia, czemu testy T-054 tego nie złapały.
+
+Exploratory (tymczasowy plik testowy, usunięty): logowanie nowym hasłem tuż po resecie 200, starym 401; dwa równoległe resety różnymi linkami → 200 + 400, działa tylko hasło zwycięzcy; reset przy otwartym WS — `live.password-reset.test.ts` zielony.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | security | `revokeLateSessions` działa przez `bestEffort`: gdy drugie usunięcie sesji się nie uda, sesja z logowania w oknie resetu przeżywa, odpowiedź resetu to 200, a jedynym śladem jest `sessions_revoke_failed` w logu — bez alarmu do właściciela (inaczej niż `reset_tokens_revoke_failed`, T-088). | `apps/api/src/modules/konta/http/auth-routes.ts` `revokeLateSessions` | Rozważyć alarm jak dla linków albo ponowienie; okno wąskie, więc nie blokuje. |
+| 2 | minor | tests | Niestabilny `routes-nul.test.ts › SEC1`: regex `/22021/` sprawdza cały log, w tym liczby (`time`, `responseTime`), więc może trafić przypadkowy ciąg cyfr; błąd powtarza się (T-109). | pełny przebieg 1 fail, pojedynczo 3× zielony; brak wpisów level ≥ 50 | Szukać `22021` tylko w polach błędu (`err.code`) albo jako osobnego tokenu. |
+| 3 | note | security | Logowanie odrzucone porównaniem hasha liczy się jako nieudana próba w limicie konta (`failures.reserve` bez `release`) i loguje `sign_in_failed` — spójne z TH-09, tylko do świadomości. | `auth-routes.ts` trasa `sign-in/email` | — |
