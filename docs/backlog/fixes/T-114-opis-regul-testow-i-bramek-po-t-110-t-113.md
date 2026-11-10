@@ -60,7 +60,7 @@ related_tasks: [T-104, T-109, T-110, T-112, T-113]
 
 T-110, T-112 i T-113 zmieniły bramki i reguły (kontrole `backlog-check`, typ `MenuAction`, sprawdzany dopisek `pokazuje SC-xx`), ale tylko w kodzie i nagłówkach testów. Przewodniki warstw i `pipeline.md` zostały przy opisie sprzed zmian. Opis granicy `isCode` od T-109 był za szeroki: „niezależnie od liczby słów i polskich znaków” dotyczy tylko JSX. `Button.writes` miało wartość domyślną `false`, więc nowy przycisk zapisu bez flagi kompilował się i był aktywny bez połączenia. Testy tego nie łapią, bo żaden test nie porównuje dokumentacji z kodem (`web.md`, „Pułapki”, T-081: „Nic nie sprawdza tej zgodności automatycznie”), a luka w typie dotyczy przycisku, którego jeszcze nie ma, więc wymusić ją może tylko typ.
 
-Inne wystąpienia: brak innych opcjonalnych flag `writes`. Przyciski wysyłające żądania bez `writes` (logowanie, rejestracja, oba kroki resetu, SC-08 „Dołącz”, SC-09 „Wyloguj”) dostały jawne `writes={false}`, bez zmiany zachowania. Czy mają być nieaktywne bez połączenia, rozstrzyga właściciel według F-15 (nie w tym zadaniu).
+Inne wystąpienia: brak innych opcjonalnych flag `writes`. Przyciski wysyłające żądania bez `writes` (logowanie, rejestracja, oba kroki resetu, SC-08 „Dołącz”, SC-09 „Wyloguj”) dostały jawne `writes={false}`, bez zmiany zachowania. Rozstrzygnięte 2026-11-10 (właściciel przyjął rekomendację): zostają aktywne bez połączenia zgodnie ze specyfikacjami — `SC-09-konto.md` stan Offline („„Wyloguj się” działa”), SC-01, SC-02, SC-03 i SC-08 mają stan „Error — sieć” zamiast blokady; F-15 (nie udawać zapisu) spełnione. Opis w `web.md`, „Konwencje”; bez nowego zadania.
 
 ## Evidence
 
