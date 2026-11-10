@@ -28,7 +28,10 @@
  * - Wiersz Copy ekranu, którego tekstu nie pokazuje kod web ekranu (z importowanymi modułami
  *   wspólnymi i komponentami), to błąd ze wskazaniem ekranu i klucza (`findUnusedCopyRows`, T-111),
  *   chyba że dopisek podaje źródło jako osobny segment: `mail z API`, `mobile`, `złożony z części`
- *   (kod składa tekst z wierszy-części) albo `pokazuje SC-xx`. Martwy wiersz się usuwa.
+ *   (kod składa tekst z wierszy-części) albo `pokazuje SC-xx`. Dopisek `pokazuje SC-xx` jest
+ *   sprawdzany: tekst wiersza musi być w tekstach ekranu SC-xx (tych samych, które liczy ten test
+ *   dla SC-xx), inaczej błąd wskazuje ekran, klucz i SC-xx; nieistniejący SC-xx też (T-113).
+ *   Martwy wiersz się usuwa.
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
  * - Parametr szablonu `${…}` pasuje do dowolnego `{nazwa}` w Copy (`${String(count)} do kupienia`
@@ -794,7 +797,7 @@ describe("findUnusedCopyRows (fixtures, T-111)", () => {
     expect(formatUnusedCopyRows(rows)).toContain("SC-07 · leave.confirm · „Opuścić listę");
   });
 
-  it("a Copy row with a source note (mail, API, mobile, parts, other screen) is not reported", () => {
+  it("a Copy row with a source note (mail, API, mobile, parts) is not reported", () => {
     const rows = findUnusedCopyRows({
       sources,
       specs: {
@@ -803,13 +806,88 @@ describe("findUnusedCopyRows (fixtures, T-111)", () => {
           ["leave.confirm", "Opuścić listę „{nazwa}”? Żeby wrócić… (złożony z części; T-111)"],
           ["mail.subject", "Reset hasła (mail z API; T-053)"],
           ["push", "Nowa pozycja (mobile; T-200)"],
-          ["joined", "Dołączyłeś(-aś) do listy „{nazwa}”. (pokazuje SC-06; T-111)"],
-          ["a / b", "Pierwszy / Drugi (pokazuje SC-01; T-111)"],
         ),
       },
     });
 
     expect(rows).toEqual([]);
+  });
+
+  describe("note „pokazuje SC-xx” is checked against the texts of SC-xx (T-113)", () => {
+    const withOtherScreens = {
+      ...sources,
+      "screens/SC-01-logowanie/messages.ts": `export const messages = { first: "Pierwszy", second: "Drugi" };`,
+      "screens/SC-06-lista/messages.ts": `
+        export const messages = { joined: (name: string) => \`Dołączyłeś(-aś) do listy „\${name}”.\` };`,
+    };
+    const specs = (...rows: [string, string][]) => ({
+      "SC-01-logowanie.md": spec(["first / second", "Pierwszy / Drugi"]),
+      "SC-06-lista.md": spec(["joined", "Dołączyłeś(-aś) do listy „{nazwa}”."]),
+      "SC-07-uczestnicy.md": spec(["title", "Uczestnicy"], ...rows),
+    });
+
+    it("a row whose text SC-xx shows is not reported (parameter, `a / b`, several segments)", () => {
+      const rows = findUnusedCopyRows({
+        sources: withOtherScreens,
+        specs: specs(
+          ["joined", "Dołączyłeś(-aś) do listy „{nazwa}”. (pokazuje SC-06; T-111)"],
+          ["a / b", "Pierwszy / Drugi (pokazuje SC-01; T-111)"],
+        ),
+      });
+
+      expect(rows).toEqual([]);
+    });
+
+    it("a row whose text SC-xx does not show is reported with screen, key and SC-xx", () => {
+      const rows = findUnusedCopyRows({
+        sources: withOtherScreens,
+        specs: specs(["joined", "Dołączyłeś(-aś) do listy „{nazwa}”. (pokazuje SC-01; T-111)"]),
+      });
+
+      expect(rows).toEqual([
+        {
+          screen: "SC-07",
+          key: "joined",
+          text: "Dołączyłeś(-aś) do listy „{…}”.",
+          shownOn: "SC-01",
+        },
+      ]);
+      expect(formatUnusedCopyRows(rows)).toContain(
+        "SC-07 · joined · „Dołączyłeś(-aś) do listy „{…}”.” (pokazuje SC-01: SC-01 nie pokazuje tego tekstu)",
+      );
+    });
+
+    it("a row pointing to a screen that does not exist is reported", () => {
+      const rows = findUnusedCopyRows({
+        sources: withOtherScreens,
+        specs: specs(["joined", "Dołączyłeś(-aś) do listy „{nazwa}”. (pokazuje SC-42; T-111)"]),
+      });
+
+      expect(rows).toEqual([
+        {
+          screen: "SC-07",
+          key: "joined",
+          text: "Dołączyłeś(-aś) do listy „{…}”.",
+          shownOn: "SC-42",
+          missingScreen: true,
+        },
+      ]);
+      expect(formatUnusedCopyRows(rows)).toContain("(pokazuje SC-42: brak ekranu SC-42)");
+    });
+
+    it("a row pointing to its own screen is checked against its own texts", () => {
+      const rows = findUnusedCopyRows({
+        sources: withOtherScreens,
+        specs: specs(
+          ["title2", "Uczestnicy (pokazuje SC-07; T-113)"],
+          ["ghost", "Nie ma mnie (pokazuje SC-07; T-113)"],
+        ),
+      });
+
+      expect(rows).toEqual([
+        { screen: "SC-07", key: "ghost", text: "Nie ma mnie", shownOn: "SC-07" },
+      ]);
+    });
   });
 
   it("a note without a source marker does not excuse a row; `a / b` rows are checked per text", () => {

@@ -46,11 +46,17 @@ const COPY_HEADING = /^## Copy\s*$/m;
 /**
  * Dopisek źródła wiersza Copy, którego tekstu nie pokazuje kod web ekranu (T-111), jako osobny
  * segment dopisku (na początku albo po `; ` / `, `): `mail z API` (tekst maila tworzony przez API),
- * `mobile` (tekst aplikacji mobilnej), `złożony z części` (kod składa tekst z wierszy-części) albo
- * `pokazuje SC-xx` (tekst pokazuje inny ekran). „e-mail” w innym dopisku nie jest źródłem.
+ * `mobile` (tekst aplikacji mobilnej) albo `złożony z części` (kod składa tekst z wierszy-części).
+ * „e-mail” w innym dopisku nie jest źródłem.
  */
-const COPY_SOURCE =
-  /(?:^\(|[;,] )(?:mail z API|mobile|złożony z części|pokazuje SC-\d{2})(?=[;,)])/;
+const COPY_SOURCE = /(?:^\(|[;,] )(?:mail z API|mobile|złożony z części)(?=[;,)])/;
+
+/**
+ * Dopisek `pokazuje SC-xx` (tekst pokazuje inny ekran) jako osobny segment dopisku: wiersz
+ * przechodzi tylko, gdy tekst jest w tekstach ekranu SC-xx, tych samych, które liczy test Copy
+ * dla SC-xx (T-113).
+ */
+const SHOWN_ON = /(?:^\(|[;,] )pokazuje (SC-\d{2})(?=[;,)])/;
 
 /** Parametr tekstu: `${…}` w kodzie i `{nazwa}` w Copy. */
 const PARAMETER = "{…}";
@@ -110,11 +116,17 @@ export interface UnusedCopyRow {
   screen: string;
   key: string;
   text: string;
+  /** Ekran z dopisku `pokazuje SC-xx`, który nie pokazuje tekstu wiersza (T-113). */
+  shownOn?: string;
+  /** Ekranu z dopisku `pokazuje SC-xx` nie ma w kodzie web (T-113). */
+  missingScreen?: true;
 }
 
 /**
  * Wiersze Copy ekranu, których tekstu nie pokazuje kod web ekranu (z modułami wspólnymi i
  * komponentami, które ekran importuje) i które nie mają dopisku źródła (`COPY_SOURCE`, T-111).
+ * Wiersz z dopiskiem `pokazuje SC-xx` przechodzi tylko, gdy tekst jest w tekstach ekranu SC-xx
+ * (`SHOWN_ON`, T-113).
  */
 export function findUnusedCopyRows({
   sources,
@@ -122,11 +134,20 @@ export function findUnusedCopyRows({
   packages = {},
 }: CopyRegisterInput): UnusedCopyRow[] {
   const modules = new ModuleGraph(sources, packages);
-  const unused: UnusedCopyRow[] = [];
+  const textsOf = new Map<string, Set<string>>();
   for (const [screen, files] of screens(sources)) {
-    const used = new Set(modules.screenTexts(files).map(({ text }) => text));
+    textsOf.set(screen, new Set(modules.screenTexts(files).map(({ text }) => text)));
+  }
+  const unused: UnusedCopyRow[] = [];
+  for (const [screen, used] of textsOf) {
     for (const { key, text, note } of copyRows(specOf(screen, specs))) {
-      if (!used.has(text) && !COPY_SOURCE.test(note)) unused.push({ screen, key, text });
+      if (used.has(text) || COPY_SOURCE.test(note)) continue;
+      const shownOn = SHOWN_ON.exec(note)?.[1];
+      const shownTexts = shownOn === undefined ? undefined : textsOf.get(shownOn);
+      if (shownOn === undefined) unused.push({ screen, key, text });
+      else if (shownTexts === undefined)
+        unused.push({ screen, key, text, shownOn, missingScreen: true });
+      else if (!shownTexts.has(text)) unused.push({ screen, key, text, shownOn });
     }
   }
   return unused;
@@ -134,8 +155,15 @@ export function findUnusedCopyRows({
 
 export function formatUnusedCopyRows(rows: UnusedCopyRow[]): string {
   return [
-    "Wiersze Copy ekranu bez tekstu w kodzie web ekranu i bez dopisku źródła (usuń martwy wiersz albo dopisz źródło: „(mail z API; T-053)”, „(mobile; T-…)”, „(złożony z części; T-111)”, „(pokazuje SC-01; T-111)”):",
-    ...rows.map(({ screen, key, text }) => `${screen} · ${key} · „${text}”`),
+    "Wiersze Copy ekranu bez tekstu w kodzie web ekranu i bez dopisku źródła (usuń martwy wiersz albo dopisz źródło: „(mail z API; T-053)”, „(mobile; T-…)”, „(złożony z części; T-111)”, „(pokazuje SC-01; T-111)”; dopisek „pokazuje SC-xx” wymaga tekstu w kodzie ekranu SC-xx, T-113):",
+    ...rows.map(({ screen, key, text, shownOn, missingScreen }) => {
+      const row = `${screen} · ${key} · „${text}”`;
+      if (shownOn === undefined) return row;
+      const reason = missingScreen
+        ? `brak ekranu ${shownOn}`
+        : `${shownOn} nie pokazuje tego tekstu`;
+      return `${row} (pokazuje ${shownOn}: ${reason})`;
+    }),
   ].join("\n");
 }
 
