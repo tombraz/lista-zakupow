@@ -4,7 +4,7 @@ title: "Obraz Node bez podatności HIGH; Dependabot aktualizuje przypięty obraz
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -63,6 +63,7 @@ Inne wystąpienia: obraz Postgresa w `docker-compose.yml` jest poza obrazem prod
 - Lokalnie (2026-11-10): `node:24.21.0-trixie-slim@sha256:173f1258…`: `node v24.21.0`, `apt 3.0.3`, `libapt-pkg7.0 3.0.3`. `node:24.22.2-trixie-slim@sha256:0820eaa8…` (to samo, co obecny `node:24-trixie-slim`): `node v24.22.2`, `apt 3.0.4`, `libapt-pkg7.0 3.0.4`.
 - Lokalnie nie da się uruchomić `scripts/image.sh build` ani Trivy: kontenery nie ufają certyfikatowi pośredniczącemu w TLS na tej maszynie (`UNABLE_TO_VERIFY_LEAF_SIGNATURE` przy `npm install`, `x509: certificate signed by unknown authority` przy pobieraniu bazy Trivy). AC1 i `image-run.test.sh` (AC4) weryfikuje job `image` w CI.
 - CI po pierwszej poprawce (run 42826144581, 690bcf4): `image-run.test.sh` ok (migracje, bez roota, smoke). Trivy nadal `Total: 2 (HIGH: 2)`, ale już nie apt: `zlib1g 1:1.3.dfsg+really1.3.1-1+b1` (CVE-2026-76844, CVE-2026-85091, poprawka `+deb13u1`). Najnowszy upstream `node:24-trixie-slim` też ma `+b1`, więc zgodnie z AC1 etap runtime robi `apt-get upgrade`. Lokalnie w obrazie bazowym `apt-get update && apt-get upgrade` daje `zlib1g …+deb13u1`.
+- Green (CI run 42830045236, 28f6875): job `image` success (migracje z obrazu, bez roota, smoke; Trivy bez high/critical z poprawką), `ci-ok` success.
 - `bash scripts/test/image.test.sh`: ok. `dependabot.yml` parsuje się (`npm`, `github-actions`, `docker`).
 
 ## Prevention
