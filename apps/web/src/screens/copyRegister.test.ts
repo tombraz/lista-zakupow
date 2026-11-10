@@ -42,7 +42,8 @@
  *   dla SC-xx), inaczej błąd wskazuje ekran, klucz i SC-xx; nieistniejący SC-xx też (T-113).
  *   Dopisek `złożony z części` jest sprawdzany: Copy ekranu ma wiersze „(część `<klucz>`…)”, tekst
  *   wiersza zawiera tekst każdej części (co do znaku, z parametrami), a kod ekranu pokazuje co
- *   najmniej jedną część; inaczej błąd wskazuje ekran, klucz i powód (T-115). Dopisek `mail z API`
+ *   najmniej jedną część; inaczej błąd wskazuje ekran, klucz i powód (T-115). Tekst wiersza
+ *   złożonego poza częściami nie jest sprawdzany (test nie zna sposobu składania w kodzie). Dopisek `mail z API`
  *   sprawdza `apps/api/test/reset-mail.copy.test.ts` (tekst maila z `passwordResetMail`, T-115);
  *   bez sprawdzenia zostaje tylko `mobile`.
  *   Martwy wiersz się usuwa.
