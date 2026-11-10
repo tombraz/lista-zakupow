@@ -1,30 +1,24 @@
 import type { Pool } from "pg";
-
-type Query = (...args: unknown[]) => Promise<unknown>;
+import { sqlOf, withQuery, type Query } from "./gated-pool";
 
 /**
  * Pula, w której pasujące zapytania wysłane przez `pool.query` kończą się błędem bazy (bez
- * wysyłania do bazy); reszta, w tym transakcje na kliencie z `connect()`, idzie do prawdziwej.
+ * wysyłania do bazy); reszta idzie do prawdziwej. Transakcje na kliencie z `connect()` idą do
+ * prawdziwej bazy, chyba że `clients: true` — wtedy pasujące zapytanie w transakcji też pada
+ * i Drizzle ją wycofuje (T-118).
  */
-export function failingPool(pool: Pool, matches: RegExp): Pool {
-  const query = pool.query.bind(pool) as Query;
-  const failing: Query = (...args) =>
-    matches.test(sqlOf(args[0]))
-      ? Promise.reject(Object.assign(new Error("connection terminated"), { code: "57P01" }))
-      : query(...args);
-  return new Proxy(pool, {
-    get(target, property) {
-      if (property === "query") return failing;
-      const value: unknown = Reflect.get(target, property, target);
-      return typeof value === "function" ? (value as Query).bind(target) : value;
-    },
-  });
-}
-
-function sqlOf(config: unknown): string {
-  if (typeof config === "string") return config;
-  if (typeof config === "object" && config !== null && "text" in config) {
-    return String(config.text);
-  }
-  return "";
+export function failingPool(
+  pool: Pool,
+  matches: RegExp,
+  { clients = false }: { clients?: boolean } = {},
+): Pool {
+  const failing =
+    (query: Query): Query =>
+    (...args) =>
+      matches.test(sqlOf(args[0]))
+        ? Promise.reject(Object.assign(new Error("connection terminated"), { code: "57P01" }))
+        : query(...args);
+  return withQuery(pool, failing(pool.query.bind(pool) as Query), (client) =>
+    clients ? withQuery(client, failing(client.query.bind(client) as Query)) : client,
+  );
 }

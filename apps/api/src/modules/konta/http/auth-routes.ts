@@ -23,6 +23,8 @@ interface AuthDeps {
   /** Pseudonim e-maila do liczników i logu `security` (TH-21). */
   accountKey: (email: string) => string;
   failures: SignInFailures;
+  /** TH-10 (T-118): bieżący hash hasła konta z tym e-mailem (`infra/credentials.ts`). */
+  passwordHash: (email: string) => Promise<string | null>;
   resetRequests: PasswordResetRequests;
   /** F-03, TH-10: resety konta po kolei, po udanym reszta linków konta przestaje działać. */
   resetTokens: ResetTokens;
@@ -97,7 +99,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
         });
         throw new ApiError(429, "rate_limited");
       }
-      const response = await forward(auth, origin, request, credentials);
+      const response = await forwardSignIn(deps, origin, request, credentials);
       if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
       else await failures.release(accountKey);
       if (response.status === 429) {
@@ -149,7 +151,9 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     const response = userId
       ? await deps.resetTokens.exclusive(userId, async () => {
           const result = await forward(auth, origin, request, body);
-          if (result.ok) await revokeOtherLinks(request, deps, userId);
+          if (!result.ok) return result;
+          await revokeLateSessions(request, auth, userId);
+          await revokeOtherLinks(request, deps, userId);
           return result;
         })
       : await forward(auth, origin, request, body);
@@ -159,6 +163,40 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     }
     return relay(response, reply);
   });
+}
+
+/**
+ * T-118 (TH-10): Better Auth usuwa sesje przed zapisem hasła, a logowanie, które zweryfikowało
+ * stare hasło, mogło zapisać sesję po tym usunięciu i przed zatwierdzeniem nowego hasła. Drugie
+ * usunięcie po zatwierdzeniu ją kończy; późniejsze takie logowanie odrzuca porównanie hasha.
+ */
+async function revokeLateSessions(request: FastifyRequest, auth: Auth, userId: string) {
+  const { internalAdapter } = await auth.$context;
+  await bestEffort(
+    request.log,
+    "sessions_revoke_failed",
+    () => internalAdapter.deleteUserSessions(userId),
+    { userId },
+  );
+}
+
+/**
+ * T-118 (TH-10): hash hasła zmienił się w trakcie logowania, więc Better Auth mógł zweryfikować
+ * hasło sprzed resetu. Taka sesja jest usuwana, a odpowiedź to złe hasło (bez ciasteczka).
+ */
+async function forwardSignIn(
+  deps: Pick<AuthDeps, "auth" | "passwordHash">,
+  origin: string,
+  request: FastifyRequest,
+  credentials: { email: string; password: string },
+): Promise<Response> {
+  const hashBefore = await deps.passwordHash(credentials.email);
+  const response = await forward(deps.auth, origin, request, credentials);
+  if (!response.ok || (await deps.passwordHash(credentials.email)) === hashBefore) return response;
+  const { token } = (await response.json()) as { token?: string };
+  const { internalAdapter } = await deps.auth.$context;
+  if (token) await internalAdapter.deleteSession(token);
+  return Response.json({ code: "INVALID_EMAIL_OR_PASSWORD" }, { status: 401 });
 }
 
 /**

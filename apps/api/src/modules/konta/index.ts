@@ -13,6 +13,7 @@ import { linksNotRevokedAlert } from "./domain/reset-alert";
 import { passwordResetMail } from "./domain/reset-mail";
 import { accountKey } from "./infra/account-key";
 import { createAuth, type AuthSettings, type OnPasswordResetToken } from "./infra/auth";
+import { passwordHashOf } from "./infra/credentials";
 import { PasswordResetRequests } from "./infra/password-reset-requests";
 import { ResetTokens } from "./infra/reset-tokens";
 import { isSessionActive } from "./infra/sessions";
@@ -83,6 +84,7 @@ export function accountRoutes(
       auth,
       accountKey: (email) => accountKey(settings.secret, email),
       failures: new SignInFailures(db),
+      passwordHash: (email) => passwordHashOf(db, email),
       resetRequests: new PasswordResetRequests(db),
       resetTokens: new ResetTokens(db),
       invitationOnSignUp: () => invitationOnSignUp,

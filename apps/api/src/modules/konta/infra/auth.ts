@@ -33,7 +33,9 @@ export function createAuth(
     baseURL: settings.origin,
     basePath: "/api/auth",
     trustedOrigins: [settings.origin],
-    database: drizzleAdapter(db, { provider: "pg", schema }),
+    // T-118: kroki resetu (zużycie tokenu, usunięcie sesji, zapis hasła) w jednej transakcji —
+    // bez tego błąd zapisu hasła zostawiał zużyty token i usunięte sesje przy starym haśle.
+    database: drizzleAdapter(db, { provider: "pg", schema, transaction: true }),
     emailAndPassword: emailAndPassword(onPasswordResetToken),
     // MC-04, MC-05: limity per IP w bazie; IP klienta ustawia most Fastify (auth-routes.ts).
     rateLimit: {
@@ -92,7 +94,9 @@ function emailAndPassword(onPasswordResetToken: OnPasswordResetToken) {
   return {
     enabled: true,
     resetPasswordTokenExpiresIn: PASSWORD_RESET_VALIDITY_SECONDS,
-    // TH-10: reset kończy wszystkie sesje konta (w tej samej transakcji co zmiana hasła).
+    // TH-10: reset kończy wszystkie sesje konta (w transakcji ze zmianą hasła). Transakcja nie
+    // zamyka wyścigu z logowaniem starym hasłem (czyta zatwierdzony hash) — domyka go most
+    // (`auth-routes.ts`, T-118): drugie usunięcie sesji po resecie i porównanie hasha przy logowaniu.
     revokeSessionsOnPasswordReset: true,
     // Link budujemy sami z originu aplikacji i tokenu (`url` Better Auth prowadzi do API).
     sendResetPassword: ({ user, token }: { user: { email: string }; token: string }) => {
