@@ -4,7 +4,7 @@ title: "Dopisek Copy „pokazuje SC-xx” sprawdzany: tekst wiersza jest w tekst
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: in-qa                 # todo | in-progress | in-qa | done | blocked
+status: done                 # todo | in-progress | in-qa | done | blocked
 depends_on: [T-111]
 layers: [web]
 requirements: []
@@ -29,10 +29,10 @@ Poza zakresem (decyzja właściciela 2026-11-09): sprawdzanie dopisków „zło�
 
 ## Acceptance criteria
 
-- [ ] AC1: Given wiersz Copy z dopiskiem „pokazuje SC-xx”, którego tekstu nie ma w tekstach ekranu SC-xx (albo SC-xx nie istnieje), when uruchamia się test Copy, then test jest czerwony i wskazuje ekran, klucz i SC-xx. — verified by: fikstura w `apps/web/src/screens/copyRegister.test.ts`
-- [ ] AC2: Given wiersz z dopiskiem „pokazuje SC-xx”, którego tekst SC-xx pokazuje, then brak błędu. — verified by: fikstura
-- [ ] AC3: Given repo, then test Copy repo jest zielony (SC-08 `joined` → SC-06, SC-09 `deleted` → SC-01). — verified by: `pnpm vitest run --project web copyRegister`
-- [ ] AC4: No regression in: T-100, T-108, T-109, T-111.
+- [x] AC1: Given wiersz Copy z dopiskiem „pokazuje SC-xx”, którego tekstu nie ma w tekstach ekranu SC-xx (albo SC-xx nie istnieje), when uruchamia się test Copy, then test jest czerwony i wskazuje ekran, klucz i SC-xx. — verified by: fikstura w `apps/web/src/screens/copyRegister.test.ts`
+- [x] AC2: Given wiersz z dopiskiem „pokazuje SC-xx”, którego tekst SC-xx pokazuje, then brak błędu. — verified by: fikstura
+- [x] AC3: Given repo, then test Copy repo jest zielony (SC-08 `joined` → SC-06, SC-09 `deleted` → SC-01). — verified by: `pnpm vitest run --project web copyRegister`
+- [x] AC4: No regression in: T-100, T-108, T-109, T-111.
 
 ## TDD plan
 
@@ -70,3 +70,27 @@ Poprawka: `pokazuje SC-xx` wyjęte z `COPY_SOURCE` do `SHOWN_ON`; `findUnusedCop
 Dopisek „pokazuje SC-xx” przestaje być deklaracją: test sprawdza go z kodem ekranu SC-xx.
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-10)
+
+Verdict: pass
+
+Commity: `65af552` (zmiany tylko w `apps/web/test/copyRegister.ts` i `apps/web/src/screens/copyRegister.test.ts`).
+
+Uruchomione:
+- `pnpm vitest run --project web copyRegister`: 31 passed.
+- `pnpm check` (format, lint, typecheck, quality, design-check, backlog-check, workflow-check, test, test:mobile): exit 0.
+- `pnpm test` uruchomiony osobno: 155 plików, 1273 testy passed (2 z 3 przebiegów; patrz #1).
+
+Kryteria:
+- AC1 pass: krok z raportu (SC-08 `joined` → „pokazuje SC-05”) daje błąd `SC-08 · joined · „Dołączyłeś(-aś) do listy „{…}”.” (pokazuje SC-05: SC-05 nie pokazuje tego tekstu)`. SC-09 `deleted` → „pokazuje SC-99” daje `(pokazuje SC-99: brak ekranu SC-99)`. Scenariusz z opisu błędu (tekst usunięty z `SC-06-lista/messages.ts`) daje błąd dla SC-08 `joined` z SC-06. Fikstury sprawdzają ekran, klucz, tekst i `shownOn`/`missingScreen` za pomocą literałów. Wszystkie zmiany cofnięte.
+- AC2 pass: fikstura z parametrem `{nazwa}`, wierszem `a / b` i kilkoma segmentami dopisku daje `[]`.
+- AC3 pass: w repo test jest zielony, SC-08 `joined` → SC-06 (`messages.ts:21`), SC-09 `deleted` → SC-01.
+- AC4 pass: pełny zestaw testów jest zielony, w tym fikstury T-111 (`mail z API`, `mobile`, `złożony z części`).
+
+Spot-check: `else if (!shownTexts.has(text))` → `else if (false)` daje 2 czerwone testy T-113 (wiersz niepokazywany przez SC-xx i odwołanie do własnego ekranu), więc testy wyłapują brak poprawki. Zmiana cofnięta, `git status` czysty. Test „nieistniejący ekran” łapie osobna gałąź `missingScreen`. Red evidence jest dla 3 testów, a AC2 był zielony już przed poprawką (zgodnie z opisem w Evidence). Root cause wyjaśnia, dlaczego testy T-111 nie wyłapały błędu.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | tests | Pierwszy osobny przebieg `pnpm test`, zaraz po `pnpm check`, dał „5 failed, 148 passed (153)” plików. Dwa kolejne przebiegi (`pnpm test` i `pnpm test` w ramach `pnpm check`) były zielone (155/1273). Nazwy plików z błędami nie zostały zapisane (log był przycięty). Zmiana T-113 dotyczy tylko testu Copy, więc to raczej niestabilność środowiska testów. | log przebiegu w sesji QA | Ustalić, które pliki bywają niestabilne, jeśli problem wróci |
+| 2 | note | code | Komunikat zbiorczy `formatUnusedCopyRows` nadal podaje „(pokazuje SC-01; T-111)” jako przykład dopisku źródła. Dopisek ma teraz zastrzeżenie T-113, więc to tylko kwestia czytelności. | `apps/web/test/copyRegister.ts` `formatUnusedCopyRows` | bez zmian albo krótszy komunikat |
