@@ -32,7 +32,7 @@ export function NewPasswordStep({ token }: { token: string }) {
           }}
           error={form.passwordError && passwordErrorText(form.passwordError)}
         />
-        <Button type="submit" loading={form.pending}>
+        <Button writes={false} type="submit" loading={form.pending}>
           {messages.step2.submit}
         </Button>
       </AuthForm>
@@ -55,6 +55,7 @@ function InvalidLink() {
         {messages.step2.invalid}
       </InlineAlert>
       <Button
+        writes={false}
         onClick={() => {
           const state: ResetState = { newLink: true };
           void navigate("/reset-hasla", { replace: true, state });

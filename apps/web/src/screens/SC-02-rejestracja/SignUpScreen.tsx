@@ -107,7 +107,7 @@ export function SignUpScreen() {
           error={errorText(errors, "password")}
         />
         <Consents values={values} errors={errors} setField={setField} />
-        <Button type="submit" loading={form.pending}>
+        <Button writes={false} type="submit" loading={form.pending}>
           {messages.submit}
         </Button>
       </form>

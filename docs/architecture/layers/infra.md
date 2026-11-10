@@ -34,7 +34,7 @@ Istnieje (T-010): `Dockerfile` i `.dockerignore` (obraz `ghcr.io/tombraz/lista-z
 
 Istnieje (T-013): `scripts/workflow-check.mjs` (znacznik `TYMCZASOWE` w `.github/workflows/` zatrzymuje `pnpm check` i job `always` w CI) z testem `scripts/test/workflow-check.test.sh`; `deploy.yml` wdraża staging tylko z `main` i przez `workflow_dispatch`.
 
-Istnieje (T-099): `scripts/test/backlog-check.test.mjs` (`node:test`, backlog-fikstury w katalogu tymczasowym, CLI z `--root`) — przekazania pracy do innego epiku bez odbiorcy; job `infra` w CI.
+Istnieje (T-099): `scripts/test/backlog-check.test.mjs` (`node:test`, backlog-fikstury w katalogu tymczasowym, CLI z `--root`) — przekazania pracy do innego epiku bez odbiorcy (ostrzeżenie, T-099); zadanie `done` z nieodhaczonym AC w „## Acceptance criteria” i status przy ID zadania w `UAT.md` epiku niezgodny z plikiem zadania (błędy, T-110); job `infra` w CI.
 
 Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`.
 
@@ -48,7 +48,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | raport pokrycia | `pnpm test:coverage` (wynik w `coverage/`) | korzeń repo |
 | actionlint (rung 1) | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` (Git Bash na Windows: poprzedź `MSYS_NO_PATHCONV=1`) | korzeń repo |
 | testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh`; `bash scripts/test/mobile.test.sh` | korzeń repo |
-| test `backlog-check` (przekazania do epiku, T-099) | `node --test scripts/test/backlog-check.test.mjs` | korzeń repo |
+| test `backlog-check` (przekazania do epiku, T-099; AC zadań `done` i statusy w `UAT.md`, T-110) | `node --test scripts/test/backlog-check.test.mjs` | korzeń repo |
 | skan zależności | `pnpm audit --audit-level high` | korzeń repo |
 | testy skryptów wdrożenia (rung 2) | `bash scripts/test/deploy.test.sh`; `deploy-workflow`, `workflow-check`, `image`, `smoke`, `zap`, `staging-setup` analogicznie | korzeń repo |
 | test przebiegu komentarzy z `pnpm lint` (obejścia padają; job `static`, bo potrzebuje zależności) | `bash scripts/test/lint-directives.test.sh` | korzeń repo |
@@ -109,3 +109,4 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | 2026-10-29 | T-013: staging tylko z `main`; `workflow-check` odrzuca `TYMCZASOWE` w workflow. |
 | 2026-10-30 | T-046: `scripts/test/lint-directives.test.sh` w jobie `static` sprawdza, że przebieg komentarzy z `pnpm lint` odrzuca znane obejścia. |
 | 2026-10-31 | T-046: „Pułapki” — bramka bez naruszeń w repo potrzebuje stałego testu na obejściach. |
+| 2026-11-10 | T-114: „Gdzie jest kod” i „Komendy” — `backlog-check` sprawdza też AC zadań `done` i statusy w `UAT.md` (T-110). |

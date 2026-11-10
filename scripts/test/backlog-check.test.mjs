@@ -1,6 +1,7 @@
 // backlog-check: przekazanie pracy do innego epiku („to E-02”, „w E-02”, „→ E-02”) musi mieć
-// odbiorcę (T-099). Każdy test buduje backlog-fiksturę w katalogu tymczasowym i uruchamia CLI
-// z --root, tak jak robi to CI.
+// odbiorcę (ostrzeżenie, T-099); zadanie `done` ma odhaczone wszystkie AC, a status przy ID zadania
+// w `UAT.md` epiku zgadza się z plikiem zadania (błędy, T-110). Każdy test buduje backlog-fiksturę
+// w katalogu tymczasowym i uruchamia CLI z --root, tak jak robi to CI.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";

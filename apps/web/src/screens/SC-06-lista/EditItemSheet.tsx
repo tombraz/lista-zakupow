@@ -94,7 +94,7 @@ function EditForm({ edit, nameRef, noteRef, onCancel }: EditFormProps) {
       >
         {messages.editSheet.delete}
       </Button>
-      <Button variant="secondary" onClick={onCancel}>
+      <Button writes={false} variant="secondary" onClick={onCancel}>
         {messages.cancel}
       </Button>
     </form>
@@ -127,7 +127,7 @@ function DeletedElsewhere({ closeRef, onClose }: DeletedElsewhereProps) {
   return (
     <>
       <InlineAlert tone="info">{messages.editSheet.deleted}</InlineAlert>
-      <Button ref={closeRef} onClick={onClose}>
+      <Button writes={false} ref={closeRef} onClick={onClose}>
         {messages.editSheet.close}
       </Button>
     </>

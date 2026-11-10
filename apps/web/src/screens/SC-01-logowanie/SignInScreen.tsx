@@ -71,7 +71,7 @@ export function SignInScreen() {
           }}
           error={form.missing.password && messages.password.required}
         />
-        <Button type="submit" loading={form.pending}>
+        <Button writes={false} type="submit" loading={form.pending}>
           {messages.submit}
         </Button>
       </AuthForm>

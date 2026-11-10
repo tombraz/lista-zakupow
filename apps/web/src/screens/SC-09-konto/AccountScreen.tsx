@@ -42,6 +42,7 @@ export function AccountScreen() {
           <NameForm />
         </section>
         <Button
+          writes={false}
           variant="secondary"
           loading={logout.isPending}
           onClick={() => {

@@ -52,7 +52,7 @@ flowchart LR
 | web | `apps/web/**`, `packages/shared/**`, `packages/tokens/**`, `docs/design/tokens.json` | lint, typy, jakość, unit + komponenty, build, E2E web (Playwright + axe, web serwowany przez API jak na produkcji), design check |
 | mobile | `apps/mobile/**`, `packages/shared/**`, `packages/tokens/**` | lint, typy, jakość, unit + komponenty, design check, E2E Android (Maestro), build iOS na symulator |
 | infra | `.github/**`, `scripts/**`, `docker-compose.yml`, `Dockerfile`, `fly*.toml` | actionlint, testy skryptów (`--dry-run`); zmiana `.github/**` uruchamia wszystkie joby |
-| zawsze | — | `pnpm audit --audit-level high`, `node scripts/backlog-check.mjs` (błędy blokują; ostrzeżenia nie — m.in. przekazanie pracy „to E-xx” / „w E-xx” / „→ E-xx” bez odbiorcy w tej samej linii ani wpisu w „Out of scope” epiku docelowego, T-099), format check |
+| zawsze | — | `pnpm audit --audit-level high`, `node scripts/backlog-check.mjs` (błędy blokują — m.in. zadanie `done` z nieodhaczonym AC i status przy ID zadania w `UAT.md` epiku niezgodny z plikiem zadania, T-110; ostrzeżenia nie — m.in. przekazanie pracy „to E-xx” / „w E-xx” / „→ E-xx” bez odbiorcy w tej samej linii ani wpisu w „Out of scope” epiku docelowego, T-099), format check |
 
 Zbiorczy wymagany check: `ci-ok` (przechodzi tylko, gdy każdy uruchomiony job przeszedł). Drugi wymagany check: `codeql`.
 

@@ -98,7 +98,7 @@ function Invite({ preview, token, joinError, signedIn, joining, onJoin }: Invite
       {!isFinal(joinError) &&
         (signedIn ? (
           <>
-            <Button loading={joining} onClick={onJoin}>
+            <Button writes={false} loading={joining} onClick={onJoin}>
               {messages.join}
             </Button>
             <Link className={styles.secondaryLink} to="/listy">
@@ -151,8 +151,10 @@ function SignInChoice({ invitation }: { invitation: EntryState["invitation"] }) 
   };
   return (
     <>
-      <Button onClick={go("/rejestracja")}>{messages.registerJoin}</Button>
-      <Button variant="secondary" onClick={go("/logowanie")}>
+      <Button writes={false} onClick={go("/rejestracja")}>
+        {messages.registerJoin}
+      </Button>
+      <Button writes={false} variant="secondary" onClick={go("/logowanie")}>
         {messages.loginJoin}
       </Button>
     </>

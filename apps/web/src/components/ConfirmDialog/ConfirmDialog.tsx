@@ -39,7 +39,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         <Button variant="danger" writes loading={pending} onClick={props.onConfirm}>
           {confirmLabel}
         </Button>
-        <Button ref={cancelRef} variant="secondary" onClick={props.onCancel}>
+        <Button writes={false} ref={cancelRef} variant="secondary" onClick={props.onCancel}>
           {cancelLabel}
         </Button>
       </div>

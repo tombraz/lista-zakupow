@@ -36,6 +36,7 @@ related_tasks: [T-053, T-100, T-111, T-113]
 - [ ] AC3: Given SC-06, then `delete.confirm` i `delete.consequence` zapisują skutek tak samo (ten sam zapis odmiany `{uczestników}` albo jawny opis odmiany w Copy). — verified by: odczyt `SC-06-lista.md` i test Copy repo
 - [ ] AC4: Given Copy SC-03 `mail.subject` i `mail.body`, when zmienia się tekst maila w `reset-mail.ts` albo w Copy, then test w `apps/api` jest czerwony. Jeśli test API okaże się nieproporcjonalny, właściciel decyduje o jawnym wyłączeniu, a opis trafia do `web.md:103` i nagłówka testu Copy. — verified by: test w `apps/api` (albo zapis decyzji)
 - [ ] AC5: Given repo, then test Copy repo jest zielony. — verified by: `pnpm vitest run --project web copyRegister`
+- [ ] AC7: Given `docs/architecture/layers/web.md` („Pułapki”, akapit testu Copy) i nagłówek `apps/web/src/screens/copyRegister.test.ts`, then opisują sprawdzanie dopisków `złożony z części` i `mail z API` tak, jak działa po tym zadaniu, a historia zmian `web.md` ma wiersz T-115 (T-114 opisał je jako niesprawdzane; decyzja właściciela 2026-11-10). — verified by: odczyt wobec `apps/web/test/copyRegister.ts`
 - [ ] AC6: No regression in: T-100, T-108, T-109, T-111, T-113; mail resetu (T-053, T-055).
 
 ## TDD plan

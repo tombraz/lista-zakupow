@@ -7,11 +7,15 @@ import { Button } from "./Button";
 // T-015: w czasie zapisu przycisk zostaje fokusowalny (aria-disabled), ale nic nie robi.
 describe("Button loading", () => {
   it("keeps focus and announces busy and unavailable instead of becoming disabled", () => {
-    const { rerender } = render(<Button>Usuń</Button>);
+    const { rerender } = render(<Button writes={false}>Usuń</Button>);
     const button = screen.getByRole("button", { name: "Usuń" });
     button.focus();
 
-    rerender(<Button loading>Usuń</Button>);
+    rerender(
+      <Button writes={false} loading>
+        Usuń
+      </Button>,
+    );
 
     expect(button).toHaveFocus();
     expect(button).not.toBeDisabled();
@@ -23,7 +27,7 @@ describe("Button loading", () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
     render(
-      <Button loading onClick={onClick}>
+      <Button writes={false} loading onClick={onClick}>
         Usuń
       </Button>,
     );
@@ -43,7 +47,7 @@ describe("Button loading", () => {
     render(
       <form onSubmit={onSubmit}>
         <input aria-label="Nazwa" />
-        <Button type="submit" loading>
+        <Button writes={false} type="submit" loading>
           Zapisz
         </Button>
       </form>,
@@ -56,7 +60,11 @@ describe("Button loading", () => {
   });
 
   it("stays really disabled when disabled is passed", () => {
-    render(<Button disabled>Zapisz</Button>);
+    render(
+      <Button writes={false} disabled>
+        Zapisz
+      </Button>,
+    );
 
     expect(screen.getByRole("button", { name: "Zapisz" })).toBeDisabled();
   });

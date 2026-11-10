@@ -7,7 +7,7 @@ export function LoadError({ text, onRetry }: { text: string; onRetry: () => void
   return (
     <>
       <InlineAlert tone="error">{text}</InlineAlert>
-      <Button variant="secondary" onClick={onRetry}>
+      <Button writes={false} variant="secondary" onClick={onRetry}>
         {loadErrorMessages.retry}
       </Button>
     </>

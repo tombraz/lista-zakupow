@@ -10,16 +10,24 @@
  * - Teksty modułu wspólnego (wszystko poza `screens/`, także komponenty design systemu w
  *   `components/`) są tylko w `<nazwa>Messages.ts` (np. `lists/leaveMessages.ts`), który liczy się
  *   jak `messages.ts`: każdy literał, także jednowyrazowy („Anuluj”; T-103, T-109). Wyświetlany
- *   literał w innym pliku `.ts` albo `.tsx` modułu wspólnego to błąd ze wskazaniem pliku,
- *   niezależnie od liczby słów i polskich znaków (T-109):
- *   - w JSX każdy literał z literą: tekst (`<span>Zamknij</span>`), wyrażenie (`{"Zamknij"}`),
- *     atrybut i props komponentu (`label="Zamknij"`, `aria-label="Zamknij"`; T-106, T-107), poza
- *     atrybutami kodu (`className`, `type`, `role`, `id`, `data-*`, `aria-*by`, `aria-controls`,
- *     `href`, `to`, `variant`, `tone`, `autoComplete`, `on…` itd.) i argumentami wywołań;
- *   - poza JSX każdy literał, który nie jest kodem: kod to jeden ciąg bez polskiej litery i bez
- *     słowa z wielkiej litery (`"name"`, `"listId"`, `"POST"`, `"/api/v1/lists"`, `"pl-PL"`);
- *     `{ cancel: "Anuluj" }` to tekst.
+ *   literał w innym pliku `.ts` albo `.tsx` modułu wspólnego to błąd ze wskazaniem pliku (T-109):
+ *   - w JSX każdy literał z literą, niezależnie od liczby słów i polskich znaków: tekst
+ *     (`<span>Zamknij</span>`), wyrażenie (`{"Zamknij"}`), atrybut i props komponentu
+ *     (`label="Zamknij"`, `aria-label="Zamknij"`; T-106, T-107), poza atrybutami kodu
+ *     (`className`, `type`, `role`, `id`, `data-*`, `aria-*by`, `aria-controls`, `href`, `to`,
+ *     `variant`, `tone`, `autoComplete`, `on…` itd.) i argumentami wywołań;
+ *   - poza JSX każdy literał, który nie jest kodem (`isCode`): kod to ciąg bez polskiej litery, bez
+ *     dwóch słów rozdzielonych odstępem i bez wielkiej litery, po której stoi mała (`"name"`,
+ *     `"listId"`, `"POST"`, `"/api/v1/lists"`, `"pl-PL"`); `{ cancel: "Anuluj" }` to tekst.
+ *     Granica: za kod uchodzą też prawdziwe teksty z jednego słowa bez polskiej litery i bez
+ *     wielkiej litery, po której stoi mała („E-mail”, „albo”, „OK”), i szablon, w którym słowo
+ *     stoi tylko obok parametru (`` `${n} osoby` ``) — test ich nie zgłosi (przegląd E-02
+ *     2026-11-10, S1).
  *   Pliki `.tsx` tylko prowadzą importy. Teksty w `.tsx` katalogów ekranów są jeszcze poza testem.
+ * - Inny plik `.ts` katalogu ekranu (poza `messages.ts`) miesza teksty z logiką, więc liczą się
+ *   z niego tylko literały, które wyglądają na tekst (`looksLikeText`: polska litera albo słowo
+ *   z wielkiej litery i kolejne słowo); jednowyrazowe „Anuluj” czy „E-mail” w takim pliku
+ *   przechodzi bez wiersza Copy i bez błędu (S2).
  * - Tekst z pliku w `components/` pasuje do wiersza Copy ekranu albo do tabeli „## Copy”
  *   komponentów w `docs/design/design-system.md` (T-106); tekst spoza `components/` tylko do Copy
  *   ekranu. Wiersz Copy ekranu, który powtarza Copy komponentów tekstem, jaki ekran bierze tylko
