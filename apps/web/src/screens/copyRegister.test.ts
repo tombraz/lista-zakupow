@@ -40,6 +40,11 @@
  *   (kod składa tekst z wierszy-części) albo `pokazuje SC-xx`. Dopisek `pokazuje SC-xx` jest
  *   sprawdzany: tekst wiersza musi być w tekstach ekranu SC-xx (tych samych, które liczy ten test
  *   dla SC-xx), inaczej błąd wskazuje ekran, klucz i SC-xx; nieistniejący SC-xx też (T-113).
+ *   Dopisek `złożony z części` jest sprawdzany: Copy ekranu ma wiersze „(część `<klucz>`…)”, tekst
+ *   wiersza zawiera tekst każdej części (co do znaku, z parametrami), a kod ekranu pokazuje co
+ *   najmniej jedną część; inaczej błąd wskazuje ekran, klucz i powód (T-115). Dopisek `mail z API`
+ *   sprawdza `apps/api/test/reset-mail.copy.test.ts` (tekst maila z `passwordResetMail`, T-115);
+ *   bez sprawdzenia zostaje tylko `mobile`.
  *   Martwy wiersz się usuwa.
  * - Nie są tekstem: ścieżki importów, typy, klucze obiektów i indeksów, kody porównywane (`===`,
  *   `case`), literały bez litery (pusty, separator) i komentarze.
@@ -806,13 +811,12 @@ describe("findUnusedCopyRows (fixtures, T-111)", () => {
     expect(formatUnusedCopyRows(rows)).toContain("SC-07 · leave.confirm · „Opuścić listę");
   });
 
-  it("a Copy row with a source note (mail, API, mobile, parts) is not reported", () => {
+  it("a Copy row with a source note (mail, API, mobile) is not reported", () => {
     const rows = findUnusedCopyRows({
       sources,
       specs: {
         "SC-07-uczestnicy.md": spec(
           ["title", "Uczestnicy"],
-          ["leave.confirm", "Opuścić listę „{nazwa}”? Żeby wrócić… (złożony z części; T-111)"],
           ["mail.subject", "Reset hasła (mail z API; T-053)"],
           ["push", "Nowa pozycja (mobile; T-200)"],
         ),
@@ -820,6 +824,129 @@ describe("findUnusedCopyRows (fixtures, T-111)", () => {
     });
 
     expect(rows).toEqual([]);
+  });
+
+  describe("note „złożony z części” is checked against its part rows (T-115)", () => {
+    const withParts = {
+      ...sources,
+      "screens/SC-07-uczestnicy/messages.ts": `
+        export const messages = {
+          title: "Uczestnicy",
+          question: (name: string) => \`Opuścić listę „\${name}”?\`,
+          consequence: "Żeby wrócić, potrzebujesz nowego zaproszenia.",
+          or: "albo",
+        };`,
+    };
+    const composed = "Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia.";
+
+    it("a composed row whose parts the screen code shows is not reported (parameter, several parts, a part of two rows)", () => {
+      const rows = findUnusedCopyRows({
+        sources: withParts,
+        specs: {
+          "SC-07-uczestnicy.md": spec(
+            ["title", "Uczestnicy"],
+            ["leave.confirm", `${composed} (złożony z części; T-111)`],
+            ["leave.question", "Opuścić listę „{nazwa}”? (część `leave.confirm`; T-103)"],
+            [
+              "leave.consequence",
+              "Żeby wrócić, potrzebujesz nowego zaproszenia. (część `leave.confirm`, `leave.again`; T-103)",
+            ],
+            [
+              "leave.again",
+              "Żeby wrócić, potrzebujesz nowego zaproszenia. (T-115; złożony z części)",
+            ],
+          ),
+        },
+      });
+
+      expect(rows).toEqual([]);
+    });
+
+    it("a composed row without any part row is reported with screen and key", () => {
+      const rows = findUnusedCopyRows({
+        sources: withParts,
+        specs: {
+          "SC-07-uczestnicy.md": spec(
+            ["title", "Uczestnicy"],
+            ["leave.confirm", `${composed} (złożony z części; T-111)`],
+            ["other", "Opuścić listę „{nazwa}”? (część `remove.confirm`; T-103)"],
+          ),
+        },
+      });
+
+      expect(rows).toEqual([
+        {
+          screen: "SC-07",
+          key: "leave.confirm",
+          text: "Opuścić listę „{…}”? Żeby wrócić, potrzebujesz nowego zaproszenia.",
+          composed: "noParts",
+        },
+      ]);
+      expect(formatUnusedCopyRows(rows)).toContain(
+        "SC-07 · leave.confirm · „Opuścić listę „{…}”? Żeby wrócić, potrzebujesz nowego zaproszenia.” (złożony z części: brak wiersza „(część `leave.confirm`…)” w Copy SC-07)",
+      );
+    });
+
+    it("a composed row whose part rows the screen code does not show is reported, and so is each part", () => {
+      const rows = findUnusedCopyRows({
+        sources: withParts,
+        specs: {
+          "SC-07-uczestnicy.md": spec(
+            ["title", "Uczestnicy"],
+            ["remove.confirm", "Usunąć {imię} z listy? Straci dostęp. (złożony z części; T-111)"],
+            ["remove.question", "Usunąć {imię} z listy? (część `remove.confirm`; T-100)"],
+            ["remove.consequence", "Straci dostęp. (część `remove.confirm`; T-100)"],
+          ),
+        },
+      });
+
+      expect(rows).toEqual([
+        {
+          screen: "SC-07",
+          key: "remove.confirm",
+          text: "Usunąć {…} z listy? Straci dostęp.",
+          composed: "partsNotShown",
+        },
+        { screen: "SC-07", key: "remove.question", text: "Usunąć {…} z listy?" },
+        { screen: "SC-07", key: "remove.consequence", text: "Straci dostęp." },
+      ]);
+      expect(formatUnusedCopyRows(rows)).toContain(
+        "SC-07 · remove.confirm · „Usunąć {…} z listy? Straci dostęp.” (złożony z części: kod SC-07 nie pokazuje żadnej części)",
+      );
+    });
+
+    it("a composed row that does not contain the text of its part is reported with the part", () => {
+      const rows = findUnusedCopyRows({
+        sources: withParts,
+        specs: {
+          "SC-07-uczestnicy.md": spec(
+            ["title", "Uczestnicy"],
+            [
+              "leave.confirm",
+              "Opuścić listę „{nazwa}”? Wróć z zaproszeniem. (złożony z części; T-111)",
+            ],
+            ["leave.question", "Opuścić listę „{nazwa}”? (część `leave.confirm`; T-103)"],
+            [
+              "leave.consequence",
+              "Żeby wrócić, potrzebujesz nowego zaproszenia. (część `leave.confirm`; T-103)",
+            ],
+          ),
+        },
+      });
+
+      expect(rows).toEqual([
+        {
+          screen: "SC-07",
+          key: "leave.confirm",
+          text: "Opuścić listę „{…}”? Wróć z zaproszeniem.",
+          composed: "partMissing",
+          part: "leave.consequence",
+        },
+      ]);
+      expect(formatUnusedCopyRows(rows)).toContain(
+        "(złożony z części: tekst nie zawiera części `leave.consequence`)",
+      );
+    });
   });
 
   describe("note „pokazuje SC-xx” is checked against the texts of SC-xx (T-113)", () => {

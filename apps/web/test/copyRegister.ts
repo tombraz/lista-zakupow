@@ -45,11 +45,22 @@ const COPY_HEADING = /^## Copy\s*$/m;
 
 /**
  * Dopisek źródła wiersza Copy, którego tekstu nie pokazuje kod web ekranu (T-111), jako osobny
- * segment dopisku (na początku albo po `; ` / `, `): `mail z API` (tekst maila tworzony przez API),
- * `mobile` (tekst aplikacji mobilnej) albo `złożony z części` (kod składa tekst z wierszy-części).
- * „e-mail” w innym dopisku nie jest źródłem.
+ * segment dopisku (na początku albo po `; ` / `, `): `mail z API` (tekst maila tworzony przez API;
+ * sprawdza go `apps/api/test/reset-mail.copy.test.ts`, T-115) albo `mobile` (tekst aplikacji
+ * mobilnej). „e-mail” w innym dopisku nie jest źródłem.
  */
-const COPY_SOURCE = /(?:^\(|[;,] )(?:mail z API|mobile|złożony z części)(?=[;,)])/;
+const COPY_SOURCE = /(?:^\(|[;,] )(?:mail z API|mobile)(?=[;,)])/;
+
+/**
+ * Dopisek `złożony z części` (kod składa tekst z wierszy-części) jako osobny segment dopisku:
+ * wiersz przechodzi tylko, gdy Copy ekranu ma wiersze „(część `<klucz>`…)”, tekst wiersza zawiera
+ * tekst każdej części, a kod ekranu pokazuje co najmniej jedną część (T-115). Część, której kod nie
+ * pokazuje, jest zgłaszana jak każdy wiersz.
+ */
+const COMPOSED = /(?:^\(|[;,] )złożony z części(?=[;,)])/;
+
+/** Dopisek „część `a`” albo „część `a`, `b`” (część wierszy złożonych `a` i `b`) jako segment. */
+const PART_OF = /(?:^\(|; )część ((?:`[^`]+`(?:, )?)+)(?=[;)])/;
 
 /**
  * Dopisek `pokazuje SC-xx` (tekst pokazuje inny ekran) jako osobny segment dopisku: wiersz
@@ -120,13 +131,22 @@ export interface UnusedCopyRow {
   shownOn?: string;
   /** Ekranu z dopisku `pokazuje SC-xx` nie ma w kodzie web (T-113). */
   missingScreen?: true;
+  /**
+   * Dlaczego wiersz `złożony z części` nie przechodzi (T-115): brak wierszy-części (`noParts`), tekst
+   * nie zawiera tekstu części `part` (`partMissing`), kod ekranu nie pokazuje żadnej części
+   * (`partsNotShown`).
+   */
+  composed?: "noParts" | "partMissing" | "partsNotShown";
+  /** Część, której tekstu nie zawiera wiersz złożony (`composed: "partMissing"`). */
+  part?: string;
 }
 
 /**
  * Wiersze Copy ekranu, których tekstu nie pokazuje kod web ekranu (z modułami wspólnymi i
  * komponentami, które ekran importuje) i które nie mają dopisku źródła (`COPY_SOURCE`, T-111).
  * Wiersz z dopiskiem `pokazuje SC-xx` przechodzi tylko, gdy tekst jest w tekstach ekranu SC-xx
- * (`SHOWN_ON`, T-113).
+ * (`SHOWN_ON`, T-113). Wiersz z dopiskiem `złożony z części` przechodzi tylko z wierszami-częściami
+ * (`COMPOSED`, `composedProblem`, T-115).
  */
 export function findUnusedCopyRows({
   sources,
@@ -140,8 +160,14 @@ export function findUnusedCopyRows({
   }
   const unused: UnusedCopyRow[] = [];
   for (const [screen, used] of textsOf) {
-    for (const { key, text, note } of copyRows(specOf(screen, specs))) {
+    const rows = copyRows(specOf(screen, specs));
+    for (const { key, text, note } of rows) {
       if (used.has(text) || COPY_SOURCE.test(note)) continue;
+      if (COMPOSED.test(note)) {
+        const problem = composedProblem(key, text, rows, used);
+        if (problem) unused.push({ screen, key, text, ...problem });
+        continue;
+      }
       const shownOn = SHOWN_ON.exec(note)?.[1];
       const shownTexts = shownOn === undefined ? undefined : textsOf.get(shownOn);
       if (shownOn === undefined) unused.push({ screen, key, text });
@@ -153,11 +179,39 @@ export function findUnusedCopyRows({
   return unused;
 }
 
+/** Wiersze-części wiersza złożonego `key`: dopisek „(część `key`…)” (`PART_OF`). */
+function partsOf(key: string, rows: CopyRow[]): CopyRow[] {
+  return rows.filter(({ note }) => {
+    const keys = PART_OF.exec(note)?.[1] ?? "";
+    return [...keys.matchAll(/`([^`]+)`/g)].some(([, part]) => part === key);
+  });
+}
+
+function composedProblem(
+  key: string,
+  text: string,
+  rows: CopyRow[],
+  used: Set<string>,
+): Pick<UnusedCopyRow, "composed" | "part"> | null {
+  const parts = partsOf(key, rows);
+  if (parts.length === 0) return { composed: "noParts" };
+  const missing = parts.find((part) => !text.includes(part.text));
+  if (missing) return { composed: "partMissing", part: missing.key };
+  if (!parts.some((part) => used.has(part.text))) return { composed: "partsNotShown" };
+  return null;
+}
+
 export function formatUnusedCopyRows(rows: UnusedCopyRow[]): string {
   return [
-    "Wiersze Copy ekranu bez tekstu w kodzie web ekranu i bez dopisku źródła (usuń martwy wiersz albo dopisz źródło: „(mail z API; T-053)”, „(mobile; T-…)”, „(złożony z części; T-111)”, „(pokazuje SC-01; T-111)”; dopisek „pokazuje SC-xx” wymaga tekstu w kodzie ekranu SC-xx, T-113):",
-    ...rows.map(({ screen, key, text, shownOn, missingScreen }) => {
+    "Wiersze Copy ekranu bez tekstu w kodzie web ekranu i bez dopisku źródła (usuń martwy wiersz albo dopisz źródło: „(mail z API; T-053)”, „(mobile; T-…)”, „(złożony z części; T-111)”, „(pokazuje SC-01; T-111)”; dopisek „pokazuje SC-xx” wymaga tekstu w kodzie ekranu SC-xx, T-113; „złożony z części” wymaga wierszy „(część `<klucz>`…)”, których tekst zawiera i z których kod ekranu pokazuje co najmniej jeden, T-115):",
+    ...rows.map(({ screen, key, text, shownOn, missingScreen, composed, part }) => {
       const row = `${screen} · ${key} · „${text}”`;
+      if (composed === "noParts")
+        return `${row} (złożony z części: brak wiersza „(część \`${key}\`…)” w Copy ${screen})`;
+      if (composed === "partMissing")
+        return `${row} (złożony z części: tekst nie zawiera części \`${part ?? ""}\`)`;
+      if (composed === "partsNotShown")
+        return `${row} (złożony z części: kod ${screen} nie pokazuje żadnej części)`;
       if (shownOn === undefined) return row;
       const reason = missingScreen
         ? `brak ekranu ${shownOn}`

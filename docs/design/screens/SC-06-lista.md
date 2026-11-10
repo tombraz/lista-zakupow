@@ -69,7 +69,7 @@ Menu „Więcej opcji”: właściciel — „Zmień nazwę listy”, „Usuń l
 - AddBar „Dodaj” / Enter → sprawdzenie duplikatu → pozycja na górze nieodhaczonych; pola czyszczone, fokus zostaje w polu nazwy.
 - „Kupione (N)” → zwija / rozwija.
 - „Usuń wszystkie kupione” → ConfirmDialog „Usunąć N kupionych pozycji?” → usunięcie.
-- „Więcej opcji” → „Zmień nazwę listy” (arkusz z polem nazwy) / „Usuń listę” (ConfirmDialog „Usunąć listę „<nazwa>”? Zniknie też u {n} uczestników.”) → SC-05.
+- „Więcej opcji” → „Zmień nazwę listy” (arkusz z polem nazwy) / „Usuń listę” (ConfirmDialog „Usunąć listę „<nazwa>”? Zniknie też u {n} {uczestników}.”; odmiana jak w Copy `delete.consequence`) → SC-05.
 - „Uczestnicy” → SC-07.
 
 ## Copy
@@ -104,7 +104,7 @@ Menu „Więcej opcji”: właściciel — „Zmień nazwę listy”, „Usuń l
 | leave.confirm.consequence | Żeby wrócić, potrzebujesz nowego zaproszenia. (z Copy SC-07 `leave.confirm`, T-103) |
 | leave.confirm.cta | Opuść (przycisk akcji w oknie; zatwierdzone 2026-11-06, T-103) |
 | leave.error | Nie udało się opuścić listy. Spróbuj ponownie. (w oknie; z Copy SC-07 `leave.error`, T-103) |
-| delete.confirm | Usunąć listę „{nazwa}”? Zniknie też u {n} uczestników. (złożony z części; T-111) |
+| delete.confirm | Usunąć listę „{nazwa}”? Zniknie też u {n} {uczestników}. (złożony z części; odmiana `{uczestników}`: `delete.consequence.one` / `.many`; T-111, T-115) |
 | invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: nazwa i notatka pozycji; zatwierdzone 2026-11-01, T-060) |
 | noAccess | Nie masz dostępu do tej listy. |
 | saveError | Nie udało się zapisać zmiany. Spróbuj ponownie. |
