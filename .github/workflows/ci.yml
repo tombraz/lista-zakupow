@@ -85,6 +85,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # backlog-check czyta commity „T-NNN:” (nowe testy a przewodniki warstw, T-117)
       - uses: ./.github/actions/setup
       - name: Format (Prettier)
         run: pnpm format:check

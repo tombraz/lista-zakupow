@@ -1,6 +1,7 @@
 // backlog-check: przekazanie pracy do innego epiku („to E-02”, „w E-02”, „→ E-02”) musi mieć
 // odbiorcę (ostrzeżenie, T-099); zadanie `done` ma odhaczone wszystkie AC, a status przy ID zadania
-// w `UAT.md` epiku zgadza się z plikiem zadania (błędy, T-110). Każdy test buduje backlog-fiksturę
+// w `UAT.md` epiku zgadza się z plikiem zadania (błędy, T-110); nowy plik testu z commitów zadania
+// ma wiersz w „Historia zmian” przewodnika warstwy (błąd, T-117; fikstura z repozytorium git). Każdy test buduje backlog-fiksturę
 // w katalogu tymczasowym i uruchamia CLI z --root, tak jak robi to CI.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -267,4 +268,176 @@ test("UAT.md: ID bez statusu, status po „;” innego zdania i ID w `kodzie` �
   const uat = `${UAT_HEAD}- T-003 bez statusu; T-002 \`done\`. Plik \`T-003-c.md\` \`done\`.\n- Po T-003 (todo) i T-002.\n`;
   const { code, out } = check(epicFiles(uat, fixes3));
   assert.equal(code, 0, out);
+});
+
+// T-117: zadanie `in-qa`/`done`, którego commity („T-NNN: …”) dodały plik testu w katalogu warstwy
+// z `layers:` (katalogi: `paths:` we frontmatter przewodnika warstwy), musi mieć wiersz z ID zadania
+// w „## Historia zmian” przewodnika tej warstwy (błąd). Fikstura jest repozytorium git.
+const guide = (layer, paths, rows) =>
+  `---\nlayer: ${layer}\npaths: [${paths.join(", ")}]\n---\n\n# ${layer}\n\n## Pułapki\n\n- T-005 tu się nie liczy.\n\n## Historia zmian\n\n| Data | Zmiana |\n| --- | --- |\n${rows.map((r) => `| 2026-11-10 | ${r} |`).join("\n")}\n`;
+const layerTask = (id, status, layers) =>
+  `---\nid: ${id}\ntitle: Fix ${id}\nkind: fix\nstatus: ${status}\ndepends_on: []\nlayers: [${layers.join(", ")}]\n---\n\n# ${id}\n`;
+const DATE = "2026-11-12T10:00:00+01:00";
+// commits: [message, { path: text }, date?]
+function checkGit(files, commits, { shallow = false } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "backlog-check-git-"));
+  const git = (args, date = DATE) =>
+    execFileSync("git", args, {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+    });
+  try {
+    git(["init", "-q", "-b", "main"]);
+    git(["config", "user.email", "t@example.com"]);
+    git(["config", "user.name", "T"]);
+    git(["config", "core.autocrlf", "false"]);
+    const put = (map) => {
+      for (const [path, text] of Object.entries(map)) {
+        mkdirSync(dirname(join(dir, path)), { recursive: true });
+        writeFileSync(join(dir, path), text);
+      }
+    };
+    put(files);
+    git(["add", "-A"]);
+    git(["commit", "-q", "-m", "start"], "2026-11-01T10:00:00+01:00");
+    for (const [message, map, date] of commits) {
+      for (const [path, text] of Object.entries(map)) {
+        if (text === null) git(["mv", path.split(" -> ")[0], path.split(" -> ")[1]]);
+        else put({ [path]: text });
+      }
+      git(["add", "-A"]);
+      git(["commit", "-q", "-m", message], date);
+    }
+    let cwd = dir;
+    if (shallow) {
+      cwd = join(dir, "shallow");
+      git(["clone", "-q", "--depth", "1", `file://${dir.replaceAll("\\", "/")}`, cwd]);
+    }
+    const r = spawnSync(process.execPath, [SCRIPT, "--root", "backlog"], {
+      cwd,
+      encoding: "utf8",
+    });
+    return { code: r.status, out: (r.stdout + r.stderr).replaceAll("\\", "/") };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+const LAYERS = "docs/architecture/layers";
+const repo = (rows, status = "in-qa", layers = ["backend"]) => ({
+  [`${LAYERS}/backend.md`]: guide("backend", ["apps/api/"], rows.backend ?? []),
+  [`${LAYERS}/infra.md`]: guide("infra", ["scripts/", ".github/"], rows.infra ?? []),
+  [`${LAYERS}/db.md`]: guide("db", ["apps/api/test/", "apps/api/drizzle/"], rows.db ?? []),
+  [`${LAYERS}/web.md`]: guide("web", ["apps/web/"], rows.web ?? []),
+  "backlog/fixes/T-005-a.md": layerTask("T-005", status, layers),
+});
+const testRowErrors = (out) =>
+  out.split("\n").filter((l) => /^ERROR .*Historia zmian|^ERROR .*change log/i.test(l));
+
+test("commit zadania in-qa dodał test w warstwie, przewodnik bez wiersza → błąd z zadaniem, plikiem i przewodnikiem (T-117 AC1)", () => {
+  const { code, out } = checkGit(repo({}), [
+    ["T-005: fix x", { "apps/api/test/reset-mail.copy.test.ts": "test\n" }],
+  ]);
+  assert.equal(code, 1, out);
+  const errs = testRowErrors(out);
+  assert.equal(errs.length, 1, out);
+  assert.match(errs[0], /backlog\/fixes\/T-005-a\.md/, errs[0]);
+  assert.match(errs[0], /apps\/api\/test\/reset-mail\.copy\.test\.ts/, errs[0]);
+  assert.match(errs[0], /docs\/architecture\/layers\/backend\.md/, errs[0]);
+});
+
+test("ten sam przypadek z wierszem T-005 w „Historia zmian” przewodnika → brak zgłoszenia (T-117 AC2)", () => {
+  const { code, out } = checkGit(repo({ backend: ["T-005: test maila"] }), [
+    ["T-005: fix x", { "apps/api/test/reset-mail.copy.test.ts": "test\n" }],
+  ]);
+  assert.equal(code, 0, out);
+  assert.deepEqual(testRowErrors(out), []);
+});
+
+test("plik pod kilkoma warstwami zadania: wiersz w przewodniku jednej z nich wystarcza (T-117)", () => {
+  const { code, out } = checkGit(
+    repo({ db: ["T-005: test migracji"] }, "done", ["backend", "db"]),
+    [["T-005: fix x", { "apps/api/test/name-key.test.ts": "test\n" }]],
+  );
+  assert.equal(code, 0, out);
+  const both = checkGit(repo({}, "done", ["backend", "db"]), [
+    ["T-005: fix x", { "apps/api/test/name-key.test.ts": "test\n" }],
+  ]);
+  const errs = testRowErrors(both.out);
+  assert.equal(errs.length, 1, both.out);
+  assert.match(errs[0], /layers\/backend\.md or docs\/architecture\/layers\/db\.md/, errs[0]);
+});
+
+test("test w apps/web/src (obok kodu) i *.spec.ts w apps/web/e2e → zgłoszenie dla warstwy web (T-117)", () => {
+  const { out } = checkGit(repo({}, "in-qa", ["web"]), [
+    [
+      "T-005: fix x",
+      {
+        "apps/web/src/screens/x.test.tsx": "t\n",
+        "apps/web/e2e/x.spec.ts": "t\n",
+        "apps/web/src/x.ts": "c\n",
+      },
+    ],
+  ]);
+  const errs = testRowErrors(out);
+  assert.equal(errs.length, 2, out);
+  assert.ok(
+    errs.some((e) => e.includes("apps/web/src/screens/x.test.tsx")),
+    out,
+  );
+  assert.ok(
+    errs.some((e) => e.includes("apps/web/e2e/x.spec.ts")),
+    out,
+  );
+});
+
+test("bez zgłoszenia: status todo/in-progress, katalog warstwy spoza layers:, commit innego zadania, zmiana w istniejącym teście (T-117)", () => {
+  for (const status of ["todo", "in-progress"]) {
+    const { out } = checkGit(repo({}, status), [
+      ["T-005: x", { "apps/api/test/a.test.ts": "t\n" }],
+    ]);
+    assert.deepEqual(testRowErrors(out), [], status);
+  }
+  const other = checkGit(repo({}), [
+    ["T-005: x", { "scripts/test/a.test.sh": "t\n" }],
+    ["T-006: x", { "apps/api/test/b.test.ts": "t\n" }],
+    ["T-005 bez dwukropka", { "apps/api/test/c.test.ts": "t\n" }],
+  ]);
+  assert.deepEqual(testRowErrors(other.out), [], other.out);
+  const edit = checkGit({ ...repo({}), "apps/api/test/a.test.ts": "t\n" }, [
+    ["T-005: x", { "apps/api/test/a.test.ts": "t\nnowy describe\n" }],
+  ]);
+  assert.deepEqual(testRowErrors(edit.out), [], edit.out);
+});
+
+test("zmiana nazwy pliku testu nie jest nowym testem (T-117)", () => {
+  const { code, out } = checkGit({ ...repo({}), "apps/api/test/old.test.ts": "t\nt\nt\nt\n" }, [
+    ["T-005: x", { "apps/api/test/old.test.ts -> apps/api/test/new.test.ts": null }],
+  ]);
+  assert.equal(code, 0, out);
+  assert.deepEqual(testRowErrors(out), []);
+});
+
+test("data graniczna: commit przed 2026-11-10 pominięty, z 2026-11-10 00:30 liczony (T-117 AC3)", () => {
+  const before = checkGit(repo({}), [
+    ["T-005: x", { "apps/api/test/a.test.ts": "t\n" }, "2026-11-09T23:30:00+01:00"],
+  ]);
+  assert.deepEqual(testRowErrors(before.out), [], before.out);
+  const early = checkGit(repo({}), [
+    ["T-005: x", { "apps/api/test/a.test.ts": "t\n" }, "2026-11-10T00:30:00+01:00"],
+  ]);
+  assert.equal(testRowErrors(early.out).length, 1, early.out);
+});
+
+test("ID zadania w przewodniku poza „Historia zmian” nie wystarcza (T-117)", () => {
+  const { out } = checkGit(repo({}), [["T-005: x", { "apps/api/test/a.test.ts": "t\n" }]]);
+  assert.equal(testRowErrors(out).length, 1, out); // „T-005” stoi w „Pułapkach” fikstury
+});
+
+test("płytki klon (CI bez fetch-depth: 0) → ostrzeżenie, bez błędu (T-117)", () => {
+  const { code, out } = checkGit(repo({}), [["T-005: x", { "apps/api/test/a.test.ts": "t\n" }]], {
+    shallow: true,
+  });
+  assert.equal(code, 0, out);
+  assert.match(out, /WARN\s+shallow git clone/, out);
 });

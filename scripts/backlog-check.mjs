@@ -17,10 +17,12 @@
 // Exit code 1 when errors are found (missing dependency, cycle, bad status...).
 // Warnings (exit code 0) include work handed over to another epic without a receiver
 // ("to E-02", "w E-02", "→ E-02"...; rules in the "Handoffs" section below).
+// Reads git history ("T-NNN: ..." commits) for new tests without a layer-guide row (T-117).
 // No dependencies: runs on plain Node 18+.
 
 import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from "node:fs";
 import { join, relative, basename, dirname, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const STATUSES = ["todo", "in-progress", "in-qa", "done", "blocked"];
 const STORY_STATUSES = ["todo", "in-progress", "done"];
@@ -284,6 +286,53 @@ for (const ep of epics.values()) {
       }
     }
   });
+}
+
+// New tests need a layer-guide row (T-117): a task in-qa or done whose commits ("T-NNN: ...",
+// since TEST_ROWS_SINCE) added a test file (*.test.*, *.spec.*) under a directory of one of its
+// layers needs a row naming the task under "## Historia zmian" / "## Change log" of that layer's
+// guide. Directories: "paths: [apps/api/, ...]" in the guide's frontmatter (repo-relative
+// prefixes); a file under several of the task's layers is fine with a row in any of their guides.
+// Renamed test files and new cases in existing files do not count. Skipped outside a git
+// repository; a shallow clone gives a warning (CI needs fetch-depth: 0).
+const TEST_ROWS_SINCE = "2026-11-10T00:00:00+01:00"; // full timestamp: a bare date means "that day at the current time" to git
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\.test\.sh$/;
+if (existsSync(LAYERS_DIR)) {
+  const git = (...a) => spawnSync("git", a, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const inRepo = git("rev-parse", "--is-inside-work-tree").stdout?.trim() === "true";
+  const layerPaths = new Map();
+  for (const f of readdirSync(LAYERS_DIR).filter((f) => f.endsWith(".md"))) {
+    const text = readFileSync(join(LAYERS_DIR, f), "utf8");
+    const paths = parseFrontmatter(text)?.paths;
+    if (!Array.isArray(paths) || !paths.length) continue;
+    const log = (text.match(/^## (?:Historia zmian|Change ?log|History)[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/im) || [])[1];
+    layerPaths.set(f.slice(0, -3), { paths, log, file: join(LAYERS_DIR, f) });
+  }
+  if (inRepo && layerPaths.size && git("rev-parse", "--is-shallow-repository").stdout?.trim() === "true") {
+    warnings.push(`shallow git clone: new-test rows in layer guides not checked (CI: actions/checkout with fetch-depth: 0)`);
+  } else if (inRepo && layerPaths.size) {
+    const out = git("-c", "core.quotePath=false", "log", "HEAD", "--no-merges", "-M", "--diff-filter=A",
+      "--name-only", `--since=${TEST_ROWS_SINCE}`, "--format=%x01%s").stdout ?? "";
+    const added = new Map(); // task id -> Set of added test files
+    for (const chunk of out.split("\u0001").slice(1)) {
+      const [subject, ...files] = chunk.split(/\r?\n/);
+      const id = subject.match(/^(T-\d{3,}):/)?.[1];
+      if (!id) continue;
+      if (!added.has(id)) added.set(id, new Set());
+      for (const f of files) if (TEST_FILE.test(f.trim())) added.get(id).add(f.trim());
+    }
+    for (const t of tasks.values()) {
+      if (t.status !== "in-qa" && t.status !== "done") continue;
+      const idRe = new RegExp(`(?<![\\w-])${t.id}(?!\\d)`);
+      for (const file of added.get(t.id) ?? []) {
+        const owners = (Array.isArray(t.layers) ? t.layers : [])
+          .filter((l) => layerPaths.get(l)?.paths.some((p) => file.startsWith(p)));
+        if (!owners.length || owners.some((l) => idRe.test(layerPaths.get(l).log ?? ""))) continue;
+        const guides = owners.map((l) => relative(process.cwd(), layerPaths.get(l).file)).join(" or ");
+        errors.push(`${t.file}: commits of ${t.id} added test ${file}, but ${guides} has no row with ${t.id} under "## Historia zmian" (change log of the layer guide)`);
+      }
+    }
+  }
 }
 
 // Cycles (DFS with colours)

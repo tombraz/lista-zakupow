@@ -1,5 +1,6 @@
 ---
 layer: web
+paths: [apps/web/, packages/shared/, packages/tokens/]   # katalogi warstwy: nowy test w nich wymaga wiersza w „Historia zmian” (backlog-check, T-117)
 status: approved          # draft | approved
 approved: 2026-10-26
 ---
@@ -168,3 +169,4 @@ React + Vite, TypeScript strict, CSS Modules, zmienne CSS z `packages/tokens`, R
 | 2026-10-27 | T-004: „Gdzie jest kod” (router, sesja, komponenty, helpery testów, fixtures E2E). |
 | 2026-10-27 | T-002: „Pułapki” — równoległość E2E na Linuksie w CI. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
+| 2026-11-10 | T-117: frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |

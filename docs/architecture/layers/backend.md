@@ -1,5 +1,6 @@
 ---
 layer: backend
+paths: [apps/api/, packages/shared/]   # katalogi warstwy: nowy test w nich wymaga wiersza w „Historia zmian” (backlog-check, T-117)
 status: approved          # draft | approved
 approved: 2026-10-26
 ---
@@ -166,3 +167,4 @@ Wymaga `DATABASE_URL` i `BETTER_AUTH_SECRET` (≥ 32 znaki) w `.env` (skopiuj `.
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
 | 2026-10-27 | T-004 (QA round 1): `Accounts.requireUser` w publicznym API modułu `konta`, `APP_ORIGIN` wymagany, „Pułapki”: konta tylko przez most, kolizja e-maila w Better Auth. |
 | 2026-10-31 | T-049: „Zasady bezpieczeństwa”: decyzje na `request.routeOptions.url`, nie na surowym `request.url` (TH-26); `trustedOrigin` i most Better Auth na dopasowanej trasie. |
+| 2026-11-10 | T-117: frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |

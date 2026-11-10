@@ -1,5 +1,6 @@
 ---
 layer: db
+paths: [apps/api/drizzle/, apps/api/src/db/, apps/api/test/]   # katalogi warstwy: nowy test w nich wymaga wiersza w „Historia zmian” (backlog-check, T-117)
 status: approved          # draft | approved
 approved: 2026-10-26
 ---
@@ -85,3 +86,4 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 | 2026-10-28 | T-005: `shopping_list`, `list_member`, migracja `0003_listy`, `uuidv7()`. |
 | 2026-10-27 | T-004: tabele kont w „Gdzie jest kod”. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
+| 2026-11-10 | T-117: frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |

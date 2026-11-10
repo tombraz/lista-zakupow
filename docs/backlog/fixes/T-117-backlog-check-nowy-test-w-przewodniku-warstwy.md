@@ -4,7 +4,7 @@ title: "backlog-check: nowy plik testu w warstwie wymaga wiersza zadania w przew
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: small-change     # bug | small-change
 severity: low          # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [infra]
 requirements: []
@@ -32,6 +32,15 @@ related_tasks: [T-110, T-112, T-113, T-115]
 - Czy sam nowy plik testu wystarcza, czy też nowy `describe` w istniejącym pliku (ryzyko fałszywych alarmów); czy reguła dotyczy tylko zadań po dacie wprowadzenia (zadania historyczne bez wierszy).
 - Czy ostrzeżenie, czy błąd.
 
+**Ustalone (/fix, 2026-11-10):**
+
+- **Powiązanie:** commity z tematem `T-NNN: …` (`git log HEAD --no-merges -M --diff-filter=A`); zadania nie mają wiarygodnej listy plików. Job `always` w CI dostał `fetch-depth: 0`; w płytkim klonie reguła daje ostrzeżenie zamiast cicho przechodzić, a poza repozytorium git jest pomijana (fikstury bez git).
+- **Mapowanie:** dane, nie kod — frontmatter `paths:` w każdym przewodniku (prefiksy względem korzenia repo): backend `apps/api/`, `packages/shared/`; db `apps/api/drizzle/`, `apps/api/src/db/`, `apps/api/test/`; web `apps/web/`, `packages/shared/`, `packages/tokens/`; mobile `apps/mobile/`, `packages/shared/`, `packages/tokens/`; infra `scripts/`, `.github/`. Przewodnik bez `paths:` nie jest sprawdzany. Plik pod kilkoma warstwami zadania: wystarczy wiersz w jednym z ich przewodników. Plik w katalogu warstwy spoza `layers:` zadania nie jest zgłaszany.
+- **Co liczy się jako nowy test:** tylko dodany plik `*.test.*` / `*.spec.*` (js/ts/jsx/tsx/mjs/cjs) albo `*.test.sh`; nowy `describe` w istniejącym pliku i zmiana nazwy pliku nie (bez fałszywych alarmów). Wiersz liczy się tylko w sekcji „## Historia zmian” (albo „Change log”/„History”).
+- **Zadania historyczne:** tylko commity od `2026-11-10T00:00:00+01:00` (bez granicy repo dawałoby 54 błędy dla zadań sprzed reguły). Statusy `in-qa` i `done`.
+- **Waga:** błąd (kod wyjścia 1), jak reguły T-110: `pnpm check` i CI mają zatrzymać zadanie przed QA.
+- `mobile.md` nie miał „Historia zmian” — dodana sekcja z wierszem T-117.
+
 ## Acceptance criteria
 
 - [ ] AC1: Given zadanie `in-qa`/`done`, którego commity dodały `*.test.ts` w warstwie z `layers:`, a przewodnik warstwy nie ma wiersza historii zmian z ID zadania, when uruchamia się `backlog-check`, then zgłasza zadanie, plik i przewodnik. — verified by: test `backlog-check` z fikstury
@@ -57,11 +66,15 @@ related_tasks: [T-110, T-112, T-113, T-115]
 
 ## Root cause
 
-<Wypełnia /fix.>
+`backlog-check` sprawdzał tylko pliki backlogu; nic nie łączyło plików dodanych w commitach zadania z przewodnikiem warstwy, więc wiersz w „Historia zmian” zależał wyłącznie od pamięci implementującego i od QA (T-110, T-112, T-113, T-115). Testy nie mogły tego złapać, bo reguły nie było — zabrakło sprawdzenia, nie przypadku testowego. Przy realizacji wyszedł drugi błąd: `git log --since=2026-11-10` (sama data) git czyta jako „tego dnia o bieżącej godzinie”, więc pierwsza wersja pomijała commity T-115 z rana; granica jest teraz pełnym znacznikiem czasu, a test „data graniczna … 00:30” to pilnuje.
+
+Ten sam wzorzec gdzie indziej: brak — inne sprawdzenia `backlog-check` nie czytają historii git.
 
 ## Evidence
 
-<Wypełnia /fix.>
+- **Red:** `node --test scripts/test/backlog-check.test.mjs` — „commit zadania in-qa dodał test w warstwie, przewodnik bez wiersza → błąd … (T-117 AC1)”: `AssertionError: … actual: 0, expected: 1` (kod wyjścia `backlog-check` 0 mimo braku wiersza).
+- **Green:** 31/31 testów `backlog-check` (8 nowych T-117: AC1, AC2, kilka warstw, `apps/web/src` i `*.spec.ts`, przypadki bez zgłoszenia, zmiana nazwy, data graniczna, ID poza „Historia zmian”, płytki klon); `pnpm check` zielony (156 plików, 1278 testów); actionlint 1.7.12 bez uwag.
+- **Rzeczywisty przypadek:** worktree na `0c719f4` (T-115 `in-qa`, `backend.md` z `paths:`) → `ERROR …T-115….md: commits of T-115 added test apps/api/test/reset-mail.copy.test.ts, but docs/architecture/layers/backend.md has no row with T-115 under "## Historia zmian"`. Obecne repo: bez zgłoszeń.
 
 ## Prevention
 

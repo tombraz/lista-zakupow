@@ -1,5 +1,6 @@
 ---
 layer: mobile
+paths: [apps/mobile/, packages/shared/, packages/tokens/]   # katalogi warstwy: nowy test w nich wymaga wiersza w „Historia zmian” (backlog-check, T-117)
 status: approved          # draft | approved
 approved: 2026-10-26
 ---
@@ -72,3 +73,9 @@ Istnieje (T-003), pakiet `@lista/mobile` (Expo SDK 58, React Native 0.88):
 
 - `.claude/skills/brd-to-design/references/accessibility.md` — lista kontrolna (React Native).
 - Dokumentacja Expo (expo-router, SecureStore, EAS), Better Auth Expo plugin, Maestro.
+
+## Historia zmian
+
+| Data | Zmiana |
+| --- | --- |
+| 2026-11-10 | T-117: sekcja „Historia zmian” i frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |
