@@ -13,13 +13,13 @@
   },
   "dependencies": {
     "@fastify/helmet": "13.2.0",
-    "@fastify/rate-limit": "11.2.1",
-    "@fastify/static": "10.1.7",
-    "@fastify/websocket": "11.3.4",
+    "@fastify/rate-limit": "11.2.2",
+    "@fastify/static": "10.1.10",
+    "@fastify/websocket": "11.3.7",
     "@lista/shared": "workspace:*",
-    "better-auth": "1.7.13",
+    "better-auth": "1.7.19",
     "drizzle-orm": "0.45.4",
-    "fastify": "5.12.7",
+    "fastify": "5.12.8",
     "pg": "8.23.1",
     "pino": "10.4.0",
     "zod": "4.6.7"
@@ -32,6 +32,6 @@
     "esbuild": "0.28.2",
     "testcontainers": "12.2.1",
     "tsx": "4.23.15",
-    "ws": "8.22.0"
+    "ws": "8.22.2"
   }
 }
