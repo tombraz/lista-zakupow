@@ -4,7 +4,7 @@ title: "Zapis pozycji sprawdza członkostwo w transakcji; usunięcie uczestnika 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress        # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-13]
@@ -75,3 +75,29 @@ Propozycja z przeglądu: linia w `backend.md` „Zasady bezpieczeństwa” — �
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-13)
+
+Verdict: fail
+
+Reproduce: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check` clean; `pnpm test` 1290/1290 green (junit: 0 failures). `items.membership-race.test.ts` 9/9 green.
+
+Acceptance criteria:
+
+- AC1 pass: 6 routes, each 404 `not_found` and DB snapshot unchanged; spot-check (`lockListFor` returning `true` for everyone) turns all 9 tests red.
+- AC2 partial: covered when the write is held **before** its transaction (404, no change). When the write is already **in** its transaction (holds `list_member FOR SHARE`), account deletion deadlocks with add/check; see #1.
+- AC3 pass: T-029/T-030 concurrency tests green; QA mix of an owner add, a participant removal, an owner check and a member check in parallel gave `[201, 204, 200, 404]`, no 500.
+- AC4 pass: full suite green.
+
+Exploratory (temporary probe `apps/api/test/zz-qa-probe.test.ts` with `gatedPool(/FOR SHARE/i, { clients: true })`, removed afterwards). An owner deleting the list during a member's in-transaction add gave 201 then 204. Edit and delete across account deletion gave 200/204 then 204.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | major | backend/db, TH-31 | Account deletion deadlocks with the same user's in-transaction item write that writes a user FK (add: `added_by`, check: `checked_by` + `recordCheck`). The write holds `list_member FOR SHARE` and waits for `FOR KEY SHARE` on `user`. `deleteAccount` (`konta/infra/users.ts:35-47`) holds `user FOR UPDATE` and its cascade waits for the `list_member` row. Postgres aborts the deletion, so `DELETE /api/v1/me` returns 500 `internal` and the user must retry. The root-cause claim that the account-deletion cascade serialises "bez zmian w tych ścieżkach" does not hold. Before this fix the same race gave a 500 on the write. Now the 500 lands on the account deletion. | Probe: write held after `FOR SHARE`, then `DELETE /me` by the participant, then release: add gave 201 and removal **500** (1399 ms); check gave 200 and removal **500** (1240 ms). Edit and delete (no user FK) gave 204 in about 270 ms. The 1.2-1.4 s matches `deadlock_timeout` (1 s). | No deadlock and no 500 (AC3, TH-31: "zmiany członkostwa (… usunięcie konta) pod tą samą blokadą"). Make account deletion take locks in the write order: lists before membership before user. For example, lock the joined lists (`lockList`) and the account's `list_member` rows before `user FOR UPDATE`, or lock `list_member` first. Add an integration test: write held inside its transaction, account deleted, then 2xx/404 for the write and 204 for the deletion. |
+| 2 | minor | docs | The layer guides do not describe the new rule or helper. `docs/architecture/layers/backend.md:30` and `:33` and `docs/architecture/layers/db.md:29` mention only `lockList`, not `lockListFor`, and not that every item write rechecks membership under the list lock (`FOR SHARE` on `list_member`). Neither guide has a change-log row for T-119. The "Prevention" line proposed for `backend.md` "Zasady bezpieczeństwa" is not added. | `grep lockListFor docs/architecture` finds nothing | "Gdzie jest kod", the security rules and the change log in `backend.md` and `db.md` updated |
+| 3 | note | threat model | The TH-31 mitigation says membership changes run "pod tą samą blokadą" (list lock). The fix serialises them through the `list_member` row lock instead, and `removeParticipant` and leave do not take `lockList`. The behaviour is correct for removal and leave. Update the TH-31 text, or align the code once #1 is fixed. | `threat-model.md:94`, `lists-repository.ts` `removeParticipant` | Mitigation text matches the mechanism |
+| 4 | note | task | "Steps to reproduce" still says "dopisać tu po wydaniu poprawki". | Report section | Fill in at release |
+
+Root cause section: it explains why the existing tests missed the bug (they only covered a write sent after removal). The reproducing tests fail without the fix (spot-check above).
+
+Must change: #1, with its negative test. Fix #2 in the same round.
