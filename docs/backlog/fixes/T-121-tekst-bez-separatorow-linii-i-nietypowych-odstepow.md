@@ -4,7 +4,7 @@ title: "Imiona, nazwy i notatki bez separatorów linii, nietypowych odstępów i
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-progress           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: [F-01, F-05, F-07, F-16]
@@ -57,15 +57,21 @@ related_tasks: [T-060, T-061]
 - **Edge cases:**
   - tabulator w notatce (dziś odrzucany jako Cc);
   - `\r\n` z wklejenia w notatce;
-  - NBSP (U+00A0) z wklejenia z przeglądarki — decyzja: odrzucić czy zamienić na spację;
+  - NBSP (U+00A0) z wklejenia z przeglądarki — decyzja właściciela 2026-11-13: zamienić na spację (przed `trim`), inne odstępy Zs odrzucać;
   - istniejące dane z takimi znakami (migracja ich nie zmienia, T-060 AC5).
 - **Platforms:** API, web.
 
+Decyzja właściciela 2026-11-13 (AC4): N = 3, liczone jako znaki łączące (`\p{M}`) z rzędu, bo nakładanie akcentów to zawsze ciąg; keycap 1️⃣ i rozłożony wietnamski mają ≤ 2.
+
 ## Root cause
 
-<Do uzupełnienia przy poprawce. Wstępnie: walidator zdefiniował „ukryte” przez kategorie Cc/Cf/DI, a odstępy i separatory nie należą do żadnej z nich.>
+T-060 i T-073 zdefiniowały „ukryty znak” listą kategorii Cc, Cf i Default_Ignorable; separatory Zl/Zp, odstępy Zs, U+2800, Co, Cn i Cs nie należą do żadnej z nich, a warunek „ma widoczny znak” łapał je tylko w tekście złożonym wyłącznie z nich. Notatka nie miała w ogóle warunku widocznego znaku. Testy nie złapały tego, bo tabela `FORBIDDEN` w `visible-text.test.ts` pokrywała tylko Cc i Cf (test własności T-073 przechodzi po wszystkich Cf, nie po wszystkich odstępach), a `INVISIBLE` sprawdzał U+2800 tylko jako cały tekst. Ten sam wzorzec nie występuje gdzie indziej: wszystkie pola tekstu widocznego dla innych idą przez `requiredName` / `optionalNote`.
 
 ## Evidence
+
+- Red, `pnpm vitest run --project shared visible-text`: 100 failed / 342 passed, np. `name (sign-up): rejects Zl: line separator U+2028 inside the text` — `expected undefined to be 'invalid'`; NBSP — `expected { name: 'Ania K.' } …` (NBSP zostawała).
+- Red, `pnpm vitest run --project api visible-text` (walidator sprzed poprawki): 5 nowych testów T-121 pada, np. `refuses to sign up with a name containing U+2028` — 200 zamiast 400.
+- Green: `shared` 514/514, `api visible-text` 25/25; pełny zestaw 160 plików / 1403 testy, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — bez błędów.
 
 ## Prevention
 

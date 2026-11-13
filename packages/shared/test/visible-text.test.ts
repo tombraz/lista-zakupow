@@ -252,3 +252,51 @@ describe("text visible to others: every format character outside the approved li
     });
   }
 });
+
+// T-121 (TH-29, TH-36): odstęp to tylko U+0020 (w notatce także `\n`), niewidoczne i
+// nieprzypisane znaki są odrzucane także obok widocznego tekstu.
+describe("text visible to others: line separators, unusual spaces and empty characters (T-121)", () => {
+  const REFUSED_INSIDE: [string, string][] = [
+    ["Zl: line separator U+2028", " "],
+    ["Zp: paragraph separator U+2029", " "],
+    ["Zs: ideographic space U+3000", "　"],
+    ["Zs: medium mathematical space U+205F", " "],
+    ["Zs: Ogham space mark U+1680", " "],
+    ["Zs: en quad U+2000", " "],
+    ["Zs: hair space U+200A", " "],
+    ["Zs: narrow no-break space U+202F", " "],
+    ["Braille blank U+2800", "⠀"],
+    ["Co: private use U+E000", ""],
+    ["Cn: unassigned U+0378", "͸"],
+    ["Cs: lone high surrogate", "\uD800"],
+    ["Cs: lone low surrogate", "\uDC00"],
+  ];
+
+  for (const [field, errorOf] of FIELDS) {
+    for (const [kind, char] of REFUSED_INSIDE) {
+      it(`${field}: rejects ${kind} inside the text`, () => {
+        expect(errorOf(`Mle${char}ko`)).toBe("invalid");
+      });
+    }
+
+    it(`${field}: rejects more than 3 combining marks in a row, accepts 3`, () => {
+      expect(errorOf("Mlé́́́ko")).toBe("invalid");
+      expect(errorOf("Mlé́́ko")).toBeUndefined();
+      expect(errorOf("Việt")).toBeUndefined();
+    });
+  }
+
+  it("rejects a note with combining marks only", () => {
+    expect(errorsOf(updateItemRequestSchema, { note: "́̈" })).toEqual({
+      note: "invalid",
+    });
+  });
+
+  it("turns a no-break space into a plain space in names and notes", () => {
+    expect(nameChangeRequestSchema.parse({ name: "Ania K." })).toEqual({ name: "Ania K." });
+    expect(updateItemRequestSchema.parse({ name: "Żółty ser", note: "2 l" })).toEqual({
+      name: "Żółty ser",
+      note: "2 l",
+    });
+  });
+});

@@ -297,3 +297,94 @@ describe("an item name with hidden characters whose key is already on the list",
     await app.close();
   });
 });
+
+// T-121 (TH-29, TH-36): separatory linii, nietypowe odstępy i puste znaki nie przechodzą przez API.
+describe("text with line separators, unusual spaces or empty characters on every save route", () => {
+  const db = useTestDatabase();
+
+  async function rows(sql: string) {
+    return (await db.pool.query<Record<string, unknown>>(sql)).rows;
+  }
+
+  it("refuses to sign up with a name containing U+2028 and creates no account", async () => {
+    const app = buildTestApp(db.pool);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/sign-up/email",
+      headers: { origin: TEST_ORIGIN },
+      remoteAddress: randomIp(),
+      payload: {
+        name: "Ania Admin",
+        email: "ania@example.com",
+        password: "dobre-haslo-1",
+        termsAccepted: true,
+        ageConfirmed: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual(invalid("name"));
+    expect(await rows(`SELECT 1 FROM "user"`)).toEqual([]);
+    await app.close();
+  });
+
+  it("refuses a name with U+2800 and keeps the old one", async () => {
+    const app = buildTestApp(db.pool);
+    const asTomek = requestsAs(app, await createUser(app, { name: "Tomek" }));
+
+    const response = await asTomek("PATCH", "/api/v1/me", { name: "To⠀mek" });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual(invalid("name"));
+    expect((await asTomek("GET", "/api/v1/me")).json<{ name: string }>().name).toBe("Tomek");
+    await app.close();
+  });
+
+  it("refuses to create or rename a list with U+3000 or U+2029 and changes nothing", async () => {
+    const app = buildTestApp(db.pool);
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania, "Zakupy");
+    const asAnia = requestsAs(app, ania);
+
+    const created = await asAnia("POST", "/api/v1/lists", { name: "Dom　owe" });
+    const renamed = await asAnia("PATCH", `/api/v1/lists/${list.id}`, { name: "Zak upy" });
+
+    expect([created.statusCode, renamed.statusCode]).toEqual([400, 400]);
+    expect(created.json()).toEqual(invalid("name"));
+    expect(renamed.json()).toEqual(invalid("name"));
+    expect(await rows("SELECT name FROM shopping_list")).toEqual([{ name: "Zakupy" }]);
+    await app.close();
+  });
+
+  it("refuses to add or change an item with U+E000, U+2800 or a lone surrogate", async () => {
+    const app = buildTestApp(db.pool);
+    const ania = await createUser(app);
+    const list = await createList(db.pool, ania);
+    const milk = await createItem(db.pool, list, ania, "Mleko");
+    const asAnia = requestsAs(app, ania);
+    const items = `/api/v1/lists/${list.id}/items`;
+
+    const byName = await asAnia("POST", items, { name: "Chleb" });
+    const byNote = await asAnia("POST", items, { name: "Chleb", note: "2⠀szt" });
+    const edited = await asAnia("PATCH", `${items}/${milk.id}`, { note: "2 l\uD800" });
+
+    expect([byName.statusCode, byNote.statusCode, edited.statusCode]).toEqual([400, 400, 400]);
+    expect(byName.json()).toEqual(invalid("name"));
+    expect(byNote.json()).toEqual(invalid("note"));
+    expect(edited.json()).toEqual(invalid("note"));
+    expect(await rows("SELECT name, note FROM item")).toEqual([{ name: "Mleko", note: null }]);
+    await app.close();
+  });
+
+  it("saves a no-break space as a plain space", async () => {
+    const app = buildTestApp(db.pool);
+    const asAnia = requestsAs(app, await createUser(app));
+
+    const response = await asAnia("POST", "/api/v1/lists", { name: "Dom i ogród" });
+
+    expect(response.statusCode).toBe(201);
+    expect(await rows("SELECT name FROM shopping_list")).toEqual([{ name: "Dom i ogród" }]);
+    await app.close();
+  });
+});
