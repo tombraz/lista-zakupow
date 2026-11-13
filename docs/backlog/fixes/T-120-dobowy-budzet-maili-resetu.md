@@ -4,7 +4,7 @@ title: "Prośby o reset nie wyczerpują dobowego limitu maili dostawcy"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: in-progress    # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-03, N-03]
@@ -78,3 +78,29 @@ Inne wystąpienia: inne maile wychodzą tylko jako alarmy N-03 (już tłumione, 
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
+
+## QA round 1 (2026-11-13)
+Verdict: fail
+
+Sprawdzone: `pnpm install --frozen-lockfile`, `pnpm test` dwa razy (1. przebieg: 1 czerwony `routes-nul.test.ts` — zob. #6; 2. przebieg: 159 plików / 1297 testów zielone), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm quality` — bez błędów. `node scripts/backlog-check.mjs` — **ERROR** (#1).
+
+Kryteria:
+- AC1 pass — `password-reset.daily-limits.test.ts` test 1: 10× 200, potem 429 dla istniejącego i nieistniejącego adresu, 10 maili, dwa zdarzenia `rate_limited` z `limit: passwordResetPerEmailDaily` (po jednym na adres); po dobie adres znów dostaje mail.
+- AC2 pass — test 2: po 100 mailach kolejne prośby 200, mail nie wychodzi, jeden alarm do właściciela.
+- AC3 pass — ten sam test: alarm wychodzi przy wyczerpanym budżecie (alarm idzie przez `ownerAlerts` z pominięciem `MailQuota`).
+- AC4 pass — limit per IP to `perIp` (preHandler w pamięci) przed `takeResetLimits`; `limits.security.test.ts` (`passwordResetPerIp`, `passwordResetPerEmail`, `passwordResetPerEmailDaily`) liczy wiersze wszystkich tabel `public`, więc także `mail_quota`; sprzątanie: `cleanup.retention.test.ts` nowy przypadek.
+- AC5 pass — `password-reset*.test.ts`, `cleanup.*`, cały zestaw zielony w 2. przebiegu.
+
+Spot-checki (cofnięte, `git status` czysty): `MailQuota.take` → `return true` — oba testy z `password-reset.daily-limits` czerwone; reguła sprzątania `mail_quota` → `false` — `cleanup.retention` (nowy przypadek) i `cleanup.logs` czerwone. Zapis licznika jednym `INSERT … ON CONFLICT … RETURNING` — równoległe prośby nie obejdą limitu; licznik w bazie, więc restart go nie zeruje.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | blocker | CI / dokumentacja | `backlog-check` (krok CI `ci.yml:95`) kończy się błędem: commit T-120 dodał plik testu w warstwie backend, a `docs/architecture/layers/backend.md` ani `db.md` nie mają wiersza T-120 w „## Historia zmian”. | `node scripts/backlog-check.mjs` → `ERROR … commits of T-120 added test apps/api/test/password-reset.daily-limits.test.ts, but … has no row with T-120 under "## Historia zmian"` | Wiersz T-120 w „Historia zmian” `backend.md` (i `db.md`: tabela `mail_quota`, migracja `0009`); `backlog-check` bez ERROR. |
+| 2 | major | TDD | Evidence pokazuje czerwień tylko dla testów 1 i 2 planu; brak czerwonego komunikatu dla 3a (`limits.security` › `passwordResetPerEmailDaily`) i 3b (`cleanup.retention`, `cleanup.logs` z `mail_quota`). QA potwierdził spot-checkiem, że 3b gryzie. | sekcja „Evidence” | Czerwony komunikat (albo dowód spot-checku) dla każdego zaplanowanego testu. |
+| 3 | minor | Testy | Planowany test 3 `writes no counter rows once the IP limit is exceeded` nie istnieje; AC4 pokrywa ogólny licznik wierszy w `limits.security.test.ts` (scenariusz `passwordResetPerIp`). | `grep -rn "writes no counter rows" apps/` — brak | Dopisać test albo poprawić plan TDD, wskazując istniejący scenariusz. |
+| 4 | minor | Dokumentacja | `docs/architecture/deployment.md:22` nadal liczy budżet Brevo jako „kilka miesięcznie + ≤ 96 alarmów”, bez dobowego budżetu 100 maili resetu (dwa okna = 200 + alarmy). | `deployment.md:22` | Wiersz „Mail” z limitami `passwordResetPerEmailDaily` / `passwordResetMailsDaily`. |
+| 5 | minor | Dokumentacja | `docs/architecture/threat-model.md:73` (TH-10) wymienia tylko limit per IP i per e-mail, bez limitu dobowego i budżetu łącznego. | `threat-model.md:73` | Mitigacja TH-10 z limitem dobowym i budżetem łącznym (T-120). |
+| 6 | note | Testy (istniejące) | `routes-nul.test.ts` › `never logs a raw database exception for NUL input` był raz czerwony w pełnym przebiegu, zielony 3× osobno i w 2. pełnym przebiegu. Wzorzec `/byte sequence\|22021/` może trafić w losowy hex (`requestId` UUID) w logach — test niedeterministyczny, niezwiązany z T-120. | junit 1. przebiegu: `expected '{"level":30,…' not to match /byte sequence\|22021/` | Wzorzec zakotwiczony (np. `"code":"22021"`), osobne zadanie. |
+| 7 | note | Bezpieczeństwo | Atakujący z wieloma IP i 10 adresami (10 × 10) wyczerpuje budżet 100 i blokuje resety wszystkim na dobę; właściciel dostaje alarm. Zgodne z decyzją właściciela (alarmy ważniejsze), do odnotowania w TH-10 jako ryzyko szczątkowe. | analiza `index.ts` `sendResetMail` | Ryzyko szczątkowe w `threat-model.md`. |
+
+Do poprawy przed kolejną rundą: #1 (blocker) i #2 (major); #3–#5 przy okazji.
