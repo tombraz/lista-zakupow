@@ -37,7 +37,7 @@ function withoutHiddenCharacters(allowNewLine: boolean) {
 }
 
 // NBSP wpada przy wklejaniu z przeglądarki; zamieniona, nie odrzucona (decyzja właściciela 2026-11-13).
-const withPlainSpaces = (text: string) => text.replaceAll(" ", " ");
+const withPlainSpaces = (text: string) => text.replaceAll("\u00A0", " ");
 
 const hasVisibleCharacter = (text: string) => VISIBLE_CHARACTER.test(text);
 
