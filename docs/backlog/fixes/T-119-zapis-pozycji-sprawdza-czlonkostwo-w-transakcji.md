@@ -73,6 +73,8 @@ Trasy pozycji sprawdzały dostęp (`requireListAccess`) osobnym zapytaniem przed
 
 Propozycja z przeglądu: linia w `backend.md` „Zasady bezpieczeństwa” — „Zapis do danych listy sprawdza członkostwo w tej samej transakcji pod `lockList`; każda zmiana członkostwa bierze tę samą blokadę”.
 
+**Co by zapobiegło:** test z `gatedPool` wstrzymującym zapis w trakcie (przed transakcją i w niej), a nie tylko zapis wysłany po odebraniu dostępu. **Zastosowane (runda QA 1):** reguła w `backend.md` „Zasady bezpieczeństwa” (`lockListFor`, kolejność blokad, test z zapisem wstrzymanym w transakcji dla każdej ścieżki zmiany członkostwa), kolejność blokad w `db.md` „Konwencje”, TH-31 zgodne z mechanizmem. Kolejność blokad pilnuje tylko konwencja; automatycznej kontroli nie dodano (zbyt drogie w stosunku do ryzyka).
+
 ## Incident note
 
 <!-- QA rounds are appended below by /qa-task -->
