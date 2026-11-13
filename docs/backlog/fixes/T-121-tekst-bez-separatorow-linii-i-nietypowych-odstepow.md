@@ -4,7 +4,7 @@ title: "Imiona, nazwy i notatki bez separatorów linii, nietypowych odstępów i
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress           # todo | in-progress | in-qa | done | blocked
+status: in-qa           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, web]
 requirements: [F-01, F-05, F-07, F-16]
