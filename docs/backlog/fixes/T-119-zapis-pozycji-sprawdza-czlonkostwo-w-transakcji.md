@@ -4,7 +4,7 @@ title: "Zapis pozycji sprawdza członkostwo w transakcji; usunięcie uczestnika 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa              # todo | in-progress | in-qa | done | blocked
+status: done               # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-13]
@@ -27,10 +27,10 @@ related_tasks: [T-056, T-058, T-059, T-029]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given zapis pozycji uczestnika (dodanie, edycja, odhaczenie, cofnięcie odhaczenia, usunięcie, wyczyszczenie kupionych) wstrzymany po sprawdzeniu dostępu, when właściciel usuwa tego uczestnika, a potem zapis zostaje wznowiony, then zapis odpowiada 404 `not_found`, a w bazie nie ma zmian. — verified by: test integracyjny z `gatedPool` dla każdej trasy zapisu
-- [ ] AC2: To samo dla opuszczenia listy i dla usunięcia konta uczestnika. — verified by: test integracyjny
-- [ ] AC3: Równoległe zapisy członków na jednej liście nie wywołują zakleszczeń ani 500 (kolejność blokad: lista, potem pozycja). — verified by: istniejące testy równoległości (T-029, T-030)
-- [ ] AC4: No regression in: `live.remove-member.test.ts`, `live.leave.test.ts`, `items*.test.ts`, J-03, J-05.
+- [x] AC1: Given zapis pozycji uczestnika (dodanie, edycja, odhaczenie, cofnięcie odhaczenia, usunięcie, wyczyszczenie kupionych) wstrzymany po sprawdzeniu dostępu, when właściciel usuwa tego uczestnika, a potem zapis zostaje wznowiony, then zapis odpowiada 404 `not_found`, a w bazie nie ma zmian. — verified by: test integracyjny z `gatedPool` dla każdej trasy zapisu
+- [x] AC2: To samo dla opuszczenia listy i dla usunięcia konta uczestnika. — verified by: test integracyjny
+- [x] AC3: Równoległe zapisy członków na jednej liście nie wywołują zakleszczeń ani 500 (kolejność blokad: lista, potem pozycja). — verified by: istniejące testy równoległości (T-029, T-030)
+- [x] AC4: No regression in: `live.remove-member.test.ts`, `live.leave.test.ts`, `items*.test.ts`, J-03, J-05.
 
 ## TDD plan
 
@@ -102,3 +102,39 @@ Exploratory (temporary probe `apps/api/test/zz-qa-probe.test.ts` with `gatedPool
 Root cause section: it explains why the existing tests missed the bug (they only covered a write sent after removal). The reproducing tests fail without the fix (spot-check above).
 
 Must change: #1, with its negative test. Fix #2 in the same round.
+
+## QA round 2 (2026-11-13)
+
+Verdict: pass
+
+Reproduce: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check` clean; `pnpm test` 158 files / 1293 tests green. `items.membership-race.test.ts` 12/12 green.
+
+Acceptance criteria:
+
+- AC1 pass: 6 routes give 404 `not_found` and an unchanged DB snapshot (round 1 spot-check still applies; tests unchanged apart from extracting `check`, `leave` and `deleteAccount` into constants).
+- AC2 pass: leave and account deletion give 404 with the write held before its transaction. With the write held inside its transaction, account deletion now waits and returns 204, and the write gives 201 (add) or 200 (check). Round 1 finding #1 is fixed.
+- AC3 pass: T-029/T-030 concurrency tests green; no deadlock in the probes below.
+- AC4 pass: full suite green.
+
+Test quality: spot-check removed the `user FOR KEY SHARE` step from `lockListFor`. The two new account-deletion tests went red (about 1.2 s each, deadlock timeout) and the other 10 stayed green. Restored, `git status` clean. The round 1 test "makes removing a participant wait…" is now one row of the parametrised test with the same lock-wait assertion, so it is not weaker.
+
+Exploratory (temporary probe `apps/api/test/zz-qa-probe.test.ts`, removed afterwards; write held 300 ms, then released):
+
+- member add inside its transaction, owner deletes their account: 201 / 204;
+- member add inside its transaction, owner deletes the list: 201 / 204;
+- owner add after the list lock, participant deletes their account: 201 / 204;
+- owner checks an item added by the participant, participant deletes their account: 200 / 204;
+- owner add inside its transaction, owner removes the participant: 201 / 204 (owner's write succeeds);
+- member add held before its transaction, owner deletes their account: 404 / 204;
+- two members check the same item at once: 200 / 200, no 500.
+
+No 500 and no response slower than the hold time.
+
+Docs: `backend.md` ("Gdzie jest kod", "Zasady bezpieczeństwa", change log), `db.md` ("Gdzie jest kod", "Konwencje", change log) and TH-31 in `threat-model.md` now describe `lockListFor` and the lock order. Round 1 findings #2 and #3 are fixed.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | task | "Steps to reproduce" still says "dopisać tu po wydaniu poprawki" (round 1 #4). | Report section | Fill in at release |
+| 2 | note | backend | The lock order `user` → list → `list_member` → item applies only where the code follows it. The invitation and list-rename paths take `lockList` without the `user` lock. They are owner-only today, so this has no effect. Any new write path must use `lockListFor`, as `backend.md` now says. No lint rule enforces it. | `invitations-repository.ts` | Consider a check that every repository write to `item` goes through `lockListFor` |
+
+Root cause section: it explains why the existing tests missed the bug, and the reproducing tests fail without the fix (round 1 spot-check plus this round's).
