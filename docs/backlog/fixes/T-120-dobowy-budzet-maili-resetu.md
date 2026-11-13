@@ -4,7 +4,7 @@ title: "Prośby o reset nie wyczerpują dobowego limitu maili dostawcy"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-03, N-03]
@@ -27,11 +27,11 @@ related_tasks: [T-053, T-055, T-088]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given dobowe okno per e-mail (10 na 24 h od pierwszej prośby; zatwierdził właściciel 2026-11-13), when przychodzi kolejna prośba dla tego adresu, then odpowiedź jest taka sama jak przy limicie 15-minutowym — 429 `rate_limited` (TH-11: ten sam status i treść dla istniejącego i nieistniejącego konta; decyzja właściciela 2026-11-13), mail nie wychodzi, a w logu `security` jest jedno zdarzenie `rate_limited` z `limit: passwordResetPerEmailDaily`. — verified by: test integracyjny
-- [ ] AC2: Given wyczerpany globalny dobowy budżet maili resetu (100 na 24 h od pierwszego maila; dwa okna w dobie Brevo + 96 alarmów < 300; zatwierdził właściciel 2026-11-13), when przychodzi prośba, then mail nie wychodzi, odpowiedź się nie zmienia, a właściciel projektu dostaje jeden alarm (tłumiony jak w T-088). — verified by: test integracyjny z adapterem przechwytującym maile
-- [ ] AC3: Given wyczerpany budżet resetu, when trzeba wysłać alarm N-03, then alarm wychodzi (rezerwa). — verified by: test integracyjny
-- [ ] AC4: Liczniki nie zapisują nic przed limitem per IP (TH-27) i są sprzątane przez codzienne sprzątanie (T-064). — verified by: test liczby wierszy
-- [ ] AC5: No regression in: `password-reset*.test.ts`, `cleanup.retention.test.ts`, J-01.
+- [x] AC1: Given dobowe okno per e-mail (10 na 24 h od pierwszej prośby; zatwierdził właściciel 2026-11-13), when przychodzi kolejna prośba dla tego adresu, then odpowiedź jest taka sama jak przy limicie 15-minutowym — 429 `rate_limited` (TH-11: ten sam status i treść dla istniejącego i nieistniejącego konta; decyzja właściciela 2026-11-13), mail nie wychodzi, a w logu `security` jest jedno zdarzenie `rate_limited` z `limit: passwordResetPerEmailDaily`. — verified by: test integracyjny
+- [x] AC2: Given wyczerpany globalny dobowy budżet maili resetu (100 na 24 h od pierwszego maila; dwa okna w dobie Brevo + 96 alarmów < 300; zatwierdził właściciel 2026-11-13), when przychodzi prośba, then mail nie wychodzi, odpowiedź się nie zmienia, a właściciel projektu dostaje jeden alarm (tłumiony jak w T-088). — verified by: test integracyjny z adapterem przechwytującym maile
+- [x] AC3: Given wyczerpany budżet resetu, when trzeba wysłać alarm N-03, then alarm wychodzi (rezerwa). — verified by: test integracyjny
+- [x] AC4: Liczniki nie zapisują nic przed limitem per IP (TH-27) i są sprzątane przez codzienne sprzątanie (T-064). — verified by: test liczby wierszy
+- [x] AC5: No regression in: `password-reset*.test.ts`, `cleanup.retention.test.ts`, J-01.
 
 ## TDD plan
 
@@ -106,3 +106,16 @@ Spot-checki (cofnięte, `git status` czysty): `MailQuota.take` → `return true`
 | 7 | note | Bezpieczeństwo | Atakujący z wieloma IP i 10 adresami (10 × 10) wyczerpuje budżet 100 i blokuje resety wszystkim na dobę; właściciel dostaje alarm. Zgodne z decyzją właściciela (alarmy ważniejsze), do odnotowania w TH-10 jako ryzyko szczątkowe. | analiza `index.ts` `sendResetMail` | Ryzyko szczątkowe w `threat-model.md`. |
 
 Do poprawy przed kolejną rundą: #1 (blocker) i #2 (major); #3–#5 przy okazji.
+
+## QA round 2 (2026-11-13)
+Verdict: pass
+
+Runda 1 poprawiona tylko w dokumentacji (`38dec0b`); kod `apps/` i `packages/` bez zmian od `cbd9461`. Sprawdzone: `node scripts/backlog-check.mjs` — `OK: no errors` (#1 z rundy 1 zamknięte, wiersze T-120 w „Historia zmian” `backend.md` i `db.md`); `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — bez błędów; `pnpm test` — 158/159 plików, 1296/1297 testów (czerwony tylko `routes-nul.test.ts` › SEC1, zob. #1 niżej; 3× osobno zielony). Testy T-120 (`password-reset.daily-limits`, `limits.security`, `cleanup.*`) zielone.
+
+Kryteria AC1–AC5: pass (jak w rundzie 1; kod bez zmian, testy przeczytane ponownie i zielone w pełnym przebiegu).
+
+Spot-check (cofnięty, `git status` czysty): na trasie `mailQuota.take` → `false` — `limits.security` › `passwordResetPerEmailDaily` czerwony z komunikatem zgodnym z Evidence (#2 z rundy 1 zamknięte). Plan TDD test 3 wskazuje istniejący scenariusz (#3), `deployment.md:22` (#4) i `threat-model.md:73` TH-10 z ryzykiem szczątkowym (#5, #7) poprawione.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | note | Testy (istniejące) | `routes-nul.test.ts` › `never logs a raw database exception for NUL input (SEC1)` znów czerwony w pełnym przebiegu (2. raz w 3 pełnych przebiegach QA), zielony 3× osobno. Wzorzec `/byte sequence\|22021/` (`routes-nul.test.ts:417`) na wszystkich liniach logu trafia w losowe ciągi; niezwiązany z T-120 (plik i logowanie nie zmienione). | pełny `pnpm test` 2026-11-13 | Osobne zadanie: zakotwiczyć wzorzec (np. `"code":"22021"`). |
