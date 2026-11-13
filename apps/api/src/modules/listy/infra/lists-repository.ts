@@ -34,16 +34,24 @@ export async function lockList(
 }
 
 /**
- * `lockList` i ponowne sprawdzenie dostępu domownika w transakcji zapisu (TH-04, T-119):
- * `requireListAccess` przed transakcją mógł widzieć członkostwo już usuwane. Wiersz
- * `list_member` zablokowany do końca transakcji, więc usunięcie uczestnika, opuszczenie listy
- * i usunięcie konta czekają na zapis albo zapis widzi je zatwierdzone.
+ * `lockList` i ponowne sprawdzenie dostępu domownika w transakcji zapisu (TH-04, TH-31, T-119):
+ * `requireListAccess` przed transakcją mógł widzieć członkostwo już usuwane. Blokady do końca
+ * transakcji, w kolejności: wiersz domownika, lista, wiersz `list_member`. Usunięcie
+ * uczestnika i opuszczenie listy czekają na `list_member`, usunięcie konta na wiersz domownika
+ * (blokuje go jako pierwszy, `deleteAccount`) — ta sama kolejność, więc bez zakleszczenia.
+ * Albo zapis widzi zmianę zatwierdzoną i zwraca `false`.
  */
 export async function lockListFor(
   tx: Pick<NodePgDatabase, "select">,
   listId: string,
   userId: string,
 ): Promise<boolean> {
+  const [person] = await tx
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.id, userId))
+    .for("key share");
+  if (!person) return false;
   const list = await lockList(tx, listId);
   if (!list) return false;
   if (list.ownerId === userId) return true;

@@ -26,7 +26,7 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 - `apps/api/scripts/metrics.sql` — zapytania miar sukcesu (tylko `SELECT`, definicje w komentarzu pliku; test `apps/api/test/metrics.test.ts`, T-065)
 - `apps/api/src/db/retention.ts` — usuwanie wierszy po terminie partiami po 1000 (`ctid`), reguły terminów w `modules/<moduł>/infra/retention.ts` (T-064)
 - `apps/api/test/global-setup.ts`, `test/database.ts` — kontener testowy, baza-szablon, `useTestDatabase()`
-- repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`, `lockList(tx, listId)` — blokada wiersza `shopping_list` w transakcji innego modułu (eksport z `listy/index.ts`), `insertParticipant` — limit 20 uczestników pod tą blokadą; `pozycje/infra/items-repository.ts` — limit 500 z `SELECT … FOR UPDATE` na wierszu `shopping_list`, duplikat przez `ON CONFLICT (list_id, name_key) DO NOTHING` przy dodaniu i naruszenie `item_list_id_name_key_unique` (23505) przy zmianie nazwy; `statystyki/infra/activity-repository.ts` — licznik odhaczeń `INSERT … ON CONFLICT DO UPDATE SET checks = checks + 1`; `zaproszenia/infra/invitations-repository.ts` — przyjęcie: warunkowy `UPDATE invitation … RETURNING list_id` i `Lists.join` w jednej transakcji, limit tworzenia linków liczony pod `lockList`)
+- repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`, `lockList(tx, listId)` — blokada wiersza `shopping_list` w transakcji innego modułu (eksport z `listy/index.ts`), `insertParticipant` — limit 20 uczestników pod tą blokadą, `lockListFor(tx, listId, userId)` — `user FOR KEY SHARE`, `lockList`, członkostwo `FOR SHARE`: dostęp sprawdzony w transakcji zapisu (T-119); `pozycje/infra/items-repository.ts` — limit 500 z `SELECT … FOR UPDATE` na wierszu `shopping_list`, duplikat przez `ON CONFLICT (list_id, name_key) DO NOTHING` przy dodaniu i naruszenie `item_list_id_name_key_unique` (23505) przy zmianie nazwy; `statystyki/infra/activity-repository.ts` — licznik odhaczeń `INSERT … ON CONFLICT DO UPDATE SET checks = checks + 1`; `zaproszenia/infra/invitations-repository.ts` — przyjęcie: warunkowy `UPDATE invitation … RETURNING list_id` i `Lists.join` w jednej transakcji, limit tworzenia linków liczony pod `lockList`)
 
 ## Komendy
 
@@ -61,6 +61,7 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 - Nazwy tabel i kolumn po angielsku w `snake_case`; mapowanie na słownik BRD w `data-model.md`.
 - Każda zmiana schematu = nowa migracja; nigdy edycja migracji już zmergowanej do `main`.
 - Limity (50 / 500 / 20) liczone w transakcji z `SELECT … FOR UPDATE` na wierszu rodzica, nie przez `COUNT` bez blokady.
+- Kolejność blokad w transakcjach: wiersz `user`, potem `shopping_list`, potem `list_member`, potem `item`. Usunięcie konta blokuje `user` jako pierwszy (`konta/infra/users.ts`), zapis pozycji też (`lockListFor`); odwrotna kolejność kończy się zakleszczeniem i 500 (QA T-119).
 - `name_key` liczone tylko funkcją z `packages/shared`; nigdy `lower()` w SQL (różne reguły dla polskich znaków).
 - Znaczniki czasu: `timestamptz`, ustawiane przez wstrzykiwany zegar w kodzie domeny, gdy test musi nimi sterować.
 
@@ -87,3 +88,4 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 | 2026-10-27 | T-004: tabele kont w „Gdzie jest kod”. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
 | 2026-11-10 | T-117: frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |
+| 2026-11-13 | T-119: „Konwencje”: kolejność blokad `user` → `shopping_list` → `list_member` → `item`; `lockListFor` w repozytoriach. |

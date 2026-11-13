@@ -49,8 +49,16 @@ describe("item writes after the participant lost access (T-119)", () => {
   type Request = (s: Setup) => ReturnType<ReturnType<typeof requestsAs>>;
   const add: Request = (s) =>
     requestsAs(s.app, s.tomek)("POST", `/api/v1/lists/${s.list.id}/items`, { name: "Jajka" });
+  const check: Request = (s) =>
+    requestsAs(s.app, s.tomek)("PATCH", `/api/v1/lists/${s.list.id}/items/${s.toBuy.id}`, {
+      checked: true,
+    });
   const removeByOwner: Request = (s) =>
     requestsAs(s.other, s.ania)("DELETE", `/api/v1/lists/${s.list.id}/members/${s.tomek.id}`);
+  const leave: Request = (s) =>
+    requestsAs(s.other, s.tomek)("POST", `/api/v1/lists/${s.list.id}/leave`);
+  const deleteAccount: Request = (s) =>
+    requestsAs(s.other, s.tomek)("DELETE", "/api/v1/me", { confirm: true });
   const writes: [string, Request][] = [
     ["add", add],
     [
@@ -60,13 +68,7 @@ describe("item writes after the participant lost access (T-119)", () => {
           name: "Masło",
         }),
     ],
-    [
-      "check",
-      (s) =>
-        requestsAs(s.app, s.tomek)("PATCH", `/api/v1/lists/${s.list.id}/items/${s.toBuy.id}`, {
-          checked: true,
-        }),
-    ],
+    ["check", check],
     [
       "uncheck",
       (s) =>
@@ -85,11 +87,8 @@ describe("item writes after the participant lost access (T-119)", () => {
   ];
 
   const removals: [string, Request][] = [
-    ["left", (s) => requestsAs(s.other, s.tomek)("POST", `/api/v1/lists/${s.list.id}/leave`)],
-    [
-      "deleted their account",
-      (s) => requestsAs(s.other, s.tomek)("DELETE", "/api/v1/me", { confirm: true }),
-    ],
+    ["left", leave],
+    ["deleted their account", deleteAccount],
   ];
 
   async function writeAcrossRemoval(write: Request, removal: Request) {
@@ -120,24 +119,34 @@ describe("item writes after the participant lost access (T-119)", () => {
     },
   );
 
-  it("makes removing a participant wait for their write already in its transaction", async () => {
-    // Zapis wstrzymany w transakcji, po sprawdzeniu członkostwa (blokada wiersza `list_member`).
-    const s = await setUp(/FOR SHARE/i, true);
-    s.gate.hold();
-    const pending = add(s);
-    await s.gate.held(1);
-    const removal = removeByOwner(s);
-    await vi.waitFor(
-      async () => {
-        const { rows } = await db.pool.query<{ n: number }>(
-          "SELECT count(*)::int AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock'",
-        );
-        expect(rows[0]?.n).toBeGreaterThan(0);
-      },
-      { timeout: 2000, interval: 20 },
-    );
-    s.gate.release();
-    expect((await pending).statusCode).toBe(201);
-    expect((await removal).statusCode).toBe(204);
-  });
+  // QA T-119 runda 1: usunięcie konta i zapis tej samej osoby brały blokady w odwrotnej
+  // kolejności (zakleszczenie, 500 po `deadlock_timeout`).
+  it.each([
+    ["add", "the owner removes them", add, removeByOwner, 201],
+    ["add", "they leave the list", add, leave, 201],
+    ["add", "they delete their account", add, deleteAccount, 201],
+    ["check", "they delete their account", check, deleteAccount, 200],
+  ] as const)(
+    "lets the participant's %s already in its transaction finish when %s",
+    async (_, __, write, removal, status) => {
+      // Zapis wstrzymany w transakcji, po sprawdzeniu członkostwa (blokada wiersza `list_member`).
+      const s = await setUp(/FOR SHARE/i, true);
+      s.gate.hold();
+      const pending = write(s);
+      await s.gate.held(1);
+      const removed = removal(s);
+      await vi.waitFor(
+        async () => {
+          const { rows } = await db.pool.query<{ n: number }>(
+            "SELECT count(*)::int AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock'",
+          );
+          expect(rows[0]?.n).toBeGreaterThan(0);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      s.gate.release();
+      expect((await pending).statusCode).toBe(status);
+      expect((await removed).statusCode).toBe(204);
+    },
+  );
 });
