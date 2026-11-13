@@ -156,7 +156,10 @@ async function takeResetLimits(
 ) {
   let exceeded: LimitKey | undefined;
   if (!(await deps.resetRequests.take(accountKey))) exceeded = "passwordResetPerEmail";
-  else if (!(await deps.mailQuota.take(`reset-email:${accountKey}`, DAILY_PER_EMAIL))) {
+  else if (
+    (await deps.mailQuota.take(`reset-email:${accountKey}`, DAILY_PER_EMAIL.windowSeconds)) >
+    DAILY_PER_EMAIL.max
+  ) {
     exceeded = "passwordResetPerEmailDaily";
   }
   if (!exceeded) return;

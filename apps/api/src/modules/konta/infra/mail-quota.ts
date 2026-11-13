@@ -1,4 +1,3 @@
-import type { RateLimit } from "@lista/shared";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { mailQuota } from "../../../db/schema";
@@ -11,8 +10,11 @@ import { mailQuota } from "../../../db/schema";
 export class MailQuota {
   constructor(private readonly db: NodePgDatabase) {}
 
-  /** Zalicza mail jednym atomowym zapytaniem; `false`, gdy limit klucza jest wyczerpany. */
-  async take(key: string, { windowSeconds, max }: RateLimit): Promise<boolean> {
+  /**
+   * Zalicza mail jednym atomowym zapytaniem; zwraca, który to mail w oknie (ponad `max` — limit
+   * wyczerpany; `max + 1` dostaje dokładnie jedno wywołanie w oknie).
+   */
+  async take(key: string, windowSeconds: number): Promise<number> {
     const now = new Date();
     const windowExpired = sql`${mailQuota.windowStartedAt} <= ${new Date(now.getTime() - windowSeconds * 1000)}::timestamptz`;
     const [row] = await this.db
@@ -26,6 +28,6 @@ export class MailQuota {
         },
       })
       .returning({ count: mailQuota.count });
-    return (row?.count ?? 0) <= max;
+    return row?.count ?? 0;
   }
 }

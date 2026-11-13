@@ -142,14 +142,16 @@ function sendResetMail(
   { mailer, ownerAlerts, clock }: Pick<AccountDeps, "mailer" | "ownerAlerts" | "clock">,
 ): OnPasswordResetToken {
   const mailQuota = new MailQuota(db);
+  const { max, windowSeconds } = RATE_LIMITS.passwordResetMailsDaily;
   return (email, token) => {
     mailQuota
-      .take("reset-mails", RATE_LIMITS.passwordResetMailsDaily)
-      .then((allowed) => {
-        if (allowed) return mailer.send(passwordResetMail(origin, email, token));
+      .take("reset-mails", windowSeconds)
+      .then((count) => {
+        if (count <= max) return mailer.send(passwordResetMail(origin, email, token));
         const event = "password_reset_budget_exhausted";
         app.log.warn({ event }, event);
-        ownerAlerts.raise(resetBudgetExhaustedAlert(clock.now()));
+        // Jeden alarm na okno budżetu (pierwsza odmowa), żeby alarmy nie zjadały doby Brevo.
+        if (count === max + 1) ownerAlerts.raise(resetBudgetExhaustedAlert(clock.now()));
       })
       .catch((error: unknown) => {
         logFailure(app.log, "password_reset_mail_failed", error, deliveryFailure(error));

@@ -105,6 +105,12 @@ describe("daily password reset mail limits (T-120)", () => {
       expect(alerts()).toHaveLength(1);
     });
     expect(resets()).toHaveLength(100);
+    // Prewencja T-120: jeden alarm na okno budżetu, nie co 15 min (T-088) — inaczej alarmy same
+    // wyczerpują dobę Brevo (mail-budget.test.ts).
+    vi.setSystemTime(Date.now() + 60 * MINUTE_MS);
+    expect((await requestReset(app, users[10]?.email ?? "")).statusCode).toBe(200);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(alerts()).toHaveLength(1);
     await app.close();
   });
 });
