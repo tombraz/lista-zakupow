@@ -4,7 +4,7 @@ title: "Prośby o reset nie wyczerpują dobowego limitu maili dostawcy"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-progress    # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-03, N-03]
@@ -41,7 +41,7 @@ related_tasks: [T-053, T-055, T-088]
 | --- | --- | --- | --- | --- |
 | 1 | `stops sending reset mail to one address after the daily limit, with the same answer` | integracja | Vitest + Testcontainers | AC1 |
 | 2 | `stops sending reset mail after the daily budget and alerts the owner once` | integracja | Vitest + Testcontainers | AC2, AC3 |
-| 3 | `writes no counter rows once the IP limit is exceeded` | integracja | Vitest + Testcontainers | AC4 |
+| 3 | `limits.security.test.ts` › `passwordResetPerIp` / `passwordResetPerEmail` — po limicie IP i 15-minutowym żadna tabela (także `mail_quota`) nie przybiera wierszy (zastępuje planowany osobny test „writes no counter rows…”, QA runda 1 #3) | integracja | Vitest + Testcontainers | AC4 |
 | 3a | `limits.security.test.ts` › `passwordResetPerEmailDaily: exceeding the limit repeatedly logs one security event` (żadna tabela nie przybiera wierszy po `atLimit`) | integracja | Vitest + Testcontainers | AC1, AC4 |
 | 3b | `cleanup.retention.test.ts` › `deletes daily reset mail counters after their 24 h window`; `cleanup.logs.test.ts` z `mail_quota` | integracja | Vitest + Testcontainers | AC4 |
 
@@ -69,6 +69,8 @@ Inne wystąpienia: inne maile wychodzą tylko jako alarmy N-03 (już tłumione, 
 - Red (przed poprawką), `pnpm vitest run --project api password-reset.daily-limits`:
   - `stops sending reset mail to one address after the daily limit, with the same answer` — `expected [200 ×12] to deeply equal [200 ×10, 429, 429]`.
   - `stops sending reset mail after the daily budget and alerts the owner once` — `expected [] to have a length of 1 but got +0` (brak alarmu po 100 mailach).
+- Red dla 3a (spot-check: na trasie wyłączone `mailQuota.take`), `pnpm vitest run --project api limits.security -t passwordResetPerEmailDaily` — `expected { 'public."user"': 1, …(13) } to deeply equal { 'public."user"': 1, …(13) }` (próby ponad limit dobowy dochodzą do Better Auth i dopisują wiersze; mail wychodzi).
+- Red dla 3b (spot-check: reguła sprzątania `mail_quota` → `false`): `cleanup.retention` › `deletes daily reset mail counters after their 24 h window` — `expected [ 'open', 'passed' ] to deeply equal [ 'open' ]`; `cleanup.logs` › `logs only table names and row counts` — `expected { session: 1, verification: 1, …(5) } to deeply equal { invitation: 1, …(6) }`.
 - Green: oba testy przechodzą; pełny zestaw 159 plików / 1297 testów, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — bez błędów.
 - Decyzje właściciela 2026-11-13: progi 10 / e-mail i 100 łącznie na 24 h; po limicie dobowym per e-mail odpowiedź 429 `rate_limited` (jak limit 15-minutowy).
 - Uwaga dla QA: okno dobowe liczone od pierwszej prośby (nie doba kalendarzowa Europe/Warsaw) — jak w pozostałych limitach; budżet 100 jest dobrany tak, by dwa okna w jednej dobie Brevo plus alarmy mieściły się w 300. Licznik w bazie, więc restart procesu go nie zeruje.

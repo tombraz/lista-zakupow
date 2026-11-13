@@ -89,3 +89,4 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
 | 2026-11-10 | T-117: frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |
 | 2026-11-13 | T-119: „Konwencje”: kolejność blokad `user` → `shopping_list` → `list_member` → `item`; `lockListFor` w repozytoriach. |
+| 2026-11-13 | T-120: tabela `mail_quota` (migracja `0009_mail_quota.sql`) — dobowe liczniki maili resetu poza `rate_limit`, bo Better Auth kasuje tam wiersze starsze niż 1 h; sprzątanie po 24 h. |
