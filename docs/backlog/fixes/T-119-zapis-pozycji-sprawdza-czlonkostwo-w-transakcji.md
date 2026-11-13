@@ -4,7 +4,7 @@ title: "Zapis pozycji sprawdza członkostwo w transakcji; usunięcie uczestnika 
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: todo           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-13]
@@ -54,9 +54,19 @@ related_tasks: [T-056, T-058, T-059, T-029]
 
 ## Root cause
 
-<Do uzupełnienia przy poprawce. Wstępnie: wzorzec „sprawdź, potem zapisz” z E-01; testy TH-04 sprawdzały zapis po usunięciu, nie zapis w toku.>
+Trasy pozycji sprawdzały dostęp (`requireListAccess`) osobnym zapytaniem przed transakcją zapisu — wzorzec „sprawdź, potem zapisz” z E-01. Transakcja zapisu nie sprawdzała członkostwa ponownie, a nic nie szeregowało jej ze zmianą członkostwa, więc zapis rozpoczęty przed usunięciem uczestnika, opuszczeniem listy albo usunięciem konta kończył się po nim sukcesem (przy usunięciu konta: 500 z naruszenia klucza obcego `added_by`). Testy TH-04 sprawdzały tylko zapis wysłany po usunięciu, nigdy zapis w toku.
+
+**Poprawka:** `lockListFor` (`listy/infra/lists-repository.ts`) w każdej transakcji zapisu pozycji (`insert`, `update`, `delete`, `check`, `deleteChecked`): blokada listy (`lockList`, `FOR UPDATE`), potem członkostwo z `FOR SHARE` na wierszu `list_member`. Brak dostępu = 404 `not_found`. Blokada wiersza członkostwa szereguje zapis z usunięciem uczestnika, opuszczeniem listy i kaskadą usunięcia konta bez zmian w tych ścieżkach. Kolejność blokad w zapisach: lista, członkostwo, pozycja (dotąd `update`/`check` blokowały pozycję przed listą przez `touchList`).
+
+**Ten sam wzorzec gdzie indziej:** zaproszenia (`invitations-repository.ts`) biorą `lockList`, ale sprawdzają rolę właściciela przed transakcją — właściciela listy nie da się odebrać, więc bez skutku; zmiana nazwy i usunięcie listy (właściciel) jak wyżej. Subskrypcja na żywo ma własne zabezpieczenie (T-056).
 
 ## Evidence
+
+- Test `apps/api/test/items.membership-race.test.ts` (seam HTTP, `gatedPool` wstrzymuje wynik `roleOf`, usunięcie przez drugą aplikację na niewstrzymanej puli). Przed poprawką 9/9 czerwone:
+  - `refuses an item write (add|edit|check|uncheck|delete|clear checked) that started before the participant was removed (AC1)`: `expected 201 to be 404` (add, edit, check, uncheck), `expected 200 to be 404` (clear checked), `expected 204 to be 404` (delete);
+  - `… participant left (AC2)`: `expected 201 to be 404`; `… participant deleted their account (AC2)`: `expected 500 to be 404`;
+  - `makes removing a participant wait for their write already in its transaction`: `0 of 1 results held` (w transakcji nie było sprawdzenia członkostwa).
+- Po poprawce: 9/9 zielone; pełny zestaw 158 plików / 1290 testów zielony, `--sequence.shuffle --sequence.seed=119` dla `api` zielony; typecheck, lint, `format:check`, build czyste.
 
 ## Prevention
 
