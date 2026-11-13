@@ -4,7 +4,7 @@ title: "Prośby o reset nie wyczerpują dobowego limitu maili dostawcy"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: done           # todo | in-progress | in-qa | done | blocked
+status: in-qa          # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-03, N-03]
@@ -76,6 +76,10 @@ Inne wystąpienia: inne maile wychodzą tylko jako alarmy N-03 (już tłumione, 
 - Uwaga dla QA: okno dobowe liczone od pierwszej prośby (nie doba kalendarzowa Europe/Warsaw) — jak w pozostałych limitach; budżet 100 jest dobrany tak, by dwa okna w jednej dobie Brevo plus alarmy mieściły się w 300. Licznik w bazie, więc restart procesu go nie zeruje.
 
 ## Prevention
+
+Co by zapobiegło: test, który zestawia wszystkie maile z API z dobowym limitem dostawcy. Przyjęte przez właściciela 2026-11-13: `apps/api/test/mail-budget.test.ts` liczy najgorszy przypadek ze stałych (2 okna budżetu × `passwordResetMailsDaily.max` + alarmy `reset_tokens_revoke_failed` co `OWNER_ALERT_WINDOW_SECONDS` + alarmy budżetu) i wymaga ≤ 300 (Brevo). Nowy rodzaj maila albo alarmu dopisuje tam swój najgorszy przypadek.
+
+Liczenie ujawniło lukę w tej poprawce: alarm `password_reset_budget_exhausted` tłumiony tylko co 15 min (T-088) dawał do 96 alarmów na dobę, razem 200 + 96 + 96 = 392 > 300. Poprawka po QA rundzie 2: alarm budżetu wychodzi raz na okno budżetu (pierwsza odmowa, `count === max + 1` z atomowego licznika — `MailQuota.take` zwraca numer maila w oknie). Red: `stops sending reset mail after the daily budget and alerts the owner once` (dopisana prośba 1 h później) — `expected [ { …(3) }, { …(3) } ] to have a length of 1 but got 2`; green: pełny zestaw 160 plików / 1298 testów, lint, typecheck, format, build.
 
 ## Incident note
 
