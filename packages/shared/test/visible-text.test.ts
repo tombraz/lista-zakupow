@@ -300,3 +300,31 @@ describe("text visible to others: line separators, unusual spaces and empty char
     });
   });
 });
+
+// T-121, prewencja: zamiast wypisanych kategorii — każdy znak, który nie jest literą, cyfrą,
+// interpunkcją, symbolem ani znakiem łączącym (czyli każdy Z* i C* poza U+0020, w notatce także
+// `\n`), w środku tekstu daje `invalid`. Zakres BMP i SMP: tam są wszystkie odstępy i separatory.
+describe("text visible to others: every separator and other character outside the allowed space (T-121)", () => {
+  const OUTSIDE: string[] = [];
+  for (let codePoint = 0; codePoint <= 0x1ffff; codePoint++) {
+    const char = String.fromCodePoint(codePoint);
+    if (char !== " " && !/[\p{L}\p{N}\p{P}\p{S}\p{M}]/u.test(char)) OUTSIDE.push(char);
+  }
+
+  it("finds the characters to check", () => {
+    expect(OUTSIDE).toContain(" ");
+    expect(OUTSIDE).toContain("　");
+    expect(OUTSIDE).toContain("\uD800");
+  });
+
+  for (const [field, errorOf] of FIELDS) {
+    it(`${field}: rejects every such character inside the text`, () => {
+      // NBSP zamieniana na spację (decyzja właściciela 2026-11-13).
+      const allowed = field.startsWith("note") ? ["\u00A0", "\n"] : ["\u00A0"];
+      const accepted = OUTSIDE.filter(
+        (char) => !allowed.includes(char) && errorOf(`Mle${char}ko`) !== "invalid",
+      ).map((char) => `U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase()}`);
+      expect(accepted).toEqual([]);
+    });
+  }
+});

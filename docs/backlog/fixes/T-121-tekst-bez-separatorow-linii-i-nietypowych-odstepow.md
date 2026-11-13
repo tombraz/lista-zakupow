@@ -75,6 +75,9 @@ T-060 i T-073 zdefiniowały „ukryty znak” listą kategorii Cc, Cf i Default_
 
 ## Prevention
 
+Co by zapobiegło: test własności zamiast wypisanych kategorii. Właściciel przyjął (2026-11-13): `visible-text.test.ts` › „every separator and other character outside the allowed space” — każdy znak BMP i SMP spoza L/N/P/S/M (poza U+0020, NBSP i `
+` w notatce) w środku tekstu daje `invalid` we wszystkich polach; na walidatorze sprzed poprawki pada (46 tys.+ przepuszczonych znaków). Wpis w „Pułapkach” odrzucony jako zbędny przy tym teście. Kontrola CI rozjazdu reguły i przewodnika warstwy (propozycja QA) — osobne zadanie przez `/plan-backlog`, jeśli właściciel zechce.
+
 Hardening z przeglądu (#11, #12) poza tym zadaniem: zwijanie odstępów w kluczu duplikatu (nowy krok migracji danych), `unicode-bidi: isolate` dla treści innych osób w web.
 
 ## Incident note
