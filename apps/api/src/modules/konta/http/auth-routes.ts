@@ -1,9 +1,11 @@
 import {
+  RATE_LIMITS,
   passwordResetRequestSchema,
   passwordResetSchema,
   signInRequestSchema,
   signUpRequestSchema,
   type ErrorCode,
+  type LimitKey,
   type SignUpInvitation,
 } from "@lista/shared";
 import { fromNodeHeaders } from "better-auth/node";
@@ -14,6 +16,7 @@ import { validate } from "../../../http/validate";
 import { bestEffort, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
+import type { MailQuota } from "../infra/mail-quota";
 import type { PasswordResetRequests } from "../infra/password-reset-requests";
 import type { ResetTokens } from "../infra/reset-tokens";
 import type { SignInFailures } from "../infra/sign-in-failures";
@@ -26,6 +29,8 @@ interface AuthDeps {
   /** TH-10 (T-118): bieżący hash hasła konta z tym e-mailem (`infra/credentials.ts`). */
   passwordHash: (email: string) => Promise<string | null>;
   resetRequests: PasswordResetRequests;
+  /** T-120 (TH-10): dobowy limit maili resetu per e-mail. */
+  mailQuota: MailQuota;
   /** F-03, TH-10: resety konta po kolei, po udanym reszta linków konta przestaje działać. */
   resetTokens: ResetTokens;
   /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
@@ -73,7 +78,7 @@ interface AuthUser {
  * odpowiedzi w formacie API, bez tokenu sesji w treści (TH-16).
  */
 export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string): void {
-  const { auth, failures, resetRequests } = deps;
+  const { auth, failures } = deps;
   app.post("/api/auth/sign-up/email", async (request, reply) => {
     const { name, email, password, invitationToken } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
@@ -120,10 +125,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
       async (request, reply) => {
         const { email } = validate(passwordResetRequestSchema, request.body);
         const accountKey = deps.accountKey(email);
-        if (!(await resetRequests.take(accountKey))) {
-          logLimitEvent(request, "rate_limited", "passwordResetPerEmail", { ids: { accountKey } });
-          throw new ApiError(429, "rate_limited");
-        }
+        await takeResetLimits(request, deps, accountKey);
         const response = await forward(auth, origin, request, { email });
         if (response.status === 429) logLimitEvent(request, "rate_limited", "passwordResetPerIp");
         return relay(response, reply);
@@ -139,6 +141,27 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
     if (response.ok && session) deps.onSignedOut(session.session.id);
     return relay(response, reply);
   });
+}
+
+const DAILY_PER_EMAIL = RATE_LIMITS.passwordResetPerEmailDaily;
+
+/**
+ * TH-10: limity maili resetu per e-mail — 15-minutowy, potem dobowy (T-120), więc dobowy liczy
+ * tylko prośby, które mogą wysłać mail. Ten sam 429 dla istniejącego i nieistniejącego konta.
+ */
+async function takeResetLimits(
+  request: FastifyRequest,
+  deps: Pick<AuthDeps, "resetRequests" | "mailQuota">,
+  accountKey: string,
+) {
+  let exceeded: LimitKey | undefined;
+  if (!(await deps.resetRequests.take(accountKey))) exceeded = "passwordResetPerEmail";
+  else if (!(await deps.mailQuota.take(`reset-email:${accountKey}`, DAILY_PER_EMAIL))) {
+    exceeded = "passwordResetPerEmailDaily";
+  }
+  if (!exceeded) return;
+  logLimitEvent(request, "rate_limited", exceeded, { ids: { accountKey } });
+  throw new ApiError(429, "rate_limited");
 }
 
 /** F-03: nowe hasło z linku resetu; TH-10 / TH-28: koniec sesji konta i ich połączeń na żywo. */

@@ -111,6 +111,8 @@ erDiagram
 | Usunięcie wygrywa z równoczesną edycją (F-14) | `UPDATE … WHERE id = $1 AND list_id = $2`; 0 wierszy = `404` |
 | Kolejność (SC-05, SC-06) | listy: `updated_at DESC`; nieodhaczone: `created_at DESC`; odhaczone: `checked_at DESC` |
 
+Dobowe liczniki maili resetu (TH-10, N-03, T-120): tabela `mail_quota (key PK, count, window_started_at)`, okno 24 h od pierwszego maila, licznik jak w `sign_in_failure` (`INSERT … ON CONFLICT DO UPDATE … RETURNING count`). Klucz `reset-email:<pseudonim e-maila>` (10 próśb na adres, po limicie 15-minutowym) albo `reset-mails` (100 maili resetu łącznie; ponad budżet mail nie wychodzi, a właściciel dostaje alarm). Nie w `rate_limit`, bo Better Auth kasuje tam wiersze starsze niż jego najdłuższe okno (1 h).
+
 Licznik nieudanych logowań per konto (TH-09, T-004): tabela `sign_in_failure (account_key PK, failures, window_started_at)`; `account_key` to HMAC-SHA256 znormalizowanego e-maila z `BETTER_AUTH_SECRET`, więc tabela nie powiela adresu. Okno 15 min liczone od pierwszej porażki. Próba jest rezerwowana przed sprawdzeniem hasła jednym zapytaniem `INSERT … ON CONFLICT DO UPDATE … RETURNING failures` (odmowa, gdy wynik > 5), a próba zakończona inaczej niż 401 jest oddawana — równoległe żądania nie obejdą limitu (QA T-004 runda 1). Licznik, który po oddaniu próby wraca do 0, jest usuwany, a limit per IP działa przed rezerwacją, więc próby ponad limit IP nie piszą do tabeli (TH-27, T-048).
 
 Indeksy: `list_member (user_id)`, `item (list_id)`, `invitation (list_id)`, `shopping_list (owner_id)`, `session (user_id)`. Dla `item` rolę indeksu po `list_id` pełni unikalny `item_list_id_name_key_unique (list_id, name_key)` (pierwsza kolumna), więc osobnego indeksu nie ma (T-006).
@@ -133,7 +135,7 @@ BRD N-02: bez dodatkowych działań dostosowujących do RODO (pilotaż, ryzyko R
 | członkostwo | `list_member` | udostępnianie | do opuszczenia, usunięcia, usunięcia listy | kaskada |
 | linki zaproszeń | `invitation` | F-11, F-12 | usuwane codziennie 30 dni po wygaśnięciu | kaskada z listą |
 | aktywność dzienna | `list_daily_activity` | miary sukcesu (BRD §10) | 90 dni, usuwane codziennie | kaskada z listą i kontem |
-| tokeny resetu, liczniki limitów | `verification`, `rate_limit`, `sign_in_failure` (pseudonim e-maila) | F-03, MC-04, MC-05 | do wygaśnięcia; usuwane codziennie. Wiersz `rate_limit` nie zapisuje swojego okna, więc znika po najdłuższym oknie limitów w tej tabeli (`signInPerIp`, `signUpPerIp`, `passwordResetPerIp`, `passwordResetPerEmail` z `RATE_LIMITS`; teraz 1 h), jak w sprzątaniu samego Better Auth; `sign_in_failure` po oknie `signInFailuresPerAccount` (`konta/infra/retention.ts`) | — |
+| tokeny resetu, liczniki limitów | `verification`, `rate_limit`, `sign_in_failure`, `mail_quota` (pseudonim e-maila) | F-03, MC-04, MC-05 | do wygaśnięcia; usuwane codziennie. Wiersz `rate_limit` nie zapisuje swojego okna, więc znika po najdłuższym oknie limitów w tej tabeli (`signInPerIp`, `signUpPerIp`, `passwordResetPerIp`, `passwordResetPerEmail` z `RATE_LIMITS`; teraz 1 h), jak w sprzątaniu samego Better Auth; `sign_in_failure` po oknie `signInFailuresPerAccount`; `mail_quota` po 24 h (`passwordResetPerEmailDaily`, `passwordResetMailsDaily`) (`konta/infra/retention.ts`) | — |
 | logi | hosting | diagnostyka | wg hostingu (`/ci-cd`), bez danych osobowych poza identyfikatorami | — |
 | kopie bazy | hosting | N-03 | 7 dni | wygasają same |
 

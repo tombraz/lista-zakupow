@@ -13,6 +13,9 @@ describe("RATE_LIMITS (MC-04, MC-05, TH-06, TH-09, TH-13)", () => {
       // T-053 (TH-10): reset 3 na e-mail w 15 min (właściciel 2026-11-01); per IP 3/min (Better Auth).
       passwordResetPerIp: { windowSeconds: 60, max: 3 },
       passwordResetPerEmail: { windowSeconds: 900, max: 3 },
+      // T-120 (TH-10, N-03): 10 maili na adres i 100 łącznie w dobie (właściciel 2026-11-13).
+      passwordResetPerEmailDaily: { windowSeconds: 86400, max: 10 },
+      passwordResetMailsDaily: { windowSeconds: 86400, max: 100 },
       // api.md: `GET /health/ready` 30/min per IP.
       healthReadyPerIp: { windowSeconds: 60, max: 30 },
       // TH-06, TH-13: progi z T-008 (threat-model.md: „konkretne progi w tasku”).

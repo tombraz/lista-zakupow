@@ -1,4 +1,4 @@
-import { PASSWORD_RESET_VALIDITY_SECONDS } from "@lista/shared";
+import { PASSWORD_RESET_VALIDITY_SECONDS, RATE_LIMITS } from "@lista/shared";
 import type { OwnerAlert } from "../../../owner-alerts";
 
 /**
@@ -22,6 +22,28 @@ export function linksNotRevokedAlert(userId: string, at: Date, errorCode: string
       `Kod błędu: ${errorCode}`,
       "",
       "Szczegóły w logu API (Fly) pod zdarzeniem reset_tokens_revoke_failed.",
+    ].join("\n"),
+  };
+}
+
+/**
+ * T-120 (N-03, TH-10): dobowy budżet maili resetu wyczerpany, więc kolejne maile resetu nie
+ * wychodzą (alarmy mają rezerwę u dostawcy). Bez e-maili i kont (TH-21).
+ */
+export function resetBudgetExhaustedAlert(at: Date): OwnerAlert {
+  const { max, windowSeconds } = RATE_LIMITS.passwordResetMailsDaily;
+  return {
+    event: "password_reset_budget_exhausted",
+    at,
+    subject: "Alarm: wyczerpany dobowy budżet maili resetu hasła",
+    text: [
+      `Wysłano ${String(max)} maili resetu hasła w oknie ${String(windowSeconds / 3600)} h; kolejne nie wychodzą do końca okna.`,
+      "Prośby dostają zwykłą odpowiedź. Możliwe zalewanie prośbami o reset (TH-10).",
+      "",
+      "Zdarzenie: password_reset_budget_exhausted",
+      `Czas zdarzenia (UTC): ${at.toISOString()}`,
+      "",
+      "Szczegóły w logu API (Fly) pod zdarzeniem password_reset_budget_exhausted.",
     ].join("\n"),
   };
 }

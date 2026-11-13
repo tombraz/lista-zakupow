@@ -229,6 +229,14 @@ export const signInFailure = pgTable("sign_in_failure", {
   windowStartedAt: timestamptz("window_started_at").notNull(),
 });
 
+// T-120 (TH-10, N-03): dobowe liczniki maili resetu (klucz: pseudonim e-maila albo budżet
+// łączny). Nie w `rate_limit`, bo Better Auth kasuje tam wiersze starsze niż jego okna (1 h).
+export const mailQuota = pgTable("mail_quota", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  windowStartedAt: timestamptz("window_started_at").notNull(),
+});
+
 // Kroki migracji danych w TS (`src/db/data-migrations/`), wykonane raz po migracjach SQL (T-060).
 export const dataMigration = pgTable("data_migration", {
   name: text("name").primaryKey(),

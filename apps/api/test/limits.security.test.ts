@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { BUSINESS_LIMITS, HTTP_LIMITS, LIVE_LIMITS, RATE_LIMITS } from "@lista/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { user } from "../src/db/schema";
 import { buildTestApp, TEST_ORIGIN } from "./app";
 import { useTestDatabase } from "./database";
@@ -24,6 +24,8 @@ const NOT_ABUSE_LIMITS = {
   pongTimeoutSeconds: "zerwane połączenie (brak pong), nie nadużycie",
   closeTimeoutSeconds: "czas oczekiwania serwera na zamknięcie TCP, nie ogranicza klienta",
   limitLogWindowSeconds: "okno deduplikacji zdarzeń w logu security, nie ogranicza klienta",
+  passwordResetMailsDaily:
+    "budżet maili dostawcy (N-03, T-120): odpowiedź bez zmian, przekroczenie to alarm do właściciela",
 } satisfies Partial<Record<LimitKey, string>>;
 
 type AbuseLimit = Exclude<LimitKey, keyof typeof NOT_ABUSE_LIMITS>;
@@ -151,6 +153,24 @@ describe("every abuse limit leaves a security event (TH-21)", () => {
       await exceed(RATE_LIMITS.passwordResetPerEmail.max, atLimit, () =>
         requestReset(app, email, randomIp()),
       );
+      return { event: "rate_limited", route: REQUEST_RESET, accountKey: expect.any(String) };
+    },
+    passwordResetPerEmailDaily: async ({ app, atLimit }) => {
+      const { email } = await createUser(app);
+      const { max } = RATE_LIMITS.passwordResetPerEmail;
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        // Po `max` prośby co 15 min (limit 15-minutowy), potem próby ponad limit w nowym oknie.
+        for (let done = 0; done < RATE_LIMITS.passwordResetPerEmailDaily.max; done += max) {
+          const batch = Math.min(max, RATE_LIMITS.passwordResetPerEmailDaily.max - done);
+          await repeat(batch, () => requestReset(app, email, randomIp()));
+          vi.setSystemTime(Date.now() + RATE_LIMITS.passwordResetPerEmail.windowSeconds * 1000);
+        }
+        await atLimit();
+        await repeat(OVER, () => requestReset(app, email, randomIp()));
+      } finally {
+        vi.useRealTimers();
+      }
       return { event: "rate_limited", route: REQUEST_RESET, accountKey: expect.any(String) };
     },
     healthReadyPerIp: async ({ app, atLimit }) => {

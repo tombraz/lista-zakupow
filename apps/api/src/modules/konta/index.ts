@@ -1,4 +1,5 @@
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { RATE_LIMITS } from "@lista/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import type { Clock } from "../../clock";
@@ -9,11 +10,12 @@ import { authRoutes, type InvitationOnSignUp } from "./http/auth-routes";
 import { meRoutes, type AccountDeleting, type NameChanged } from "./http/me-routes";
 import { requireSession, requireUser } from "./http/require-user";
 import type { Mailer } from "./domain/mailer";
-import { linksNotRevokedAlert } from "./domain/reset-alert";
+import { linksNotRevokedAlert, resetBudgetExhaustedAlert } from "./domain/reset-alert";
 import { passwordResetMail } from "./domain/reset-mail";
 import { accountKey } from "./infra/account-key";
 import { createAuth, type AuthSettings, type OnPasswordResetToken } from "./infra/auth";
 import { passwordHashOf } from "./infra/credentials";
+import { MailQuota } from "./infra/mail-quota";
 import { PasswordResetRequests } from "./infra/password-reset-requests";
 import { ResetTokens } from "./infra/reset-tokens";
 import { isSessionActive } from "./infra/sessions";
@@ -76,7 +78,8 @@ export function accountRoutes(
   { live, mailer, clock, ownerAlerts }: AccountDeps,
 ): Accounts {
   const db = drizzle(pool);
-  const auth = createAuth(db, settings, app.log, sendResetMail(app, mailer, settings.origin));
+  const resetMail = sendResetMail(app, settings.origin, db, { mailer, ownerAlerts, clock });
+  const auth = createAuth(db, settings, app.log, resetMail);
   let invitationOnSignUp: InvitationOnSignUp | undefined;
   authRoutes(
     app,
@@ -86,6 +89,7 @@ export function accountRoutes(
       failures: new SignInFailures(db),
       passwordHash: (email) => passwordHashOf(db, email),
       resetRequests: new PasswordResetRequests(db),
+      mailQuota: new MailQuota(db),
       resetTokens: new ResetTokens(db),
       invitationOnSignUp: () => invitationOnSignUp,
       onSignedOut: (sessionId) => {
@@ -130,10 +134,25 @@ export function accountRoutes(
 
 // TH-11: wysyłka w tle — czas odpowiedzi nie zdradza, czy konto istnieje. Błąd dostawcy tylko
 // w logu, bez adresu i treści (TH-21); odpowiedź i tak jest ta sama (architecture.md).
-function sendResetMail(app: FastifyInstance, mailer: Mailer, origin: string): OnPasswordResetToken {
+// T-120 (N-03): po dobowym budżecie mail resetu nie wychodzi, żeby alarmy miały rezerwę.
+function sendResetMail(
+  app: FastifyInstance,
+  origin: string,
+  db: NodePgDatabase,
+  { mailer, ownerAlerts, clock }: Pick<AccountDeps, "mailer" | "ownerAlerts" | "clock">,
+): OnPasswordResetToken {
+  const mailQuota = new MailQuota(db);
   return (email, token) => {
-    mailer.send(passwordResetMail(origin, email, token)).catch((error: unknown) => {
-      logFailure(app.log, "password_reset_mail_failed", error, deliveryFailure(error));
-    });
+    mailQuota
+      .take("reset-mails", RATE_LIMITS.passwordResetMailsDaily)
+      .then((allowed) => {
+        if (allowed) return mailer.send(passwordResetMail(origin, email, token));
+        const event = "password_reset_budget_exhausted";
+        app.log.warn({ event }, event);
+        ownerAlerts.raise(resetBudgetExhaustedAlert(clock.now()));
+      })
+      .catch((error: unknown) => {
+        logFailure(app.log, "password_reset_mail_failed", error, deliveryFailure(error));
+      });
   };
 }
