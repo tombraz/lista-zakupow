@@ -14,14 +14,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   /**
    * Akcja zapisu (albo prowadząca wprost do zapisu): bez połączenia nieaktywna przez
-   * `aria-disabled`, z paskiem „Brak połączenia” jako opisem (F-15).
+   * `aria-disabled`, z paskiem „Brak połączenia” jako opisem (F-15). Wymagane, jak
+   * `MenuAction.writes`: każdy przycisk jawnie decyduje o działaniu bez połączenia (T-114).
    */
-  writes?: boolean;
+  writes: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button(props: ButtonProps) {
-  const { variant = "primary", loading = false, writes = false, children, ...button } = props;
+  const { variant = "primary", loading = false, writes, children, ...button } = props;
   const { online } = useConnection();
   const offline = writes && !online;
   const inactive = loading || offline;

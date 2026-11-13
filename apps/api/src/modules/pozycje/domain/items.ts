@@ -35,6 +35,8 @@ export type InsertResult =
   | { status: "duplicate" }
   /** `id` od klienta należy do pozycji innej listy. */
   | { status: "id_taken" }
+  /** Dodający stracił dostęp do listy przed zapisem (T-119). */
+  | { status: "no_access" }
   | { status: "limit_reached" };
 
 /** Repozytorium pozycji, którego potrzebuje domena; implementacja w `infra`. */
@@ -46,26 +48,34 @@ export interface ItemsRepository {
   /** Nowa pozycja, gdy lista ma mniej niż `limit`; przesuwa listę na początek SC-05. */
   insert(item: NewItem, limit: number): Promise<InsertResult>;
   /**
-   * Zmiana pozycji tej listy; `null`, gdy na liście jej nie ma (także usunięta w międzyczasie,
-   * F-14), `"duplicate"`, gdy nowy `nameKey` ma inna pozycja (F-09).
+   * Zmiana pozycji tej listy przez `by`; `null`, gdy na liście jej nie ma (także usunięta
+   * w międzyczasie, F-14) albo `by` nie ma już dostępu do listy (T-119), `"duplicate"`, gdy nowy
+   * `nameKey` ma inna pozycja (F-09).
    */
   update(
     listId: string,
     itemId: string,
     changes: ItemChanges,
-    at: Date,
+    stamp: ItemStamp,
   ): Promise<ListItem | null | "duplicate">;
   /** Czy inna niż `exceptItemId` pozycja listy ma ten `nameKey` (F-09). */
   nameKeyTaken(listId: string, nameKey: string, exceptItemId?: string): Promise<boolean>;
-  /** `false`, gdy na liście nie ma tej pozycji. */
-  delete(listId: string, itemId: string): Promise<boolean>;
+  /** `false`, gdy na liście nie ma tej pozycji albo `by` nie ma już dostępu do listy. */
+  delete(listId: string, itemId: string, by: string): Promise<boolean>;
   /**
    * Odhacza (zapisując aktywność dzienną) albo odznacza pozycję tej listy; ponowne odhaczenie
-   * odhaczonej nic nie zmienia. `null`, gdy na liście nie ma tej pozycji.
+   * odhaczonej nic nie zmienia. `null`, gdy na liście nie ma tej pozycji albo odhaczający nie ma
+   * już dostępu do listy.
    */
   check(listId: string, itemId: string, check: ItemCheck): Promise<ListItem | null>;
-  /** Usuwa odhaczone pozycje listy; zwraca ich identyfikatory. */
-  deleteChecked(listId: string): Promise<string[]>;
+  /** Usuwa odhaczone pozycje listy; zwraca ich identyfikatory, `null` = `by` bez dostępu. */
+  deleteChecked(listId: string, by: string): Promise<string[] | null>;
+}
+
+/** Kto i kiedy zmienia pozycję. */
+export interface ItemStamp {
+  at: Date;
+  by: string;
 }
 
 export interface ItemCheck {
@@ -129,8 +139,10 @@ export async function addItem(
     });
   }
   if (result.status === "duplicate") throw new DomainError("duplicate_item");
-  // Cudza pozycja wygląda jak nieistniejąca (TH-01).
-  if (result.status === "id_taken") throw new DomainError("not_found");
+  // Cudza pozycja wygląda jak nieistniejąca (TH-01); dostęp utracony w trakcie też (TH-04).
+  if (result.status === "id_taken" || result.status === "no_access") {
+    throw new DomainError("not_found");
+  }
   return { item: result.item, created: result.status === "created" };
 }
 
@@ -165,7 +177,11 @@ export async function updateItem(
     ...(note === undefined ? {} : { note }),
   };
   // api.md: `updatedAt` z zegara aplikacji, jak przy odhaczeniu (klient porównuje wersje).
-  const result = await repository.update(actor.access.listId, itemId, changes, actor.clock.now());
+  const { access, clock, userId } = actor;
+  const result = await repository.update(access.listId, itemId, changes, {
+    at: clock.now(),
+    by: userId,
+  });
   if (result === "duplicate") throw new DomainError("duplicate_item");
   if (!result) throw new DomainError("not_found");
   return result;
@@ -204,14 +220,19 @@ export async function changeItem(
 /** F-07: usunięcie od razu, bez potwierdzenia (SC-06); już usunięta = `not_found`. */
 export async function deleteItem(
   repository: ItemsRepository,
-  access: ListAccess,
+  { access, userId }: Pick<Actor, "access" | "userId">,
   itemId: string,
 ): Promise<void> {
-  const deleted = isUuid(itemId) && (await repository.delete(access.listId, itemId));
+  const deleted = isUuid(itemId) && (await repository.delete(access.listId, itemId, userId));
   if (!deleted) throw new DomainError("not_found");
 }
 
 /** F-08: „Usuń wszystkie kupione” (po potwierdzeniu w SC-06); nieodhaczone zostają. */
-export function clearChecked(repository: ItemsRepository, access: ListAccess): Promise<string[]> {
-  return repository.deleteChecked(access.listId);
+export async function clearChecked(
+  repository: ItemsRepository,
+  { access, userId }: Pick<Actor, "access" | "userId">,
+): Promise<string[]> {
+  const deleted = await repository.deleteChecked(access.listId, userId);
+  if (!deleted) throw new DomainError("not_found");
+  return deleted;
 }

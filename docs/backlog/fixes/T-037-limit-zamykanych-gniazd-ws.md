@@ -27,8 +27,8 @@ related_tasks: [T-033, T-036]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given sesja, która otwiera i zamyka połączenia bez FIN, when przekroczy ustalony limit, then kolejne gniazda nie zostają utrzymywane (np. krótki `closeTimeout` / `terminate` po wymianie ramek close / limit upgrade'ów na sesję — do wyboru w `/fix`), a przekroczenie limitu trafia do logu `security` przez `logLimitEvent`. — verified by: `live.limits.test.ts`
-- [ ] AC2: No regression in: T-033, T-036, `limits.security.test.ts`.
+- [x] AC1: Given sesja, która otwiera i zamyka połączenia bez FIN, when przekroczy ustalony limit, then kolejne gniazda nie zostają utrzymywane (np. krótki `closeTimeout` / `terminate` po wymianie ramek close / limit upgrade'ów na sesję — do wyboru w `/fix`), a przekroczenie limitu trafia do logu `security` przez `logLimitEvent`. — verified by: `live.limits.test.ts`
+- [x] AC2: No regression in: T-033, T-036, `limits.security.test.ts`.
 
 ## TDD plan
 

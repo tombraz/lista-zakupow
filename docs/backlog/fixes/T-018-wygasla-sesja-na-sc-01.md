@@ -27,9 +27,9 @@ related_tasks: [T-004, T-005, T-009]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given zalogowany na SC-05, when `GET /api/v1/lists` zwraca 401, then użytkownik trafia na SC-01, a po zalogowaniu wraca na SC-05. — verified by: test komponentu (MSW 401)
-- [ ] AC2: Given SC-06 z aktywnym WS, when sesja wygasa, then po 401 WS nie ponawia połączenia. — verified by: test komponentu `LiveSocket` / E2E J-01
-- [ ] AC3: No regression in: logowanie (401 z błędnym hasłem nie może wylogowywać), SC-08 dla niezalogowanego, wylogowanie z SC-09.
+- [x] AC1: Given zalogowany na SC-05, when `GET /api/v1/lists` zwraca 401, then użytkownik trafia na SC-01, a po zalogowaniu wraca na SC-05. — verified by: test komponentu (MSW 401)
+- [x] AC2: Given SC-06 z aktywnym WS, when sesja wygasa, then po 401 WS nie ponawia połączenia. — verified by: test komponentu `LiveSocket` / E2E J-01
+- [x] AC3: No regression in: logowanie (401 z błędnym hasłem nie może wylogowywać), SC-08 dla niezalogowanego, wylogowanie z SC-09.
 
 ## TDD plan
 

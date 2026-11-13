@@ -35,12 +35,8 @@ export const messages = {
     // Copy SC-07 `remove.error` (T-058 AC4).
     failed: "Nie udało się usunąć. Spróbuj ponownie.",
   },
-  leave: {
-    action: "Opuść listę",
-    question: (listName: string) => `Opuścić listę „${listName}”?`,
-    consequence: "Żeby wrócić, potrzebujesz nowego zaproszenia.",
-    confirm: "Opuść",
-  },
+  // Okno potwierdzenia i `leave.error`: `lists/LeaveListDialog.tsx` (wspólne z SC-06, T-094).
+  leave: { action: "Opuść listę" },
   cancel: "Anuluj",
   limit: "Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę.",
 };
@@ -51,11 +47,6 @@ export function createErrorText(code: RequestErrorCode): string {
     rate_limited: "Utworzono zbyt wiele linków. Spróbuj ponownie za godzinę.",
     otherwise: "Nie udało się utworzyć linku. Spróbuj ponownie.",
   });
-}
-
-// Copy SC-07 `leave.error` (T-080).
-export function leaveErrorText(code: RequestErrorCode): string {
-  return errorText(code, { otherwise: "Nie udało się opuścić listy. Spróbuj ponownie." });
 }
 
 export function removeErrorText(code: RequestErrorCode): string {

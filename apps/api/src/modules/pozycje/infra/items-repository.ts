@@ -2,12 +2,13 @@ import { and, desc, eq, inArray, isNotNull, isNull, ne, sql, type SQL } from "dr
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { alias } from "drizzle-orm/pg-core";
 import { item, shoppingList, user } from "../../../db/schema";
-import { lockList } from "../../listy";
+import { lockListFor } from "../../listy";
 import { recordCheck } from "../../statystyki";
 import type {
   InsertResult,
   ItemChanges,
   ItemCheck,
+  ItemStamp,
   ItemsRepository,
   ListItem,
   NewItem,
@@ -42,7 +43,7 @@ export class DrizzleItemsRepository implements ItemsRepository {
   async insert(values: NewItem, limit: number): Promise<InsertResult> {
     return this.db.transaction(async (tx) => {
       // data-model.md: blokada wiersza listy szereguje równoległe dodawanie jej pozycji.
-      await lockList(tx, values.listId);
+      if (!(await lockListFor(tx, values.listId, values.addedBy))) return { status: "no_access" };
       if (values.id !== undefined) {
         const repeated = await this.repeatedInsert(tx, values.id, values.listId);
         if (repeated) return repeated;
@@ -76,10 +77,11 @@ export class DrizzleItemsRepository implements ItemsRepository {
     listId: string,
     itemId: string,
     changes: ItemChanges,
-    at: Date,
+    { at, by }: ItemStamp,
   ): Promise<ListItem | null | "duplicate"> {
     try {
       return await this.db.transaction(async (tx) => {
+        if (!(await lockListFor(tx, listId, by))) return null;
         // data-model.md: zawsze z `list_id` sprawdzonej listy; 0 wierszy = usunięta (F-14).
         const [row] = await tx
           .update(item)
@@ -111,8 +113,9 @@ export class DrizzleItemsRepository implements ItemsRepository {
     return row !== undefined;
   }
 
-  async delete(listId: string, itemId: string): Promise<boolean> {
+  async delete(listId: string, itemId: string, by: string): Promise<boolean> {
     return this.db.transaction(async (tx) => {
+      if (!(await lockListFor(tx, listId, by))) return false;
       const deleted = await tx
         .delete(item)
         .where(and(eq(item.id, itemId), eq(item.listId, listId)))
@@ -123,8 +126,9 @@ export class DrizzleItemsRepository implements ItemsRepository {
     });
   }
 
-  async deleteChecked(listId: string): Promise<string[]> {
+  async deleteChecked(listId: string, by: string): Promise<string[] | null> {
     return this.db.transaction(async (tx) => {
+      if (!(await lockListFor(tx, listId, by))) return null;
       const deleted = await tx
         .delete(item)
         .where(and(eq(item.listId, listId), isNotNull(item.checkedAt)))
@@ -136,6 +140,7 @@ export class DrizzleItemsRepository implements ItemsRepository {
 
   async check(listId: string, itemId: string, check: ItemCheck): Promise<ListItem | null> {
     return this.db.transaction(async (tx) => {
+      if (!(await lockListFor(tx, listId, check.by))) return null;
       const onList = and(eq(item.id, itemId), eq(item.listId, listId));
       // Odhaczenie tylko nieodhaczonej: podwójne kliknięcie nie zmienia podpisu (F-10).
       const [row] = await tx

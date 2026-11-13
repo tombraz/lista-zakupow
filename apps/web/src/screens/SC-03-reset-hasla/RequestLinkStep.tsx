@@ -39,7 +39,7 @@ export function RequestLinkStep() {
           }}
           error={form.invalid && messages.email.invalid}
         />
-        <Button type="submit" loading={form.pending}>
+        <Button writes={false} type="submit" loading={form.pending}>
           {messages.submit}
         </Button>
       </AuthForm>

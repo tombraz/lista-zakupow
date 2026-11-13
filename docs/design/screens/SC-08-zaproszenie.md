@@ -70,7 +70,10 @@ Uwaga dot. MC-02: nazwa listy i imię właściciela są pokazywane tylko dla wa�
 | already | Już jesteś na tej liście. |
 | own | To Twoja lista — nie musisz dołączać. |
 | open | Otwórz listę |
-| joined | Dołączyłeś(-aś) do listy „{nazwa}”. |
+| joined | Dołączyłeś(-aś) do listy „{nazwa}”. (pokazuje SC-06; T-111) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z Layout/States, T-100) |
+| error.rateLimit | Zbyt wiele prób. Spróbuj ponownie za minutę. (zatwierdzone 2026-11-05, T-100) |
+| error.otherwise | Coś poszło nie tak. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-100) |
 
 ## Accessibility
 

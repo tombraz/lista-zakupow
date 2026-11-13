@@ -4,7 +4,7 @@ status: approved         # draft | approved
 ui: yes                  # yes | none (no user interface: design stage is skipped)
 profile: greenfield      # greenfield | brownfield (set by /adopt-codebase)
 change:                  # brownfield only: current change ID, C-00 = adoption, C-01, C-02 …
-version: 1.3
+version: 1.4
 approved: 2026-10-26     # YYYY-MM-DD, filled only on explicit approval
 ---
 
@@ -100,7 +100,7 @@ Konta z e-mailem i hasłem, prywatne listy z pozycjami do odhaczania oraz udost�
   - Given istniejące konto, when domownik poprosi o reset hasła dla swojego e-maila, then dostaje mail z linkiem do ustawienia nowego hasła.
   - Given dowolny e-mail, when ktoś poprosi o reset, then komunikat w aplikacji jest taki sam niezależnie od tego, czy konto istnieje.
   - Given link resetu został już użyty lub wygasł, when ktoś go otworzy, then nie może ustawić hasła.
-- **Business rules:** Link resetu jest jednorazowy i ważny 1 godzinę. Nowe hasło ma co najmniej 8 znaków. To jedyny mail wysyłany przez aplikację. Prośby o reset są ograniczane, żeby nie dało się zalewać skrzynki (MC-04).
+- **Business rules:** Link resetu jest jednorazowy i ważny 1 godzinę. Nowe hasło ma co najmniej 8 znaków. To jedyny mail wysyłany do domowników (poza nim aplikacja wysyła tylko alarmy do właściciela projektu, N-03). Prośby o reset są ograniczane, żeby nie dało się zalewać skrzynki (MC-04).
 
 ### F-04 Usunięcie konta
 - **Persona:** Domownik
@@ -374,3 +374,4 @@ Brak — wszystkie rozstrzygnięte przy zatwierdzeniu (2026-10-26).
 | 2026-10-26 | 1.1 | F-09: blokada duplikatu obejmuje też zmianę nazwy pozycji (na prośbę właściciela). |
 | 2026-10-26 | 1.2 | Luki z /brd-to-design: imię przy rejestracji i F-16 zmiana imienia; prezentacja osoby imieniem (F-10, F-13); hasło ≥8 znaków (F-01, F-03); link resetu ważny 1 h (F-03). |
 | 2026-10-26 | 1.3 | F-05: nazwa listy 1–100 znaków (luka z /brd-to-design). |
+| 2026-11-06 | 1.4 | F-03: „jedyny mail” dotyczy maili do domowników; alarmy do właściciela projektu (N-03) to osobny odbiorca (przegląd E-02 runda 3, P5; decyzja właściciela). |

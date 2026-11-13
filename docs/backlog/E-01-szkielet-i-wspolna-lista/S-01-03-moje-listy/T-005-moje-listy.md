@@ -172,7 +172,7 @@ Zmiana istniejącego testu: `apps/api/test/body-limit.test.ts` (T-001) używał 
 - **`members` w `GET /lists/:listId`:** dopisane do kontraktu (`api.md`), bo okno usunięcia pokazuje liczbę uczestników.
 - **Teksty agenta (brak w tabelach „Copy”):** okno usunięcia przy 0 uczestników — „Tego nie można cofnąć.” (zamiast „Zniknie też u 0 uczestników.”); przy 1 — „Zniknie też u 1 uczestnika.”; nieudane utworzenie — „Nie udało się utworzyć listy. Spróbuj ponownie.”; nieudane usunięcie i zmiana nazwy — Copy SC-06 `saveError`. Tytuł arkusza „Zmień nazwę listy” (jak pozycja menu), przycisk „Zapisz” (`edit.save`). Na ekranie „brak dostępu” `h1` to „Nie masz dostępu do tej listy.”.
 - **Karta listy:** zawsze „N do kupienia”; „Wszystko kupione” (`card.allBought`) dopiero z pozycjami (T-006 / T-007) — dziś nie da się odróżnić pustej listy od listy, na której wszystko kupiono.
-- **Menu „Więcej opcji”:** wzorzec disclosure (przycisk z `aria-expanded` + lista przycisków), nie `role="menu"` ze strzałkami. Uczestnik nie widzi przycisku wcale, bo „Opuść listę” to E-02 (F-13).
+- **Menu „Więcej opcji”:** wzorzec disclosure (przycisk z `aria-expanded` + lista przycisków), nie `role="menu"` ze strzałkami. Uczestnik nie widzi przycisku wcale, bo „Opuść listę” to E-02 (F-13); przejął T-094.
 - **Dialogi:** własny `Modal` (portal, `aria-modal`, pułapka Tab, Esc, powrót fokusu) zamiast `<dialog>.showModal()` — jsdom go nie obsługuje, więc testy komponentów nie mogłyby sprawdzić zachowania.
 - **UUID v7:** `src/db/uuid.ts` (PostgreSQL 17 nie ma `uuidv7()`), zgodnie z „Identyfikatory: UUID (v7)” w `architecture.md`.
 - **Ponawianie zapytań:** `createQueryClient()` ponawia tylko błędy sieci i 5xx (wcześniej domyślnie każdy błąd 3×).

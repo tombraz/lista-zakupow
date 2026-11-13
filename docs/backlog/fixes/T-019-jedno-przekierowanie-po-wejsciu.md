@@ -27,9 +27,9 @@ related_tasks: [T-004, T-008, T-010]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given rejestracja z ważnym tokenem, when API odpowiada `invitation.listId`, then klient przechodzi na SC-06 tej listy i nie wysyła `accept`; test stabilny w 50 powtórzeniach. — verified by: `InvitationScreen.entry.test.tsx` z powtórzeniami
-- [ ] AC2: Given logowanie z SC-08, when sesja ustawiona, then dokładnie jeden `accept`. — verified by: test komponentu
-- [ ] AC3: No regression in: powrót na chroniony ekran po logowaniu, zalogowany na SC-01 → SC-05, E2E J-03.
+- [x] AC1: Given rejestracja z ważnym tokenem, when API odpowiada `invitation.listId`, then klient przechodzi na SC-06 tej listy i nie wysyła `accept`; test stabilny w 50 powtórzeniach. — verified by: `InvitationScreen.entry.test.tsx` z powtórzeniami
+- [x] AC2: Given logowanie z SC-08, when sesja ustawiona, then dokładnie jeden `accept`. — verified by: test komponentu
+- [x] AC3: No regression in: powrót na chroniony ekran po logowaniu, zalogowany na SC-01 → SC-05, E2E J-03.
 
 ## TDD plan
 

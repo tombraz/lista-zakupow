@@ -75,6 +75,7 @@ jobs:
               - 'scripts/**'
               - 'docker-compose.yml'
               - 'Dockerfile'
+              - '.nvmrc'
               - '.dockerignore'
               - '**/fly*.toml'
               - '.zap/**'
@@ -85,6 +86,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # backlog-check czyta commity „T-NNN:” (nowe testy a przewodniki warstw, T-117)
       - uses: ./.github/actions/setup
       - name: Format (Prettier)
         run: pnpm format:check
@@ -287,6 +290,7 @@ jobs:
           bash scripts/test/smoke.test.sh
           bash scripts/test/zap.test.sh
           bash scripts/test/staging-setup.test.sh
+          node --test scripts/test/backlog-check.test.mjs
 
   # Obraz z deploy.yml (T-010) budowany i sprawdzany na PR, bez publikacji: migracje z obrazu, api i web
   # pod jednym portem przechodzą smoke test, Trivy blokuje high/critical z poprawką (TH-22).

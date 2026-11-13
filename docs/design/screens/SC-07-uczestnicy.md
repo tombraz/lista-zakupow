@@ -67,7 +67,7 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | owner | właściciel |
 | you | Ty |
 | remove | Usuń (nazwa dostępna: „Usuń {imię} z listy”) |
-| remove.confirm | Usunąć {imię} z listy? Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną. |
+| remove.confirm | Usunąć {imię} z listy? Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną. (złożony z części; T-111) |
 | remove.error | Nie udało się usunąć. Spróbuj ponownie. (w ConfirmDialog; zatwierdzone 2026-11-01, T-058) |
 | invites | Zaproszenia |
 | invite.create | Utwórz link zaproszenia |
@@ -78,10 +78,26 @@ Kierunek B: `prototypes/directions.html?variant=B`, ramka „SC-07 Uczestnicy i 
 | invite.revoke | Unieważnij |
 | invite.revoked | Link unieważniony |
 | leave | Opuść listę |
-| leave.confirm | Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia. |
+| leave.confirm | Opuścić listę „{nazwa}”? Żeby wrócić, potrzebujesz nowego zaproszenia. (złożony z części; T-111) |
 | leave.error | Nie udało się opuścić listy. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
+| leave.confirm.question | Opuścić listę „{nazwa}”? (część `leave.confirm`; T-103) |
+| leave.confirm.consequence | Żeby wrócić, potrzebujesz nowego zaproszenia. (część `leave.confirm`; T-103) |
+| leave.confirm.cta | Opuść (przycisk akcji w oknie; zatwierdzone 2026-11-06, T-103) |
 | empty | Nikt jeszcze nie dołączył. Utwórz link i wyślij go domownikowi. |
 | limit | Lista ma 20 uczestników — to limit. Usuń kogoś, żeby zaprosić nową osobę. |
+| back | Wstecz (z Layout/States, T-100) |
+| loadError | Nie udało się wczytać uczestników. (z Layout/States, T-100) |
+| noAccess | Nie masz dostępu do tej listy. (z States: jak SC-06, T-100) |
+| backToLists | Wróć do moich list (z States: jak SC-06, T-100) |
+| remove.label | Usuń {imię} z listy (nazwa dostępna; z Copy `remove`, T-100) |
+| remove.confirm.question | Usunąć {imię} z listy? (część `remove.confirm`; z Interactions, T-100) |
+| remove.confirm.consequence | Straci do niej dostęp od razu. Dodane przez niego pozycje zostaną. (część `remove.confirm`; z Interactions, T-100) |
+| cancel | Anuluj (z design-system ConfirmDialog, T-100) |
+| invite.copyManually | Skopiuj link ręcznie. (z Layout/States, T-100) |
+| invite.rateLimit | Utworzono zbyt wiele linków. Spróbuj ponownie za godzinę. (zatwierdzone 2026-11-05, T-100) |
+| invite.createError | Nie udało się utworzyć linku. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-100) |
+| invite.revokeError | Nie udało się unieważnić linku. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z States SC-01, T-100) |
 
 ## Accessibility
 

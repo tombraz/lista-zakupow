@@ -1,5 +1,6 @@
 ---
 layer: infra
+paths: [scripts/, .github/]   # katalogi warstwy: nowy test w nich wymaga wiersza w „Historia zmian” (backlog-check, T-117)
 status: approved          # draft | approved
 approved: 2026-10-26
 ---
@@ -34,6 +35,8 @@ Istnieje (T-010): `Dockerfile` i `.dockerignore` (obraz `ghcr.io/tombraz/lista-z
 
 Istnieje (T-013): `scripts/workflow-check.mjs` (znacznik `TYMCZASOWE` w `.github/workflows/` zatrzymuje `pnpm check` i job `always` w CI) z testem `scripts/test/workflow-check.test.sh`; `deploy.yml` wdraża staging tylko z `main` i przez `workflow_dispatch`.
 
+Istnieje (T-099): `scripts/test/backlog-check.test.mjs` (`node:test`, backlog-fikstury w katalogu tymczasowym, CLI z `--root`) — przekazania pracy do innego epiku bez odbiorcy (ostrzeżenie, T-099); zadanie `done` z nieodhaczonym AC w „## Acceptance criteria” i status przy ID zadania w `UAT.md` epiku niezgodny z plikiem zadania (błędy, T-110; pozycje „Definition of done” nie są śledzone po `done` — decyzja właściciela 2026-11-10, T-116); `--write-index` wpisuje „—” w kolumnach Epic i Story zadań z `fixes/` (T-116); zadanie `in-qa`/`done`, którego commity `T-NNN: …` (od 2026-11-10) dodały plik `*.test.*`/`*.spec.*` w katalogu swojej warstwy (`paths:` we frontmatter przewodnika), a „Historia zmian” tego przewodnika nie ma wiersza z ID zadania (błąd, T-117; zmiana nazwy pliku i nowy `describe` w istniejącym pliku się nie liczą; fikstury to repozytoria git, płytki klon daje ostrzeżenie, stąd `fetch-depth: 0` w jobie `always`); job `infra` w CI.
+
 Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `apps/mobile/eas.json`.
 
 ## Komendy
@@ -46,6 +49,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | raport pokrycia | `pnpm test:coverage` (wynik w `coverage/`) | korzeń repo |
 | actionlint (rung 1) | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` (Git Bash na Windows: poprzedź `MSYS_NO_PATHCONV=1`) | korzeń repo |
 | testy skryptów (rung 2) | `bash scripts/test/protect-main.test.sh`; `bash scripts/test/mobile.test.sh` | korzeń repo |
+| test `backlog-check` (przekazania do epiku, T-099; AC zadań `done` i statusy w `UAT.md`, T-110; nowy test a wiersz w przewodniku warstwy, T-117) | `node --test scripts/test/backlog-check.test.mjs` | korzeń repo |
 | skan zależności | `pnpm audit --audit-level high` | korzeń repo |
 | testy skryptów wdrożenia (rung 2) | `bash scripts/test/deploy.test.sh`; `deploy-workflow`, `workflow-check`, `image`, `smoke`, `zap`, `staging-setup` analogicznie | korzeń repo |
 | test przebiegu komentarzy z `pnpm lint` (obejścia padają; job `static`, bo potrzebuje zależności) | `bash scripts/test/lint-directives.test.sh` | korzeń repo |
@@ -90,6 +94,8 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 - Przerwane przebiegi testów mogą zostawić kontenery Testcontainers. Sprząta je Ryuk (zostaw go włączonego, także w CI: nie ustawiaj `TESTCONTAINERS_RYUK_DISABLED`); ręcznie: `docker ps --filter label=org.testcontainers=true`, potem `docker rm -f <id>`.
 - Wymagane checki `ci-ok` i `codeql` muszą raportować na każdym PR: `security.yml` i job `ci-ok` nie mają filtra ścieżek (pominięty wymagany workflow blokowałby merge).
 - Bramka, której nic w repo nie narusza (np. przebieg komentarzy z `pnpm lint`), jest zielona także po osłabieniu: zmiana flagi, listy reguł albo `files` przechodzi po cichu (T-030 → T-044 → T-045). Każda taka bramka dostaje stały test na znanych obejściach, który bierze polecenie z miejsca, gdzie bramka działa (wzór: `scripts/test/lint-directives.test.sh`, T-046), a nie tylko jednorazowe pliki próbne.
+- `git log --since=2026-11-10` (sama data) znaczy „tego dnia o bieżącej godzinie”: commity sprzed godziny uruchomienia wypadają. Granica w skrypcie to pełny znacznik czasu (`2026-11-10T00:00:00+01:00`, T-117). Sprawdzenie oparte na historii git w CI potrzebuje `fetch-depth: 0` (domyślny płytki klon ma jeden commit).
+- Dependabot (`package-ecosystem: docker`) aktualizuje tylko dosłowne `FROM obraz:tag@sha256:…`. `FROM ${ARG}` pomija po cichu, więc pin nie dostaje poprawek, a nowe CVE w obrazie bazowym zatrzymują Trivy (T-122). Obraz wpisany dosłownie w każde `FROM`, major Node równy `.nvmrc`; pilnuje tego `scripts/test/image.test.sh`. Gdy upstream nie ma jeszcze poprawki Debiana, etap runtime robi `apt-get upgrade`.
 - Emulator Androida w CI wymaga KVM na runnerze Linux; build Gradle lokalnie w jobie, nie przez EAS (limit 15 buildów).
 
 ## Skille i źródła
@@ -106,3 +112,7 @@ Planowane (kolejne taski infra): `mobile.yml`, `apps/api/fly.production.toml`, `
 | 2026-10-29 | T-013: staging tylko z `main`; `workflow-check` odrzuca `TYMCZASOWE` w workflow. |
 | 2026-10-30 | T-046: `scripts/test/lint-directives.test.sh` w jobie `static` sprawdza, że przebieg komentarzy z `pnpm lint` odrzuca znane obejścia. |
 | 2026-10-31 | T-046: „Pułapki” — bramka bez naruszeń w repo potrzebuje stałego testu na obejściach. |
+| 2026-11-10 | T-114: „Gdzie jest kod” i „Komendy” — `backlog-check` sprawdza też AC zadań `done` i statusy w `UAT.md` (T-110). |
+| 2026-11-10 | T-117: `backlog-check` — nowy plik testu z commitów zadania w katalogu warstwy (`paths:` we frontmatter przewodników) wymaga wiersza zadania w „Historia zmian” przewodnika; `fetch-depth: 0` w jobie `always`; „Pułapki”: `git log --since` z samą datą. |
+| 2026-11-10 | T-116: „Gdzie jest kod” — `--write-index` wpisuje „—” zamiast `undefined` w kolumnach Epic i Story zadań z `fixes/`; pozycje „Definition of done” nie są śledzone po `done` (decyzja właściciela 2026-11-10). |
+| 2026-11-10 | T-122: „Pułapki” — Dependabot `docker` nie aktualizuje `FROM ${ARG}`; `scripts/test/image.test.sh` sprawdza pin obrazu Node (dosłowne `FROM` z tagiem i digestem, major = `.nvmrc`, ekosystem `docker` w `dependabot.yml`); `.nvmrc` w filtrze `infra`. |

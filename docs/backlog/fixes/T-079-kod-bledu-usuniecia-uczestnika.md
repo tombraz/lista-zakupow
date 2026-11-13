@@ -25,8 +25,8 @@ related_tasks: [T-058, T-059]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given usunięcie uczestnika kończy się błędem, then tekst błędu powstaje z kodu przez `errorText`: błąd sieci → wspólny „Brak połączenia. Sprawdź internet i spróbuj ponownie.”, każdy kod bez tekstu ekranu → „Nie udało się usunąć. Spróbuj ponownie.”. (`rate_limited` nie dotyczy: trasa nie zwraca 429, `api.md:44`; zawężone po QA round 1 #1, decyzja właściciela 2026-11-04.) — verified by: test ekranu (MSW)
-- [ ] AC2: No regression in: T-058 (wszystkie AC), ponowienie po 404 jako sukces.
+- [x] AC1: Given usunięcie uczestnika kończy się błędem, then tekst błędu powstaje z kodu przez `errorText`: błąd sieci → wspólny „Brak połączenia. Sprawdź internet i spróbuj ponownie.”, każdy kod bez tekstu ekranu → „Nie udało się usunąć. Spróbuj ponownie.”. (`rate_limited` nie dotyczy: trasa nie zwraca 429, `api.md:44`; zawężone po QA round 1 #1, decyzja właściciela 2026-11-04.) — verified by: test ekranu (MSW)
+- [x] AC2: No regression in: T-058 (wszystkie AC), ponowienie po 404 jako sukces.
 
 ## TDD plan
 

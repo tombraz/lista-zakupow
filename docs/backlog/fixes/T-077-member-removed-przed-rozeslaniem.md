@@ -25,8 +25,8 @@ related_tasks: [T-058, T-089, T-076]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given `peopleWithAccess` rzuca po zatwierdzonym usunięciu, when `DELETE …/members/:userId`, then 204, w logu jest `member_removed`, a `revoke` dla usuniętej osoby zostało wykonane. — verified by: test integracyjny (`captureLogs`, podstawione repozytorium albo `gated-pool`)
-- [ ] AC2: No regression in: T-058 (wszystkie AC i SEC), T-059.
+- [x] AC1: Given `peopleWithAccess` rzuca po zatwierdzonym usunięciu, when `DELETE …/members/:userId`, then 204, w logu jest `member_removed`, a `revoke` dla usuniętej osoby zostało wykonane. — verified by: test integracyjny (`captureLogs`, podstawione repozytorium albo `gated-pool`)
+- [x] AC2: No regression in: T-058 (wszystkie AC i SEC), T-059.
 
 ## TDD plan
 

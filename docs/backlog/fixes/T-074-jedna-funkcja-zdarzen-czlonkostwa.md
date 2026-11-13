@@ -29,10 +29,10 @@ related_tasks: [T-058, T-059, T-061, T-062, T-008, T-032]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given usunięcie listy (trasą albo przez usunięcie konta właściciela), then zdarzenia `list.deleted`, `revoke` i `lists.changed` idą przez jedną funkcję modułu `listy`, w tej samej kolejności co dziś. — verified by: istniejące testy `live.*` zielone bez zmian asercji
-- [ ] AC2: Given usunięcie uczestnika, opuszczenie listy, przyjęcie zaproszenia, zmiana imienia i usunięcie konta uczestnika, then `members.changed` i `lists.changed` idą przez jedną funkcję. — verified by: istniejące testy `live.*`
-- [ ] AC3: `announceRenamedPerson` używa `listsWithPeopleOf`; jest jeden typ `ListWithPeople`. — verified by: typecheck + testy `live.name`
-- [ ] AC4: No regression in: T-008, T-032, T-058, T-059, T-061, T-062 (testy integracyjne na żywo).
+- [x] AC1: Given usunięcie listy (trasą albo przez usunięcie konta właściciela), then zdarzenia `list.deleted`, `revoke` i `lists.changed` idą przez jedną funkcję modułu `listy`, w tej samej kolejności co dziś. — verified by: istniejące testy `live.*` zielone bez zmian asercji
+- [x] AC2: Given usunięcie uczestnika, opuszczenie listy, przyjęcie zaproszenia, zmiana imienia i usunięcie konta uczestnika, then `members.changed` i `lists.changed` idą przez jedną funkcję. — verified by: istniejące testy `live.*`
+- [x] AC3: `announceRenamedPerson` używa `listsWithPeopleOf`; jest jeden typ `ListWithPeople`. — verified by: typecheck + testy `live.name`
+- [x] AC4: No regression in: T-008, T-032, T-058, T-059, T-061, T-062 (testy integracyjne na żywo).
 
 ## TDD plan
 

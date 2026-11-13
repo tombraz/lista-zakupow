@@ -6,12 +6,19 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
+import { useConnection } from "../../live/useConnection";
 import { AppBarButton } from "../AppBar/AppBar";
+import { OFFLINE_BANNER_ID } from "../OfflineBanner/OfflineBanner";
 import styles from "./MoreMenu.module.css";
 
 export interface MenuAction {
   label: string;
   onSelect: () => void;
+  /**
+   * Akcja prowadząca do zapisu: bez połączenia nieaktywna, jak `Button` z `writes` (T-063).
+   * Wymagane, żeby każda pozycja jawnie decydowała o działaniu bez połączenia (T-112).
+   */
+  writes: boolean;
 }
 
 interface MoreMenuProps {
@@ -29,6 +36,7 @@ export function MoreMenu({ label, actions, buttonRef }: MoreMenuProps) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { online } = useConnection();
 
   const closeWhenFocusLeaves = (event: FocusEvent) => {
     if (!containerRef.current?.contains(event.relatedTarget)) setOpen(false);
@@ -55,22 +63,28 @@ export function MoreMenu({ label, actions, buttonRef }: MoreMenuProps) {
       />
       {open && (
         <ul id={menuId} className={styles.items}>
-          {actions.map((action) => (
-            <li key={action.label}>
-              <button
-                type="button"
-                className={styles.item}
-                onKeyDown={closeOnEscape}
-                onBlur={closeWhenFocusLeaves}
-                onClick={() => {
-                  setOpen(false);
-                  action.onSelect();
-                }}
-              >
-                {action.label}
-              </button>
-            </li>
-          ))}
+          {actions.map((action) => {
+            const offline = action.writes && !online;
+            return (
+              <li key={action.label}>
+                <button
+                  type="button"
+                  className={styles.item}
+                  aria-disabled={offline || undefined}
+                  aria-describedby={offline ? OFFLINE_BANNER_ID : undefined}
+                  onKeyDown={closeOnEscape}
+                  onBlur={closeWhenFocusLeaves}
+                  onClick={() => {
+                    if (offline) return;
+                    setOpen(false);
+                    action.onSelect();
+                  }}
+                >
+                  {action.label}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

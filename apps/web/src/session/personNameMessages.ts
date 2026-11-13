@@ -1,5 +1,5 @@
 import { NAME_MAX_LENGTH, type FieldErrorCode } from "@lista/shared";
-import { HIDDEN_CHARACTERS_TEXT } from "../errorText";
+import { HIDDEN_CHARACTERS_TEXT } from "../errorTextMessages";
 
 /** Błędy pola „Imię” (F-16): rejestracja (SC-02) i zmiana imienia (SC-09). */
 export const NAME_ERROR_TEXTS: Partial<Record<FieldErrorCode, string>> = {

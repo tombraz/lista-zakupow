@@ -36,10 +36,10 @@ related_tasks: [T-006, T-020, T-024]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given wywołanie `mutate(vars, { onSuccess | onError | onSettled })` w `apps/web/src`, when `pnpm lint`, then błąd `no-restricted-syntax` z odesłaniem do T-029. — verified by: `pnpm lint` (red: 6 błędów przed zmianą)
-- [ ] AC2: Wszystkie zapisy w `apps/web/src` mają wywołania zwrotne w opcjach `useGuardedMutation` / `useMutation`: `useAddItem`, `useEditItem` (zapis i usunięcie), `useListNameForm`, `useSignInForm`, `useSignUpForm`. Dodawanie pozycji idzie przez `useGuardedMutation`, bez wyjątku lintu. — verified by: `pnpm lint`, grep `eslint-disable` w `useAddItem.ts`
-- [ ] AC3: Given dodanie w toku, when użytkownik wpisze inną treść i naciśnie Enter, then nic nie zostaje wysłane, a po odpowiedzi pierwsza pozycja jest na liście, jest ogłoszona i wpisana treść zostaje w polu. — verified by: `ListScreen.add.test.tsx` › sends nothing when Enter is pressed while the previous item is saving (T-029)
-- [ ] AC4: No regression in: J-01, J-03, T-006 (dodanie, ponowienie z tym samym `id`), T-020, T-024, edycja i usuwanie pozycji, zmiana nazwy listy (SC-05/SC-06), logowanie (SC-01), rejestracja (SC-02).
+- [x] AC1: Given wywołanie `mutate(vars, { onSuccess | onError | onSettled })` w `apps/web/src`, when `pnpm lint`, then błąd `no-restricted-syntax` z odesłaniem do T-029. — verified by: `pnpm lint` (red: 6 błędów przed zmianą)
+- [x] AC2: Wszystkie zapisy w `apps/web/src` mają wywołania zwrotne w opcjach `useGuardedMutation` / `useMutation`: `useAddItem`, `useEditItem` (zapis i usunięcie), `useListNameForm`, `useSignInForm`, `useSignUpForm`. Dodawanie pozycji idzie przez `useGuardedMutation`, bez wyjątku lintu. — verified by: `pnpm lint`, grep `eslint-disable` w `useAddItem.ts`
+- [x] AC3: Given dodanie w toku, when użytkownik wpisze inną treść i naciśnie Enter, then nic nie zostaje wysłane, a po odpowiedzi pierwsza pozycja jest na liście, jest ogłoszona i wpisana treść zostaje w polu. — verified by: `ListScreen.add.test.tsx` › sends nothing when Enter is pressed while the previous item is saving (T-029)
+- [x] AC4: No regression in: J-01, J-03, T-006 (dodanie, ponowienie z tym samym `id`), T-020, T-024, edycja i usuwanie pozycji, zmiana nazwy listy (SC-05/SC-06), logowanie (SC-01), rejestracja (SC-02).
 
 ## TDD plan
 

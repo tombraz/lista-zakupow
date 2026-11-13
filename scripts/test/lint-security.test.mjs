@@ -23,6 +23,10 @@ const liveRoute = (body) =>
   `declare function announceAccessChanges(live: Live, changes: unknown[]): Promise<void>;\n` +
   `export async function route(live: Live, log: FastifyBaseLogger, userId: string) { ${body} }`;
 const shared = "packages/shared/src/api/account.ts";
+// T-101 (TH-21): wpis błędu po zapisie i w tle tylko przez logFailure / bestEffort (src/logging.ts).
+const logged = (body) =>
+  `import type { FastifyBaseLogger, FastifyRequest } from "fastify";\n` +
+  `export function failed(request: FastifyRequest, log: FastifyBaseLogger, error: unknown) { ${body} }`;
 
 const SECURITY_RULES = [
   "no-restricted-syntax",
@@ -115,6 +119,51 @@ const rejected = [
     "T-089",
     liveRoute("await announceAccessChanges(live, []);"),
   ],
+  [
+    "request.log.error w trasie modułu",
+    apiRoutes,
+    syntax,
+    "logFailure",
+    logged('request.log.error({ event: "x" }, "x");'),
+  ],
+  ["log.error w pliku API", api, syntax, "logFailure", logged('log.error({ event: "x" }, "x");')],
+  [
+    "app.log.error w pliku API",
+    api,
+    syntax,
+    "logFailure",
+    'import type { FastifyInstance } from "fastify";\nexport const failed = (app: FastifyInstance) => app.log.error("x");',
+  ],
+  ['log["error"] w pliku API', api, syntax, "logFailure", logged('log["error"]("x");')],
+  [
+    "logger.error w pliku API",
+    api,
+    syntax,
+    "logFailure",
+    logged('const logger = log; logger.error("x");'),
+  ],
+  [
+    "this.log.error w pliku API",
+    api,
+    syntax,
+    "logFailure",
+    'import type { FastifyBaseLogger } from "fastify";\nexport class Job { constructor(private readonly log: FastifyBaseLogger) {} fail() { this.log.error("x"); } }',
+  ],
+  [
+    "request.log.error w web-app.ts",
+    "apps/api/src/http/web-app.ts",
+    syntax,
+    "logFailure",
+    logged('request.log.error("x");'),
+  ],
+  ["log.error w schema.ts", schema, syntax, "logFailure", logged('log.error("x");')],
+  [
+    "log.error w rate-limit.ts",
+    "apps/api/src/http/rate-limit.ts",
+    syntax,
+    "logFailure",
+    logged('log.error("x");'),
+  ],
   ["localStorage", web, "no-restricted-globals", "TH-16", show('localStorage.setItem("x", name);')],
   [
     "sessionStorage",
@@ -152,6 +201,17 @@ const accepted = [
     liveRoute(
       'await afterCommit(log, async () => { live.notify([userId], { type: "lists.changed" }); await announceAccessChanges(live, []); });',
     ),
+  ],
+  [
+    "logFailure i bestEffort w pliku API",
+    api,
+    'import type { FastifyBaseLogger } from "fastify";\nimport { bestEffort, logFailure } from "../../../logging";\nexport async function failed(log: FastifyBaseLogger, error: unknown) { logFailure(log, "x_failed", error); await bestEffort(log, "x_failed", () => undefined); log.warn("x"); }',
+  ],
+  ["log.error w logging.ts", "apps/api/src/logging.ts", logged('log.error({ event: "x" }, "x");')],
+  [
+    "request.log.error w handlerze błędów",
+    "apps/api/src/http/api-error.ts",
+    logged('request.log.error({ event: "x" }, "unexpected error");'),
   ],
 ];
 

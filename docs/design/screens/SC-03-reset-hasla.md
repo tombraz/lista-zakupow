@@ -71,11 +71,18 @@ Jak SC-01. Dwa widoki pod jednym ekranem:
 | back | Wróć do logowania |
 | step2.title | Ustaw nowe hasło |
 | step2.submit | Zapisz hasło |
+| step2.password.tooLong | Hasło może mieć najwyżej 128 znaków (zatwierdzone 2026-11-05, T-096) |
 | step2.error | Nie udało się zapisać hasła. Spróbuj ponownie. (zatwierdzone 2026-11-04, T-080) |
 | step2.invalid | Ten link wygasł albo został już użyty. |
 | step2.resend | Wyślij nowy link |
-| mail.subject | Reset hasła — Wspólna lista zakupów |
-| mail.body | Ktoś poprosił o reset hasła do Twojego konta. Kliknij link, żeby ustawić nowe hasło (ważny 1 godzinę): {link}. Jeśli to nie Ty, zignoruj tę wiadomość. |
+| step1.email.label | E-mail (z Layout/States, T-100) |
+| step1.error.rateLimit | Zbyt wiele próśb o reset. Spróbuj ponownie za kilka minut. (z Layout/States, T-100) |
+| step2.password.label | Nowe hasło (z Layout/States, T-100) |
+| step2.password.hint | Co najmniej 8 znaków. (z Layout/States, T-100) |
+| step2.password.tooShort | Hasło musi mieć co najmniej 8 znaków (z Layout/States, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z Layout/States, T-100) |
+| mail.subject | Reset hasła — Wspólna lista zakupów (mail z API; T-053) |
+| mail.body | Ktoś poprosił o reset hasła do Twojego konta. Kliknij link, żeby ustawić nowe hasło (ważny 1 godzinę): {link}. Jeśli to nie Ty, zignoruj tę wiadomość. (mail z API; T-053) |
 
 ## Accessibility
 

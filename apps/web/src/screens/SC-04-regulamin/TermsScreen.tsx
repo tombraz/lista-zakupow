@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { documentTitle } from "../../components/productMessages";
 import { PrivacyPolicy, TermsOfService } from "./documents";
 import { messages } from "./messages";
 import styles from "./TermsScreen.module.css";
@@ -14,7 +15,7 @@ export function TermsScreen() {
   const titleRef = useEntryFocus();
   return (
     <main className={styles.page}>
-      <title>{`${messages.title} · Wspólna lista zakupów`}</title>
+      <title>{documentTitle(messages.title)}</title>
       <BackLink />
       <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
         {messages.title}

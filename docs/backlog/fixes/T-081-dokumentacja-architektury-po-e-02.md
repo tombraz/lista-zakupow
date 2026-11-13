@@ -30,8 +30,8 @@ related_tasks: [T-053, T-054, T-056, T-060, T-061, T-062, T-064]
 
 ## Acceptance criteria
 
-- [ ] AC1: Wszystkie punkty z listy „Actual” są poprawione w dokumentach; każda zmiana ma wpis w historii dokumentu, jeśli dokument ją prowadzi. — verified by: przegląd dokumentów
-- [ ] AC2: `pnpm backlog-check` i `pnpm format:check` przechodzą.
+- [x] AC1: Wszystkie punkty z listy „Actual” są poprawione w dokumentach; każda zmiana ma wpis w historii dokumentu, jeśli dokument ją prowadzi. — verified by: przegląd dokumentów
+- [x] AC2: `pnpm backlog-check` i `pnpm format:check` przechodzą.
 
 ## TDD plan
 

@@ -67,7 +67,7 @@ export function NewListForm({ onCancel, onLimitReached }: NewListFormProps) {
       <Button type="submit" writes loading={form.pending} onKeyDown={closeOnEscape}>
         {messages.new.submit}
       </Button>
-      <Button variant="secondary" onClick={onCancel} onKeyDown={closeOnEscape}>
+      <Button writes={false} variant="secondary" onClick={onCancel} onKeyDown={closeOnEscape}>
         {messages.cancel}
       </Button>
     </form>

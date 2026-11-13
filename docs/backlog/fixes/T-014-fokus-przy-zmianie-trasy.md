@@ -27,9 +27,9 @@ related_tasks: [T-004, T-005, T-006, T-008, T-011]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-05, when użytkownik otwiera listę z pozycjami, then fokus jest na `h1` z nazwą listy. — verified by: test komponentu routera (RTL)
-- [ ] AC2: Given SC-06, when przejście do SC-07 albo SC-09 i z powrotem, then fokus na `h1` nowego ekranu; pusty SC-06 nadal ustawia fokus w „Co kupić?” (T-011). — verified by: test komponentu + E2E J-02
-- [ ] AC3: No regression in: T-011 (fokus pustej listy), SC-08 (własny fokus), powrót przyciskiem „wstecz” przeglądarki.
+- [x] AC1: Given SC-05, when użytkownik otwiera listę z pozycjami, then fokus jest na `h1` z nazwą listy. — verified by: test komponentu routera (RTL)
+- [x] AC2: Given SC-06, when przejście do SC-07 albo SC-09 i z powrotem, then fokus na `h1` nowego ekranu; pusty SC-06 nadal ustawia fokus w „Co kupić?” (T-011). — verified by: test komponentu + E2E J-02
+- [x] AC3: No regression in: T-011 (fokus pustej listy), SC-08 (własny fokus), powrót przyciskiem „wstecz” przeglądarki.
 
 ## TDD plan
 

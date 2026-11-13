@@ -28,9 +28,9 @@ related_tasks: [T-004, T-014]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given SC-09, when użytkownik otwiera regulamin linkiem, then fokus jest na `h1` SC-04. — verified by: test RTL przejścia linkiem
-- [ ] AC2: Given SC-04 otwarty z SC-01 (ta sama karta), when wejście linkiem, then fokus na `h1`; „Wróć” wraca na poprzedni ekran z jego własnym fokusem.
-- [ ] AC3: No regression in: linki spisu treści przenoszą fokus do sekcji `h2` (SC-04 „Accessibility”); SC-02 otwiera regulamin w nowej karcie (bez zmian).
+- [x] AC1: Given SC-09, when użytkownik otwiera regulamin linkiem, then fokus jest na `h1` SC-04. — verified by: test RTL przejścia linkiem
+- [x] AC2: Given SC-04 otwarty z SC-01 (ta sama karta), when wejście linkiem, then fokus na `h1`; „Wróć” wraca na poprzedni ekran z jego własnym fokusem.
+- [x] AC3: No regression in: linki spisu treści przenoszą fokus do sekcji `h2` (SC-04 „Accessibility”); SC-02 otwiera regulamin w nowej karcie (bez zmian).
 
 ## TDD plan
 

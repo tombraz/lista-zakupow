@@ -1,7 +1,7 @@
 import type { FieldErrorCode } from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
 import { errorText } from "../../errorText";
-import { NAME_ERROR_TEXTS } from "../../session/personName";
+import { NAME_ERROR_TEXTS } from "../../session/personNameMessages";
 
 export type SignUpField = "name" | "email" | "password" | "termsAccepted" | "ageConfirmed";
 

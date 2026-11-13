@@ -32,10 +32,10 @@ related_tasks: [T-007, T-020]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given pozycja w trakcie zapisu, when padną dwa kliknięcia bez przerysowania między nimi (`fireEvent.click` ×2 bez `await`), then API dostaje jedno żądanie. Test nie przechodzi bez blokady. — verified by: test komponentu SC-06
-- [ ] AC2: Given dwie różne pozycje, when użytkownik odhaczy je szybko po sobie, then oba żądania idą, a obie pozycje są odhaczone, z fokusem i ogłoszeniem jak dziś. — verified by: test komponentu SC-06
-- [ ] AC3: `useCheckItem` korzysta z `useGuardedMutation` z `lockOf` po `itemId`, a wyjątek `eslint-disable` jest usunięty z pliku i z listy wyjątków w `layers/web.md:83`. — verified by: `pnpm lint`
-- [ ] AC4: No regression in: J-03 (odhaczenie), T-007, T-020.
+- [x] AC1: Given pozycja w trakcie zapisu, when padną dwa kliknięcia bez przerysowania między nimi (`fireEvent.click` ×2 bez `await`), then API dostaje jedno żądanie. Test nie przechodzi bez blokady. — verified by: test komponentu SC-06
+- [x] AC2: Given dwie różne pozycje, when użytkownik odhaczy je szybko po sobie, then oba żądania idą, a obie pozycje są odhaczone, z fokusem i ogłoszeniem jak dziś. — verified by: test komponentu SC-06
+- [x] AC3: `useCheckItem` korzysta z `useGuardedMutation` z `lockOf` po `itemId`, a wyjątek `eslint-disable` jest usunięty z pliku i z listy wyjątków w `layers/web.md:83`. — verified by: `pnpm lint`
+- [x] AC4: No regression in: J-03 (odhaczenie), T-007, T-020.
 
 ## TDD plan
 

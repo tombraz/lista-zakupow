@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { Clock } from "../clock";
-import { errorSummary } from "../logging";
+import { logFailure } from "../logging";
 import { CLEANUP_INTERVAL_MS, cleanUpIfDue } from "./run";
 
 /** Pierwsze sprawdzenie po starcie: nadrabia sprzątanie zaległe w czasie uśpienia maszyny. */
@@ -34,7 +34,7 @@ export function scheduleCleanup(
 
   async function check(): Promise<void> {
     const next = await cleanUpIfDue(pool, clock, app.log).catch((error: unknown) => {
-      app.log.error({ event: "cleanup_failed", err: errorSummary(error) }, "cleanup failed");
+      logFailure(app.log, "cleanup_failed", error);
       return new Date(clock.now().getTime() + CLEANUP_INTERVAL_MS);
     });
     if (stopped) return;

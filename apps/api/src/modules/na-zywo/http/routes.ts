@@ -4,7 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type WebSocket from "ws";
 import { DomainError } from "../../../domain-error";
 import { ApiError, logSecurityEvent } from "../../../http/api-error";
-import { logLimitEvent } from "../../../logging";
+import { logFailure, logLimitEvent } from "../../../logging";
 import { POLICY_VIOLATION, type LiveConnection, type LiveHub } from "../domain/hub";
 import { MessageBudget } from "../domain/message-budget";
 import { heartbeat, WsConnection } from "../infra/ws-connection";
@@ -114,9 +114,9 @@ function serve(
     const message = parseClientMessage(data.toString("utf8"));
     if (!message) connection.send({ type: "error", code: "validation_failed" });
     else {
-      handle(message, connection, request, deps).catch(() => {
+      handle(message, connection, request, deps).catch((error: unknown) => {
         // Np. baza niedostępna: klient nie dostaje potwierdzenia i ponowi po połączeniu.
-        request.log.error({ event: "live_message_failed" }, "live message failed");
+        logFailure(request.log, "live_message_failed", error);
       });
     }
   });
@@ -193,9 +193,9 @@ function sessionCheck(
       .then((active) => {
         if (!active) endConnection(hub, connection);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         // Baza niedostępna: połączenie zostaje, kolejna kontrola przy następnym pingu.
-        request.log.error({ event: "live_session_check_failed" }, "live session check failed");
+        logFailure(request.log, "live_session_check_failed", error);
       })
       .finally(() => {
         checking = false;

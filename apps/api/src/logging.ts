@@ -199,13 +199,44 @@ export function errorSummary(error: unknown): ErrorSummary {
 }
 
 /**
- * Błąd wysyłki maila do logu: typ i status dostawcy, nigdy komunikat (bywa z adresem lub treścią,
- * TH-21).
+ * Błąd kroku po zapisie albo w tle (rozesłanie zdarzeń, mail, kontrola sesji, sprzątanie): jeden
+ * kształt wpisu — stała nazwa `event`, pola kontekstu (identyfikatory, `status` dostawcy) i `err`
+ * z `errorSummary` (layers/backend.md, „Pułapki”; T-098). Zwraca podsumowanie dla wołającego.
  */
-export function deliveryFailure(error: unknown): { error: string; status?: number } {
+export function logFailure(
+  log: FastifyBaseLogger,
+  event: string,
+  error: unknown,
+  fields: Record<string, unknown> = {},
+): ErrorSummary {
+  const err = errorSummary(error);
+  log.error({ event, ...fields, err }, event);
+  return err;
+}
+
+/**
+ * Krok, którego błąd nie może zmienić wyniku już zatwierdzonej operacji: błąd tylko do logu
+ * (`logFailure`), wołający dostaje podsumowanie (np. kod do alarmu) albo `undefined` po sukcesie.
+ */
+export async function bestEffort(
+  log: FastifyBaseLogger,
+  event: string,
+  step: () => unknown,
+  fields: Record<string, unknown> = {},
+): Promise<ErrorSummary | undefined> {
+  try {
+    await step();
+    return undefined;
+  } catch (error) {
+    return logFailure(log, event, error, fields);
+  }
+}
+
+/**
+ * Pole dodatkowe do `logFailure` dla błędu wysyłki maila: status HTTP dostawcy (Brevo), gdy jest.
+ * Nigdy komunikat — bywa z adresem lub treścią (TH-21); typ błędu niesie już `err`.
+ */
+export function deliveryFailure(error: unknown): { status?: number } {
   const status = (error as { status?: unknown } | null)?.status;
-  return {
-    error: error instanceof Error ? error.name : typeof error,
-    ...(typeof status === "number" ? { status } : {}),
-  };
+  return typeof status === "number" ? { status } : {};
 }

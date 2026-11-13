@@ -15,10 +15,14 @@
 //   node scripts/backlog-check.mjs --threats <file> # threat model (default docs/architecture/threat-model.md)
 //
 // Exit code 1 when errors are found (missing dependency, cycle, bad status...).
+// Warnings (exit code 0) include work handed over to another epic without a receiver
+// ("to E-02", "w E-02", "→ E-02"...; rules in the "Handoffs" section below).
+// Reads git history ("T-NNN: ..." commits) for new tests without a layer-guide row (T-117).
 // No dependencies: runs on plain Node 18+.
 
 import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from "node:fs";
 import { join, relative, basename, dirname, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const STATUSES = ["todo", "in-progress", "in-qa", "done", "blocked"];
 const STORY_STATUSES = ["todo", "in-progress", "done"];
@@ -203,6 +207,132 @@ if (existsSync(THREAT_MODEL)) {
   for (const [th, coveredBy] of known) {
     if (!coveredBy) warnings.push(`${THREAT_MODEL}: ${th} needs exactly one "Covered by" value: task, ci or accepted`);
     else if (coveredBy === "task" && !listed.has(th)) warnings.push(`threat ${th} is covered "by task" but no task lists it in threats:`);
+  }
+}
+
+// Handoffs: a task line that hands work over to another epic needs a receiver, otherwise the
+// work is lost between epics (T-099). Handoff phrase: "to E-xx", "w E-xx", "we E-xx", "do E-xx",
+// "→ E-xx" or "-> E-xx", in any letter case ("to e-02" counts as E-02, T-102; fenced code blocks
+// and `inline code` are ignored). Received when the same line names a task of E-xx (a fix task
+// belongs to the epic whose branch epic/E-xx-... its text names) or a story of E-xx, or when
+// E-xx's "## Out of scope" section names the source task.
+// Skipped: the task's own epic, and epics still in status todo (not planned yet).
+// Warning only, so it never blocks /build-epic.
+const HANDOFF = /(?<![\p{L}\p{N}_])(?:to|we?|do)\s+(E-\d+)(?![\w-])|(?:->|→)\s*(E-\d+)(?![\w-])/giu;
+const RECEIVER = /(?<![\w-])(?:T-\d{3,}|S-\d+-\d+)(?!\d)/g;
+const taskText = new Map([...tasks.values()].map((t) => [t.id, readFileSync(t.path, "utf8")]));
+const epicOf = (t) => t.epic || (taskText.get(t.id).match(/epic\/(E-\d+)(?!\w)/) || [])[1];
+const ownerEpic = (id) => (tasks.has(id) ? epicOf(tasks.get(id)) : stories.get(id)?.epic);
+const outOfScope = (ep) =>
+  (readFileSync(ep.path, "utf8").match(/^## Out of scope[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [])[1] ?? "";
+const received = (target, line, sourceId) =>
+  [...line.matchAll(RECEIVER)].some(([id]) => id !== sourceId && ownerEpic(id) === target) ||
+  (epics.has(target) && new RegExp(`(?<![\\w-])${sourceId}(?!\\d)`).test(outOfScope(epics.get(target))));
+for (const t of tasks.values()) {
+  let fenced = false;
+  taskText.get(t.id).split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) return;
+    const reported = new Set();
+    for (const m of line.replace(/`[^`]*`/g, "").matchAll(HANDOFF)) {
+      const target = (m[1] ?? m[2]).toUpperCase();
+      if (reported.has(target) || target === epicOf(t) || epics.get(target)?.status === "todo" || received(target, line, t.id)) continue;
+      reported.add(target);
+      warnings.push(`${t.file}:${i + 1}: hands work over to ${target} ("${m[0].trim()}") but names no ${target} task or story as receiver, and ${target} "Out of scope" does not list ${t.id}`);
+    }
+  });
+}
+
+// Acceptance criteria (T-110): a done task has every checkbox under "## Acceptance criteria"
+// (subsections and indented items included) ticked; QA ticks each criterion it verified.
+// "## Definition of done" checkboxes are not tracked after done (owner decision 2026-11-10, T-116).
+const AC_BOX = /^\s*[-*]\s+\[([ xX])\]/;
+for (const t of tasks.values()) {
+  if (t.status !== "done") continue;
+  const section = (taskText.get(t.id).match(/^## Acceptance criteria[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [])[1] ?? "";
+  const boxes = section.split(/\r?\n/).map((l) => l.match(AC_BOX)?.[1]).filter(Boolean);
+  const open = boxes.filter((b) => b === " ").length;
+  if (open) errors.push(`${t.file}: status done but ${open} of ${boxes.length} acceptance criteria are unchecked ("- [ ]"); QA ticks each verified criterion ("- [x]")`);
+}
+
+// UAT.md (T-110): a status written next to task IDs in an epic's UAT.md ("T-103 i T-104 `done`",
+// "T-090–T-093 `todo`", "T-052 (todo)") must match the task files. A status applies to the IDs
+// before it in the same clause (clauses end at ";" or "."); text in (parentheses) and other
+// `inline code` is skipped; an ID with no status after it is not checked.
+const UAT_STATUS = new RegExp(`\`(${STATUSES.join("|")})\`|\\((${STATUSES.join("|")})\\)`, "g");
+const UAT_TOKEN = /\u0001([a-z-]+)\u0001|(?<![\w-])T-(\d{3,})(?:\s*[–—-]\s*T-(\d{3,}))?(?!\d)/g;
+for (const ep of epics.values()) {
+  const uatPath = join(ep.dir, "UAT.md");
+  if (!existsSync(uatPath)) continue;
+  const uatRel = relative(process.cwd(), uatPath);
+  let fenced = false;
+  readFileSync(uatPath, "utf8").split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) return;
+    let s = line.replace(UAT_STATUS, (_, a, b) => `\u0001${a ?? b}\u0001`).replace(/`[^`]*`/g, " ");
+    while (/\([^()]*\)/.test(s)) s = s.replace(/\([^()]*\)/g, " ");
+    for (const clause of s.split(/;|\.(?=\s|$)/)) {
+      let pending = [];
+      for (const m of clause.matchAll(UAT_TOKEN)) {
+        if (m[1]) {
+          for (const id of pending) {
+            const t = tasks.get(id);
+            if (t && t.status !== m[1]) errors.push(`${uatRel}:${i + 1}: ${id} is "${m[1]}" here but "${t.status}" in ${t.file}`);
+          }
+          pending = [];
+          continue;
+        }
+        const from = Number(m[2]), to = m[3] ? Number(m[3]) : from;
+        for (let n = from; n <= to && n - from <= 1000; n++) pending.push(`T-${String(n).padStart(m[2].length, "0")}`);
+      }
+    }
+  });
+}
+
+// New tests need a layer-guide row (T-117): a task in-qa or done whose commits ("T-NNN: ...",
+// since TEST_ROWS_SINCE) added a test file (*.test.*, *.spec.*) under a directory of one of its
+// layers needs a row naming the task under "## Historia zmian" / "## Change log" of that layer's
+// guide. Directories: "paths: [apps/api/, ...]" in the guide's frontmatter (repo-relative
+// prefixes); a file under several of the task's layers is fine with a row in any of their guides.
+// Renamed test files and new cases in existing files do not count. Skipped outside a git
+// repository; a shallow clone gives a warning (CI needs fetch-depth: 0).
+const TEST_ROWS_SINCE = "2026-11-10T00:00:00+01:00"; // full timestamp: a bare date means "that day at the current time" to git
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$|\.test\.sh$/;
+if (existsSync(LAYERS_DIR)) {
+  const git = (...a) => spawnSync("git", a, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const inRepo = git("rev-parse", "--is-inside-work-tree").stdout?.trim() === "true";
+  const layerPaths = new Map();
+  for (const f of readdirSync(LAYERS_DIR).filter((f) => f.endsWith(".md"))) {
+    const text = readFileSync(join(LAYERS_DIR, f), "utf8");
+    const paths = parseFrontmatter(text)?.paths;
+    if (!Array.isArray(paths) || !paths.length) continue;
+    const log = (text.match(/^## (?:Historia zmian|Change ?log|History)[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/im) || [])[1];
+    layerPaths.set(f.slice(0, -3), { paths, log, file: join(LAYERS_DIR, f) });
+  }
+  if (inRepo && layerPaths.size && git("rev-parse", "--is-shallow-repository").stdout?.trim() === "true") {
+    warnings.push(`shallow git clone: new-test rows in layer guides not checked (CI: actions/checkout with fetch-depth: 0)`);
+  } else if (inRepo && layerPaths.size) {
+    const out = git("-c", "core.quotePath=false", "log", "HEAD", "--no-merges", "-M", "--diff-filter=A",
+      "--name-only", `--since=${TEST_ROWS_SINCE}`, "--format=%x01%s").stdout ?? "";
+    const added = new Map(); // task id -> Set of added test files
+    for (const chunk of out.split("\u0001").slice(1)) {
+      const [subject, ...files] = chunk.split(/\r?\n/);
+      const id = subject.match(/^(T-\d{3,}):/)?.[1];
+      if (!id) continue;
+      if (!added.has(id)) added.set(id, new Set());
+      for (const f of files) if (TEST_FILE.test(f.trim())) added.get(id).add(f.trim());
+    }
+    for (const t of tasks.values()) {
+      if (t.status !== "in-qa" && t.status !== "done") continue;
+      const idRe = new RegExp(`(?<![\\w-])${t.id}(?!\\d)`);
+      for (const file of added.get(t.id) ?? []) {
+        const owners = (Array.isArray(t.layers) ? t.layers : [])
+          .filter((l) => layerPaths.get(l)?.paths.some((p) => file.startsWith(p)));
+        if (!owners.length || owners.some((l) => idRe.test(layerPaths.get(l).log ?? ""))) continue;
+        const guides = owners.map((l) => relative(process.cwd(), layerPaths.get(l).file)).join(" or ");
+        errors.push(`${t.file}: commits of ${t.id} added test ${file}, but ${guides} has no row with ${t.id} under "## Historia zmian" (change log of the layer guide)`);
+      }
+    }
   }
 }
 
@@ -660,7 +790,7 @@ if (flag("--next")) {
 
 if (flag("--write-index")) {
   const rows = all
-    .map((t) => `| [${t.id}](${relative(ROOT, t.file).replace(/\\/g, "/")}) | ${t.title} | ${t.epic} | ${t.story} | ${t.status} | ${t.depends_on.join(", ") || "—"} |`)
+    .map((t) => `| [${t.id}](${relative(ROOT, t.file).replace(/\\/g, "/")}) | ${t.title} | ${t.epic || "—"} | ${t.story || "—"} | ${t.status} | ${t.depends_on.join(", ") || "—"} |`)
     .join("\n");
   const md = `# Backlog index
 

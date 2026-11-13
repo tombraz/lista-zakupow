@@ -7,6 +7,7 @@ import { LoadError } from "../../components/LoadError/LoadError";
 import { MoreMenu } from "../../components/MoreMenu/MoreMenu";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { joinedListOf } from "../../invitations/invitationContext";
+import { LeaveListDialog } from "../../lists/LeaveListDialog";
 import { useList } from "../../lists/useList";
 import { useLiveList } from "../../live/useLiveList";
 import { AddItemBar } from "./AddItemBar";
@@ -21,7 +22,7 @@ import { useCheckItem } from "./useCheckItem";
 
 const BACK = { to: "/listy", label: messages.back };
 
-/** SC-06: pozycje do kupienia, dodawanie i edycja; menu właściciela. */
+/** SC-06: pozycje do kupienia, dodawanie i edycja; menu właściciela lub uczestnika. */
 export function ListScreen() {
   const { listId = "" } = useParams();
   const list = useList(listId);
@@ -41,14 +42,15 @@ function ListBar({ list }: { list: ListDetails | undefined }) {
       title={list?.name ?? ""}
       back={BACK}
       actions={
-        list?.role === "owner" && (
+        // SC-06 Layout pkt 1: „Uczestnicy” i „Więcej opcji” dla każdej osoby z dostępem (F-13).
+        list && (
           <>
             <AppBarLink
               to={`/listy/${list.id}/uczestnicy`}
               label={messages.participants}
               icon="👥"
             />
-            <OwnerMenu list={list} />
+            {list.role === "owner" ? <OwnerMenu list={list} /> : <ParticipantMenu list={list} />}
           </>
         )
       }
@@ -170,12 +172,14 @@ function OwnerMenu({ list }: { list: ListDetails }) {
         actions={[
           {
             label: messages.menu.rename,
+            writes: true,
             onSelect: () => {
               setOpen("rename");
             },
           },
           {
             label: messages.menu.delete,
+            writes: true,
             onSelect: () => {
               setOpen("delete");
             },
@@ -185,6 +189,38 @@ function OwnerMenu({ list }: { list: ListDetails }) {
       {open === "rename" && <RenameSheet list={list} onClose={close} returnFocus={buttonRef} />}
       {open === "delete" && (
         <DeleteListDialog list={list} onClose={close} returnFocus={buttonRef} />
+      )}
+    </>
+  );
+}
+
+/** F-13: uczestnik — tylko „Opuść listę”, z tym samym potwierdzeniem co na SC-07 (SEC2). */
+function ParticipantMenu({ list }: { list: ListDetails }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [leaving, setLeaving] = useState(false);
+  return (
+    <>
+      <MoreMenu
+        label={messages.more}
+        buttonRef={buttonRef}
+        actions={[
+          {
+            label: messages.menu.leave,
+            writes: true,
+            onSelect: () => {
+              setLeaving(true);
+            },
+          },
+        ]}
+      />
+      {leaving && (
+        <LeaveListDialog
+          list={list}
+          onClose={() => {
+            setLeaving(false);
+          }}
+          returnFocus={buttonRef}
+        />
       )}
     </>
   );

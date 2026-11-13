@@ -35,11 +35,11 @@ related_tasks: [T-076, T-074, T-032]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given hub, który zawodzi, when każda z tras z listy powyżej wykona zapis, then odpowiedź jest taka jak bez błędu (201/200/204), zapis jest w bazie, a log zawiera jeden wpis `live_announce_failed` bez danych osobowych. — verified by: testy integracyjne z zawodzącym hubem
-- [ ] AC2: Jeden wspólny pomocnik „po zatwierdzeniu” w warstwie backend (przeniesiony `afterCommit` z `konta/http/me-routes.ts`) zamiast kopii w modułach; `me-routes.ts` też go używa. — verified by: przegląd kodu
-- [ ] AC3: Reguła lintu (`no-restricted-syntax` w `eslint.config.*`) zabrania wołania `announceAccessChanges` i metod rozsyłających `live` w `apps/api/src/modules/*/http/**` poza pomocnikiem; nowe wywołanie bezpośrednie zawodzi `pnpm lint`. Jeśli reguły nie da się wyrazić selektorem bez fałszywych alarmów, implementujący zapisuje dlaczego i proponuje alternatywę (np. test architektury). — verified by: lint na celowo złym przykładzie
-- [ ] AC4: Kolejność MC-03 (TH-04) bez zmian: `revoke` przed dalszym zdarzeniem listy. — verified by: istniejące `test/live.*.test.ts`
-- [ ] AC5: No regression in: T-032, T-061, T-062, T-074, T-076 (zdarzenia na żywo przy listach, pozycjach, zaproszeniach, imieniu, usunięciu konta).
+- [x] AC1: Given hub, który zawodzi, when każda z tras z listy powyżej wykona zapis, then odpowiedź jest taka jak bez błędu (201/200/204), zapis jest w bazie, a log zawiera jeden wpis `live_announce_failed` bez danych osobowych. — verified by: testy integracyjne z zawodzącym hubem
+- [x] AC2: Jeden wspólny pomocnik „po zatwierdzeniu” w warstwie backend (przeniesiony `afterCommit` z `konta/http/me-routes.ts`) zamiast kopii w modułach; `me-routes.ts` też go używa. — verified by: przegląd kodu
+- [x] AC3: Reguła lintu (`no-restricted-syntax` w `eslint.config.*`) zabrania wołania `announceAccessChanges` i metod rozsyłających `live` w `apps/api/src/modules/*/http/**` poza pomocnikiem; nowe wywołanie bezpośrednie zawodzi `pnpm lint`. Jeśli reguły nie da się wyrazić selektorem bez fałszywych alarmów, implementujący zapisuje dlaczego i proponuje alternatywę (np. test architektury). — verified by: lint na celowo złym przykładzie
+- [x] AC4: Kolejność MC-03 (TH-04) bez zmian: `revoke` przed dalszym zdarzeniem listy. — verified by: istniejące `test/live.*.test.ts`
+- [x] AC5: No regression in: T-032, T-061, T-062, T-074, T-076 (zdarzenia na żywo przy listach, pozycjach, zaproszeniach, imieniu, usunięciu konta).
 
 ## TDD plan
 

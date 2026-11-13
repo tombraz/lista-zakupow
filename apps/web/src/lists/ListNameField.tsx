@@ -1,6 +1,7 @@
 import type { FieldErrorCode } from "@lista/shared";
 import { TextField, type TextFieldProps } from "../components/TextField/TextField";
-import { LIST_NAME_MAX_LENGTH, listNameErrorText } from "./listName";
+import { LIST_NAME_MAX_LENGTH } from "./listName";
+import { listNameErrorText } from "./listNameMessages";
 
 type ListNameFieldProps = Omit<TextFieldProps, "value" | "onChange" | "error" | "maxChars"> & {
   state: { name: string; setName: (name: string) => void; fieldError: FieldErrorCode | null };

@@ -4,7 +4,7 @@ import { Button } from "../../components/Button/Button";
 import { InlineAlert } from "../../components/InlineAlert/InlineAlert";
 import { TextField } from "../../components/TextField/TextField";
 import { Toast, useToast } from "../../components/Toast/Toast";
-import { NAME_ERROR_TEXTS } from "../../session/personName";
+import { NAME_ERROR_TEXTS } from "../../session/personNameMessages";
 import styles from "./AccountScreen.module.css";
 import { messages, saveErrorText } from "./messages";
 import { useNameChange } from "./useNameChange";

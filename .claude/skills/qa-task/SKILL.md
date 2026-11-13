@@ -91,7 +91,7 @@ Severity: **blocker** (criterion fails, test suite red, security hole, data loss
 
 Verdict:
 
-- **Pass** — no blocker or major findings. Set `status: done`. Minor findings and notes become a new task only if the user agrees.
+- **Pass** — no blocker or major findings. Tick every acceptance criterion you verified (`- [ ]` → `- [x]` under "## Acceptance criteria"), then set `status: done`; `backlog-check` fails on a `done` task with an unchecked criterion and on a status in the epic's `UAT.md` that differs from the task file (T-110), so update a status `UAT.md` gives for this task too. A criterion verified outside this round (another task, a later CI run, the owner) is ticked only with one line under "## Acceptance criteria" naming where and when it was verified. Minor findings and notes become a new task only if the user agrees.
 - **Fail** — any blocker or major finding. Set `status: in-progress`, and list exactly what must change. The author fixes it with `/implement-task T-NNN` in a fresh session, then it comes back to QA.
 
 Never fix the code yourself during QA, except reverting your own spot-check.

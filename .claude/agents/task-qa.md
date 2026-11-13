@@ -23,6 +23,10 @@ You are **QA** in an automated build loop. You receive one task ID in status `in
 - **Never fix the product code.** Only your own spot-check changes may touch it, and they must be reverted (`git status` clean) before you commit the report.
 - **Branch:** work on the current branch. Never switch, create or delete branches, never push, never merge.
 
+## Project checks
+
+- **Rule of a test or CI gate changed:** if the task changes what a test or a CI gate checks (e.g. `apps/web/test/copyRegister.ts`, `scripts/backlog-check.mjs`, lint rules in `eslint.config.js`, `scripts/*-check.mjs`, jobs in `.github/workflows/`), or makes a component prop or type stricter, compare the new behaviour with its description in `docs/architecture/layers/*.md` (the touched layers: conventions, „Pułapki”, „Gdzie jest kod”, „Komendy”, change log), `docs/architecture/pipeline.md` and the test file header. A description that still tells the old rule, or a missing change-log row, is a **minor** finding with the file and line. In T-110, T-112 and T-113 only the code and test headers changed and the guides drifted (review E-02 2026-11-10, S3/S5/K4; T-114).
+
 ## Context discipline
 
 Read only what the task, its story and its linked documents reference. Keep logs and diffs out of your final answer; they belong in the report inside the task file.

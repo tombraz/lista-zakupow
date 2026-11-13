@@ -27,10 +27,10 @@ related_tasks: [T-027, T-033]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given klucze `RATE_LIMITS`, `BUSINESS_LIMITS`, `LIVE_LIMITS` (bez progów bicia serca `pingIntervalSeconds`, `pongTimeoutSeconds` — jawna lista wyłączeń z uzasadnieniem), when uruchomiony jest test pokrycia, then dla każdego klucza istnieje scenariusz, który przekracza limit i sprawdza zdarzenie `security` (`limit_reached` / `rate_limited`); nowy klucz bez scenariusza → test czerwony z nazwą klucza. — verified by: test pokrycia (spot-check: dodany klucz testowy → czerwony)
-- [ ] AC2: Given żądanie z treścią ponad 16 kB, when API odpowie 413, then log `security` ma zdarzenie `limit_reached` z `limit: "bodyBytes"` (nazwa do potwierdzenia) i trasą, bez treści żądania. — verified by: test integracyjny logów
-- [ ] AC3: Luki znalezione przez test z AC1 (np. limity logowania i rejestracji obsługiwane przez Better Auth, `invitationsCreatedPerList`) są poprawione albo — gdy poprawka wykracza poza to zadanie — zapisane jako osobne zadanie i jawnie wyłączone w teście z odwołaniem do niego.
-- [ ] AC4: No regression in: T-027, T-033, `security-log.test.ts`, `body-limit.test.ts`.
+- [x] AC1: Given klucze `RATE_LIMITS`, `BUSINESS_LIMITS`, `LIVE_LIMITS` (bez progów bicia serca `pingIntervalSeconds`, `pongTimeoutSeconds` — jawna lista wyłączeń z uzasadnieniem), when uruchomiony jest test pokrycia, then dla każdego klucza istnieje scenariusz, który przekracza limit i sprawdza zdarzenie `security` (`limit_reached` / `rate_limited`); nowy klucz bez scenariusza → test czerwony z nazwą klucza. — verified by: test pokrycia (spot-check: dodany klucz testowy → czerwony)
+- [x] AC2: Given żądanie z treścią ponad 16 kB, when API odpowie 413, then log `security` ma zdarzenie `limit_reached` z `limit: "bodyBytes"` (nazwa do potwierdzenia) i trasą, bez treści żądania. — verified by: test integracyjny logów
+- [x] AC3: Luki znalezione przez test z AC1 (np. limity logowania i rejestracji obsługiwane przez Better Auth, `invitationsCreatedPerList`) są poprawione albo — gdy poprawka wykracza poza to zadanie — zapisane jako osobne zadanie i jawnie wyłączone w teście z odwołaniem do niego.
+- [x] AC4: No regression in: T-027, T-033, `security-log.test.ts`, `body-limit.test.ts`.
 
 ## TDD plan
 

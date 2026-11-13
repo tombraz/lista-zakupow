@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TextField, type TextFieldProps } from "../TextField/TextField";
+import { passwordFieldMessages } from "./passwordFieldMessages";
 import styles from "./PasswordField.module.css";
 
 interface PasswordFieldProps extends Omit<TextFieldProps, "type" | "addon"> {
@@ -22,7 +23,7 @@ export function PasswordField(props: PasswordFieldProps) {
             setVisible((current) => !current);
           }}
         >
-          {visible ? "Ukryj" : "Pokaż"}
+          {visible ? passwordFieldMessages.hide : passwordFieldMessages.show}
         </button>
       }
     />

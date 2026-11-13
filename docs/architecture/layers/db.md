@@ -1,5 +1,6 @@
 ---
 layer: db
+paths: [apps/api/drizzle/, apps/api/src/db/, apps/api/test/]   # katalogi warstwy: nowy test w nich wymaga wiersza w „Historia zmian” (backlog-check, T-117)
 status: approved          # draft | approved
 approved: 2026-10-26
 ---
@@ -16,8 +17,8 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 
 ## Gdzie jest kod
 
-- `apps/api/src/db/schema.ts` — schemat Drizzle (`user`, `session`, `account`, `verification`, `rate_limit`, `sign_in_failure`, `shopping_list`, `list_member`, `item`, `list_daily_activity`, `invitation`, `data_migration`, `cleanup_run` — jeden wiersz z początkiem ostatniego sprzątania, T-064; tabele kolejnych modułów dochodzą w taskach); `src/db/uuid.ts` — `uuidv7()` dla kluczy UUID (PostgreSQL 17 nie ma wbudowanego)
-- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa, `0001_konta.sql` tabele Better Auth + zgody, `0002_sign_in_failure.sql`, `0003_listy.sql` listy i członkostwa, `0004_pozycje.sql` pozycje z `UNIQUE (list_id, name_key)` i `CHECK` długości, `0005_statystyki.sql` aktywność dzienna z PK `(list_id, day, user_id)` i indeksem `user_id`, `0006_zaproszenia.sql` linki z unikalnym `token`, indeksami `list_id` i `used_by`, `0007_data_migration.sql` tabela wykonanych kroków danych, `0008_sprzatanie.sql` tabela `cleanup_run` z `CHECK (id = 1)`) i `meta/_journal.json`
+- `apps/api/src/db/schema.ts` — schemat Drizzle (`user`, `session`, `account`, `verification`, `rate_limit`, `sign_in_failure`, `mail_quota` (T-120), `shopping_list`, `list_member`, `item`, `list_daily_activity`, `invitation`, `data_migration`, `cleanup_run` — jeden wiersz z początkiem ostatniego sprzątania, T-064; tabele kolejnych modułów dochodzą w taskach); `src/db/uuid.ts` — `uuidv7()` dla kluczy UUID (PostgreSQL 17 nie ma wbudowanego)
+- `apps/api/drizzle/` — migracje SQL (`0000_init.sql` startowa, `0001_konta.sql` tabele Better Auth + zgody, `0002_sign_in_failure.sql`, `0003_listy.sql` listy i członkostwa, `0004_pozycje.sql` pozycje z `UNIQUE (list_id, name_key)` i `CHECK` długości, `0005_statystyki.sql` aktywność dzienna z PK `(list_id, day, user_id)` i indeksem `user_id`, `0006_zaproszenia.sql` linki z unikalnym `token`, indeksami `list_id` i `used_by`, `0007_data_migration.sql` tabela wykonanych kroków danych, `0008_sprzatanie.sql` tabela `cleanup_run` z `CHECK (id = 1)`, `0009_mail_quota.sql` dobowe liczniki maili resetu) i `meta/_journal.json`
 - `apps/api/drizzle.config.ts` — konfiguracja drizzle-kit
 - `apps/api/src/db/pool.ts` — pula `pg` (bezczynne połączenia zamykane po 30 s)
 - `apps/api/src/db/migrate.ts`, `migrate-cli.ts` — uruchamianie migracji: SQL, potem kroki danych w TS
@@ -25,7 +26,7 @@ PostgreSQL, Drizzle ORM + drizzle-kit (`../tech-stack.md`). Tabele Better Auth g
 - `apps/api/scripts/metrics.sql` — zapytania miar sukcesu (tylko `SELECT`, definicje w komentarzu pliku; test `apps/api/test/metrics.test.ts`, T-065)
 - `apps/api/src/db/retention.ts` — usuwanie wierszy po terminie partiami po 1000 (`ctid`), reguły terminów w `modules/<moduł>/infra/retention.ts` (T-064)
 - `apps/api/test/global-setup.ts`, `test/database.ts` — kontener testowy, baza-szablon, `useTestDatabase()`
-- repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`, `lockList(tx, listId)` — blokada wiersza `shopping_list` w transakcji innego modułu (eksport z `listy/index.ts`), `insertParticipant` — limit 20 uczestników pod tą blokadą; `pozycje/infra/items-repository.ts` — limit 500 z `SELECT … FOR UPDATE` na wierszu `shopping_list`, duplikat przez `ON CONFLICT (list_id, name_key) DO NOTHING` przy dodaniu i naruszenie `item_list_id_name_key_unique` (23505) przy zmianie nazwy; `statystyki/infra/activity-repository.ts` — licznik odhaczeń `INSERT … ON CONFLICT DO UPDATE SET checks = checks + 1`; `zaproszenia/infra/invitations-repository.ts` — przyjęcie: warunkowy `UPDATE invitation … RETURNING list_id` i `Lists.join` w jednej transakcji, limit tworzenia linków liczony pod `lockList`)
+- repozytoria: `apps/api/src/modules/<moduł>/infra/` (`listy/infra/lists-repository.ts` — w tym limit 50 list z `SELECT … FOR UPDATE` na wierszu `user`, `lockList(tx, listId)` — blokada wiersza `shopping_list` w transakcji innego modułu (eksport z `listy/index.ts`), `insertParticipant` — limit 20 uczestników pod tą blokadą, `lockListFor(tx, listId, userId)` — `user FOR KEY SHARE`, `lockList`, członkostwo `FOR SHARE`: dostęp sprawdzony w transakcji zapisu (T-119); `pozycje/infra/items-repository.ts` — limit 500 z `SELECT … FOR UPDATE` na wierszu `shopping_list`, duplikat przez `ON CONFLICT (list_id, name_key) DO NOTHING` przy dodaniu i naruszenie `item_list_id_name_key_unique` (23505) przy zmianie nazwy; `statystyki/infra/activity-repository.ts` — licznik odhaczeń `INSERT … ON CONFLICT DO UPDATE SET checks = checks + 1`; `zaproszenia/infra/invitations-repository.ts` — przyjęcie: warunkowy `UPDATE invitation … RETURNING list_id` i `Lists.join` w jednej transakcji, limit tworzenia linków liczony pod `lockList`)
 
 ## Komendy
 
@@ -60,6 +61,7 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 - Nazwy tabel i kolumn po angielsku w `snake_case`; mapowanie na słownik BRD w `data-model.md`.
 - Każda zmiana schematu = nowa migracja; nigdy edycja migracji już zmergowanej do `main`.
 - Limity (50 / 500 / 20) liczone w transakcji z `SELECT … FOR UPDATE` na wierszu rodzica, nie przez `COUNT` bez blokady.
+- Kolejność blokad w transakcjach: wiersz `user`, potem `shopping_list`, potem `list_member`, potem `item`. Usunięcie konta blokuje `user` jako pierwszy (`konta/infra/users.ts`), zapis pozycji też (`lockListFor`); odwrotna kolejność kończy się zakleszczeniem i 500 (QA T-119).
 - `name_key` liczone tylko funkcją z `packages/shared`; nigdy `lower()` w SQL (różne reguły dla polskich znaków).
 - Znaczniki czasu: `timestamptz`, ustawiane przez wstrzykiwany zegar w kodzie domeny, gdy test musi nimi sterować.
 
@@ -85,3 +87,6 @@ Izolacja testów (decyzja T-001): jeden kontener na przebieg, migracje raz do ba
 | 2026-10-28 | T-005: `shopping_list`, `list_member`, migracja `0003_listy`, `uuidv7()`. |
 | 2026-10-27 | T-004: tabele kont w „Gdzie jest kod”. |
 | 2026-10-27 | T-001 (QA round 1): sekcja „Komendy” uzupełniona (wiersze trafiły wcześniej przed frontmatter). |
+| 2026-11-10 | T-117: frontmatter `paths:` — katalogi warstwy; nowy plik testu w nich wymaga wiersza zadania w tej historii (`backlog-check`). |
+| 2026-11-13 | T-119: „Konwencje”: kolejność blokad `user` → `shopping_list` → `list_member` → `item`; `lockListFor` w repozytoriach. |
+| 2026-11-13 | T-120: tabela `mail_quota` (migracja `0009_mail_quota.sql`) — dobowe liczniki maili resetu poza `rate_limit`, bo Better Auth kasuje tam wiersze starsze niż 1 h; sprzątanie po 24 h. |

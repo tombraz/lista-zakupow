@@ -41,10 +41,13 @@ export function useRemovalFocus(participants: Participant[]) {
         participants.slice(index + 1).map(({ id }) => id),
       );
     },
-    /** Po usunięciu `person`: fokus na pierwszej z zapamiętanych osób, która jeszcze jest. */
+    /**
+     * Po usunięciu `person`: fokus na pierwszej z zapamiętanych osób, która jeszcze jest.
+     * Idempotentne: powtórne wywołanie (kolejny render, StrictMode) celuje w ten sam wiersz,
+     * więc kolejności nie zużywa; nadpisuje ją następne `remember` (T-097).
+     */
     focusAfter: (person: Participant) => {
       const after = orders.current.get(person.id) ?? [];
-      orders.current.delete(person.id);
       setRequest((current) => ({ after, seq: (current?.seq ?? 0) + 1 }));
     },
   };

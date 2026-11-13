@@ -43,7 +43,9 @@ describe("password reset in logs (SEC4)", () => {
     expect((await requestReset(app, ania.email)).statusCode).toBe(200);
     expect((await requestReset(app, `${unknown}@example.com`)).statusCode).toBe(200);
     await vi.waitFor(() => {
-      expect(logs.entries().some((entry) => entry["source"] === "mailer")).toBe(true);
+      expect(logs.entries().some((entry) => entry["event"] === "password_reset_mail_failed")).toBe(
+        true,
+      );
     });
     const token = /token=([\w-]+)/.exec(sent[0]?.text ?? "")?.[1];
 
@@ -52,6 +54,34 @@ describe("password reset in logs (SEC4)", () => {
     for (const secret of [local, unknown, token ?? "", "Kliknij link", "Reset hasła"]) {
       expect(text).not.toContain(secret);
     }
+    await app.close();
+  });
+
+  // T-098, QA edge case: dostawca odrzuca czymś, co nie jest `Error` (tekst z adresem).
+  it("logs a non-Error provider failure as its type only", async () => {
+    const logs = captureLogs();
+    const app = buildTestApp(db.pool, {
+      logger: { level: "info", stream: logs.stream },
+      mailer: {
+        // Biblioteka dostawcy odrzuca tekstem (thenable spoza naszego kodu), nie `Error`.
+        send: (mail: Mail) =>
+          Promise.resolve({
+            then: (_resolve: unknown, reject: (reason: unknown) => void) => {
+              reject(`invalid recipient ${mail.to}`);
+            },
+          }).then(() => undefined),
+      },
+    });
+    const local = `reset${randomUUID().slice(0, 8)}`;
+    await createUser(app, { email: `${local}@example.com` });
+
+    expect((await requestReset(app, `${local}@example.com`)).statusCode).toBe(200);
+    await vi.waitFor(() => {
+      expect(
+        logs.entries().filter((entry) => entry["event"] === "password_reset_mail_failed"),
+      ).toEqual([expect.objectContaining({ level: 50, err: { type: "string" } })]);
+    });
+    expect(logs.lines.join("\n")).not.toContain(local);
     await app.close();
   });
 

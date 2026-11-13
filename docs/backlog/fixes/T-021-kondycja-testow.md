@@ -27,9 +27,11 @@ related_tasks: [T-001, T-005, T-006, T-010]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given pełny przebieg web, when uruchomiony dwa razy równolegle, then 0 czerwonych; jeden przebieg < 60 s. — verified by: pomiar w Evidence
-- [ ] AC2: Given testy API, when pełny przebieg, then brak „Connection terminated”, całość < 2 min, pliki < 5 s albo wyjątek zapisany w `testing-strategy.md`. — verified by: pomiar w Evidence
-- [ ] AC3: No regression in: `pnpm check`, CI (Linux, równolegle) i Windows.
+- [x] AC1: Given pełny przebieg web, when uruchomiony dwa razy równolegle, then 0 czerwonych; jeden przebieg < 60 s. — verified by: pomiar w Evidence
+- [x] AC2: Given testy API, when pełny przebieg, then brak „Connection terminated”, całość < 2 min, pliki < 5 s albo wyjątek zapisany w `testing-strategy.md`. — verified by: pomiar w Evidence
+- [x] AC3: No regression in: `pnpm check`, CI (Linux, równolegle) i Windows.
+
+Weryfikacja poza rundą QA (T-110): AC3 „CI (Linux, równolegle)” potwierdzone zielonym przebiegiem CI na `main` dla `c3dbc86` (2026-11-01), który zawiera `77e800e`.
 
 ## TDD plan
 

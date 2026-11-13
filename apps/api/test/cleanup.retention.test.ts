@@ -180,6 +180,23 @@ describe("purgeExpiredData (AC1, SEC1: TH-27)", () => {
     expect(result.deleted.sign_in_failure).toBe(1);
   });
 
+  it("deletes daily reset mail counters after their 24 h window (T-120: TH-27)", async () => {
+    for (const [label, windowStartedAt] of [
+      ["passed", at(-DAY - SECOND)],
+      ["open", at(-DAY + SECOND)],
+    ] as const) {
+      await db.pool.query(
+        "INSERT INTO mail_quota (key, count, window_started_at) VALUES ($1, 10, $2)",
+        [label, windowStartedAt],
+      );
+    }
+
+    const result = await purgeExpiredData(db.pool, NOW);
+
+    expect(await remaining(db.pool, "SELECT key AS label FROM mail_quota")).toEqual(["open"]);
+    expect(result.deleted.mail_quota).toBe(1);
+  });
+
   it("keeps the number of pre-sign-in rows bounded over time (SEC1: TH-27)", async () => {
     // Codziennie nowe liczniki z innych kont i adresów; po każdym sprzątaniu zostają tylko świeże.
     for (let day = 0; day < 5; day += 1) {

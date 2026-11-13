@@ -5,7 +5,7 @@ status: in-uat    # todo | in-progress | in-uat | done
 approved: 2026-11-01    # date the user approved this epic's tasks (set by /plan-backlog)
 change:                # brownfield only: the change ID this epic implements (C-NN)
 branch: epic/E-02-konto-i-uczestnicy
-pr: https://github.com/tombraz/lista-zakupow/pull/14
+pr: https://github.com/tombraz/lista-zakupow/pull/15
 requirements: [F-03, F-04, F-13, F-15, F-16, N-02]
 ---
 
@@ -27,12 +27,12 @@ Domownik odzyskuje dostęp do konta resetem hasła, zmienia imię i usuwa konto;
 ## Stories
 
 - S-02-01 Reset hasła mailem (F-03, SC-01, SC-02, SC-03)
-- S-02-02 Uczestnicy: podgląd, usunięcie, opuszczenie listy (F-13, SC-07)
+- S-02-02 Uczestnicy: podgląd, usunięcie, opuszczenie listy (F-13, SC-05, SC-06, SC-07)
 - S-02-03 Konto: zmiana imienia i usunięcie konta (F-04, F-16, SC-09)
 - S-02-04 Brak połączenia (F-15, SC-05, SC-06, SC-07, SC-09)
 - S-02-05 Sprzątanie danych i miary sukcesu (N-02, BRD §10)
 
-Poprawki spoza epiku planowane razem z nim (`fixes/`, z UAT E-01): T-052 niestabilne CI na `main`, T-066 pusty `h1` SC-06, T-067 „Wszystko kupione” na pustej liście SC-05, T-068 alert CodeQL w pliku testowym.
+Poprawki z UAT E-01 (T-052 niestabilne CI na `main`, T-066 pusty `h1` SC-06, T-067 „Wszystko kupione” na pustej liście SC-05, T-068 alert CodeQL w pliku testowym) nie należą do tego epiku: od żadnej nie zależy punkt „Done when”, zostają samodzielnymi poprawkami w `fixes/` (decyzja właściciela 2026-11-06, przegląd E-02 runda 3, P7). T-052 warto zrobić wkrótce po scaleniu epiku, bo czerwone CI na `main` zasłania prawdziwe awarie.
 
 ## Technology
 

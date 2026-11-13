@@ -1,5 +1,7 @@
 import type { ReactNode, Ref } from "react";
 import { Link } from "react-router";
+import { documentTitle, PRODUCT_NAME } from "../productMessages";
+import { authPageMessages } from "./authPageMessages";
 import styles from "./AuthPage.module.css";
 
 interface AuthPageProps {
@@ -15,15 +17,15 @@ interface AuthPageProps {
 export function AuthPage({ title, children, legalInNewTab = false, titleRef }: AuthPageProps) {
   return (
     <main className={styles.page}>
-      <title>{`${title} · Wspólna lista zakupów`}</title>
-      <p className={styles.product}>Wspólna lista zakupów</p>
+      <title>{documentTitle(title)}</title>
+      <p className={styles.product}>{PRODUCT_NAME}</p>
       <h1 className={styles.title} ref={titleRef} tabIndex={titleRef ? -1 : undefined}>
         {title}
       </h1>
       {children}
       <footer className={styles.footer}>
         <Link to="/regulamin" {...(legalInNewTab ? { target: "_blank", rel: "noopener" } : {})}>
-          Regulamin i polityka prywatności
+          {authPageMessages.legal}
         </Link>
       </footer>
     </main>

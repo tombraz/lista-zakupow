@@ -40,8 +40,9 @@ Domownik widzi swój e-mail, zmienia imię widoczne dla innych, wylogowuje się 
 | --- | --- | --- |
 | Empty | — (zawsze są dane konta) | |
 | Loading | Wskaźnik w przycisku „Zapisz imię” / w oknie usuwania | Zapis |
-| Error — imię | Pod polem: „Wpisz imię” / „Imię może mieć najwyżej 30 znaków” | F-16 |
+| Error — imię | Pod polem: „Wpisz imię” / „Imię może mieć najwyżej 30 znaków” / „Usuń niewidoczne lub specjalne znaki.” | F-16 |
 | Error — zapis | „Nie udało się zapisać. Spróbuj ponownie.” | Błąd serwera |
+| Error — wylogowanie | „Nie udało się wylogować. Spróbuj ponownie.” (zatwierdzone 2026-11-05, T-096) | Błąd serwera przy wylogowaniu |
 | Offline | OfflineBanner; „Zapisz imię” i „Usuń konto” nieaktywne; „Wyloguj się” działa | F-15 |
 | Success — imię | Toast „Imię zmienione” | F-16 |
 | Success — wylogowanie | SC-01 | F-02 |
@@ -65,7 +66,9 @@ Domownik widzi swój e-mail, zmienia imię widoczne dla innych, wylogowuje się 
 | name.hint | Tak zobaczą Cię inni na wspólnych listach. |
 | name.save | Zapisz imię |
 | name.saved | Imię zmienione |
+| name.invalid.hiddenChars | Usuń niewidoczne lub specjalne znaki. (pod polem: imię; zatwierdzone 2026-11-01, T-060) |
 | logout | Wyloguj się |
+| logout.error | Nie udało się wylogować. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-096) |
 | legal | Regulamin i polityka prywatności |
 | delete.section | Usuń konto |
 | delete.body | Usunięcie konta jest trwałe. Twoje listy zostaną usunięte także u uczestników. Z cudzych list zostaniesz wypisany(-a), a dodane przez Ciebie pozycje zostaną z podpisem „usunięty użytkownik”. |
@@ -73,7 +76,13 @@ Domownik widzi swój e-mail, zmienia imię widoczne dla innych, wylogowuje się 
 | delete.confirm.title | Usunąć konto na zawsze? |
 | delete.confirm.body | {n} Twoich list zniknie, także u ich uczestników. Tego nie da się cofnąć. |
 | delete.confirm.cta | Usuń konto |
-| deleted | Konto zostało usunięte. |
+| deleted | Konto zostało usunięte. (pokazuje SC-01; T-111) |
+| back | Wstecz (z Layout/States, T-100) |
+| name.required | Wpisz imię (z Layout/States, T-100) |
+| name.tooLong | Imię może mieć najwyżej 30 znaków (z Layout/States, T-100) |
+| name.saveError | Nie udało się zapisać. Spróbuj ponownie. (z Layout/States, T-100) |
+| delete.confirm.cancel | Anuluj (z Accessibility, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z States SC-01, T-100) |
 
 ## Accessibility
 

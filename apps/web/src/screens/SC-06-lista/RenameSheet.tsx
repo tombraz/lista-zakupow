@@ -60,7 +60,7 @@ export function RenameSheet({ list, onClose, returnFocus }: RenameSheetProps) {
         <Button type="submit" writes loading={form.pending}>
           {messages.rename.save}
         </Button>
-        <Button variant="secondary" onClick={onClose}>
+        <Button writes={false} variant="secondary" onClick={onClose}>
           {messages.cancel}
         </Button>
       </form>

@@ -17,6 +17,9 @@ import { captureLogs } from "./logs";
 import { capturingMailer } from "./mailer";
 import { requestResetToken } from "./reset-token";
 
+/** Ramki stosu z `errorSummary` — treść zależy od maszyny. */
+const ANY_STACK: unknown = expect.any(String);
+
 // Zapytanie `ResetTokens.revokeAll` (T-075): usunięcie wszystkich tokenów resetu konta.
 const REVOKE_ALL = /delete from "verification" where .*like/i;
 const ALERT_EMAIL = "alarm-wlasciciela@example.com";
@@ -165,8 +168,17 @@ describe("owner alert after a failed revocation of the other reset links (T-088)
   });
 
   it.each([
-    ["a provider refusal", new MailDeliveryError(502), { error: "MailDeliveryError", status: 502 }],
-    ["a provider timeout", new MailTimeoutError(10_000), { error: "MailTimeoutError" }],
+    // T-098: kształt błędów w tle — `err` z `errorSummary`, status dostawcy obok.
+    [
+      "a provider refusal",
+      new MailDeliveryError(502),
+      { err: { type: "MailDeliveryError", stack: ANY_STACK }, status: 502 },
+    ],
+    [
+      "a provider timeout",
+      new MailTimeoutError(10_000),
+      { err: { type: "MailTimeoutError", stack: ANY_STACK } },
+    ],
   ])(
     "answers 200, logs password_reset and closes live connections despite %s (AC3)",
     async (_case, failure, logged) => {

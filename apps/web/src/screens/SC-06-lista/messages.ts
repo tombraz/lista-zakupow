@@ -6,7 +6,8 @@ import {
   type Person,
 } from "@lista/shared";
 import type { RequestErrorCode } from "../../api/client";
-import { errorText, HIDDEN_CHARACTERS_TEXT } from "../../errorText";
+import { errorText } from "../../errorText";
+import { HIDDEN_CHARACTERS_TEXT } from "../../errorTextMessages";
 
 /** Teksty z tabeli „Copy” SC-06 (docs/design/screens/SC-06-lista.md). */
 export const messages = {
@@ -18,7 +19,7 @@ export const messages = {
   participants: "Uczestnicy",
   // SC-08, „Copy” → joined: komunikat po dołączeniu pokazuje SC-06.
   joined: (name: string) => `Dołączyłeś(-aś) do listy „${name}”.`,
-  menu: { rename: "Zmień nazwę listy", delete: "Usuń listę" },
+  menu: { rename: "Zmień nazwę listy", delete: "Usuń listę", leave: "Opuść listę" },
   rename: { title: "Zmień nazwę listy", label: "Nazwa listy", save: "Zapisz" },
   delete: {
     question: (name: string) => `Usunąć listę „${name}”?`,

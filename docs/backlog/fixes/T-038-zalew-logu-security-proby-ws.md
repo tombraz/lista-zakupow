@@ -30,8 +30,8 @@ related_tasks: [T-033, T-035, T-037]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given sesja ponad limitem połączeń / gniazd WS, when wykona N kolejnych prób połączenia w krótkim czasie, then log `security` ma ograniczoną liczbę wpisów (niezależną od N) w oknie czasu, a każdy wpis ma kształt `logLimitEvent` (`limit`, `route`, `userId`). — verified by: `live.limits.test.ts`
-- [ ] AC2: No regression in: T-033, T-035, T-036, T-037, `limits.security.test.ts` (nadal dokładnie jedno zdarzenie na pierwsze przekroczenie).
+- [x] AC1: Given sesja ponad limitem połączeń / gniazd WS, when wykona N kolejnych prób połączenia w krótkim czasie, then log `security` ma ograniczoną liczbę wpisów (niezależną od N) w oknie czasu, a każdy wpis ma kształt `logLimitEvent` (`limit`, `route`, `userId`). — verified by: `live.limits.test.ts`
+- [x] AC2: No regression in: T-033, T-035, T-036, T-037, `limits.security.test.ts` (nadal dokładnie jedno zdarzenie na pierwsze przekroczenie).
 
 ## TDD plan
 

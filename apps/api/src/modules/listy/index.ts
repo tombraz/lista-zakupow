@@ -40,7 +40,7 @@ export type { AccessChange, ListEvents } from "./domain/membership-events";
 export { announceAccessChanges } from "./domain/membership-events";
 export type { Transaction } from "./infra/lists-repository";
 /** Blokada wiersza listy w transakcji innego modułu (limity pozycji i linków). */
-export { lockList } from "./infra/lists-repository";
+export { lockList, lockListFor } from "./infra/lists-repository";
 
 /** Publiczne API modułu: jedyne miejsce sprawdzania dostępu do listy (architecture.md). */
 export interface Lists {

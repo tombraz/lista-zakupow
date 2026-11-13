@@ -64,7 +64,6 @@ Wygląd wg kierunku B: `prototypes/directions.html?variant=B` (styl przycisków 
 | title | Zaloguj się |
 | email.label | E-mail |
 | password.label | Hasło |
-| password.show / hide | Pokaż / Ukryj |
 | submit | Zaloguj się |
 | forgot | Nie pamiętasz hasła? |
 | noAccount | Nie masz konta? |
@@ -72,7 +71,12 @@ Wygląd wg kierunku B: `prototypes/directions.html?variant=B` (styl przycisków 
 | error.credentials | Nieprawidłowy e-mail lub hasło. |
 | error.rateLimit | Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut albo zresetuj hasło. |
 | info.invite | Zaloguj się, żeby dołączyć do listy „{nazwa}”. |
-| legal | Regulamin i polityka prywatności |
+| email.required | Wpisz adres e-mail (z Layout/States, T-100) |
+| password.required | Wpisz hasło (z Layout/States, T-100) |
+| info.passwordChanged | Hasło zmienione. Zaloguj się nowym hasłem. (z Layout/States, T-100) |
+| info.accountDeleted | Konto zostało usunięte. (z Copy SC-09 `deleted`, T-100) |
+| error.network | Brak połączenia. Sprawdź internet i spróbuj ponownie. (z Layout/States, T-100) |
+| error.otherwise | Nie udało się zalogować. Spróbuj ponownie. (zatwierdzone 2026-11-05, T-100) |
 
 ## Accessibility
 

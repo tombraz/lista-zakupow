@@ -33,10 +33,10 @@ related_tasks: [T-027, T-033, T-035, T-038, T-040]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given właściciel przekroczy limit tworzenia linków, when API odpowie 429, then zdarzenie `rate_limited` w logu `security` ma `userId` i `listId`. — verified by: scenariusz w `limits.security.test.ts`
-- [ ] AC2: Given jedno połączenie WS przekroczy dwa różne limity, when oba zostaną przekroczone, then log `security` ma po jednym zdarzeniu na każdy limit (okno `LimitLogWindow` nadal tłumi powtórzenia tego samego limitu). — verified by: test integracyjny WS
-- [ ] AC3: Given dowolne zdarzenie w logu `security` (`sign_in_failed`, `list_access_denied`, zdarzenia limitów), when zostanie zapisane, then `route` to wzorzec trasy albo `UNKNOWN_ROUTE`, nigdy surowy URL. Zdarzenia składa jedna funkcja w `logging.ts`, na której opiera się `logLimitEvent`. — verified by: test logów
-- [ ] AC4: No regression in: `limits.security.test.ts`, `sign-in-rate-limit.test.ts`, `live.limits.test.ts`, `invitations.logs.test.ts`.
+- [x] AC1: Given właściciel przekroczy limit tworzenia linków, when API odpowie 429, then zdarzenie `rate_limited` w logu `security` ma `userId` i `listId`. — verified by: scenariusz w `limits.security.test.ts`
+- [x] AC2: Given jedno połączenie WS przekroczy dwa różne limity, when oba zostaną przekroczone, then log `security` ma po jednym zdarzeniu na każdy limit (okno `LimitLogWindow` nadal tłumi powtórzenia tego samego limitu). — verified by: test integracyjny WS
+- [x] AC3: Given dowolne zdarzenie w logu `security` (`sign_in_failed`, `list_access_denied`, zdarzenia limitów), when zostanie zapisane, then `route` to wzorzec trasy albo `UNKNOWN_ROUTE`, nigdy surowy URL. Zdarzenia składa jedna funkcja w `logging.ts`, na której opiera się `logLimitEvent`. — verified by: test logów
+- [x] AC4: No regression in: `limits.security.test.ts`, `sign-in-rate-limit.test.ts`, `live.limits.test.ts`, `invitations.logs.test.ts`.
 
 ## TDD plan
 

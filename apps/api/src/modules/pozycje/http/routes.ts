@@ -89,7 +89,7 @@ export function itemRoutes(
   app.post<ListParams>("/api/v1/lists/:listId/items/clear-checked", async (request, reply) => {
     const user = await accounts.requireUser(request, reply);
     const access = await lists.requireListAccess(user.id, request.params.listId, "member");
-    const deletedIds = await clearChecked(repository, access);
+    const deletedIds = await clearChecked(repository, { access, userId: user.id });
     await publish(request.log, {
       type: "items.cleared",
       listId: access.listId,
@@ -121,7 +121,7 @@ export function itemRoutes(
     const user = await accounts.requireUser(request, reply);
     const access = await lists.requireListAccess(user.id, request.params.listId, "member");
     const { itemId } = request.params;
-    await deleteItem(repository, access, itemId);
+    await deleteItem(repository, { access, userId: user.id }, itemId);
     await publish(request.log, { type: "item.deleted", listId: access.listId, itemId });
     return reply.code(204).send();
   });

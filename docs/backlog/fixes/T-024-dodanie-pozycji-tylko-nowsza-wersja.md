@@ -27,9 +27,9 @@ related_tasks: [T-006, T-009, T-017]
 
 ## Acceptance criteria
 
-- [ ] AC1: Given zdarzenia WS własnego dodania i nowszej zmiany innej osoby przed odpowiedzią `POST`, when przyjdzie odpowiedź, then SC-06 pokazuje nowszą wersję. — verified by: test komponentu SC-06 (podstawiony klient WS)
-- [ ] AC2: Given zdarzenia WS własnego dodania i `item.deleted` przed odpowiedzią `POST`, when przyjdzie odpowiedź, then pozycji nie ma na liście. — verified by: test komponentu SC-06
-- [ ] AC3: No regression in: dodanie pozycji (T-006, ogłoszenie „Dodano …”, czyszczenie pól), ponowienie z tym samym `id` (AC6 T-006), J-05.
+- [x] AC1: Given zdarzenia WS własnego dodania i nowszej zmiany innej osoby przed odpowiedzią `POST`, when przyjdzie odpowiedź, then SC-06 pokazuje nowszą wersję. — verified by: test komponentu SC-06 (podstawiony klient WS)
+- [x] AC2: Given zdarzenia WS własnego dodania i `item.deleted` przed odpowiedzią `POST`, when przyjdzie odpowiedź, then pozycji nie ma na liście. — verified by: test komponentu SC-06
+- [x] AC3: No regression in: dodanie pozycji (T-006, ogłoszenie „Dodano …”, czyszczenie pól), ponowienie z tym samym `id` (AC6 T-006), J-05.
 
 ## TDD plan
 

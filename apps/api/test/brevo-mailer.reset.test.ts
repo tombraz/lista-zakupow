@@ -7,8 +7,12 @@ import { useTestDatabase } from "./database";
 import { createUser, randomIp } from "./factories";
 import { captureLogs } from "./logs";
 
+/** Ramki stosu z `errorSummary` — treść zależy od maszyny. */
+const ANY_STACK: unknown = expect.any(String);
+
 // AC2, SEC1 (TH-21) T-055: awaria Brevo nie zmienia odpowiedzi prośby o reset (SEC1 T-053);
-// w logu tylko typ błędu i status — bez e-maila, tokenu, treści i klucza API.
+// w logu tylko typ błędu i status — bez e-maila, tokenu, treści i klucza API. T-098: wpis
+// w kształcie błędów w tle — `event` i `err` z `errorSummary`, status dostawcy obok.
 describe("password reset when Brevo fails (AC2, SEC1)", () => {
   const db = useTestDatabase();
   let brevo: Awaited<ReturnType<typeof fakeBrevo>> | undefined;
@@ -44,8 +48,14 @@ describe("password reset when Brevo fails (AC2, SEC1)", () => {
 
     expect(response.statusCode).toBe(200);
     await vi.waitFor(() => {
-      expect(logs.entries().filter((entry) => entry["source"] === "mailer")).toEqual([
-        expect.objectContaining({ level: 50, error: "MailDeliveryError", status: 500 }),
+      expect(
+        logs.entries().filter((entry) => entry["event"] === "password_reset_mail_failed"),
+      ).toEqual([
+        expect.objectContaining({
+          level: 50,
+          err: { type: "MailDeliveryError", stack: ANY_STACK },
+          status: 500,
+        }),
       ]);
     });
     expect(brevo.received).toHaveLength(1);

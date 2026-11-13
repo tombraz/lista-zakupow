@@ -1,9 +1,11 @@
 import {
+  RATE_LIMITS,
   passwordResetRequestSchema,
   passwordResetSchema,
   signInRequestSchema,
   signUpRequestSchema,
   type ErrorCode,
+  type LimitKey,
   type SignUpInvitation,
 } from "@lista/shared";
 import { fromNodeHeaders } from "better-auth/node";
@@ -11,9 +13,10 @@ import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest }
 import { ApiError } from "../../../http/api-error";
 import { perIp, perIpRateLimit } from "../../../http/rate-limit";
 import { validate } from "../../../http/validate";
-import { errorSummary, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
+import { bestEffort, logLimitEvent, securityEvent, type ErrorSummary } from "../../../logging";
 import { passCookies } from "./cookies";
 import type { Auth } from "../infra/auth";
+import type { MailQuota } from "../infra/mail-quota";
 import type { PasswordResetRequests } from "../infra/password-reset-requests";
 import type { ResetTokens } from "../infra/reset-tokens";
 import type { SignInFailures } from "../infra/sign-in-failures";
@@ -23,7 +26,11 @@ interface AuthDeps {
   /** Pseudonim e-maila do liczników i logu `security` (TH-21). */
   accountKey: (email: string) => string;
   failures: SignInFailures;
+  /** TH-10 (T-118): bieżący hash hasła konta z tym e-mailem (`infra/credentials.ts`). */
+  passwordHash: (email: string) => Promise<string | null>;
   resetRequests: PasswordResetRequests;
+  /** T-120 (TH-10): dobowy limit maili resetu per e-mail. */
+  mailQuota: MailQuota;
   /** F-03, TH-10: resety konta po kolei, po udanym reszta linków konta przestaje działać. */
   resetTokens: ResetTokens;
   /** F-12: przyjęcie zaproszenia zaraz po założeniu konta (podaje moduł `zaproszenia`). */
@@ -71,7 +78,7 @@ interface AuthUser {
  * odpowiedzi w formacie API, bez tokenu sesji w treści (TH-16).
  */
 export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string): void {
-  const { auth, failures, resetRequests } = deps;
+  const { auth, failures } = deps;
   app.post("/api/auth/sign-up/email", async (request, reply) => {
     const { name, email, password, invitationToken } = validate(signUpRequestSchema, request.body);
     const response = await forward(auth, origin, request, { name, email, password });
@@ -97,7 +104,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
         });
         throw new ApiError(429, "rate_limited");
       }
-      const response = await forward(auth, origin, request, credentials);
+      const response = await forwardSignIn(deps, origin, request, credentials);
       if (response.status === 401) logSecurity(request, "sign_in_failed", { accountKey });
       else await failures.release(accountKey);
       if (response.status === 429) {
@@ -118,10 +125,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
       async (request, reply) => {
         const { email } = validate(passwordResetRequestSchema, request.body);
         const accountKey = deps.accountKey(email);
-        if (!(await resetRequests.take(accountKey))) {
-          logLimitEvent(request, "rate_limited", "passwordResetPerEmail", { ids: { accountKey } });
-          throw new ApiError(429, "rate_limited");
-        }
+        await takeResetLimits(request, deps, accountKey);
         const response = await forward(auth, origin, request, { email });
         if (response.status === 429) logLimitEvent(request, "rate_limited", "passwordResetPerIp");
         return relay(response, reply);
@@ -139,6 +143,30 @@ export function authRoutes(app: FastifyInstance, deps: AuthDeps, origin: string)
   });
 }
 
+const DAILY_PER_EMAIL = RATE_LIMITS.passwordResetPerEmailDaily;
+
+/**
+ * TH-10: limity maili resetu per e-mail — 15-minutowy, potem dobowy (T-120), więc dobowy liczy
+ * tylko prośby, które mogą wysłać mail. Ten sam 429 dla istniejącego i nieistniejącego konta.
+ */
+async function takeResetLimits(
+  request: FastifyRequest,
+  deps: Pick<AuthDeps, "resetRequests" | "mailQuota">,
+  accountKey: string,
+) {
+  let exceeded: LimitKey | undefined;
+  if (!(await deps.resetRequests.take(accountKey))) exceeded = "passwordResetPerEmail";
+  else if (
+    (await deps.mailQuota.take(`reset-email:${accountKey}`, DAILY_PER_EMAIL.windowSeconds)) >
+    DAILY_PER_EMAIL.max
+  ) {
+    exceeded = "passwordResetPerEmailDaily";
+  }
+  if (!exceeded) return;
+  logLimitEvent(request, "rate_limited", exceeded, { ids: { accountKey } });
+  throw new ApiError(429, "rate_limited");
+}
+
 /** F-03: nowe hasło z linku resetu; TH-10 / TH-28: koniec sesji konta i ich połączeń na żywo. */
 function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string): void {
   const { auth } = deps;
@@ -149,7 +177,9 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
     const response = userId
       ? await deps.resetTokens.exclusive(userId, async () => {
           const result = await forward(auth, origin, request, body);
-          if (result.ok) await revokeOtherLinks(request, deps, userId);
+          if (!result.ok) return result;
+          await revokeLateSessions(request, auth, userId);
+          await revokeOtherLinks(request, deps, userId);
           return result;
         })
       : await forward(auth, origin, request, body);
@@ -162,6 +192,40 @@ function newPasswordRoute(app: FastifyInstance, deps: AuthDeps, origin: string):
 }
 
 /**
+ * T-118 (TH-10): Better Auth usuwa sesje przed zapisem hasła, a logowanie, które zweryfikowało
+ * stare hasło, mogło zapisać sesję po tym usunięciu i przed zatwierdzeniem nowego hasła. Drugie
+ * usunięcie po zatwierdzeniu ją kończy; późniejsze takie logowanie odrzuca porównanie hasha.
+ */
+async function revokeLateSessions(request: FastifyRequest, auth: Auth, userId: string) {
+  const { internalAdapter } = await auth.$context;
+  await bestEffort(
+    request.log,
+    "sessions_revoke_failed",
+    () => internalAdapter.deleteUserSessions(userId),
+    { userId },
+  );
+}
+
+/**
+ * T-118 (TH-10): hash hasła zmienił się w trakcie logowania, więc Better Auth mógł zweryfikować
+ * hasło sprzed resetu. Taka sesja jest usuwana, a odpowiedź to złe hasło (bez ciasteczka).
+ */
+async function forwardSignIn(
+  deps: Pick<AuthDeps, "auth" | "passwordHash">,
+  origin: string,
+  request: FastifyRequest,
+  credentials: { email: string; password: string },
+): Promise<Response> {
+  const hashBefore = await deps.passwordHash(credentials.email);
+  const response = await forward(deps.auth, origin, request, credentials);
+  if (!response.ok || (await deps.passwordHash(credentials.email)) === hashBefore) return response;
+  const { token } = (await response.json()) as { token?: string };
+  const { internalAdapter } = await deps.auth.$context;
+  if (token) await internalAdapter.deleteSession(token);
+  return Response.json({ code: "INVALID_EMAIL_OR_PASSWORD" }, { status: 401 });
+}
+
+/**
  * T-087: hasło już zmienione i sesje usunięte (transakcja Better Auth), więc błąd sprzątania
  * pozostałych linków nie może przerwać logu `password_reset` ani zamknięcia połączeń (TH-28).
  * Linki i tak wygasają po 1 h (F-03); błąd tylko w logu, bez tokenów (TH-21).
@@ -171,16 +235,13 @@ async function revokeOtherLinks(
   deps: Pick<AuthDeps, "resetTokens" | "onLinksNotRevoked">,
   userId: string,
 ) {
-  try {
-    await deps.resetTokens.revokeAll(userId);
-  } catch (error) {
-    const summary = errorSummary(error);
-    request.log.error(
-      { event: "reset_tokens_revoke_failed", userId, err: summary },
-      "revoking reset links failed",
-    );
-    deps.onLinksNotRevoked(userId, errorCodeOf(summary));
-  }
+  const failure = await bestEffort(
+    request.log,
+    "reset_tokens_revoke_failed",
+    () => deps.resetTokens.revokeAll(userId),
+    { userId },
+  );
+  if (failure) deps.onLinksNotRevoked(userId, errorCodeOf(failure));
 }
 
 /** Kod błędu z najgłębszej przyczyny (np. `57P01` z pg), bez komunikatu (TH-21). */

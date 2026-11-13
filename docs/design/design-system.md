@@ -109,7 +109,7 @@ Rodzina: `typography.family.base` (systemowa bezszeryfowa). Rozmiary w px skaluj
 ### Pole hasła (PasswordField)
 - **Używany na:** SC-01, SC-02, SC-03
 - **Warianty:** bieżące hasło, nowe hasło (z podpowiedzią „co najmniej 8 znaków”)
-- **Stany:** jak TextField + przełącznik „Pokaż / ukryj hasło”
+- **Stany:** jak TextField + przełącznik „Pokaż” / „Ukryj” (Copy `PasswordField.*`)
 - **Dostępność:** przełącznik jako `button` z `aria-pressed`; bez blokady wklejania (WCAG 3.3.8)
 
 ### Checkbox zgody (ConsentCheckbox)
@@ -188,6 +188,20 @@ Rodzina: `typography.family.base` (systemowa bezszeryfowa). Rozmiary w px skaluj
 - **Używany na:** SC-05, SC-06, SC-07, SC-08
 - **Warianty:** szkielet wierszy (lista), wskaźnik w przycisku
 - **Dostępność:** `aria-busy` na kontenerze; animacja wyłączana przy „ogranicz ruch”
+
+## Copy
+
+Teksty komponentów design systemu (`apps/web/src/components/`). Ekran, który pokazuje komponent, nie powtarza tych wierszy w swojej tabeli Copy; test zgodności Copy (`copyRegister.test.ts`) czyta tę tabelę dla tekstów z `components/` (T-106), a wiersz Copy ekranu z tekstem, który ekran bierze tylko z komponentu, zgłasza jako błąd (T-108).
+
+| Key | Text |
+| --- | --- |
+| product.name | Wspólna lista zakupów (AuthPage nad `h1`; z Layout SC-01, T-106) |
+| product.documentTitle | {tytuł} · Wspólna lista zakupów (tytuł karty przeglądarki: AppBar, AuthPage, SC-04, SC-08 przez `documentTitle`; zatwierdzone 2026-11-06, T-106; T-109) |
+| AuthPage.legal | Regulamin i polityka prywatności (stopka SC-01–SC-03; z Copy SC-01 `legal`, T-106) |
+| LoadError.retry | Spróbuj ponownie (z Layout/States SC-05–SC-07, T-106) |
+| OfflineBanner.offline | Brak połączenia. Zmiany nie są zapisywane. (z OfflineBanner „Budowa”, T-106) |
+| OfflineBanner.restored | Połączenie przywrócone. (ukryte wizualnie; zatwierdzone 2026-11-04, T-080) |
+| PasswordField.show / PasswordField.hide | Pokaż / Ukryj (zatwierdzone 2026-11-06, T-106) |
 
 ## Zasady dostępności
 

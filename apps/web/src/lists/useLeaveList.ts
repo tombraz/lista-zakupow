@@ -1,13 +1,13 @@
 import type { ListSummary } from "@lista/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { asRequestError } from "../../api/client";
-import { leaveList } from "../../api/lists";
-import { useGuardedMutation } from "../../api/useGuardedMutation";
-import { leaveListKey } from "../../lists/ownExit";
-import { listKey } from "../../lists/useList";
-import { LISTS_KEY } from "../../lists/useLists";
-import { membersKey } from "../../lists/useMembers";
+import { asRequestError } from "../api/client";
+import { leaveList } from "../api/lists";
+import { useGuardedMutation } from "../api/useGuardedMutation";
+import { leaveListKey } from "./ownExit";
+import { listKey } from "./useList";
+import { LISTS_KEY } from "./useLists";
+import { membersKey } from "./useMembers";
 
 /**
  * F-13: uczestnik opuszcza listę i wraca na SC-05 bez niej (`replace`: SC-07 znika z historii).

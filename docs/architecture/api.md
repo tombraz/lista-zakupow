@@ -7,6 +7,19 @@ approved: 2026-10-26
 
 Zarys dla głównych ścieżek; taski doprecyzowują kształty. Kontrakt (typy żądań, odpowiedzi i zdarzeń + schematy zod) żyje w `packages/shared/src/api/` i jest importowany przez api, web i mobile. Konwencje i kody błędów: `architecture.md`, „Konwencje API i błędów”. Wszystkie trasy `/api/v1/*` wymagają sesji (401), chyba że zaznaczono inaczej.
 
+## Błędy wspólne
+
+Te kody mogą wystąpić na każdej trasie z opisanego zakresu, więc kolumny „Błędy” w tabelach tras ich nie powtarzają. Status i znaczenie każdego kodu (także tych z kolumn „Błędy”) opisuje tylko tabela w `architecture.md`, „Konwencje API i błędów”.
+
+| Kod | Zakres |
+| --- | --- |
+| `validation_failed` | każda trasa (treść, parametry ścieżki, `content-type`) |
+| `unauthenticated` | każda trasa `/api/v1/*` poza publicznymi |
+| `invalid_origin` | każde `POST` / `PATCH` / `DELETE` |
+| `not_found` | każda trasa z identyfikatorem w ścieżce |
+| `rate_limited` | trasy z „429” w kolumnie „Błędy” |
+| `internal` | każda trasa |
+
 ## Konta (Better Auth, `/api/auth/*`)
 
 Nazwy tras Better Auth sprawdzić w dokumentacji wersji użytej w walking skeleton.
@@ -16,7 +29,7 @@ Nazwy tras Better Auth sprawdzić w dokumentacji wersji użytej w walking skelet
 | Rejestracja (F-01) | `POST /api/auth/sign-up/email` | `{ name, email, password, termsAccepted: true, ageConfirmed: true, invitationToken? }` | 200 `{ user }` + sesja | 400 `validation_failed`, 409 `email_taken`, 429 |
 | Logowanie (F-02) | `POST /api/auth/sign-in/email` | `{ email, password }` | 200 `{ user }` + sesja | 401 `invalid_credentials` (ten sam dla złego e-maila i hasła), 429 |
 | Wylogowanie (F-02) | `POST /api/auth/sign-out` | — | 200 | — |
-| Prośba o reset (F-03) | `POST /api/auth/request-password-reset` (publiczna) | `{ email, redirectTo }` | 200 zawsze | 429 |
+| Prośba o reset (F-03) | `POST /api/auth/request-password-reset` (publiczna) | `{ email }` (inne pola, np. `redirectTo`, ignorowane: link zawsze na `APP_ORIGIN`, T-053 SEC5) | 200 zawsze | 429 |
 | Nowe hasło (F-03) | `POST /api/auth/reset-password` (publiczna) | `{ token, newPassword }` | 200 | 400 `invalid_token` (użyty lub wygasły), 400 `validation_failed` |
 
 Zgody i 16+ są weryfikowane w hooku rejestracji Better Auth (brak = 400) i zapisywane w `user`.
@@ -29,7 +42,7 @@ Stan po T-004: API udostępnia z Better Auth tylko trasy z tabeli, które już m
 | --- | --- | --- | --- | --- |
 | Moje dane | `GET /api/v1/me` | — | `{ id, name, email }` | 401 |
 | Zmiana imienia (F-16) | `PATCH /api/v1/me` | `{ name }` | 200 `{ id, name, email }`; błąd rozesłania zdarzeń po zapisie tylko w logu | 400, 401 (konto usunięte w międzyczasie) |
-| Usunięcie konta (F-04) | `DELETE /api/v1/me` | `{ confirm: true }` | 204; zdarzenia `list.deleted` / `access.revoked` / `lists.changed` do dotkniętych osób; sesje zamknięte | 400 bez `confirm` |
+| Usunięcie konta (F-04) | `DELETE /api/v1/me` | `{ confirm: true }` | 204; zdarzenia `list.deleted` / `access.revoked` / `lists.changed` do dotkniętych osób; sesje zamknięte | 400 bez `confirm`, 401 (konto usunięte w międzyczasie, np. w drugiej karcie) |
 
 ## Listy (`listy`)
 
@@ -68,9 +81,9 @@ Stan po T-006: dodawanie, edycja nazwy i notatki oraz usuwanie działają (odhac
 | Utwórz link (F-11) | `POST /api/v1/lists/:listId/invitations` | — | 201 `{ id, url, expiresAt }` | 403, 404, 409 `limit_reached` (`participants`), 429 |
 | Unieważnij (F-11) | `DELETE /api/v1/lists/:listId/invitations/:invitationId` | — | 204 | 403, 404 |
 | Podgląd (SC-08), publiczna | `GET /api/v1/invitations/:token` | — | `{ listName, ownerName }` | 410 `invitation_invalid`, 429 |
-| Przyjmij (F-12) | `POST /api/v1/invitations/:token/accept` | — | 200 `{ listId }` | 401, 409 `own_list` / `already_member` / `limit_reached` (`participants`), 410, 429 |
+| Przyjmij (F-12) | `POST /api/v1/invitations/:token/accept` | — | 200 `{ listId }` | 401, 409 `own_list` / `already_member` (z `listId` tej listy), 409 `limit_reached` (`participants`), 410, 429 |
 
-`url` = `https://<web>/zaproszenie/<token>`. Rejestracja z `invitationToken` (F-01, F-12) przyjmuje zaproszenie w tej samej operacji po założeniu konta; błąd zaproszenia nie blokuje rejestracji (konto powstaje, klient pokazuje komunikat z SC-08).
+`url` = `https://<web>/zaproszenie/<token>`. Przy `own_list` i `already_member` błąd niesie `listId` listy, do której domownik już ma dostęp, żeby SC-08 mógł ją otworzyć („Otwórz listę”). Rejestracja z `invitationToken` (F-01, F-12) przyjmuje zaproszenie w tej samej operacji po założeniu konta; błąd zaproszenia nie blokuje rejestracji (konto powstaje, klient pokazuje komunikat z SC-08).
 
 ## Zmiany na żywo (`na-zywo`)
 

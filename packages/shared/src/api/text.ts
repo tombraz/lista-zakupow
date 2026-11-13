@@ -5,8 +5,11 @@ export const withoutNul = (text: string) => !text.includes("\u0000");
 
 // TH-29: znaki sterujące (Cc), formatujące (Cf, w tym wszystkie znaki zmiany kierunku tekstu)
 // i domyślnie ignorowane (wypełniacze, selektory wariantu) pozwalają podszyć się pod kogoś,
-// ukryć część nazwy przed innymi albo zrobić nazwę pustą wizualnie.
-const HIDDEN_CHARACTER = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+// ukryć część nazwy przed innymi albo zrobić nazwę pustą wizualnie. T-121: także Co, Cn i pojedyncze
+// surogaty, każdy odstęp poza U+0020 (separatory linii łamią wiersz), pusty brajl i więcej niż
+// 3 znaki łączące z rzędu (decyzja właściciela 2026-11-13).
+const HIDDEN_CHARACTER =
+  /[\p{C}\p{Default_Ignorable_Code_Point}\u{2800}]|(?! )\p{White_Space}|\p{M}{4}/u;
 
 // Zamknięta lista wyjątków tylko wewnątrz emoji; żaden wzorzec nie dopuszcza dowolnej liczby
 // znaków Cf (backend.md, „Pułapki”, T-073). ZWJ między obrazkami (👨‍👩‍👧, 👩🏽‍🍳, 🏳️‍🌈), jeden
@@ -33,6 +36,9 @@ function withoutHiddenCharacters(allowNewLine: boolean) {
   };
 }
 
+// NBSP wpada przy wklejaniu z przeglądarki; zamieniona, nie odrzucona (decyzja właściciela 2026-11-13).
+const withPlainSpaces = (text: string) => text.replaceAll("\u00A0", " ");
+
 const hasVisibleCharacter = (text: string) => VISIBLE_CHARACTER.test(text);
 
 /**
@@ -42,6 +48,7 @@ const hasVisibleCharacter = (text: string) => VISIBLE_CHARACTER.test(text);
 export function requiredName(max: number) {
   return z
     .string({ error: "required" })
+    .overwrite(withPlainSpaces)
     .trim()
     .min(1, { error: "required" })
     .max(max, { error: "too_long" })
@@ -53,7 +60,9 @@ export function requiredName(max: number) {
 export function optionalNote(max: number) {
   return z
     .string({ error: "invalid" })
+    .overwrite(withPlainSpaces)
     .trim()
     .max(max, { error: "too_long" })
-    .refine(withoutHiddenCharacters(true), { error: "invalid" });
+    .refine(withoutHiddenCharacters(true), { error: "invalid" })
+    .refine((text) => text === "" || hasVisibleCharacter(text), { error: "invalid" });
 }

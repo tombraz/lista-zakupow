@@ -12,6 +12,11 @@ export const RATE_LIMITS = {
   passwordResetPerIp: { windowSeconds: 60, max: 3 },
   // TH-10: zalewanie jednej skrzynki z wielu adresów; zatwierdził właściciel 2026-11-01 (T-053).
   passwordResetPerEmail: { windowSeconds: 15 * 60, max: 3 },
+  // TH-10 (T-120): maile resetu na jeden adres w dobie; zatwierdził właściciel 2026-11-13.
+  passwordResetPerEmailDaily: { windowSeconds: 24 * 60 * 60, max: 10 },
+  // N-03 (T-120): maile resetu łącznie w dobie. Okno od pierwszego maila, więc w dobie Brevo
+  // (300) mieszczą się dwa okna (200) i alarmy (≤ 96); zatwierdził właściciel 2026-11-13.
+  passwordResetMailsDaily: { windowSeconds: 24 * 60 * 60, max: 100 },
   // Odpytuje bazę; zapas dla smoke testu i ręcznych sprawdzeń (CodeQL js/missing-rate-limiting).
   healthReadyPerIp: { windowSeconds: 60, max: 30 },
   // TH-06: podgląd i przyjęcie zaproszenia (osobno) — odgadywanie tokenu.

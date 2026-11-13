@@ -11,6 +11,7 @@ const LONG_AGO = new Date("2026-01-01T10:00:00.000Z");
 const TABLES = [
   "invitation",
   "list_daily_activity",
+  "mail_quota",
   "rate_limit",
   "session",
   "sign_in_failure",
@@ -45,6 +46,7 @@ describe("cleanup log (SEC2: TH-21)", () => {
       resetToken: marker(),
       invitationToken: marker(),
       accountKey: marker(),
+      mailQuotaKey: `reset-email:${marker()}`,
       rateLimitKey: `203.0.113.77${marker()}`,
     };
     await db.pool.query(`INSERT INTO "user" (id, name, email) VALUES ($1, 'Domownik', $2)`, [
@@ -76,6 +78,10 @@ describe("cleanup log (SEC2: TH-21)", () => {
     await db.pool.query(
       "INSERT INTO sign_in_failure (account_key, failures, window_started_at) VALUES ($1, 5, $2)",
       [markers.accountKey, LONG_AGO],
+    );
+    await db.pool.query(
+      "INSERT INTO mail_quota (key, count, window_started_at) VALUES ($1, 10, $2)",
+      [markers.mailQuotaKey, LONG_AGO],
     );
     await db.pool.query(
       "INSERT INTO rate_limit (id, key, count, last_request) VALUES ($1, $1, 3, $2)",
