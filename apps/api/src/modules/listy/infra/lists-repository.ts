@@ -33,6 +33,28 @@ export async function lockList(
   return list ?? null;
 }
 
+/**
+ * `lockList` i ponowne sprawdzenie dostępu domownika w transakcji zapisu (TH-04, T-119):
+ * `requireListAccess` przed transakcją mógł widzieć członkostwo już usuwane. Wiersz
+ * `list_member` zablokowany do końca transakcji, więc usunięcie uczestnika, opuszczenie listy
+ * i usunięcie konta czekają na zapis albo zapis widzi je zatwierdzone.
+ */
+export async function lockListFor(
+  tx: Pick<NodePgDatabase, "select">,
+  listId: string,
+  userId: string,
+): Promise<boolean> {
+  const list = await lockList(tx, listId);
+  if (!list) return false;
+  if (list.ownerId === userId) return true;
+  const [member] = await tx
+    .select({ userId: listMember.userId })
+    .from(listMember)
+    .where(and(eq(listMember.listId, listId), eq(listMember.userId, userId)))
+    .for("share");
+  return member !== undefined;
+}
+
 /** F-12: limit liczony pod blokadą listy, więc bez wyścigu (data-model.md). */
 export async function insertParticipant(
   tx: Transaction,
