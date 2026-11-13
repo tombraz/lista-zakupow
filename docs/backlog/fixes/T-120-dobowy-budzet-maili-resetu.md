@@ -4,7 +4,7 @@ title: "Prośby o reset nie wyczerpują dobowego limitu maili dostawcy"
 kind: fix              # fix tasks live in docs/backlog/fixes/ and have no epic or story
 type: bug              # bug | small-change
 severity: normal       # incident | high | normal | low
-status: in-qa          # todo | in-progress | in-qa | done | blocked
+status: done           # todo | in-progress | in-qa | done | blocked
 depends_on: []
 layers: [backend, db]
 requirements: [F-03, N-03]
@@ -123,3 +123,20 @@ Spot-check (cofnięty, `git status` czysty): na trasie `mailQuota.take` → `fal
 | # | Severity | Area | Finding | Evidence | Expected |
 | --- | --- | --- | --- | --- | --- |
 | 1 | note | Testy (istniejące) | `routes-nul.test.ts` › `never logs a raw database exception for NUL input (SEC1)` znów czerwony w pełnym przebiegu (2. raz w 3 pełnych przebiegach QA), zielony 3× osobno. Wzorzec `/byte sequence\|22021/` (`routes-nul.test.ts:417`) na wszystkich liniach logu trafia w losowe ciągi; niezwiązany z T-120 (plik i logowanie nie zmienione). | pełny `pnpm test` 2026-11-13 | Osobne zadanie: zakotwiczyć wzorzec (np. `"code":"22021"`). |
+
+## QA round 3 (2026-11-13)
+Verdict: pass
+
+Zakres: zmiany po rundzie 2 — `d94c4b9` (alarm budżetu raz na okno: `MailQuota.take` zwraca numer maila w oknie, alarm przy `count === max + 1`; nowy `mail-budget.test.ts`; asercja w `password-reset.daily-limits.test.ts`) i `68e67b9` (sekcja „Prevention”). Sprawdzone: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — bez błędów; `pnpm test` — 160/160 plików, 1298/1298 testów (tym razem także `routes-nul.test.ts` zielony); `node scripts/backlog-check.mjs` — `OK: no errors`.
+
+Kryteria AC1–AC5: pass. AC1 — trasa porównuje numer z `DAILY_PER_EMAIL.max` (ta sama semantyka co poprzednie `<= max`), test 1 zielony. AC2 — po 100 mailach mail nie wychodzi, jeden alarm, a prośba godzinę później (po oknie tłumienia T-088) nie daje drugiego alarmu. AC3 — alarm idzie przez `ownerAlerts`, poza `MailQuota`. AC4/AC5 — `limits.security`, `cleanup.*`, `password-reset*` zielone.
+
+Spot-checki (cofnięte, `git status` czysty):
+- `index.ts`: usunięty warunek `count === max + 1` (alarm przy każdej odmowie) — `password-reset.daily-limits` › `…alerts the owner once` czerwony: `expected [ { …(3) }, { …(3) } ] to have a length of 1 but got 2` (zgodne z Evidence).
+- `limits.ts`: `passwordResetMailsDaily.max` 100 → 102 — `mail-budget.test.ts` czerwony: `expected 302 to be less than or equal to 300`. Bilans przy obecnych stałych: 2 × 100 + 96 + 2 = 298 ≤ 300.
+
+| # | Severity | Area | Finding | Evidence | Expected |
+| --- | --- | --- | --- | --- | --- |
+| 1 | minor | Dokumentacja | `docs/architecture/deployment.md:22` opisuje alarmy jako „najwyżej 1 na zdarzenie / 15 min, ≤ 96 na dobę”; nie mówi, że alarm `password_reset_budget_exhausted` wychodzi raz na okno budżetu (≤ 2 / dobę), ani że sumy (298 ≤ 300) pilnuje `apps/api/test/mail-budget.test.ts`. | `deployment.md:22` | Wiersz „Mail” z bilansem 200 + 96 + 2 i odesłaniem do `mail-budget.test.ts`. |
+| 2 | note | Prewencja | `mail-budget.test.ts` zakłada ≤ 96 alarmów `reset_tokens_revoke_failed` na dobę, ale okno tłumienia w `owner-alerts.ts` jest w pamięci procesu — restart (np. deploy, OOM) je zeruje, więc w dobie z restartami alarmów może być więcej. Stan sprzed T-120 (T-088, ADR 0003), budżet resetu i jego alarm są w bazie i restart ich nie dotyczy. | `owner-alerts.ts:34-36` | Odnotować założenie w komentarzu testu albo przenieść tłumienie do bazy (osobne zadanie, jeśli właściciel uzna). |
+| 3 | note | TDD | `mail-budget.test.ts` nie ma czerwonego przebiegu w Evidence (test liczy ze stałych; wartość 392 sprzed poprawki podana opisowo). QA potwierdził spot-checkiem, że test gryzie (302 > 300). | sekcja „Prevention” | — |
