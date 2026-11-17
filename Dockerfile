@@ -3,7 +3,7 @@
 # Wersja Node zgodna z .nvmrc / engines; tag i digest przypięte (TH-22). Obraz wpisany dosłownie w obu FROM
 # (bez ARG): Dependabot (ekosystem docker, T-122) aktualizuje tylko dosłowne FROM, oba naraz.
 
-FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d AS build
+FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS build
 WORKDIR /repo
 # pnpm w wersji z packageManager w package.json.
 RUN npm install --global --no-fund --no-audit pnpm@12.11.2
@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile --filter @lista/api... --filter @lista/web...
   && pnpm build \
   && pnpm --filter @lista/api deploy --prod /out
 
-FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d
+FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0
 ENV NODE_ENV=production
 # Poprawki bezpieczeństwa Debiana, których upstream obraz Node jeszcze nie ma (T-122; Trivy blokuje
 # high/critical z dostępną poprawką). Digest przypięty, a Dependabot docker podnosi go co tydzień.
